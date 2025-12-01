@@ -917,7 +917,7 @@ PetscErrorCode TaoEvalHessian(Tao /* tao */, Vec x, Mat H, Mat Hpre, void*ptr){
 
   OptimProblem* ctx = (OptimProblem*) ptr;
   // Set the inverse Hessian as preconditioner. Works together with KSPSetType KSPPREONLY, which applies the preconditioner to the RHS rather than solving a linear system.
-  if (ctx->getMPIRankWorld() == 0) printf("Eval Hessian.\n");
+  // if (ctx->getMPIRankWorld() == 0) printf("Eval Hessian.\n");
   ctx->evalHessian(x, H, Hpre); 
 
   return 0;
@@ -935,7 +935,7 @@ PetscErrorCode TaoPreconditioner(PC pc, Vec x, Vec y){
   auto* ctx = static_cast<PCShellCtx*>(ctx_void);
   OptimProblem* optim = ctx->optimctx_;
 
-  if (optim->getMPIRankWorld() == 0) printf("Applying preconditioner.\n");
+  // if (optim->getMPIRankWorld() == 0) printf("Applying preconditioner.\n");
   MatMult(optim->Hessian_inv, x, y);
 
   return 0;
