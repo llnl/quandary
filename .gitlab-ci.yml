@@ -138,6 +138,7 @@ performance-test:
           perf_processing_cmd: "${CI_PROJECT_DIR}/tests/performance/convert_benchmark_format.py"
           github_project_name: $GITHUB_PROJECT_NAME
           github_project_org: $GITHUB_PROJECT_ORG
+          dane_perf_alloc: $DANE_PERF_ALLOC
       - local: '.gitlab/jobs/performances.yml'
     strategy: depend
     forward:
