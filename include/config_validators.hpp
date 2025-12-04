@@ -9,12 +9,55 @@
 /**
  * @brief Validation utilities for TOML configuration parsing.
  *
- * Provides chainable validators for type-safe TOML field extraction with
- * built-in validation (required, positive, ranges, custom predicates).
+ * Provides a chainable API for type-safe TOML field validation. Chain validation
+ * methods together, then extract the final value in one operation with clear error messages.
+ *
+ * ## How Method Chaining Works
+ *
+ * Each validation method (required(), greaterThan(), etc.) returns `*this`, which
+ * allows you to call another method on the same object. This creates a readable
+ * chain of validation rules that execute from left to right.
+ *
+ * ## Basic Usage Pattern
+ *
+ * 1. Create a validator using field<T>() or vectorField<T>()
+ * 2. Chain validation methods (required(), positive(), etc.)
+ * 3. Extract the value using value() or valueOr(default)
+ *
+ * @code
+ * // Parse required positive double from toml::table config with key "step_size"
+ * double step_size = validators::field<double>(config, "step_size")
+ *                     .required()
+ *                     .positive()
+ *                     .value();
+ *
+ * // Parse optional string from toml::table config with key "output_dir" with default value "./data_out"
+ * std::string output_dir = validators::field<std::string>(config, "output_dir")
+ *                            .valueOr("./data_out");
+ *
+ * // Parse required vector of positive doubles from toml::table config with key "frequencies"
+ * std::vector<double> frequencies = validators::vectorField<double>(config, "frequencies")
+ *                                    .required()
+ *                                    .minLength(1)
+ *                                    .positive()
+ *                                    .value();
+ * @endcode
+ *
+ * ## Error Handling
+ *
+ * All validators throw ValidationError with descriptive messages when validation fails.
+ * This includes missing required fields, type mismatches, and constraint violations.
+ *
+ * ## Supported Types
+ *
+ * Scalar fields: int, size_t, double, std::string, bool, etc.
+ * Vector fields: std::vector<T> where T is any supported scalar type
  */
 namespace validators {
 
-// Helper to get readable type names for error messages
+/**
+ * @brief Helper to get readable type names for error messages
+ */
 template <typename T>
 std::string getTypeName() {
   if constexpr (std::is_same_v<T, int> || std::is_same_v<T, int64_t> || std::is_same_v<T, size_t>) {
@@ -42,16 +85,60 @@ class ValidationError : public std::runtime_error {
 /**
  * @brief Chainable validator for scalar TOML fields.
  *
- * Provides type-safe extraction and validation of scalar values from TOML configuration.
- * Supports chaining multiple validation rules (required, range checks, etc.).
+ * This class provides type-safe extraction and validation of single-value fields from
+ * TOML configuration using the method chaining pattern described above.
  *
- * Example usage:
+ * ## Available Validation Methods
+ *
+ * If any of the following methods are called, the corresponding validation is applied
+ * when extracting the value, and an error is thrown if the validation fails.
+ *
+ * - `required()`: Field must be present in the TOML
+ * - `greaterThan(value)`: Field must be > value
+ * - `greaterThanEqual(value)`: Field must be >= value
+ * - `lessThan(value)`: Field must be < value
+ * - `positive()`: Field must be > 0 (shorthand for greaterThan(0))
+ *
+ * ## Extraction Methods
+ *
+ * - `value()`: Extract validated value (throws if field missing or invalid)
+ * - `valueOr(default)`: Extract value or return default if field missing (throws if field is present and invalid)
+ *
+ * ## Complete Examples
+ *
  * @code
- * int value = validators::field<int>(config, "port")
- *               .required()
- *               .greaterThan(0)
- *               .value();
+ * // Required positive size_t field, parsed from toml::table config with key "num_steps"
+ * size_t num_steps = validators::field<size_t>(config, "num_steps")
+ *                     .required()       // Must be present
+ *                     .greaterThan(10)  // Must be greater than 10
+ *                     .value();         // Extract the value (throws if invalid or missing)
+ *
+ * // Optional double parameter with bounds, parsed from toml::table config with key "time_step"
+ * double time_step = validators::field<double>(config, "time_step")
+ *                      .greaterThanEqual(0.1)  // At least 0.1
+ *                      .lessThan(1000.0)       // Less than 1000
+ *                      .valueOr(50.0);         // Default to 50 if missing (throws if invalid)
+ *
+ * // Required positive frequency with multiple constraints, parsed from toml::table config with key "frequency"
+ * double frequency = validators::field<double>(config, "frequency")
+ *                      .required()     // Must be present
+ *                      .positive()     // Must be > 0
+ *                      .lessThan(1e9)  // Must be less than 1e9
+ *                      .value();       // Extract the value (throws if invalid or missing)
+ *
+ * // Optional boolean flag with default, parsed from toml::table config with key "enabled"
+ * bool enabled = validators::field<bool>(config, "enabled").valueOr(false);
+ *
+ * // Required string parameter, parsed from toml::table config with key "filename"
+ * std::string filename = validators::field<std::string>(config, "filename")
+ *                          .required()     // Must be present
+ *                          .value();       // Extract the value (throws if invalid or missing)
  * @endcode
+ *
+ * ## Error Behavior
+ *
+ * Throws ValidationError for missing required fields, type mismatches, or constraint violations.
+ * For optional fields: valueOr() returns default if missing, value() throws if missing.
  *
  * @tparam T Type of field to validate (int, double, string, bool, etc.)
  */
@@ -153,7 +240,7 @@ class Validator {
 
     if (less_than && result >= *less_than) {
       std::ostringstream oss;
-      oss << "must be > " << *less_than << ", got " << result;
+      oss << "must be < " << *less_than << ", got " << result;
       throw ValidationError(key, oss.str());
     }
 
@@ -202,21 +289,54 @@ class Validator {
 };
 
 /**
- * @brief Chainable validator for vector/array TOML fields.
+ * @brief Chainable validator for vector TOML fields.
  *
- * Provides type-safe extraction and validation of array values from TOML configuration.
- * Supports validation of both the array itself (length) and its elements (values).
+ * This class provides type-safe extraction and validation of array fields from
+ * TOML configuration using the method chaining pattern described above.
  *
- * Example usage:
+ * ## Available Validation Methods
+ *
+ * ### Vector-Level Validations:
+ * - `required()`: Vector field must be present in the TOML (throws if missing)
+ * - `minLength(size)`: Vector must have at least `size` elements
+ *
+ * ### Element-Level Validations:
+ * - `positive()`: All elements must be > 0 (only for numeric types)
+ *
+ * ## Extraction Methods
+ *
+ * - `value()`: Extract validated array (throws if field missing or invalid)
+ * - `valueOr(default)`: Extract array or return default if field missing
+ *
+ * ## Complete Examples
+ *
  * @code
- * auto values = validators::vectorField<double>(config, "frequencies")
- *                 .required()
- *                 .minLength(1)
- *                 .positive()
- *                 .value();
+ * // Parse required vector of positive doubles from toml::table config with key "frequencies"
+ * std::vector<double> frequencies = validators::vectorField<double>(config, "frequencies")
+ *                                    .required()    // Vector must exist
+ *                                    .minLength(1)  // Must have at least 1 element
+ *                                    .positive()    // All elements must be > 0
+ *                                    .value();      // Extract the vector (throws if invalid or missing)
+ *
+ * // Parse optional list of coefficients with constraints from toml::table config with key "coefficients"
+ * std::vector<double> coefficients = validators::vectorField<double>(config, "coefficients")
+ *                                     .minLength(1)                // If present, must not be empty
+ *                                     .positive()                  // All coefficients must be positive
+ *                                     .valueOr({1.1, 2.2, 3.3});   // Default values (throws if present and invalid)
  * @endcode
  *
- * @tparam T Element type of the vector (int, double, string, etc.)
+ * ## Error Behavior
+ *
+ * Throws ValidationError for missing required fields, wrong types, or constraint violations.
+ * For optional fields: valueOr() returns default if missing (throws if present and invalid), value() throws if missing.
+ *
+ * ## Type Requirements
+ *
+ * The element type T must be a type supported by the TOML library (int, double, string, bool).
+ * For numeric types, you can use the positive() validation. For other types, only
+ * array-level validations (required, length) are available.
+ *
+ * @tparam T Element type of the vector (int, double, string, bool, etc.)
  */
 template <typename T>
 class VectorValidator {
@@ -416,7 +536,7 @@ std::optional<std::vector<T>> getOptionalVector(const toml::node_view<toml::node
  * @param config Parent TOML table
  * @param key Name of the table field
  * @return Reference to the table
- * @throws Exits via logger if table is missing or wrong type
+ * @throws ValidationError if table is missing or wrong type
  */
 inline const toml::table& getRequiredTable(const toml::table& config, const std::string& key) {
   if (!config.contains(key)) {
@@ -434,7 +554,7 @@ inline const toml::table& getRequiredTable(const toml::table& config, const std:
 /**
  * @brief Extracts an optional array of tables from a TOML configuration.
  *
- * Returns an empty array if the key doesn't exist or isn't a array of tables.
+ * Returns an empty array if the key doesn't exist or isn't an array of tables.
  *
  * @param config Parent TOML table
  * @param key Name of the array of tables field
