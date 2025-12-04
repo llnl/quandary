@@ -345,7 +345,6 @@ class VectorValidator {
   std::string key;
   bool is_required = false;
   std::optional<size_t> min_length;
-  std::optional<size_t> max_length;
   bool is_positive = false;
 
  public:
@@ -415,12 +414,6 @@ class VectorValidator {
     if (min_length && result.size() < *min_length) {
       std::ostringstream oss;
       oss << "must have at least " << *min_length << " elements, got " << result.size();
-      throw ValidationError(key, oss.str());
-    }
-
-    if (max_length && result.size() > *max_length) {
-      std::ostringstream oss;
-      oss << "must have at most " << *max_length << " elements, got " << result.size();
       throw ValidationError(key, oss.str());
     }
 
