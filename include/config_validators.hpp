@@ -14,20 +14,19 @@
  *
  * ## How Method Chaining Works
  *
- * Each validation method (required(), greaterThan(), etc.) returns `*this`, which
+ * Each validation method (greaterThan(), positive(), etc.) returns `*this`, which
  * allows you to call another method on the same object. This creates a readable
  * chain of validation rules that execute from left to right.
  *
  * ## Basic Usage Pattern
  *
  * 1. Create a validator using field<T>() or vectorField<T>()
- * 2. Chain validation methods (required(), positive(), etc.)
+ * 2. Chain validation methods (positive(), greaterThan(), etc.)
  * 3. Extract the value using value() or valueOr(default)
  *
  * @code
  * // Parse required positive double from toml::table config with key "step_size"
  * double step_size = validators::field<double>(config, "step_size")
- *                     .required()
  *                     .positive()
  *                     .value();
  *
@@ -37,7 +36,6 @@
  *
  * // Parse required vector of positive doubles from toml::table config with key "frequencies"
  * std::vector<double> frequencies = validators::vectorField<double>(config, "frequencies")
- *                                    .required()
  *                                    .minLength(1)
  *                                    .positive()
  *                                    .value();
@@ -46,7 +44,7 @@
  * ## Error Handling
  *
  * All validators throw ValidationError with descriptive messages when validation fails.
- * This includes missing required fields, type mismatches, and constraint violations.
+ * This includes missing fields, type mismatches, and constraint violations.
  *
  * ## Supported Types
  *
@@ -93,7 +91,6 @@ class ValidationError : public std::runtime_error {
  * If any of the following methods are called, the corresponding validation is applied
  * when extracting the value, and an error is thrown if the validation fails.
  *
- * - `required()`: Field must be present in the TOML
  * - `greaterThan(value)`: Field must be > value
  * - `greaterThanEqual(value)`: Field must be >= value
  * - `lessThan(value)`: Field must be < value
@@ -109,7 +106,6 @@ class ValidationError : public std::runtime_error {
  * @code
  * // Required positive size_t field, parsed from toml::table config with key "num_steps"
  * size_t num_steps = validators::field<size_t>(config, "num_steps")
- *                     .required()       // Must be present
  *                     .greaterThan(10)  // Must be greater than 10
  *                     .value();         // Extract the value (throws if invalid or missing)
  *
@@ -121,7 +117,6 @@ class ValidationError : public std::runtime_error {
  *
  * // Required positive frequency with multiple constraints, parsed from toml::table config with key "frequency"
  * double frequency = validators::field<double>(config, "frequency")
- *                      .required()     // Must be present
  *                      .positive()     // Must be > 0
  *                      .lessThan(1e9)  // Must be less than 1e9
  *                      .value();       // Extract the value (throws if invalid or missing)
@@ -131,14 +126,13 @@ class ValidationError : public std::runtime_error {
  *
  * // Required string parameter, parsed from toml::table config with key "filename"
  * std::string filename = validators::field<std::string>(config, "filename")
- *                          .required()     // Must be present
  *                          .value();       // Extract the value (throws if invalid or missing)
  * @endcode
  *
  * ## Error Behavior
  *
- * Throws ValidationError for missing required fields, type mismatches, or constraint violations.
- * For optional fields: valueOr() returns default if missing, value() throws if missing.
+ * Throws ValidationError for missing fields (when using value()), type mismatches, or constraint violations.
+ * Use value() when field must exist, valueOr() when field is optional.
  *
  * @tparam T Type of field to validate (int, double, string, bool, etc.)
  */
@@ -147,23 +141,12 @@ class Validator {
  private:
   const toml::table& config;
   std::string key;
-  bool is_required = false;
   std::optional<T> greater_than;
   std::optional<T> greater_than_equal;
   std::optional<T> less_than;
 
  public:
   Validator(const toml::table& config_, const std::string& key_) : config(config_), key(key_) {}
-
-  /**
-   * @brief Marks field as required (will error if missing).
-   *
-   * @return Reference to this validator for chaining
-   */
-  Validator& required() {
-    is_required = true;
-    return *this;
-  }
 
   /**
    * @brief Requires value to be strictly greater than threshold.
@@ -251,7 +234,7 @@ class Validator {
   /**
    * @brief Extracts and validates the field value.
    *
-   * Throws ValidationError if the field is required and missing,
+   * Throws ValidationError if the field is missing
    * or if any validation rules fail.
    *
    * @return The validated field value
@@ -260,9 +243,6 @@ class Validator {
   T value() {
     auto val = extractValue();
 
-    if (!val && is_required) {
-      throw ValidationError(key, "field is required");
-    }
     if (!val) {
       throw ValidationError(key, "field not found");
     }
@@ -297,7 +277,6 @@ class Validator {
  * ## Available Validation Methods
  *
  * ### Vector-Level Validations:
- * - `required()`: Vector field must be present in the TOML (throws if missing)
  * - `minLength(size)`: Vector must have at least `size` elements
  *
  * ### Element-Level Validations:
@@ -313,7 +292,6 @@ class Validator {
  * @code
  * // Parse required vector of positive doubles from toml::table config with key "frequencies"
  * std::vector<double> frequencies = validators::vectorField<double>(config, "frequencies")
- *                                    .required()    // Vector must exist
  *                                    .minLength(1)  // Must have at least 1 element
  *                                    .positive()    // All elements must be > 0
  *                                    .value();      // Extract the vector (throws if invalid or missing)
@@ -327,14 +305,14 @@ class Validator {
  *
  * ## Error Behavior
  *
- * Throws ValidationError for missing required fields, wrong types, or constraint violations.
- * For optional fields: valueOr() returns default if missing (throws if present and invalid), value() throws if missing.
+ * Throws ValidationError for missing fields (when using value()), wrong types, or constraint violations.
+ * Use value() when field must exist, valueOr() when field is optional.
  *
  * ## Type Requirements
  *
  * The element type T must be a type supported by the TOML library (int, double, string, bool).
  * For numeric types, you can use the positive() validation. For other types, only
- * array-level validations (required, length) are available.
+ * array-level validations (length) are available.
  *
  * @tparam T Element type of the vector (int, double, string, bool, etc.)
  */
@@ -343,22 +321,11 @@ class VectorValidator {
  private:
   const toml::table& config;
   std::string key;
-  bool is_required = false;
   std::optional<size_t> min_length;
   bool is_positive = false;
 
  public:
   VectorValidator(const toml::table& config_, const std::string& key_) : config(config_), key(key_) {}
-
-  /**
-   * @brief Marks field as required (will error if missing).
-   *
-   * @return Reference to this validator for chaining
-   */
-  VectorValidator& required() {
-    is_required = true;
-    return *this;
-  }
 
   /**
    * @brief Requires minimum vector length.
@@ -440,9 +407,6 @@ class VectorValidator {
   std::vector<T> value() {
     auto val = extractVector();
 
-    if (!val && is_required) {
-      throw ValidationError(key, "field is required");
-    }
     if (!val) {
       throw ValidationError(key, "field not found");
     }

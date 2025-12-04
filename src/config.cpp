@@ -37,7 +37,7 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     }
     auto system = *table["system"].as_table();
 
-    nlevels = validators::vectorField<size_t>(system, "nlevels").required().minLength(1).positive().value();
+    nlevels = validators::vectorField<size_t>(system, "nlevels").minLength(1).positive().value();
 
     size_t num_osc = nlevels.size();
     size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
@@ -49,7 +49,7 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
 
     dt = validators::field<double>(system, "dt").positive().valueOr(dt);
 
-    transfreq = validators::vectorField<double>(system, "transfreq").required().minLength(1).value();
+    transfreq = validators::vectorField<double>(system, "transfreq").minLength(1).value();
     copyLast(transfreq, num_osc);
 
     selfkerr =
@@ -64,7 +64,7 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     Jkl = validators::vectorField<double>(system, "Jkl").minLength(1).valueOr(std::vector<double>(num_pairs_osc, 0.0));
     copyLast(Jkl, num_pairs_osc);
 
-    rotfreq = validators::vectorField<double>(system, "rotfreq").required().minLength(1).value();
+    rotfreq = validators::vectorField<double>(system, "rotfreq").minLength(1).value();
     copyLast(rotfreq, num_osc);
 
     std::string collapse_type_str = validators::field<std::string>(system, "collapse_type").valueOr("none");
@@ -77,7 +77,7 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     copyLast(dephase_time, num_osc);
 
     auto init_cond_table = validators::getRequiredTable(system, "initial_condition");
-    std::string type_str = validators::field<std::string>(init_cond_table, "type").required().value();
+    std::string type_str = validators::field<std::string>(init_cond_table, "type").value();
     std::optional<std::vector<size_t>> levels = validators::getOptionalVector<size_t>(init_cond_table["levels"]);
     std::optional<std::vector<size_t>> osc_IDs = validators::getOptionalVector<size_t>(init_cond_table["oscIDs"]);
     std::optional<std::string> filename = init_cond_table["filename"].value<std::string>();
@@ -88,10 +88,10 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     auto apply_pipulse_array_of_tables = validators::getOptionalArrayOfTables(system, "apply_pipulse");
     for (auto& elem : apply_pipulse_array_of_tables) {
       auto table = *elem.as_table();
-      size_t oscilID = validators::field<size_t>(table, "oscID").required().value();
-      double tstart = validators::field<double>(table, "tstart").required().value();
-      double tstop = validators::field<double>(table, "tstop").required().value();
-      double amp = validators::field<double>(table, "amp").required().value();
+      size_t oscilID = validators::field<size_t>(table, "oscID").value();
+      double tstart = validators::field<double>(table, "tstart").value();
+      double tstop = validators::field<double>(table, "tstop").value();
+      double amp = validators::field<double>(table, "amp").value();
 
       addPiPulseSegment(apply_pipulse, oscilID, tstart, tstop, amp);
     }
@@ -112,7 +112,7 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     if (control_seg_node.is_array_of_tables()) {
       for (auto& elem : *control_seg_node.as_array()) {
         auto table = *elem.as_table();
-        size_t oscilID = validators::field<size_t>(table, "oscID").required().value();
+        size_t oscilID = validators::field<size_t>(table, "oscID").value();
         ControlSegment control_seg = parseControlSegment(table);
         control_segments_parsed[oscilID].push_back(control_seg);
       }
@@ -126,7 +126,7 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
       if (init_node.is_array_of_tables()) {
         for (auto& elem : *init_node.as_array()) {
           auto table = *elem.as_table();
-          std::string type = validators::field<std::string>(table, "type").required().value();
+          std::string type = validators::field<std::string>(table, "type").value();
 
           auto type_enum = parseEnum(type, CONTROL_SEGMENT_INIT_TYPE_MAP);
           if (!type_enum.has_value()) {
@@ -135,20 +135,20 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
 
           switch (type_enum.value()) {
             case ControlSegmentInitType::FILE: {
-              std::string filename = validators::field<std::string>(table, "filename").required().value();
+              std::string filename = validators::field<std::string>(table, "filename").value();
               control_initialization_file = filename;
               break;
             }
             case ControlSegmentInitType::CONSTANT: {
-              size_t oscID = validators::field<size_t>(table, "oscID").required().value();
-              double amplitude = validators::field<double>(table, "amplitude").required().value();
+              size_t oscID = validators::field<size_t>(table, "oscID").value();
+              double amplitude = validators::field<double>(table, "amplitude").value();
               double phase = validators::field<double>(table, "phase").valueOr(0.0);
               ControlSegmentInitialization init = {ControlSegmentInitType::CONSTANT, amplitude, phase};
               osc_inits[oscID].push_back(init);
               break;
             }
             case ControlSegmentInitType::RANDOM: {
-              size_t oscID = validators::field<size_t>(table, "oscID").required().value();
+              size_t oscID = validators::field<size_t>(table, "oscID").value();
               double amplitude = validators::field<double>(table, "amplitude").valueOr(0.1);
               double phase = validators::field<double>(table, "phase").valueOr(0.0);
               ControlSegmentInitialization init = {ControlSegmentInitType::RANDOM, amplitude, phase};
@@ -166,8 +166,8 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
       control_bounds_opt = std::map<int, std::vector<double>>();
       for (auto& elem : *control_bounds_node.as_array()) {
         auto table = *elem.as_table();
-        size_t oscilID = validators::field<size_t>(table, "oscID").required().value();
-        (*control_bounds_opt)[oscilID] = validators::vectorField<double>(table, "values").required().value();
+        size_t oscilID = validators::field<size_t>(table, "oscID").value();
+        (*control_bounds_opt)[oscilID] = validators::vectorField<double>(table, "values").value();
       }
     }
     std::optional<std::map<int, std::vector<double>>> carrier_freq_opt = std::nullopt;
@@ -176,8 +176,8 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
       carrier_freq_opt = std::map<int, std::vector<double>>();
       for (auto& elem : *carrier_freq_node.as_array()) {
         auto table = *elem.as_table();
-        size_t oscilID = validators::field<size_t>(table, "oscID").required().value();
-        (*carrier_freq_opt)[oscilID] = validators::vectorField<double>(table, "values").required().value();
+        size_t oscilID = validators::field<size_t>(table, "oscID").value();
+        (*carrier_freq_opt)[oscilID] = validators::vectorField<double>(table, "values").value();
       }
     }
 
@@ -218,7 +218,7 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     std::optional<OptimTargetData> optim_target_config;
     if (optimization.contains("optim_target")) {
       auto target_table = *optimization["optim_target"].as_table();
-      std::string type_str = validators::field<std::string>(target_table, "target_type").required().value();
+      std::string type_str = validators::field<std::string>(target_table, "target_type").value();
       std::optional<std::string> gate_type_str = target_table["gate_type"].value<std::string>();
       std::optional<std::string> gate_file = target_table["gate_file"].value<std::string>();
       std::optional<std::vector<size_t>> levels = validators::getOptionalVector<size_t>(target_table["levels"]);
@@ -276,9 +276,9 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     auto write_array = validators::getOptionalArrayOfTables(output, "write");
     for (auto& elem : write_array) {
       auto table = *elem.as_table();
-      size_t oscilID = validators::field<size_t>(table, "oscID").required().lessThan(num_osc).value();
+      size_t oscilID = validators::field<size_t>(table, "oscID").lessThan(num_osc).value();
 
-      std::vector<std::string> types_str = validators::vectorField<std::string>(table, "type").required().value();
+      std::vector<std::string> types_str = validators::vectorField<std::string>(table, "type").value();
       output_to_write[oscilID] = convertStringVectorToEnum(types_str, OUTPUT_TYPE_MAP);
     }
 
@@ -1012,7 +1012,7 @@ ControlSegment Config::parseControlSegment(const ControlSegmentData& seg_config)
 ControlSegment Config::parseControlSegment(const toml::table& table) const {
   ControlSegment segment;
 
-  std::string type_str = validators::field<std::string>(table, "type").required().value();
+  std::string type_str = validators::field<std::string>(table, "type").value();
   std::optional<ControlType> type = parseEnum(type_str, CONTROL_TYPE_MAP);
   if (!type.has_value()) {
     logger.exitWithError("Unrecognized type '" + type_str + "' in control segment.");
@@ -1023,7 +1023,7 @@ ControlSegment Config::parseControlSegment(const toml::table& table) const {
     case ControlType::BSPLINE:
     case ControlType::BSPLINE0: {
       SplineParams spline_params;
-      spline_params.nspline = validators::field<size_t>(table, "num").required().value();
+      spline_params.nspline = validators::field<size_t>(table, "num").value();
       spline_params.tstart = validators::field<double>(table, "tstart").valueOr(0.0);
       spline_params.tstop = validators::field<double>(table, "tstop").valueOr(ntime * dt);
       segment.params = spline_params;
@@ -1031,8 +1031,8 @@ ControlSegment Config::parseControlSegment(const toml::table& table) const {
     }
     case ControlType::BSPLINEAMP: {
       SplineAmpParams spline_amp_params;
-      spline_amp_params.nspline = validators::field<size_t>(table, "num").required().value();
-      spline_amp_params.scaling = validators::field<double>(table, "scaling").required().value();
+      spline_amp_params.nspline = validators::field<size_t>(table, "num").value();
+      spline_amp_params.scaling = validators::field<double>(table, "scaling").value();
       spline_amp_params.tstart = validators::field<double>(table, "tstart").valueOr(0.0);
       spline_amp_params.tstop = validators::field<double>(table, "tstop").valueOr(ntime * dt);
       segment.params = spline_amp_params;
@@ -1040,9 +1040,9 @@ ControlSegment Config::parseControlSegment(const toml::table& table) const {
     }
     case ControlType::STEP:
       StepParams step_params;
-      step_params.step_amp1 = validators::field<double>(table, "step_amp1").required().value();
-      step_params.step_amp2 = validators::field<double>(table, "step_amp2").required().value();
-      step_params.tramp = validators::field<double>(table, "tramp").required().value();
+      step_params.step_amp1 = validators::field<double>(table, "step_amp1").value();
+      step_params.step_amp2 = validators::field<double>(table, "step_amp2").value();
+      step_params.tramp = validators::field<double>(table, "tramp").value();
       step_params.tstart = validators::field<double>(table, "tstart").valueOr(0.0);
       step_params.tstop = validators::field<double>(table, "tstop").valueOr(ntime * dt);
       segment.params = step_params;
@@ -1076,13 +1076,13 @@ std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlIniti
 }
 
 ControlSegmentInitialization Config::parseControlInitialization(const toml::table& table) const {
-  std::string type_str = validators::field<std::string>(table, "type").required().value();
+  std::string type_str = validators::field<std::string>(table, "type").value();
 
   std::optional<ControlSegmentInitType> type = parseEnum(type_str, CONTROL_SEGMENT_INIT_TYPE_MAP);
   if (!type.has_value()) {
     logger.exitWithError("Unrecognized type '" + type_str + "' in control initialization.");
   }
-  return ControlSegmentInitialization{type.value(), validators::field<double>(table, "amplitude").required().value(),
+  return ControlSegmentInitialization{type.value(), validators::field<double>(table, "amplitude").value(),
                                       validators::field<double>(table, "phase").valueOr(0.0)};
 }
 
