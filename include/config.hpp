@@ -11,6 +11,7 @@
 #include <variant>
 #include <vector>
 
+#include "config_defaults.hpp"
 #include "config_types.hpp"
 #include "defs.hpp"
 #include "mpi_logger.hpp"
@@ -94,11 +95,11 @@ using InitialCondition = std::variant<FromFileInitialCondition, PureInitialCondi
  * Groups all optimization stopping criteria and iteration limits.
  */
 struct OptimTolerance {
-  double atol = 1e-8; ///< Absolute gradient tolerance
-  double rtol = 1e-4; ///< Relative gradient tolerance
-  double ftol = 1e-8; ///< Final time cost tolerance
-  double inftol = 1e-5; ///< Infidelity tolerance
-  size_t maxiter = 200; ///< Maximum iterations
+  double atol = ConfigDefaults::OPTIM_ATOL; ///< Absolute gradient tolerance
+  double rtol = ConfigDefaults::OPTIM_RTOL; ///< Relative gradient tolerance
+  double ftol = ConfigDefaults::OPTIM_FTOL; ///< Final time cost tolerance
+  double inftol = ConfigDefaults::OPTIM_INFTOL; ///< Infidelity tolerance
+  size_t maxiter = ConfigDefaults::OPTIM_MAXITER; ///< Maximum iterations
 };
 
 /**
@@ -107,18 +108,18 @@ struct OptimTolerance {
  * Groups all penalty terms used for control pulse regularization.
  */
 struct OptimPenalty {
-  double penalty = 0.0; ///< First integral penalty coefficient
-  double penalty_param = 0.5; ///< Gaussian variance parameter
-  double penalty_dpdm = 0.0; ///< Second derivative penalty coefficient
-  double penalty_energy = 0.0; ///< Energy penalty coefficient
-  double penalty_variation = 0.01; ///< Amplitude variation penalty coefficient
+  double penalty = ConfigDefaults::PENALTY; ///< First integral penalty coefficient
+  double penalty_param = ConfigDefaults::PENALTY_PARAM; ///< Gaussian variance parameter
+  double penalty_dpdm = ConfigDefaults::PENALTY_DPDM; ///< Second derivative penalty coefficient
+  double penalty_energy = ConfigDefaults::PENALTY_ENERGY; ///< Energy penalty coefficient
+  double penalty_variation = ConfigDefaults::PENALTY_VARIATION; ///< Amplitude variation penalty coefficient
 };
 
 /**
  * @brief Gate-based optimization target.
  */
 struct GateOptimTarget {
-  GateType gate_type = GateType::NONE; ///< Gate type (for gate targets)
+  GateType gate_type = ConfigDefaults::GATE_TYPE; ///< Gate type (for gate targets)
   std::string gate_file; ///< Gate file (for gate from file)
 
   std::string toString() const {
@@ -247,27 +248,20 @@ struct ControlSegmentInitialization {
  */
 class Config {
  private:
-  // Default values for repeated constants
-  static constexpr double DEFAULT_CONTROL_BOUND = 10000.0;
-  static constexpr double DEFAULT_CARRIER_FREQ = 0.0;
-  static constexpr size_t DEFAULT_SPLINE_COUNT = 10;
-  static constexpr double DEFAULT_CONTROL_INIT_AMPLITUDE = 0.0;
-  static constexpr double DEFAULT_CONTROL_INIT_PHASE = 0.0;
-
   // Logging
   MPILogger logger; ///< MPI-aware logger for output messages.
 
   // General options
   std::vector<size_t> nlevels; ///< Number of levels per subsystem
   std::vector<size_t> nessential; ///< Number of essential levels per subsystem (Default: same as nlevels)
-  size_t ntime = 1000; ///< Number of time steps used for time-integration
-  double dt = 0.1; ///< Time step size (ns). Determines final time: T=ntime*dt
+  size_t ntime = ConfigDefaults::NTIME; ///< Number of time steps used for time-integration
+  double dt = ConfigDefaults::DT; ///< Time step size (ns). Determines final time: T=ntime*dt
   std::vector<double> transfreq; ///< Fundamental transition frequencies for each oscillator (GHz)
   std::vector<double> selfkerr; ///< Self-kerr frequencies for each oscillator (GHz)
   std::vector<double> crosskerr; ///< Cross-kerr coupling frequencies for each oscillator coupling (GHz)
   std::vector<double> Jkl; ///< Dipole-dipole coupling frequencies for each oscillator coupling (GHz)
   std::vector<double> rotfreq; ///< Rotational wave approximation frequencies for each subsystem (GHz)
-  LindbladType collapse_type = LindbladType::NONE; ///< Switch between Schroedinger and Lindblad solver
+  LindbladType collapse_type = ConfigDefaults::COLLAPSE_TYPE_ENUM; ///< Switch between Schroedinger and Lindblad solver
   std::vector<double> decay_time; ///< Time of decay collapse operation (T1) per oscillator (for Lindblad solver)
   std::vector<double> dephase_time; ///< Time of dephase collapse operation (T2) per oscillator (for Lindblad solver)
   size_t n_initial_conditions; ///< Number of initial conditions
@@ -277,7 +271,7 @@ class Config {
   std::optional<std::string> hamiltonian_file_Hc; ///< File to read the control Hamiltonian from
 
   // Optimization options
-  bool control_enforceBC = true; ///< Decide whether control pulses should start and end at zero
+  bool control_enforceBC = ConfigDefaults::CONTROL_ENFORCE_BC; ///< Decide whether control pulses should start and end at zero
   std::optional<std::string> control_initialization_file; ///< Global control initialization file for all oscillators
   std::vector<std::vector<ControlSegment>> control_segments; ///< Control segments for each oscillator
   std::vector<std::vector<ControlSegmentInitialization>>
@@ -287,24 +281,23 @@ class Config {
   OptimTargetSettings optim_target; ///< Grouped optimization target configuration
   std::vector<double> gate_rot_freq =
       std::vector<double>{0.0}; ///< Frequency of rotation of the target gate, for each oscillator (GHz)
-  ObjectiveType optim_objective = ObjectiveType::JFROBENIUS; ///< Objective function measure
+  ObjectiveType optim_objective = ConfigDefaults::OPTIM_OBJECTIVE; ///< Objective function measure
   std::vector<double> optim_weights; ///< Weights for summing up the objective function
   OptimTolerance tolerance; ///< Grouped optimization stopping criteria and iteration limits
-  double optim_regul = 1e-4; ///< Coefficient of Tikhonov regularization for the design variables
+  double optim_regul = ConfigDefaults::OPTIM_REGUL; ///< Coefficient of Tikhonov regularization for the design variables
   OptimPenalty penalty; ///< Grouped optimization penalty coefficients
-  bool optim_regul_tik0 = false; ///< Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
+  bool optim_regul_tik0 = ConfigDefaults::OPTIM_REGUL_TIK0; ///< Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
 
   // Output and runtypes
-  std::string datadir = "./data_out"; ///< Directory for output files
+  std::string datadir = ConfigDefaults::DATADIR; ///< Directory for output files
   std::vector<std::vector<OutputType>> output_to_write; ///< Specify the desired output for each oscillator
-  size_t output_frequency = 1; ///< Output frequency in the time domain: write output every <num> time-step
-  size_t optim_monitor_frequency = 10; ///< Frequency of writing output during optimization iterations
-  RunType runtype = RunType::SIMULATION; ///< Runtype options: simulation, gradient, or optimization
-  bool usematfree = false; ///< Use matrix free solver, instead of sparse matrix implementation
-  LinearSolverType linearsolver_type =
-      LinearSolverType::GMRES; ///< Solver type for solving the linear system at each time step
-  size_t linearsolver_maxiter = 10; ///< Set maximum number of iterations for the linear solver
-  TimeStepperType timestepper_type = TimeStepperType::IMR; ///< The time-stepping algorithm
+  size_t output_frequency = ConfigDefaults::OUTPUT_FREQUENCY; ///< Output frequency in the time domain: write output every <num> time-step
+  size_t optim_monitor_frequency = ConfigDefaults::OPTIM_MONITOR_FREQUENCY; ///< Frequency of writing output during optimization iterations
+  RunType runtype = ConfigDefaults::RUNTYPE; ///< Runtype options: simulation, gradient, or optimization
+  bool usematfree = ConfigDefaults::USEMATFREE; ///< Use matrix free solver, instead of sparse matrix implementation
+  LinearSolverType linearsolver_type = ConfigDefaults::LINEARSOLVER_TYPE; ///< Solver type for solving the linear system at each time step
+  size_t linearsolver_maxiter = ConfigDefaults::LINEARSOLVER_MAXITER; ///< Set maximum number of iterations for the linear solver
+  TimeStepperType timestepper_type = ConfigDefaults::TIMESTEPPER_TYPE; ///< The time-stepping algorithm
   int rand_seed; ///< Fixed seed for the random number generator for reproducibility
 
  public:

@@ -292,3 +292,20 @@ std::optional<T> parseEnum(const std::string& str, const std::map<std::string, T
     return std::nullopt;
   }
 }
+
+/**
+ * @brief Generic enum parsing utility with case-insensitive lookup and default fallback.
+ *
+ * @param opt_str Optional string value to parse into enum
+ * @param enum_map Map from string to enum values
+ * @param default_value Default enum value to return if string is missing or invalid
+ * @return T Parsed enum value or default_value if not found
+ */
+template<typename T>
+T parseEnum(const std::optional<std::string>& opt_str, const std::map<std::string, T>& enum_map, const T& default_value) {
+  if (!opt_str.has_value()) {
+    return default_value;
+  }
+  auto result = parseEnum(opt_str.value(), enum_map);
+  return result.value_or(default_value);
+}
