@@ -1,4 +1,3 @@
-[system]
 nlevels = [2, 2]
 ntime = 1000
 dt = 0.1
@@ -12,8 +11,6 @@ decay_time = [0.0, 0.0]
 dephase_time = [0.0, 0.0]
 crosskerr = [0.1]
 Jkl = [0.0]
-
-[optimization]
 control_enforceBC = false
 optim_target = {target_type = "gate", gate_type = "cnot"}
 gate_rot_freq = [4.10595, 4.81526]
@@ -32,43 +29,42 @@ optim_regul_tik0 = false
 optim_penalty_dpdm = 0.0
 optim_penalty_variation = 0.0
 
-[[optimization.control_segments]]
+[[control_segments]]
 oscID = 0
 type = "spline"
 num = 150
 
-[[optimization.control_segments]]
+[[control_segments]]
 oscID = 1
 type = "spline"
 num = 150
 
-[[optimization.control_bounds]]
+[[control_bounds]]
 oscID = 0
 values = [0.008]
 
-[[optimization.control_bounds]]
+[[control_bounds]]
 oscID = 1
 values = [0.008]
 
-[[optimization.control_initialization]]
+[[control_initialization]]
 oscID = 0
 type = "constant"
 amplitude = 0.005
 
-[[optimization.control_initialization]]
+[[control_initialization]]
 oscID = 1
 type = "constant"
 amplitude = 0.005
 
-[[optimization.carrier_frequency]]
+[[carrier_frequency]]
 oscID = 0
 values = [0.0, -0.2198, -0.1]
 
-[[optimization.carrier_frequency]]
+[[carrier_frequency]]
 oscID = 1
 values = [0.0, -0.2252, -0.1]
 
-[output]
 runtype = "optimization"
 usematfree = true
 datadir = "./data_out"
@@ -79,10 +75,10 @@ linearsolver_maxiter = 20
 timestepper = "IMR"
 rand_seed = 1234
 
-[[output.write]]
+[[write]]
 oscID = 0
 type = ["population", "expectedEnergy"]
 
-[[output.write]]
+[[write]]
 oscID = 1
 type = ["population", "expectedEnergy"]

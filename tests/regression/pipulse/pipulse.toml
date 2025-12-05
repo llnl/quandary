@@ -1,4 +1,3 @@
-[system]
 nlevels = [3]
 nessential = [2]
 ntime = 10000
@@ -13,13 +12,12 @@ decay_time = [20.0]
 dephase_time = [26.0]
 initial_condition = {type = "basis"}
 
-[[system.apply_pipulse]]
+[[apply_pipulse]]
 oscID = 0
 tstart = 0.01
 tstop = 0.8
 amp = 15.10381
 
-[optimization]
 control_enforceBC = true
 optim_target = {target_type = "pure", levels = [0]}
 optim_objective = "Jmeasure"
@@ -36,25 +34,24 @@ optim_penalty_dpdm = 0.0
 optim_penalty_energy = 0.0
 optim_penalty_variation = 0.01
 
-[[optimization.control_segments]]
+[[control_segments]]
 oscID = 0
 type = "spline"
 num = 30
 
-[[optimization.control_bounds]]
+[[control_bounds]]
 oscID = 0
 values = [15.0]
 
-[[optimization.control_initialization]]
+[[control_initialization]]
 oscID = 0
 type = "constant"
 amplitude = 0.0
 
-[[optimization.carrier_frequency]]
+[[carrier_frequency]]
 oscID = 0
 values = [0.0]
 
-[output]
 datadir = "data_out"
 output_frequency = 1
 optim_monitor_frequency = 100
@@ -64,6 +61,6 @@ linearsolver_type = "gmres"
 linearsolver_maxiter = 20
 timestepper = "IMR"
 
-[[output.write]]
+[[write]]
 oscID = 0
 type = ["expectedEnergy", "population", "fullstate"]

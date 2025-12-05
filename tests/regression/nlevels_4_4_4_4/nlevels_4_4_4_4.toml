@@ -1,4 +1,3 @@
-[system]
 nlevels = [4, 4, 4, 4]
 ntime = 500
 dt = 0.01
@@ -12,7 +11,6 @@ decay_time = [0.0, 0.0, 0.0, 0.0]
 dephase_time = [0.0, 0.0, 0.0, 0.0]
 initial_condition = {type = "pure", levels = [1, 0, 0, 0]}
 
-[optimization]
 control_enforceBC = false
 optim_target = {target_type = "pure", levels = [0, 0, 0, 0]}
 optim_objective = "Jtrace"
@@ -30,79 +28,78 @@ optim_penalty_energy = 0.0
 optim_penalty_variation = 0.0
 optim_regul_tik0 = false
 
-[[optimization.control_segments]]
+[[control_segments]]
 oscID = 0
 type = "spline"
 num = 15
 
-[[optimization.control_segments]]
+[[control_segments]]
 oscID = 1
 type = "spline"
 num = 15
 
-[[optimization.control_segments]]
+[[control_segments]]
 oscID = 2
 type = "spline"
 num = 15
 
-[[optimization.control_segments]]
+[[control_segments]]
 oscID = 3
 type = "spline"
 num = 15
 
-[[optimization.control_bounds]]
+[[control_bounds]]
 oscID = 0
 values = [0.008]
 
-[[optimization.control_bounds]]
+[[control_bounds]]
 oscID = 1
 values = [0.008]
 
-[[optimization.control_bounds]]
+[[control_bounds]]
 oscID = 2
 values = [0.008]
 
-[[optimization.control_bounds]]
+[[control_bounds]]
 oscID = 3
 values = [0.008]
 
-[[optimization.control_initialization]]
+[[control_initialization]]
 oscID = 0
 type = "constant"
 amplitude = 0.005
 
-[[optimization.control_initialization]]
+[[control_initialization]]
 oscID = 1
 type = "constant"
 amplitude = 0.005
 
-[[optimization.control_initialization]]
+[[control_initialization]]
 oscID = 2
 type = "constant"
 amplitude = 0.005
 
-[[optimization.control_initialization]]
+[[control_initialization]]
 oscID = 3
 type = "constant"
 amplitude = 0.005
 
-[[optimization.carrier_frequency]]
+[[carrier_frequency]]
 oscID = 0
 values = [0.0, -0.2, -0.001]
 
-[[optimization.carrier_frequency]]
+[[carrier_frequency]]
 oscID = 1
 values = [0.0, -0.2, -0.001]
 
-[[optimization.carrier_frequency]]
+[[carrier_frequency]]
 oscID = 2
 values = [0.0, -0.2, -0.001]
 
-[[optimization.carrier_frequency]]
+[[carrier_frequency]]
 oscID = 3
 values = [0.0, -0.2, -0.001]
 
-[output]
 datadir = "./data_out"
 output_frequency = 1
 optim_monitor_frequency = 1
@@ -113,18 +110,18 @@ linearsolver_maxiter = 20
 timestepper = "IMR"
 rand_seed = 1234
 
-[[output.write]]
+[[write]]
 oscID = 0
 type = ["expectedEnergy", "population", "expectedEnergyComposite", "populationComposite"]
 
-[[output.write]]
+[[write]]
 oscID = 1
 type = ["expectedEnergy", "population"]
 
-[[output.write]]
+[[write]]
 oscID = 2
 type = ["expectedEnergy", "population"]
 
-[[output.write]]
+[[write]]
 oscID = 3
 type = ["expectedEnergy", "population"]
