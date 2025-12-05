@@ -40,9 +40,9 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     nessential = validators::vectorField<size_t>(table, "nessential").minLength(1).positive().valueOr(nlevels);
     copyLast(nessential, num_osc);
 
-    ntime = validators::field<size_t>(table, "ntime").positive().valueOr(ntime);
+    ntime = table["ntime"].value_or(ConfigDefaults::NTIME);
 
-    dt = validators::field<double>(table, "dt").positive().valueOr(dt);
+    dt = table["dt"].value_or(ConfigDefaults::DT);
 
     transfreq = validators::vectorField<double>(table, "transfreq").minLength(1).value();
     copyLast(transfreq, num_osc);
@@ -203,7 +203,7 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
 
     carrier_frequencies = parseIndexedWithDefaults<double>(carrier_freq_opt, num_osc, {ConfigDefaults::CARRIER_FREQ});
 
-    control_enforceBC = validators::field<bool>(table, "control_enforceBC").valueOr(control_enforceBC);
+    control_enforceBC = table["control_enforceBC"].value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
 
     // optim_target
     std::optional<OptimTargetData> optim_target_config;
@@ -218,8 +218,7 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     }
     optim_target = parseOptimTarget(optim_target_config, nlevels);
 
-    gate_rot_freq =
-        validators::vectorField<double>(table, "gate_rot_freq").valueOr(std::vector<double>(num_osc, 0.0));
+    gate_rot_freq = validators::vectorField<double>(table, "gate_rot_freq").valueOr(std::vector<double>(num_osc, 0.0));
     copyLast(gate_rot_freq, num_osc);
 
     optim_objective = parseEnum(table["optim_objective"].value<std::string>(), OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
@@ -255,9 +254,9 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
       optim_regul_tik0 = validators::field<bool>(table, "optim_regul_interpolate").value();
       logger.log("# Warning: 'optim_regul_interpolate' is deprecated. Please use 'optim_regul_tik0' instead.\n");
     }
-    optim_regul_tik0 = validators::field<bool>(table, "optim_regul_tik0").valueOr(optim_regul_tik0);
+    optim_regul_tik0 = table["optim_regul_tik0"].value_or(ConfigDefaults::OPTIM_REGUL_TIK0);
 
-    datadir = validators::field<std::string>(table, "datadir").valueOr(datadir);
+    datadir = table["datadir"].value_or(ConfigDefaults::DATADIR);
 
     output_to_write.resize(num_osc); // Empty vectors by default
     auto write_array = validators::getOptionalArrayOfTables(table, "write");
@@ -269,22 +268,20 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
       output_to_write[oscilID] = convertStringVectorToEnum(types_str, OUTPUT_TYPE_MAP);
     }
 
-    output_frequency = validators::field<size_t>(table, "output_frequency").positive().valueOr(output_frequency);
-    optim_monitor_frequency =
-        validators::field<size_t>(table, "optim_monitor_frequency").positive().valueOr(optim_monitor_frequency);
+    output_frequency = table["output_frequency"].value_or(ConfigDefaults::OUTPUT_FREQUENCY);
+    optim_monitor_frequency = table["optim_monitor_frequency"].value_or(ConfigDefaults::OPTIM_MONITOR_FREQUENCY);
 
     runtype = parseEnum(table["runtype"].value<std::string>(), RUN_TYPE_MAP, ConfigDefaults::RUNTYPE);
 
-    usematfree = validators::field<bool>(table, "usematfree").valueOr(usematfree);
+    usematfree = table["usematfree"].value_or(ConfigDefaults::USEMATFREE);
 
     linearsolver_type = parseEnum(table["linearsolver_type"].value<std::string>(), LINEAR_SOLVER_TYPE_MAP, ConfigDefaults::LINEARSOLVER_TYPE);
 
-    linearsolver_maxiter =
-        validators::field<size_t>(table, "linearsolver_maxiter").positive().valueOr(linearsolver_maxiter);
+    linearsolver_maxiter = table["linearsolver_maxiter"].value_or(ConfigDefaults::LINEARSOLVER_MAXITER);
 
     timestepper_type = parseEnum(table["timestepper"].value<std::string>(), TIME_STEPPER_TYPE_MAP, ConfigDefaults::TIMESTEPPER_TYPE);
 
-    int rand_seed_ = validators::field<int>(table, "rand_seed").valueOr(-1);
+    int rand_seed_ = table["rand_seed"].value_or(-1);
     setRandSeed(rand_seed_);
 
   } catch (const validators::ValidationError& e) {
