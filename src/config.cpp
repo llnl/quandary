@@ -523,6 +523,8 @@ void Config::printConfig(std::stringstream& log) const {
   log << "# Configuration settings\n";
   log << "# =============================================\n\n";
 
+  // Section 1: Root table settings
+
   // System parameters
   log << "nlevels = " << printVector(nlevels) << "\n";
   log << "nessential = " << printVector(nessential) << "\n";
@@ -538,18 +540,6 @@ void Config::printConfig(std::stringstream& log) const {
   log << "dephase_time = " << printVector(dephase_time) << "\n";
   log << "initial_condition = " << print(initial_condition) << "\n";
 
-  // Apply pi-pulse array of tables
-  for (size_t i = 0; i < apply_pipulse.size(); ++i) {
-    for (const auto& segment : apply_pipulse[i]) {
-      log << "[[apply_pipulse]]\n";
-      log << "oscID = " << i << "\n";
-      log << "tstart = " << segment.tstart << "\n";
-      log << "tstop = " << segment.tstop << "\n";
-      log << "amp = " << segment.amp << "\n";
-      log << "\n";
-    }
-  }
-
   if (hamiltonian_file_Hsys.has_value()) {
     log << "hamiltonian_file_Hsys = \"" << hamiltonian_file_Hsys.value() << "\"\n";
   }
@@ -558,16 +548,7 @@ void Config::printConfig(std::stringstream& log) const {
   }
 
   // Optimization parameters
-  log << "\n";
-
-  log << "control_enforce_BC = " << (control_enforceBC ? "true" : "false") << "\n";
-
-  // Control initialization file
-  if (control_initialization_file.has_value()) {
-    log << "[control_initialization_file]\n";
-    log << "filename = \"" << control_initialization_file.value() << "\"\n\n";
-  }
-
+  log << "control_enforceBC = " << (control_enforceBC ? "true" : "false") << "\n";
   log << "optim_target = " << toString(optim_target) << "\n";
   log << "gate_rot_freq = " << printVector(gate_rot_freq) << "\n";
   log << "optim_objective = \"" << enumToString(optim_objective, OBJECTIVE_TYPE_MAP) << "\"\n";
@@ -584,6 +565,32 @@ void Config::printConfig(std::stringstream& log) const {
   log << "optim_penalty_energy = " << penalty.penalty_energy << "\n";
   log << "optim_penalty_variation = " << penalty.penalty_variation << "\n";
   log << "optim_regul_tik0 = " << (optim_regul_tik0 ? "true" : "false") << "\n";
+
+  // Output parameters
+  log << "datadir = \"" << datadir << "\"\n";
+  log << "output_frequency = " << output_frequency << "\n";
+  log << "optim_monitor_frequency = " << optim_monitor_frequency << "\n";
+  log << "runtype = \"" << enumToString(runtype, RUN_TYPE_MAP) << "\"\n";
+  log << "usematfree = " << (usematfree ? "true" : "false") << "\n";
+  log << "linearsolver_type = \"" << enumToString(linearsolver_type, LINEAR_SOLVER_TYPE_MAP) << "\"\n";
+  log << "linearsolver_maxiter = " << linearsolver_maxiter << "\n";
+  log << "timestepper = \"" << enumToString(timestepper_type, TIME_STEPPER_TYPE_MAP) << "\"\n";
+  log << "rand_seed = " << rand_seed << "\n";
+
+  // Section 2: All array-of-tables at the end
+  log << "\n";
+
+  // Apply pi-pulse array of tables
+  for (size_t i = 0; i < apply_pipulse.size(); ++i) {
+    for (const auto& segment : apply_pipulse[i]) {
+      log << "[[apply_pipulse]]\n";
+      log << "oscID = " << i << "\n";
+      log << "tstart = " << segment.tstart << "\n";
+      log << "tstop = " << segment.tstop << "\n";
+      log << "amp = " << segment.amp << "\n";
+      log << "\n";
+    }
+  }
 
   // Control segments as array of tables
   for (size_t i = 0; i < control_segments.size(); ++i) {
@@ -647,18 +654,6 @@ void Config::printConfig(std::stringstream& log) const {
     }
   }
 
-  // Output parameters
-  log << "\n";
-  log << "datadir = \"" << datadir << "\"\n";
-  log << "output_frequency = " << output_frequency << "\n";
-  log << "optim_monitor_frequency = " << optim_monitor_frequency << "\n";
-  log << "runtype = \"" << enumToString(runtype, RUN_TYPE_MAP) << "\"\n";
-  log << "usematfree = " << (usematfree ? "true" : "false") << "\n";
-  log << "linearsolver_type = \"" << enumToString(linearsolver_type, LINEAR_SOLVER_TYPE_MAP) << "\"\n";
-  log << "linearsolver_maxiter = " << linearsolver_maxiter << "\n";
-  log << "timestepper = \"" << enumToString(timestepper_type, TIME_STEPPER_TYPE_MAP) << "\"\n";
-  log << "rand_seed = " << rand_seed << "\n";
-
   // Output write specifications as array of tables
   for (size_t i = 0; i < output_to_write.size(); ++i) {
     if (!output_to_write[i].empty()) {
@@ -672,8 +667,6 @@ void Config::printConfig(std::stringstream& log) const {
       log << "]\n\n";
     }
   }
-
-  log << "# =============================================\n\n";
 }
 
 void Config::finalize() {
