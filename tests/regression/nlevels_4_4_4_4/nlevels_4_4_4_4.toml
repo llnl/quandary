@@ -28,78 +28,6 @@ optim_penalty_energy = 0.0
 optim_penalty_variation = 0.0
 optim_regul_tik0 = false
 
-[[control_segments]]
-oscID = 0
-type = "spline"
-num = 15
-
-[[control_segments]]
-oscID = 1
-type = "spline"
-num = 15
-
-[[control_segments]]
-oscID = 2
-type = "spline"
-num = 15
-
-[[control_segments]]
-oscID = 3
-type = "spline"
-num = 15
-
-[[control_bounds]]
-oscID = 0
-values = [0.008]
-
-[[control_bounds]]
-oscID = 1
-values = [0.008]
-
-[[control_bounds]]
-oscID = 2
-values = [0.008]
-
-[[control_bounds]]
-oscID = 3
-values = [0.008]
-
-[[control_initialization]]
-oscID = 0
-type = "constant"
-amplitude = 0.005
-
-[[control_initialization]]
-oscID = 1
-type = "constant"
-amplitude = 0.005
-
-[[control_initialization]]
-oscID = 2
-type = "constant"
-amplitude = 0.005
-
-[[control_initialization]]
-oscID = 3
-type = "constant"
-amplitude = 0.005
-
-[[carrier_frequency]]
-oscID = 0
-values = [0.0, -0.2, -0.001]
-
-[[carrier_frequency]]
-oscID = 1
-values = [0.0, -0.2, -0.001]
-
-[[carrier_frequency]]
-oscID = 2
-values = [0.0, -0.2, -0.001]
-
-[[carrier_frequency]]
-oscID = 3
-values = [0.0, -0.2, -0.001]
-
 datadir = "./data_out"
 output_frequency = 1
 optim_monitor_frequency = 1
@@ -109,6 +37,78 @@ linearsolver_type = "gmres"
 linearsolver_maxiter = 20
 timestepper = "IMR"
 rand_seed = 1234
+
+[[control_segments]]
+oscID = 0
+type = "spline"
+num = 15
+
+[[control_segments]]
+oscID = 1
+type = "spline"
+num = 15
+
+[[control_segments]]
+oscID = 2
+type = "spline"
+num = 15
+
+[[control_segments]]
+oscID = 3
+type = "spline"
+num = 15
+
+[[control_bounds]]
+oscID = 0
+values = [0.008]
+
+[[control_bounds]]
+oscID = 1
+values = [0.008]
+
+[[control_bounds]]
+oscID = 2
+values = [0.008]
+
+[[control_bounds]]
+oscID = 3
+values = [0.008]
+
+[[control_initialization]]
+oscID = 0
+type = "constant"
+amplitude = 0.005
+
+[[control_initialization]]
+oscID = 1
+type = "constant"
+amplitude = 0.005
+
+[[control_initialization]]
+oscID = 2
+type = "constant"
+amplitude = 0.005
+
+[[control_initialization]]
+oscID = 3
+type = "constant"
+amplitude = 0.005
+
+[[carrier_frequency]]
+oscID = 0
+values = [0.0, -0.2, -0.001]
+
+[[carrier_frequency]]
+oscID = 1
+values = [0.0, -0.2, -0.001]
+
+[[carrier_frequency]]
+oscID = 2
+values = [0.0, -0.2, -0.001]
+
+[[carrier_frequency]]
+oscID = 3
+values = [0.0, -0.2, -0.001]
 
 [[write]]
 oscID = 0

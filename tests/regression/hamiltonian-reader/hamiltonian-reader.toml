@@ -30,42 +30,6 @@ optim_penalty_dpdm = 0.0
 optim_penalty_variation = 0.0
 optim_penalty_energy = 0.0
 
-[[control_segments]]
-oscID = 0
-type = "spline"
-num = 6
-
-[[control_segments]]
-oscID = 1
-type = "spline"
-num = 6
-
-[[control_bounds]]
-oscID = 0
-values = [1000000000000.0]
-
-[[control_bounds]]
-oscID = 1
-values = [1000000000000.0]
-
-[[control_initialization]]
-oscID = 0
-type = "constant"
-amplitude = 0.0070710678118654745
-
-[[control_initialization]]
-oscID = 1
-type = "constant"
-amplitude = 0.0070710678118654745
-
-[[carrier_frequency]]
-oscID = 0
-values = [0.0]
-
-[[carrier_frequency]]
-oscID = 1
-values = [0.0]
-
 datadir = "./data_out"
 output_frequency = 1
 optim_monitor_frequency = 1
@@ -75,6 +39,42 @@ linearsolver_type = "gmres"
 linearsolver_maxiter = 20
 timestepper = "IMR"
 rand_seed = 1234
+
+[[control_segments]]
+oscID = 0
+type = "spline"
+num = 6
+
+[[control_segments]]
+oscID = 1
+type = "spline"
+num = 6
+
+[[control_bounds]]
+oscID = 0
+values = [1000000000000.0]
+
+[[control_bounds]]
+oscID = 1
+values = [1000000000000.0]
+
+[[control_initialization]]
+oscID = 0
+type = "constant"
+amplitude = 0.0070710678118654745
+
+[[control_initialization]]
+oscID = 1
+type = "constant"
+amplitude = 0.0070710678118654745
+
+[[carrier_frequency]]
+oscID = 0
+values = [0.0]
+
+[[carrier_frequency]]
+oscID = 1
+values = [0.0]
 
 [[write]]
 oscID = 0

@@ -12,12 +12,6 @@ decay_time = [20.0]
 dephase_time = [26.0]
 initial_condition = {type = "basis"}
 
-[[apply_pipulse]]
-oscID = 0
-tstart = 0.01
-tstop = 0.8
-amp = 15.10381
-
 control_enforceBC = true
 optim_target = {target_type = "pure", levels = [0]}
 optim_objective = "Jmeasure"
@@ -33,6 +27,21 @@ optim_penalty_param = 0.5
 optim_penalty_dpdm = 0.0
 optim_penalty_energy = 0.0
 optim_penalty_variation = 0.01
+
+datadir = "data_out"
+output_frequency = 1
+optim_monitor_frequency = 100
+runtype = "simulation"
+usematfree = true
+linearsolver_type = "gmres"
+linearsolver_maxiter = 20
+timestepper = "IMR"
+
+[[apply_pipulse]]
+oscID = 0
+tstart = 0.01
+tstop = 0.8
+amp = 15.10381
 
 [[control_segments]]
 oscID = 0
@@ -51,15 +60,6 @@ amplitude = 0.0
 [[carrier_frequency]]
 oscID = 0
 values = [0.0]
-
-datadir = "data_out"
-output_frequency = 1
-optim_monitor_frequency = 100
-runtype = "simulation"
-usematfree = true
-linearsolver_type = "gmres"
-linearsolver_maxiter = 20
-timestepper = "IMR"
 
 [[write]]
 oscID = 0

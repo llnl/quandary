@@ -29,6 +29,16 @@ optim_regul_tik0 = false
 optim_penalty_dpdm = 0.0
 optim_penalty_variation = 0.0
 
+runtype = "optimization"
+usematfree = true
+datadir = "./data_out"
+output_frequency = 1
+optim_monitor_frequency = 1
+linearsolver_type = "gmres"
+linearsolver_maxiter = 20
+timestepper = "IMR"
+rand_seed = 1234
+
 [[control_segments]]
 oscID = 0
 type = "spline"
@@ -64,16 +74,6 @@ values = [0.0, -0.2198, -0.1]
 [[carrier_frequency]]
 oscID = 1
 values = [0.0, -0.2252, -0.1]
-
-runtype = "optimization"
-usematfree = true
-datadir = "./data_out"
-output_frequency = 1
-optim_monitor_frequency = 1
-linearsolver_type = "gmres"
-linearsolver_maxiter = 20
-timestepper = "IMR"
-rand_seed = 1234
 
 [[write]]
 oscID = 0

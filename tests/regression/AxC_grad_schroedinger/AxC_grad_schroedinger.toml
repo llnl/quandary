@@ -26,6 +26,15 @@ optim_penalty_param = 0.5
 optim_penalty_dpdm = 0.1
 optim_penalty_energy = 0.1
 
+datadir = "data_out"
+output_frequency = 1
+optim_monitor_frequency = 100
+runtype = "gradient"
+usematfree = true
+linearsolver_type = "gmres"
+linearsolver_maxiter = 20
+rand_seed = 1234
+
 [[control_segments]]
 oscID = 0
 type = "spline"
@@ -61,15 +70,6 @@ values = [0.0, -230.56, 1.176]
 [[carrier_frequency]]
 oscID = 1
 values = [0.0, 1.176]
-
-datadir = "data_out"
-output_frequency = 1
-optim_monitor_frequency = 100
-runtype = "gradient"
-usematfree = true
-linearsolver_type = "gmres"
-linearsolver_maxiter = 20
-rand_seed = 1234
 
 [[write]]
 oscID = 0

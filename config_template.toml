@@ -45,16 +45,6 @@ initial_condition = {type = "basis"}
 # initial_condition = {type = "nplus1"}
 # initial_condition = {type = "performance"}
 
-# Apply a pi-pulse to oscillator <oscID> from <tstart> to <tstop> using a control strength of <amp> rad/ns.
-# This ignores the codes control parameters inside [tstart,tstop], and instead applies the constant control
-# amplitude |p+iq|=<amp> to oscillator <oscID>, and zero control for all other oscillators.
-# For more than one pipulse, just repeat this block.
-# [[apply_pipulse]]
-# oscID = 0
-# tstart = 0.5
-# tstop = 0.604
-# amp = 15.10381
-
 # Optional: Read system Hamiltonian from file (default: none - use built-in analytical Hamiltonian)
 # hamiltonian_file_Hsys = "/path/to/system_hamiltonian.dat"
 # Optional: Read control Hamiltonian from file (default: none - use built-in analytical Hamiltonian)
@@ -110,6 +100,53 @@ optim_penalty_energy = 0.0
 optim_penalty_variation = 0.0
 # Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
 optim_regul_tik0 = false
+
+# ---------------------------------------------------------------
+# ------------------- Output and runtypes -----------------------
+# ---------------------------------------------------------------
+# Directory for output files
+datadir = "./data_out"
+
+# Output frequency in the time domain: write output every <num> time-step
+output_frequency = 1
+# Frequency of writing output during optimization: write output every <num> optimization iterations
+optim_monitor_frequency = 1
+# Runtype options:
+# "simulation" - a forward simulation only
+# "gradient" - forward simulation and backward simulation
+# "optimization" - a full optimization cycle
+# "evalControls" - Only evaluates the current control pulses (no simulation)
+# "none" - Don't run anything
+runtype = "optimization"
+# Use matrix free solver, instead of sparse matrix implementation. Only available for 2,3,4, or 5 oscillators.
+usematfree = true
+# Solver type for solving the linear system at each time step: "gmres", "neumann"
+linearsolver_type = "gmres"
+# Set maximum number of iterations for the linear solver
+linearsolver_maxiter = 20
+# Switch the time-stepping algorithm. Currently available:
+# "IMR" - Implicit Midpoint Rule (IMR) of 2nd order,
+# "IMR4" - Compositional IMR of order 2 using 3 stages,
+# "IMR8" - Compositional IMR of order 8 using 15 stages,
+# "EE" - Explicit Euler (EE) of 1st order, (for debugging only)
+timestepper = "IMR"
+# For reproducability, one can choose to set a fixed seed for the random number generator. Comment out, or set negative if seed should be random (non-reproducable)
+rand_seed = 1234
+
+# ---------------------------------------------------------------
+# ------------------- Table settings ----------------------------
+# ---------------------------------------------------------------
+# Note: these must go after the above root table settings
+
+# Apply a pi-pulse to oscillator <oscID> from <tstart> to <tstop> using a control strength of <amp> rad/ns.
+# This ignores the codes control parameters inside [tstart,tstop], and instead applies the constant control
+# amplitude |p+iq|=<amp> to oscillator <oscID>, and zero control for all other oscillators.
+# For more than one pipulse, just repeat this block.
+# [[apply_pipulse]]
+# oscID = 0
+# tstart = 0.5
+# tstop = 0.604
+# amp = 15.10381
 
 # Define the controllable segments for each oscillator and the type of parameterization.
 # Multiple of these blocks can be defined.
@@ -191,38 +228,6 @@ values = [0.0, -0.2198, -0.1]
 [[carrier_frequency]]
 oscID = 1
 values = [0.0, -0.2252, -0.1]
-
-# ---------------------------------------------------------------
-# ------------------- Output and runtypes ----------------------
-# ---------------------------------------------------------------
-# Directory for output files
-datadir = "./data_out"
-
-# Output frequency in the time domain: write output every <num> time-step
-output_frequency = 1
-# Frequency of writing output during optimization: write output every <num> optimization iterations
-optim_monitor_frequency = 1
-# Runtype options:
-# "simulation" - a forward simulation only
-# "gradient" - forward simulation and backward simulation
-# "optimization" - a full optimization cycle
-# "evalControls" - Only evaluates the current control pulses (no simulation)
-# "none" - Don't run anything
-runtype = "optimization"
-# Use matrix free solver, instead of sparse matrix implementation. Only available for 2,3,4, or 5 oscillators.
-usematfree = true
-# Solver type for solving the linear system at each time step: "gmres", "neumann"
-linearsolver_type = "gmres"
-# Set maximum number of iterations for the linear solver
-linearsolver_maxiter = 20
-# Switch the time-stepping algorithm. Currently available:
-# "IMR" - Implicit Midpoint Rule (IMR) of 2nd order,
-# "IMR4" - Compositional IMR of order 2 using 3 stages,
-# "IMR8" - Compositional IMR of order 8 using 15 stages,
-# "EE" - Explicit Euler (EE) of 1st order, (for debugging only)
-timestepper = "IMR"
-# For reproducability, one can choose to set a fixed seed for the random number generator. Comment out, or set negative if seed should be random (non-reproducable)
-rand_seed = 1234
 
 # Specify the desired output for each oscillator. Format: list of either of the following options:
 # "expectedEnergy" - time evolution of the expected energy level for this oscillator (expected energy of the reduced density matrix)
