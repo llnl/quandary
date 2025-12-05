@@ -1,7 +1,6 @@
 # ---------------------------------------------------------------
 # -------------------------- System settings --------------------
 # ---------------------------------------------------------------
-[system]
 # Number of levels per subsystem
 nlevels = [2, 2]
 # Number of essential levels per subsystem (Default: same as nlevels)
@@ -50,7 +49,7 @@ initial_condition = {type = "basis"}
 # This ignores the codes control parameters inside [tstart,tstop], and instead applies the constant control
 # amplitude |p+iq|=<amp> to oscillator <oscID>, and zero control for all other oscillators.
 # For more than one pipulse, just repeat this block.
-# [[system.apply_pipulse]]
+# [[apply_pipulse]]
 # oscID = 0
 # tstart = 0.5
 # tstop = 0.604
@@ -64,7 +63,6 @@ initial_condition = {type = "basis"}
 # ---------------------------------------------------------------
 # ------------------- Optimization options ----------------------
 # ---------------------------------------------------------------
-[optimization]
 # Decide whether control pulses should start and end at zero. Default: true.
 control_enforceBC = false
 
@@ -120,30 +118,30 @@ optim_regul_tik0 = false
 # "spline0" - piecewise constant control parameterization (0th order B-splines)
 # "spline_amplitude" - amplitude-only parameterization
 # "step" - step function control
-[[optimization.control_segments]]
+[[control_segments]]
 oscID = 0
 type = "spline"
 num = 150
 # tstart = 0.0  # optional, defaults to 0.0
 # tstop = 100.0  # optional, defaults to ntime * dt
 
-[[optimization.control_segments]]
+[[control_segments]]
 oscID = 1
 type = "spline"
 num = 150
 
-# [[optimization.control_segments]]
+# [[control_segments]]
 # oscID = 0
 # type = "spline0"
 # num = 300
 
-# [[optimization.control_segments]]
+# [[control_segments]]
 # oscID = 0
 # type = "spline_amplitude"
 # num = 150
 # scaling = 1.0
 
-# [[optimization.control_segments]]
+# [[control_segments]]
 # oscID = 0
 # type = "step"
 # step_amp1 = 0.1
@@ -154,50 +152,49 @@ num = 150
 
 # Control initialization options:
 # Option 1: File initialization (applies to all oscillators)
-# [[optimization.control_initialization]]
+# [[control_initialization]]
 # type = "file"
 # filename = "params.dat"
 
 # Option 2: Per-oscillator initialization
 # Options: "constant" with amplitude and optional phase, "random" with amplitude and optional phase
-[[optimization.control_initialization]]
+[[control_initialization]]
 oscID = 0
 type = "constant"
 amplitude = 0.005
 # phase = 0.0  # optional, defaults to 0.0
 
-[[optimization.control_initialization]]
+[[control_initialization]]
 oscID = 1
 type = "constant"
 amplitude = 0.005
 
-# [[optimization.control_initialization]]
+# [[control_initialization]]
 # oscID = 0
 # type = "random"
 # amplitude = 0.005
 
 # Maximum amplitude bound for the control pulses for each oscillator (GHz). One entry for each segment.
-[[optimization.control_bounds]]
+[[control_bounds]]
 oscID = 0
 values = [0.008]
 
-[[optimization.control_bounds]]
+[[control_bounds]]
 oscID = 1
 values = [0.008]
 
 # Carrier wave frequencies for each oscillator 0..Q-1. (GHz)
-[[optimization.carrier_frequency]]
+[[carrier_frequency]]
 oscID = 0
 values = [0.0, -0.2198, -0.1]
 
-[[optimization.carrier_frequency]]
+[[carrier_frequency]]
 oscID = 1
 values = [0.0, -0.2252, -0.1]
 
 # ---------------------------------------------------------------
 # ------------------- Output and runtypes ----------------------
 # ---------------------------------------------------------------
-[output]
 # Directory for output files
 datadir = "./data_out"
 
@@ -234,10 +231,10 @@ rand_seed = 1234
 # "populationComposite" - time evolution of the energy level population (probabilities) for the full-dimensional composite system
 # "fullstate" - time-evolution of the full state of the composite system (full density matrix, or state vector)
 # (note: 'fullstate' can appear in *any* of the lines). WARNING: This might result in *huge* output files! Use with care.
-[[output.write]]
+[[write]]
 oscID = 0
 type = ["population", "expectedEnergy"]
 
-[[output.write]]
+[[write]]
 oscID = 1
 type = ["population", "expectedEnergy"]

@@ -467,11 +467,12 @@ VectorValidator<T> vectorField(const toml::table& config_, const std::string& ke
  * an array or contains type mismatches, returns nullopt.
  *
  * @tparam T Element type of the vector
+ * @tparam NodeType Type of the TOML node
  * @param node TOML node that may contain an array
  * @return Vector if node is a valid array with matching types, nullopt otherwise
  */
-template <typename T>
-std::optional<std::vector<T>> getOptionalVector(const toml::node_view<toml::node>& node) {
+template <typename T, typename NodeType>
+std::optional<std::vector<T>> getOptionalVector(const toml::node_view<NodeType>& node) {
   auto* arr = node.as_array();
   if (!arr) return std::nullopt;
 
