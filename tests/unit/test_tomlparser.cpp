@@ -833,3 +833,120 @@ TEST_F(TomlParserTest, OptimWeights) {
   EXPECT_DOUBLE_EQ(weights[2], 0.2);
   EXPECT_DOUBLE_EQ(weights[3], 0.2);
 }
+
+TEST_F(TomlParserTest, ComprehensiveNonDefaultSettings_PrintConfigValidation) {
+  // Create a comprehensive configuration with all non-default settings (single oscillator)
+  std::string input_toml = R"(# Configuration settings
+# =============================================
+
+nlevels = [3]
+nessential = [2]
+ntime = 2500
+dt = 0.02
+transfreq = [5.500000]
+selfkerr = [-0.200000]
+crosskerr = [0.050000]
+Jkl = [0.010000]
+rotfreq = [2.100000]
+collapse_type = "decay"
+decay_time = [25.000000]
+dephase_time = [45.000000]
+initial_condition = {type = "pure", levels = [1]}
+control_enforceBC = false
+optim_target = {target_type = "gate", gate_type = "hadamard"}
+gate_rot_freq = [1.500000]
+optim_objective = "jtrace"
+optim_weights = [1.000000]
+optim_atol = 1e-06
+optim_rtol = 0.001
+optim_ftol = 1e-07
+optim_inftol = 0.0001
+optim_maxiter = 150
+optim_regul = 0.002
+optim_penalty = 0.1
+optim_penalty_param = 0.8
+optim_penalty_dpdm = 0.05
+optim_penalty_energy = 0.02
+optim_penalty_variation = 0.03
+optim_regul_tik0 = true
+datadir = "/custom/output/path"
+output_frequency = 5
+optim_monitor_frequency = 25
+runtype = "optimization"
+usematfree = true
+linearsolver_type = "gmres"
+linearsolver_maxiter = 20
+timestepper = "imr"
+rand_seed = 12345
+
+[[apply_pipulse]]
+oscID = 0
+tstart = 1
+tstop = 2
+amp = 0.75
+
+[[control_segments]]
+oscID = 0
+type = "spline"
+num = 25
+tstop = 1.5
+
+[[control_initialization]]
+oscID = 0
+type = "random"
+amplitude = 1.500000
+phase = 0.500000
+
+[[control_bounds]]
+oscID = 0
+values = [5.000000, 8.000000]
+
+[[carrier_frequency]]
+oscID = 0
+values = [2.500000, 3.000000]
+
+[[write]]
+oscID = 0
+type = ["population", "expectedenergy"]
+
+)";
+
+  Config config = Config::fromTomlString(input_toml, logger);
+
+  // Call printConfig and capture the output
+  std::stringstream printed_output;
+  config.printConfig(printed_output);
+
+  std::string output = printed_output.str();
+
+  // Split both strings into lines
+  auto splitIntoLines = [](const std::string& text) {
+    std::vector<std::string> lines;
+    std::istringstream stream(text);
+    std::string line;
+    while (std::getline(stream, line)) {
+      lines.push_back(line);
+    }
+    return lines;
+  };
+
+  std::vector<std::string> input_lines = splitIntoLines(input_toml);
+  std::vector<std::string> output_lines = splitIntoLines(output);
+
+  // Compare line counts
+  EXPECT_EQ(input_lines.size(), output_lines.size()) 
+    << "Line count mismatch: input has " << input_lines.size() 
+    << " lines, output has " << output_lines.size() << " lines";
+
+  // Compare each line
+  size_t max_lines = std::max(input_lines.size(), output_lines.size());
+  for (size_t i = 0; i < max_lines; ++i) {
+    if (i >= input_lines.size()) {
+      FAIL() << "Output has extra line " << (i + 1) << ": '" << output_lines[i] << "'";
+    } else if (i >= output_lines.size()) {
+      FAIL() << "Output missing line " << (i + 1) << ": '" << input_lines[i] << "'";
+    } else {
+      EXPECT_EQ(input_lines[i], output_lines[i]) << "Line " << (i + 1) << " differs";
+    }
+  }
+}
