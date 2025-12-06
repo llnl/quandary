@@ -254,14 +254,14 @@ class Config {
   // General options
   std::vector<size_t> nlevels; ///< Number of levels per subsystem
   std::vector<size_t> nessential; ///< Number of essential levels per subsystem (Default: same as nlevels)
-  size_t ntime = ConfigDefaults::NTIME; ///< Number of time steps used for time-integration
-  double dt = ConfigDefaults::DT; ///< Time step size (ns). Determines final time: T=ntime*dt
+  size_t ntime; ///< Number of time steps used for time-integration
+  double dt; ///< Time step size (ns). Determines final time: T=ntime*dt
   std::vector<double> transfreq; ///< Fundamental transition frequencies for each oscillator (GHz)
   std::vector<double> selfkerr; ///< Self-kerr frequencies for each oscillator (GHz)
   std::vector<double> crosskerr; ///< Cross-kerr coupling frequencies for each oscillator coupling (GHz)
   std::vector<double> Jkl; ///< Dipole-dipole coupling frequencies for each oscillator coupling (GHz)
   std::vector<double> rotfreq; ///< Rotational wave approximation frequencies for each subsystem (GHz)
-  LindbladType collapse_type = ConfigDefaults::COLLAPSE_TYPE_ENUM; ///< Switch between Schroedinger and Lindblad solver
+  LindbladType collapse_type; ///< Switch between Schroedinger and Lindblad solver
   std::vector<double> decay_time; ///< Time of decay collapse operation (T1) per oscillator (for Lindblad solver)
   std::vector<double> dephase_time; ///< Time of dephase collapse operation (T2) per oscillator (for Lindblad solver)
   size_t n_initial_conditions; ///< Number of initial conditions
@@ -271,33 +271,31 @@ class Config {
   std::optional<std::string> hamiltonian_file_Hc; ///< File to read the control Hamiltonian from
 
   // Optimization options
-  bool control_enforceBC = ConfigDefaults::CONTROL_ENFORCE_BC; ///< Decide whether control pulses should start and end at zero
+  bool control_enforceBC; ///< Decide whether control pulses should start and end at zero
   std::optional<std::string> control_initialization_file; ///< Global control initialization file for all oscillators
   std::vector<std::vector<ControlSegment>> control_segments; ///< Control segments for each oscillator
-  std::vector<std::vector<ControlSegmentInitialization>>
-      control_initializations; ///< Control initializations for each oscillator
+  std::vector<std::vector<ControlSegmentInitialization>> control_initializations; ///< Control initializations for each oscillator
   std::vector<std::vector<double>> control_bounds; ///< Control bounds for each oscillator
   std::vector<std::vector<double>> carrier_frequencies; ///< Carrier frequencies for each oscillator
   OptimTargetSettings optim_target; ///< Grouped optimization target configuration
-  std::vector<double> gate_rot_freq =
-      std::vector<double>{0.0}; ///< Frequency of rotation of the target gate, for each oscillator (GHz)
-  ObjectiveType optim_objective = ConfigDefaults::OPTIM_OBJECTIVE; ///< Objective function measure
+  std::vector<double> gate_rot_freq; ///< Frequency of rotation of the target gate, for each oscillator (GHz)
+  ObjectiveType optim_objective; ///< Objective function measure
   std::vector<double> optim_weights; ///< Weights for summing up the objective function
   OptimTolerance tolerance; ///< Grouped optimization stopping criteria and iteration limits
-  double optim_regul = ConfigDefaults::OPTIM_REGUL; ///< Coefficient of Tikhonov regularization for the design variables
+  double optim_regul; ///< Coefficient of Tikhonov regularization for the design variables
   OptimPenalty penalty; ///< Grouped optimization penalty coefficients
-  bool optim_regul_tik0 = ConfigDefaults::OPTIM_REGUL_TIK0; ///< Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
+  bool optim_regul_tik0; ///< Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
 
   // Output and runtypes
-  std::string datadir = ConfigDefaults::DATADIR; ///< Directory for output files
+  std::string datadir; ///< Directory for output files
   std::vector<std::vector<OutputType>> output_to_write; ///< Specify the desired output for each oscillator
-  size_t output_frequency = ConfigDefaults::OUTPUT_FREQUENCY; ///< Output frequency in the time domain: write output every <num> time-step
-  size_t optim_monitor_frequency = ConfigDefaults::OPTIM_MONITOR_FREQUENCY; ///< Frequency of writing output during optimization iterations
-  RunType runtype = ConfigDefaults::RUNTYPE; ///< Runtype options: simulation, gradient, or optimization
-  bool usematfree = ConfigDefaults::USEMATFREE; ///< Use matrix free solver, instead of sparse matrix implementation
-  LinearSolverType linearsolver_type = ConfigDefaults::LINEARSOLVER_TYPE; ///< Solver type for solving the linear system at each time step
-  size_t linearsolver_maxiter = ConfigDefaults::LINEARSOLVER_MAXITER; ///< Set maximum number of iterations for the linear solver
-  TimeStepperType timestepper_type = ConfigDefaults::TIMESTEPPER_TYPE; ///< The time-stepping algorithm
+  size_t output_frequency; ///< Output frequency in the time domain: write output every <num> time-step
+  size_t optim_monitor_frequency; ///< Frequency of writing output during optimization iterations
+  RunType runtype; ///< Runtype options: simulation, gradient, or optimization
+  bool usematfree; ///< Use matrix free solver, instead of sparse matrix implementation
+  LinearSolverType linearsolver_type; ///< Solver type for solving the linear system at each time step
+  size_t linearsolver_maxiter; ///< Set maximum number of iterations for the linear solver
+  TimeStepperType timestepper_type; ///< The time-stepping algorithm
   int rand_seed; ///< Fixed seed for the random number generator for reproducibility
 
  public:

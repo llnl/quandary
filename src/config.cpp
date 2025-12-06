@@ -32,6 +32,7 @@ std::string enumToString(EnumType value, const std::map<std::string, EnumType>& 
 
 Config::Config(const MPILogger& logger, const toml::table& table) : logger(logger) {
   try {
+    // General options
     nlevels = validators::vectorField<size_t>(table, "nlevels").minLength(1).positive().value();
 
     size_t num_osc = nlevels.size();
@@ -47,16 +48,19 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     transfreq = validators::vectorField<double>(table, "transfreq").minLength(1).value();
     copyLast(transfreq, num_osc);
 
-    selfkerr =
-        validators::vectorField<double>(table, "selfkerr").minLength(1).valueOr(std::vector<double>(num_osc, 0.0));
+    selfkerr = validators::vectorField<double>(table, "selfkerr")
+                  .minLength(1)
+                  .valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
     copyLast(selfkerr, num_osc);
 
     crosskerr = validators::vectorField<double>(table, "crosskerr")
                     .minLength(1)
-                    .valueOr(std::vector<double>(num_pairs_osc, 0.0));
+                    .valueOr(std::vector<double>(num_pairs_osc, ConfigDefaults::CROSSKERR));
     copyLast(crosskerr, num_pairs_osc);
 
-    Jkl = validators::vectorField<double>(table, "Jkl").minLength(1).valueOr(std::vector<double>(num_pairs_osc, 0.0));
+    Jkl = validators::vectorField<double>(table, "Jkl")
+              .minLength(1)
+              .valueOr(std::vector<double>(num_pairs_osc, ConfigDefaults::JKL));
     copyLast(Jkl, num_pairs_osc);
 
     rotfreq = validators::vectorField<double>(table, "rotfreq").minLength(1).value();
@@ -64,10 +68,10 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
 
     collapse_type = parseEnum(table["collapse_type"].value<std::string>(), LINDBLAD_TYPE_MAP, ConfigDefaults::COLLAPSE_TYPE_ENUM);
 
-    decay_time = validators::vectorField<double>(table, "decay_time").valueOr(std::vector<double>(num_osc, 0.0));
+    decay_time = validators::vectorField<double>(table, "decay_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
     copyLast(decay_time, num_osc);
 
-    dephase_time = validators::vectorField<double>(table, "dephase_time").valueOr(std::vector<double>(num_osc, 0.0));
+    dephase_time = validators::vectorField<double>(table, "dephase_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
     copyLast(dephase_time, num_osc);
 
     auto init_cond_table = validators::getRequiredTable(table, "initial_condition");
@@ -92,6 +96,9 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
 
     hamiltonian_file_Hsys = table["hamiltonian_file_Hsys"].value<std::string>();
     hamiltonian_file_Hc = table["hamiltonian_file_Hc"].value<std::string>();
+
+  // Optimization options
+    control_enforceBC = table["control_enforceBC"].value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
 
     control_segments.resize(num_osc);
     control_initializations.resize(num_osc);
@@ -202,8 +209,6 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     }
 
     carrier_frequencies = parseIndexedWithDefaults<double>(carrier_freq_opt, num_osc, {ConfigDefaults::CARRIER_FREQ});
-
-    control_enforceBC = table["control_enforceBC"].value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
 
     // optim_target
     std::optional<OptimTargetData> optim_target_config;
