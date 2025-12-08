@@ -11,7 +11,6 @@
 #include <variant>
 #include <vector>
 
-#include "config_defaults.hpp"
 #include "config_types.hpp"
 #include "defs.hpp"
 #include "mpi_logger.hpp"
@@ -95,11 +94,11 @@ using InitialCondition = std::variant<FromFileInitialCondition, PureInitialCondi
  * Groups all optimization stopping criteria and iteration limits.
  */
 struct OptimTolerance {
-  double atol = ConfigDefaults::OPTIM_ATOL; ///< Absolute gradient tolerance
-  double rtol = ConfigDefaults::OPTIM_RTOL; ///< Relative gradient tolerance
-  double ftol = ConfigDefaults::OPTIM_FTOL; ///< Final time cost tolerance
-  double inftol = ConfigDefaults::OPTIM_INFTOL; ///< Infidelity tolerance
-  size_t maxiter = ConfigDefaults::OPTIM_MAXITER; ///< Maximum iterations
+  double atol; ///< Absolute gradient tolerance
+  double rtol; ///< Relative gradient tolerance
+  double ftol; ///< Final time cost tolerance
+  double inftol; ///< Infidelity tolerance
+  size_t maxiter; ///< Maximum iterations
 };
 
 /**
@@ -108,18 +107,18 @@ struct OptimTolerance {
  * Groups all penalty terms used for control pulse regularization.
  */
 struct OptimPenalty {
-  double penalty = ConfigDefaults::PENALTY; ///< First integral penalty coefficient
-  double penalty_param = ConfigDefaults::PENALTY_PARAM; ///< Gaussian variance parameter
-  double penalty_dpdm = ConfigDefaults::PENALTY_DPDM; ///< Second derivative penalty coefficient
-  double penalty_energy = ConfigDefaults::PENALTY_ENERGY; ///< Energy penalty coefficient
-  double penalty_variation = ConfigDefaults::PENALTY_VARIATION; ///< Amplitude variation penalty coefficient
+  double penalty; ///< First integral penalty coefficient
+  double penalty_param; ///< Gaussian variance parameter
+  double penalty_dpdm; ///< Second derivative penalty coefficient
+  double penalty_energy; ///< Energy penalty coefficient
+  double penalty_variation; ///< Amplitude variation penalty coefficient
 };
 
 /**
  * @brief Gate-based optimization target.
  */
 struct GateOptimTarget {
-  GateType gate_type = ConfigDefaults::GATE_TYPE; ///< Gate type (for gate targets)
+  GateType gate_type; ///< Gate type (for gate targets)
   std::string gate_file; ///< Gate file (for gate from file)
 
   std::string toString() const {
