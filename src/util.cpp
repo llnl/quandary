@@ -5,6 +5,84 @@
 // Suppress compiler warnings about unused parameters in code with #ifdef
 #define UNUSED(expr) (void)(expr)
 
+
+void printHelp() {
+  printf("\nQuandary - Optimal control for open quantum systems\n");
+  printf("\nUSAGE:\n");
+  printf("  quandary <config_file> [--quiet] [--petsc-options \"options\"]\n");
+  printf("  quandary --version\n");
+  printf("  quandary --help\n");
+  printf("\nOPTIONS:\n");
+  printf("  <config_file>    Configuration file: .toml (preferred) or .cfg (deprecated) specifying system parameters\n");
+  printf("  --quiet           Reduce output verbosity\n");
+  printf("  --petsc-options   Pass options directly to PETSc/SLEPc (in quotes)\n");
+  printf("  --version         Show version information\n");
+  printf("  --help            Show this help message\n");
+  printf("\nEXAMPLES:\n");
+  printf("  quandary config.toml\n");
+  printf("  mpirun -np 4 quandary config.toml --quiet\n");
+  printf("  quandary config.toml --petsc-options \"-log_view -tao_view\"\n");
+  printf("  mpirun -np 4 quandary config.toml --quiet --petsc-options \"-log_view -tao_view\"\n");
+  printf("\n");
+}
+
+ParsedArgs parseArguments(int argc, char** argv) {
+  ParsedArgs args;
+
+  if (argc < 2 || std::string(argv[1]) == "--help") {
+    printHelp();
+    exit(0);
+  }
+
+  if (std::string(argv[1]) == "--version") {
+    printf("Quandary %s %s\n", QUANDARY_FULL_VERSION_STRING, QUANDARY_GIT_SHA);
+    exit(0);
+  }
+
+  args.config_filename = argv[1];
+
+  // Validate config file exists and is readable
+  std::ifstream test_file(args.config_filename);
+  if (!test_file.good()) {
+    printf("\nERROR: Cannot open config file '%s'\n", args.config_filename.c_str());
+    printf("Please check that the file exists and is readable.\n\n");
+    exit(1);
+  }
+  test_file.close();
+
+  // Parse quiet mode and PETSc options flags
+  std::string petsc_options;
+  for (int i=2; i<argc; i++) {
+    std::string arg = argv[i];
+    if (arg == "--quiet") {
+      args.quietmode = true;
+    } else if (arg == "--petsc-options" && i + 1 < argc) {
+      petsc_options = argv[++i];
+    }
+  }
+
+  // Build PETSc argc/argv
+  // Always include program name
+  args.petsc_argv.push_back(argv[0]);
+
+  // Parse PETSc options string into individual tokens
+  if (!petsc_options.empty()) {
+    std::istringstream iss(petsc_options);
+    std::string token;
+    while (iss >> token) {
+      args.petsc_tokens.push_back(token);
+    }
+
+    for (const auto& token : args.petsc_tokens) {
+      args.petsc_argv.push_back(const_cast<char*>(token.c_str()));
+    }
+  }
+
+  args.petsc_argc = args.petsc_argv.size();
+
+  return args;
+}
+
 double sigmoid(double width, double x){
   return 1.0 / ( 1.0 + exp(-width*x) );
 }

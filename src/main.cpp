@@ -11,7 +11,7 @@
 #include "output.hpp"
 #include "petsc.h"
 #include <random>
-#include "version.hpp"
+#include "util.hpp"
 #ifdef WITH_SLEPC
 #include <slepceps.h>
 #endif
@@ -23,6 +23,9 @@
 
 int main(int argc,char **argv)
 {
+  /* Parse command line arguments */
+  ParsedArgs args = parseArguments(argc, argv);
+
   char filename[255];
   PetscErrorCode ierr;
 
@@ -32,48 +35,11 @@ int main(int argc,char **argv)
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
   MPI_Comm_size(MPI_COMM_WORLD, &mpisize_world);
 
-  if (argc > 1 && std::string(argv[1]) == "--version") {
-    if (mpirank_world == 0) {
-      printf("Quandary %s %s\n", QUANDARY_FULL_VERSION_STRING, QUANDARY_GIT_SHA);
-    }
-    MPI_Finalize();
-    return 0;
-  }
-
-  bool quietmode = false;
-  if (argc > 2){
-    for (int i=2; i<argc; i++) {
-      std::string quietstring = argv[i];
-      if (quietstring.substr(2,5).compare("quiet") == 0) {
-        quietmode = true;
-        // printf("quietmode =  %d\n", quietmode);
-      }
-    }
-  }
-
+  bool quietmode = args.quietmode;
   if (mpirank_world == 0 && !quietmode) printf("Running on %d cores.\n", mpisize_world);
 
-  /* Read config file */
-  if (argc < 2) {
-    if (mpirank_world == 0) {
-      printf("\nQuandary - Optimal control for open quantum systems\n");
-      printf("\nUSAGE:\n");
-      printf("  quandary <config_file> [--quiet]\n");
-      printf("  quandary --version\n");
-      printf("\nOPTIONS:\n");
-      printf("  <config_file>    Configuration file: .toml (preferred) or .cfg (deprecated) specifying system parameters\n");
-      printf("  --quiet          Reduce output verbosity\n");
-      printf("  --version        Show version information\n");
-      printf("\nEXAMPLES:\n");
-      printf("  quandary config.toml\n");
-      printf("  mpirun -np 4 quandary config.toml --quiet\n");
-      printf("\n");
-    }
-    MPI_Finalize();
-    return 0;
-  }
   MPILogger logger(mpirank_world, quietmode);
-  std::string config_file = argv[1];
+  std::string config_file = args.config_filename;
   Config config = Config::fromFile(config_file, logger);
   std::stringstream config_log;
   config.printConfig(config_log);
@@ -133,10 +99,11 @@ int main(int argc,char **argv)
 
   if (mpirank_world == 0 && !quietmode)  std::cout<< "Parallel distribution: " << mpisize_init << " np_init  X  " << mpisize_petsc<< " np_petsc  " << std::endl;
 
+  char** petsc_argv = args.petsc_argv.data();
 #ifdef WITH_SLEPC
-  ierr = SlepcInitialize(&argc, &argv, (char*)0, NULL);if (ierr) return ierr;
+  ierr = SlepcInitialize(&args.petsc_argc, &petsc_argv, (char*)0, NULL);if (ierr) return ierr;
 #else
-  ierr = PetscInitialize(&argc,&argv,(char*)0,NULL);if (ierr) return ierr;
+  ierr = PetscInitialize(&args.petsc_argc, &petsc_argv, (char*)0, NULL);if (ierr) return ierr;
 #endif
   PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, 	PETSC_VIEWER_ASCII_MATLAB );
 

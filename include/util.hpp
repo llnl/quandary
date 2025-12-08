@@ -5,13 +5,40 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <fstream>
+#include <iostream>
 #include <vector>
+#include "version.hpp"
 #ifdef WITH_SLEPC
 #include <slepceps.h>
 #endif
 
 #pragma once
 
+/**
+ * @brief Structure for parsed command-line arguments.
+ */
+struct ParsedArgs {
+  bool quietmode = false; ///< Flag for quiet mode (reduced output)
+  std::string config_filename; ///< Configuration filename
+  int petsc_argc = 0; ///< PETSc argument count
+  std::vector<std::string> petsc_tokens; ///< PETSc option tokens
+  std::vector<char*> petsc_argv; ///< PETSc argument vector
+};
+
+/**
+ * Prints help message for command-line usage.
+ */
+void printHelp();
+
+/**
+ * Parses command-line arguments for the Quandary program.
+ *
+ * @param argc Number of command-line arguments.
+ * @param argv Array of command-line argument strings.
+ * @return ParsedArgs structure containing configuration filename, quiet mode flag, and PETSc options.
+ */
+ParsedArgs parseArguments(int argc, char** argv);
 
 /**
  * @brief Sigmoid function for smooth transitions.
