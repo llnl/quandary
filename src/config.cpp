@@ -382,6 +382,17 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
     } else {
       control_initializations = parseControlInitializations(settings.indexed_control_init);
     }
+  } else {
+    // Initialize with defaults when no control initialization is provided
+    control_initializations.resize(num_osc);
+    ControlSegmentInitialization default_init = ControlSegmentInitialization{
+        ControlSegmentInitType::CONSTANT, ConfigDefaults::CONTROL_INIT_AMPLITUDE, ConfigDefaults::CONTROL_INIT_PHASE};
+    std::vector<ControlSegmentInitialization> default_initialization = {default_init};
+    for (size_t i = 0; i < num_osc; i++) {
+      control_initializations[i] = default_initialization;
+      size_t num_segments = control_segments[i].size();
+      copyLast(control_initializations[i], num_segments);
+    }
   }
 
   control_bounds = parseIndexedWithDefaults<double>(settings.indexed_control_bounds, control_segments.size(),
