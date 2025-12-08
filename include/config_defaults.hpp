@@ -16,8 +16,8 @@
 namespace ConfigDefaults {
 
 // General options
-const size_t NTIME = 1000; ///< Default number of time steps
 const double DT = 0.1; ///< Default time step size (ns)
+const size_t NTIME = 1000; ///< Default number of time steps
 const double SELFKERR = 0.0; ///< Default self-kerr frequency (GHz)
 const double CROSSKERR = 0.0; ///< Default cross-kerr frequency (GHz)
 const double JKL = 0.0; ///< Default dipole-dipole coupling frequency (GHz)
