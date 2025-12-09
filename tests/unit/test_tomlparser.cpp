@@ -726,6 +726,53 @@ TEST_F(TomlParserTest, ControlBounds) {
   EXPECT_EQ(control_bounds0[2], 2.0); // Use last bound for extra segments
 }
 
+TEST_F(TomlParserTest, ControlBounds_AllOscillators) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2]
+        transfreq = [4.1, 4.1]
+        rotfreq = [0.0, 0.0]
+        initial_condition = {type = "basis"}
+
+        [[control_segments]]
+        oscID = 0
+        type = "spline"
+        num = 10
+        tstart = 0.0
+        tstop = 1.0
+        [[control_segments]]
+        oscID = 0
+        type = "step"
+        step_amp1 = 0.1
+        step_amp2 = 0.2
+        tramp = 0.3
+        tstart = 0.4
+        tstop = 0.5
+        [[control_segments]]
+        oscID = 0
+        num = 20
+        type = "spline0"
+        tstart = 1.0
+        tstop = 2.0
+        [[control_bounds]]
+        values = [1.0, 2.0]
+      )",
+      logger);
+
+  // Check control bounds for the three segments
+  const auto& control_bounds0 = config.getControlBounds(0);
+  EXPECT_EQ(control_bounds0.size(), 3);
+  EXPECT_EQ(control_bounds0[0], 1.0);
+  EXPECT_EQ(control_bounds0[1], 2.0);
+  EXPECT_EQ(control_bounds0[2], 2.0); // Use last bound for extra segments
+
+  const auto& control_bounds1 = config.getControlBounds(1);
+  EXPECT_EQ(control_bounds1.size(), 3);
+  EXPECT_EQ(control_bounds1[0], 1.0);
+  EXPECT_EQ(control_bounds1[1], 2.0);
+  EXPECT_EQ(control_bounds1[2], 2.0); // Use last bound for extra segments
+}
+
 TEST_F(TomlParserTest, CarrierFrequencies) {
   Config config = Config::fromTomlString(
       R"(

@@ -183,19 +183,8 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     }
 
     // Parse control bounds
-    control_bounds.resize(num_osc);
-    std::optional<std::map<int, std::vector<double>>> control_bounds_opt = std::nullopt;
-    auto control_bounds_node = table["control_bounds"];
-    if (control_bounds_node.is_array_of_tables()) {
-      control_bounds_opt = std::map<int, std::vector<double>>();
-      for (auto& elem : *control_bounds_node.as_array()) {
-        auto bounds_table = *elem.as_table();
-        size_t oscilID = validators::field<size_t>(bounds_table, "oscID").value();
-        (*control_bounds_opt)[oscilID] = validators::vectorField<double>(bounds_table, "values").value();
-      }
-    }
-    control_bounds =
-        parseIndexedWithDefaults<double>(control_bounds_opt, control_segments.size(), {ConfigDefaults::CONTROL_BOUND});
+    auto control_bounds_array = validators::getArrayOfTables(table, "control_bounds");
+    control_bounds = parseOscillatorSettings<double>(control_bounds_array, num_osc, {ConfigDefaults::CONTROL_BOUND}, "values");
     // Extend bounds to match number of control segments
     for (size_t i = 0; i < control_bounds.size(); i++) {
       copyLast(control_bounds[i], control_segments[i].size());
