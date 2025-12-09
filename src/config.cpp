@@ -211,20 +211,20 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     optim_maxiter = validators::field<size_t>(table, "optim_maxiter").positive().valueOr(ConfigDefaults::OPTIM_MAXITER);
     optim_regul = validators::field<double>(table, "optim_regul").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_REGUL);
 
-    penalty.penalty =
-        validators::field<double>(table, "optim_penalty").greaterThanEqual(0.0).valueOr(ConfigDefaults::PENALTY);
-    penalty.penalty_param = validators::field<double>(table, "optim_penalty_param")
+    optim_penalty =
+        validators::field<double>(table, "optim_penalty").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY);
+    optim_penalty_param = validators::field<double>(table, "optim_penalty_param")
                                 .greaterThanEqual(0.0)
-                                .valueOr(ConfigDefaults::PENALTY_PARAM);
-    penalty.penalty_dpdm = validators::field<double>(table, "optim_penalty_dpdm")
+                                .valueOr(ConfigDefaults::OPTIM_PENALTY_PARAM);
+    optim_penalty_dpdm = validators::field<double>(table, "optim_penalty_dpdm")
                                .greaterThanEqual(0.0)
-                               .valueOr(ConfigDefaults::PENALTY_DPDM);
-    penalty.penalty_energy = validators::field<double>(table, "optim_penalty_energy")
+                               .valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
+    optim_penalty_energy = validators::field<double>(table, "optim_penalty_energy")
                                  .greaterThanEqual(0.0)
-                                 .valueOr(ConfigDefaults::PENALTY_ENERGY);
-    penalty.penalty_variation = validators::field<double>(table, "optim_penalty_variation")
+                                 .valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
+    optim_penalty_variation = validators::field<double>(table, "optim_penalty_variation")
                                     .greaterThanEqual(0.0)
-                                    .valueOr(ConfigDefaults::PENALTY_VARIATION);
+                                    .valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
 
     if (!table.contains("optim_regul_tik0") && table.contains("optim_regul_interpolate")) {
       // Handle deprecated optim_regul_interpolate logic
@@ -385,14 +385,11 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
 
   optim_regul = settings.optim_regul.value_or(ConfigDefaults::OPTIM_REGUL);
 
-  penalty = ConfigDefaults::OPTIM_PENALTY;
-  if (settings.optim_penalty.has_value()) penalty.penalty = settings.optim_penalty.value();
-  if (settings.optim_penalty_param.has_value()) penalty.penalty_param = settings.optim_penalty_param.value();
-  if (settings.optim_penalty_dpdm.has_value()) penalty.penalty_dpdm = settings.optim_penalty_dpdm.value();
-  if (settings.optim_penalty_energy.has_value()) penalty.penalty_energy = settings.optim_penalty_energy.value();
-  if (settings.optim_penalty_variation.has_value())
-    penalty.penalty_variation = settings.optim_penalty_variation.value();
-
+  optim_penalty = settings.optim_penalty.value_or(ConfigDefaults::OPTIM_PENALTY);
+  optim_penalty_param = settings.optim_penalty_param.value_or(ConfigDefaults::OPTIM_PENALTY_PARAM);
+  optim_penalty_dpdm = settings.optim_penalty_dpdm.value_or(ConfigDefaults::OPTIM_PENALTY_DPDM);
+  optim_penalty_energy = settings.optim_penalty_energy.value_or(ConfigDefaults::OPTIM_PENALTY_ENERGY);
+  optim_penalty_variation = settings.optim_penalty_variation.value_or(ConfigDefaults::OPTIM_PENALTY_VARIATION);
   optim_regul_tik0 = settings.optim_regul_tik0.value_or(ConfigDefaults::OPTIM_REGUL_TIK0);
   if (settings.optim_regul_interpolate.has_value()) {
     // Handle deprecated optim_regul_interpolate logic
@@ -558,11 +555,11 @@ void Config::printConfig(std::stringstream& log) const {
   log << "optim_inftol = " << optim_inftol << "\n";
   log << "optim_maxiter = " << optim_maxiter << "\n";
   log << "optim_regul = " << optim_regul << "\n";
-  log << "optim_penalty = " << penalty.penalty << "\n";
-  log << "optim_penalty_param = " << penalty.penalty_param << "\n";
-  log << "optim_penalty_dpdm = " << penalty.penalty_dpdm << "\n";
-  log << "optim_penalty_energy = " << penalty.penalty_energy << "\n";
-  log << "optim_penalty_variation = " << penalty.penalty_variation << "\n";
+  log << "optim_penalty = " << optim_penalty << "\n";
+  log << "optim_penalty_param = " << optim_penalty_param << "\n";
+  log << "optim_penalty_dpdm = " << optim_penalty_dpdm << "\n";
+  log << "optim_penalty_energy = " << optim_penalty_energy << "\n";
+  log << "optim_penalty_variation = " << optim_penalty_variation << "\n";
   log << "optim_regul_tik0 = " << (optim_regul_tik0 ? "true" : "false") << "\n";
 
   // Output parameters

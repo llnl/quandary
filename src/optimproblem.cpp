@@ -74,13 +74,12 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
   grtol = config.getOptimRtol();
   maxiter = config.getOptimMaxiter();
 
-  // Get penalty settings as a group
-  const auto& penalty_config = config.getOptimPenalty();
-  gamma_penalty = penalty_config.penalty;
-  penalty_param = penalty_config.penalty_param;
-  gamma_penalty_energy = penalty_config.penalty_energy;
-  gamma_penalty_dpdm = penalty_config.penalty_dpdm;
-  gamma_penalty_variation = penalty_config.penalty_variation;
+  // Get penalty settings
+  gamma_penalty = config.getOptimPenalty();
+  penalty_param = config.getOptimPenaltyParam();
+  gamma_penalty_energy = config.getOptimPenaltyEnergy();
+  gamma_penalty_dpdm = config.getOptimPenaltyDpdm();
+  gamma_penalty_variation = config.getOptimPenaltyVariation();
 
   gamma_tik_interpolate = config.getOptimRegulTik0();
 

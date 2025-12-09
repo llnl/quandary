@@ -30,19 +30,6 @@ struct InitialCondition {
 };
 
 /**
- * @brief Grouped optimization penalty settings.
- *
- * Groups all penalty terms used for control pulse regularization.
- */
-struct OptimPenalty {
-  double penalty; ///< First integral penalty coefficient
-  double penalty_param; ///< Gaussian variance parameter
-  double penalty_dpdm; ///< Second derivative penalty coefficient
-  double penalty_energy; ///< Energy penalty coefficient
-  double penalty_variation; ///< Amplitude variation penalty coefficient
-};
-
-/**
  * @brief Gate-based optimization target.
  */
 struct GateOptimTarget {
@@ -214,7 +201,11 @@ class Config {
   double optim_inftol; ///< Infidelity tolerance
   size_t optim_maxiter; ///< Maximum iterations
   double optim_regul; ///< Coefficient of Tikhonov regularization for the design variables
-  OptimPenalty penalty; ///< Grouped optimization penalty coefficients
+  double optim_penalty; ///< First integral penalty coefficient
+  double optim_penalty_param; ///< Gaussian variance parameter
+  double optim_penalty_dpdm; ///< Second derivative penalty coefficient
+  double optim_penalty_energy; ///< Energy penalty coefficient
+  double optim_penalty_variation; ///< Amplitude variation penalty coefficient
   bool optim_regul_tik0; ///< Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
 
   // Output and runtypes
@@ -292,7 +283,11 @@ class Config {
   double getOptimInftol() const { return optim_inftol; }
   size_t getOptimMaxiter() const { return optim_maxiter; }
   double getOptimRegul() const { return optim_regul; }
-  const OptimPenalty& getOptimPenalty() const { return penalty; }
+  double getOptimPenalty() const { return optim_penalty; }
+  double getOptimPenaltyParam() const { return optim_penalty_param; }
+  double getOptimPenaltyDpdm() const { return optim_penalty_dpdm; }
+  double getOptimPenaltyEnergy() const { return optim_penalty_energy; }
+  double getOptimPenaltyVariation() const { return optim_penalty_variation; }
   bool getOptimRegulTik0() const { return optim_regul_tik0; }
 
   const std::string& getDataDir() const { return datadir; }
