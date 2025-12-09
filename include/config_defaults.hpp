@@ -36,7 +36,7 @@ const double CONTROL_INIT_RANDOM_AMPLITUDE = 0.1; ///< Default amplitude for ran
 const double CONTROL_BOUND = 10000.0; ///< Default amplitude bound for control pulses
 const double CARRIER_FREQ = 0.0; ///< Default carrier frequency
 
-const PureOptimTarget OPTIM_TARGET = PureOptimTarget{}; ///< Default optimization target: pure state transfer
+const OptimTargetSettings OPTIM_TARGET = {TargetType::PURE, {}, {}, {}, {}}; ///< Default optimization target: pure state transfer
 const GateType GATE_TYPE = GateType::NONE; ///< Default gate type
 const double GATE_ROT_FREQ = 0.0; ///< Default gate rotational frequency
 const ObjectiveType OPTIM_OBJECTIVE = ObjectiveType::JFROBENIUS; ///< Default objective function

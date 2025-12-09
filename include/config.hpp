@@ -2,7 +2,6 @@
 
 #include <petsc.h>
 
-#include <algorithm>
 #include <cstddef>
 #include <optional>
 #include <sstream>
@@ -30,64 +29,19 @@ struct InitialCondition {
 };
 
 /**
- * @brief Gate-based optimization target.
+ * @brief Optimization target configuration.
  */
-struct GateOptimTarget {
-  GateType gate_type; ///< Gate type (for gate targets)
-  std::string gate_file; ///< Gate file (for gate from file)
+struct OptimTargetSettings {
+  TargetType type; ///< Type of optimization target
 
-  std::string toString() const {
-    if (gate_type == GateType::FILE) {
-      return "{target_type = \"gate\", gate_type = \"file\", gate_file = \"" + gate_file + "\"}";
-    } else {
-      auto it = std::find_if(GATE_TYPE_MAP.begin(), GATE_TYPE_MAP.end(),
-                             [this](const auto& pair) { return pair.second == gate_type; });
-      std::string gate_name = (it != GATE_TYPE_MAP.end() ? it->first : "unknown");
-      return "{target_type = \"gate\", gate_type = \"" + gate_name + "\"}";
-    }
-  }
+  // Optional fields - populate based on type
+  std::optional<GateType> gate_type;              ///< For GATE: Gate type
+  std::optional<std::string> gate_file;           ///< For GATE with FILE type: Gate file path
+  std::optional<std::vector<size_t>> levels;      ///< For PURE: Pure state levels
+  std::optional<std::string> file;                ///< For FROMFILE: Target file path
+
+  std::string toString() const;
 };
-
-/**
- * @brief Pure state optimization target.
- */
-struct PureOptimTarget {
-  std::vector<size_t> purestate_levels; ///< Pure state levels (for pure targets)
-
-  std::string toString() const {
-    std::string out = "{target_type = \"pure\", levels = [";
-    for (size_t i = 0; i < purestate_levels.size(); ++i) {
-      out += std::to_string(purestate_levels[i]);
-      if (i < purestate_levels.size() - 1) out += ", ";
-    }
-    out += "]}";
-    return out;
-  }
-};
-
-/**
- * @brief File-based optimization target.
- */
-struct FileOptimTarget {
-  std::string file; ///< Target file (for file targets)
-
-  std::string toString() const { return "{target_type = \"file\", filename = \"" + file + "\"}"; }
-};
-
-/**
- * @brief Variant type representing any optimization target configuration.
- */
-using OptimTargetSettings = std::variant<GateOptimTarget, PureOptimTarget, FileOptimTarget>;
-
-/**
- * @brief Converts optimization target to string representation.
- *
- * @param target Optimization target variant
- * @return String representation of the target
- */
-inline std::string toString(const OptimTargetSettings& target) {
-  return std::visit([](const auto& t) { return t.toString(); }, target);
-}
 
 /**
  * @brief Structure for storing pi-pulse parameters for one segment.

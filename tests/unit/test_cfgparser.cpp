@@ -83,9 +83,8 @@ TEST_F(CfgParserTest, ParseStructSettings) {
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_TRUE(std::holds_alternative<GateOptimTarget>(target));
-  const auto& gate_target = std::get<GateOptimTarget>(target);
-  EXPECT_EQ(gate_target.gate_type, GateType::CNOT);
+  EXPECT_EQ(target.type, TargetType::GATE);
+  EXPECT_EQ(target.gate_type.value(), GateType::CNOT);
 
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::DIAGONAL);
@@ -613,9 +612,8 @@ TEST_F(CfgParserTest, OptimTarget_GateType) {
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_TRUE(std::holds_alternative<GateOptimTarget>(target));
-  const auto& gate_target = std::get<GateOptimTarget>(target);
-  EXPECT_EQ(gate_target.gate_type, GateType::CNOT);
+  EXPECT_EQ(target.type, TargetType::GATE);
+  EXPECT_EQ(target.gate_type.value(), GateType::CNOT);
 }
 
 TEST_F(CfgParserTest, OptimTarget_GateFromFile) {
@@ -630,10 +628,9 @@ TEST_F(CfgParserTest, OptimTarget_GateFromFile) {
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_TRUE(std::holds_alternative<GateOptimTarget>(target));
-  const auto& gate_target = std::get<GateOptimTarget>(target);
-  EXPECT_EQ(gate_target.gate_type, GateType::FILE);
-  EXPECT_EQ(gate_target.gate_file, "/path/to/gate.dat");
+  EXPECT_EQ(target.type, TargetType::GATE);
+  EXPECT_EQ(target.gate_type.value(), GateType::FILE);
+  EXPECT_EQ(target.gate_file.value(), "/path/to/gate.dat");
 }
 
 TEST_F(CfgParserTest, OptimTarget_PureState) {
@@ -648,9 +645,8 @@ TEST_F(CfgParserTest, OptimTarget_PureState) {
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_TRUE(std::holds_alternative<PureOptimTarget>(target));
-  const auto& pure_target = std::get<PureOptimTarget>(target);
-  const auto& levels = pure_target.purestate_levels;
+  EXPECT_EQ(target.type, TargetType::PURE);
+  const auto& levels = target.levels.value();
   EXPECT_EQ(levels.size(), 3);
   EXPECT_EQ(levels[0], 0);
   EXPECT_EQ(levels[1], 1);
@@ -669,9 +665,8 @@ TEST_F(CfgParserTest, OptimTarget_FromFile) {
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_TRUE(std::holds_alternative<FileOptimTarget>(target));
-  const auto& file_target = std::get<FileOptimTarget>(target);
-  EXPECT_EQ(file_target.file, "/path/to/target.dat");
+  EXPECT_EQ(target.type, TargetType::FROMFILE);
+  EXPECT_EQ(target.file.value(), "/path/to/target.dat");
 }
 
 TEST_F(CfgParserTest, OptimTarget_DefaultPure) {
@@ -685,10 +680,10 @@ TEST_F(CfgParserTest, OptimTarget_DefaultPure) {
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_TRUE(std::holds_alternative<PureOptimTarget>(target));
-
-  const auto& pure_target = std::get<PureOptimTarget>(target);
-  EXPECT_TRUE(pure_target.purestate_levels.empty());
+  EXPECT_EQ(target.type, TargetType::PURE);
+  // For default pure state, levels should be set to ground state
+  EXPECT_TRUE(target.levels.has_value());
+  EXPECT_FALSE(target.levels.value().empty());
 }
 
 TEST_F(CfgParserTest, OptimWeights) {

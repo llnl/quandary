@@ -158,25 +158,21 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
 
   const auto& target = config.getOptimTarget();
 
-  if (std::holds_alternative<GateOptimTarget>(target)) {
-    target_type = TargetType::GATE;
-    const auto& gate_target = std::get<GateOptimTarget>(target);
+  target_type = target.type;
+
+  if (target_type == TargetType::GATE) {
     const std::vector<double>& gate_rot_freq = config.getGateRotFreq();
 
     /* Initialize the targetgate */
-    targetgate = initTargetGate(gate_target.gate_type, gate_target.gate_file, mastereq->nlevels, mastereq->nessential, total_time, lindbladtype, gate_rot_freq, quietmode);
-  } else if (std::holds_alternative<PureOptimTarget>(target)) {
-    target_type = TargetType::PURE;
+    targetgate = initTargetGate(target.gate_type.value(), target.gate_file.value_or(""), mastereq->nlevels, mastereq->nessential, total_time, lindbladtype, gate_rot_freq, quietmode);
+  } else if (target_type == TargetType::PURE) {
     purestateID = 0;
-    const auto& pure_target = std::get<PureOptimTarget>(target);
-    const std::vector<size_t>& purestate_levels = pure_target.purestate_levels;
+    const std::vector<size_t>& purestate_levels = target.levels.value();
     for (size_t i=0; i < mastereq->getNOscillators(); i++) {
       purestateID += purestate_levels[i] * mastereq->getOscillator(i)->dim_postOsc;
     }
-  } else if (std::holds_alternative<FileOptimTarget>(target)) {
-    target_type = TargetType::FROMFILE;
-    const auto& file_target = std::get<FileOptimTarget>(target);
-    target_filename = file_target.file;
+  } else if (target_type == TargetType::FROMFILE) {
+    target_filename = target.file.value();
   }
 
   objective_type = config.getOptimObjective();
