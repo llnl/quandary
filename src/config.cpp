@@ -17,19 +17,6 @@
 #include "defs.hpp"
 #include "util.hpp"
 
-namespace {
-
-// Helper function to convert enum back to string using existing enum maps
-template <typename EnumType>
-std::string enumToString(EnumType value, const std::map<std::string, EnumType>& type_map) {
-  for (const auto& [str, enum_val] : type_map) {
-    if (enum_val == value) return str;
-  }
-  return "unknown";
-}
-
-} // namespace
-
 Config::Config(const MPILogger& logger, const toml::table& table) : logger(logger) {
   try {
     // General options

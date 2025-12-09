@@ -321,6 +321,21 @@ std::optional<T> parseEnum(const std::string& str, const std::map<std::string, T
 }
 
 /**
+ * @brief Converts enum value back to string.
+ *
+ * @param value Enum value to convert
+ * @param type_map Map from string to enum values
+ * @return std::string String representation of enum value
+ */
+template <typename EnumType>
+std::string enumToString(EnumType value, const std::map<std::string, EnumType>& type_map) {
+  for (const auto& [str, enum_val] : type_map) {
+    if (enum_val == value) return str;
+  }
+  return "unknown";
+}
+
+/**
  * @brief Generic enum parsing utility with case-insensitive lookup and default fallback.
  *
  * @param opt_str Optional string value to parse into enum
