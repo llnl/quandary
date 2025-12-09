@@ -204,11 +204,11 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
         validators::getOptionalVector<double>(table["optim_weights"]);
     optim_weights = parseOptimWeights(optim_weights_opt);
 
-    tolerance.atol = validators::field<double>(table, "optim_atol").positive().valueOr(ConfigDefaults::OPTIM_ATOL);
-    tolerance.rtol = validators::field<double>(table, "optim_rtol").positive().valueOr(ConfigDefaults::OPTIM_RTOL);
-    tolerance.ftol = validators::field<double>(table, "optim_ftol").positive().valueOr(ConfigDefaults::OPTIM_FTOL);
-    tolerance.inftol = validators::field<double>(table, "optim_inftol").positive().valueOr(ConfigDefaults::OPTIM_INFTOL);
-    tolerance.maxiter = validators::field<size_t>(table, "optim_maxiter").positive().valueOr(ConfigDefaults::OPTIM_MAXITER);
+    optim_atol = validators::field<double>(table, "optim_atol").positive().valueOr(ConfigDefaults::OPTIM_ATOL);
+    optim_rtol = validators::field<double>(table, "optim_rtol").positive().valueOr(ConfigDefaults::OPTIM_RTOL);
+    optim_ftol = validators::field<double>(table, "optim_ftol").positive().valueOr(ConfigDefaults::OPTIM_FTOL);
+    optim_inftol = validators::field<double>(table, "optim_inftol").positive().valueOr(ConfigDefaults::OPTIM_INFTOL);
+    optim_maxiter = validators::field<size_t>(table, "optim_maxiter").positive().valueOr(ConfigDefaults::OPTIM_MAXITER);
     optim_regul = validators::field<double>(table, "optim_regul").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_REGUL);
 
     penalty.penalty =
@@ -377,12 +377,11 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
 
   optim_weights = parseOptimWeights(settings.optim_weights);
 
-  tolerance = ConfigDefaults::OPTIM_TOLERANCE;
-  if (settings.optim_atol.has_value()) tolerance.atol = settings.optim_atol.value();
-  if (settings.optim_rtol.has_value()) tolerance.rtol = settings.optim_rtol.value();
-  if (settings.optim_ftol.has_value()) tolerance.ftol = settings.optim_ftol.value();
-  if (settings.optim_inftol.has_value()) tolerance.inftol = settings.optim_inftol.value();
-  if (settings.optim_maxiter.has_value()) tolerance.maxiter = settings.optim_maxiter.value();
+  optim_atol = settings.optim_atol.value_or(ConfigDefaults::OPTIM_ATOL);
+  optim_rtol = settings.optim_rtol.value_or(ConfigDefaults::OPTIM_RTOL);
+  optim_ftol = settings.optim_ftol.value_or(ConfigDefaults::OPTIM_FTOL);
+  optim_inftol = settings.optim_inftol.value_or(ConfigDefaults::OPTIM_INFTOL);
+  optim_maxiter = settings.optim_maxiter.value_or(ConfigDefaults::OPTIM_MAXITER);
 
   optim_regul = settings.optim_regul.value_or(ConfigDefaults::OPTIM_REGUL);
 
@@ -553,11 +552,11 @@ void Config::printConfig(std::stringstream& log) const {
   log << "gate_rot_freq = " << printVector(gate_rot_freq) << "\n";
   log << "optim_objective = \"" << enumToString(optim_objective, OBJECTIVE_TYPE_MAP) << "\"\n";
   log << "optim_weights = " << printVector(optim_weights) << "\n";
-  log << "optim_atol = " << tolerance.atol << "\n";
-  log << "optim_rtol = " << tolerance.rtol << "\n";
-  log << "optim_ftol = " << tolerance.ftol << "\n";
-  log << "optim_inftol = " << tolerance.inftol << "\n";
-  log << "optim_maxiter = " << tolerance.maxiter << "\n";
+  log << "optim_atol = " << optim_atol << "\n";
+  log << "optim_rtol = " << optim_rtol << "\n";
+  log << "optim_ftol = " << optim_ftol << "\n";
+  log << "optim_inftol = " << optim_inftol << "\n";
+  log << "optim_maxiter = " << optim_maxiter << "\n";
   log << "optim_regul = " << optim_regul << "\n";
   log << "optim_penalty = " << penalty.penalty << "\n";
   log << "optim_penalty_param = " << penalty.penalty_param << "\n";

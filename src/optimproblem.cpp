@@ -67,13 +67,12 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
   /* Store other optimization parameters */
   gamma_tik = config.getOptimRegul();
 
-  // Get tolerance settings as a group
-  const auto& tolerance = config.getOptimTolerance();
-  gatol = tolerance.atol;
-  fatol = tolerance.ftol;
-  inftol = tolerance.inftol;
-  grtol = tolerance.rtol;
-  maxiter = tolerance.maxiter;
+  // Get tolerance settings
+  gatol = config.getOptimAtol();
+  fatol = config.getOptimFtol();
+  inftol = config.getOptimInftol();
+  grtol = config.getOptimRtol();
+  maxiter = config.getOptimMaxiter();
 
   // Get penalty settings as a group
   const auto& penalty_config = config.getOptimPenalty();

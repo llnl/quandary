@@ -30,19 +30,6 @@ struct InitialCondition {
 };
 
 /**
- * @brief Grouped optimization tolerance settings.
- *
- * Groups all optimization stopping criteria and iteration limits.
- */
-struct OptimTolerance {
-  double atol; ///< Absolute gradient tolerance
-  double rtol; ///< Relative gradient tolerance
-  double ftol; ///< Final time cost tolerance
-  double inftol; ///< Infidelity tolerance
-  size_t maxiter; ///< Maximum iterations
-};
-
-/**
  * @brief Grouped optimization penalty settings.
  *
  * Groups all penalty terms used for control pulse regularization.
@@ -221,7 +208,11 @@ class Config {
   std::vector<double> gate_rot_freq; ///< Frequency of rotation of the target gate, for each oscillator (GHz)
   ObjectiveType optim_objective; ///< Objective function measure
   std::vector<double> optim_weights; ///< Weights for summing up the objective function
-  OptimTolerance tolerance; ///< Grouped optimization stopping criteria and iteration limits
+  double optim_atol; ///< Absolute gradient tolerance
+  double optim_rtol; ///< Relative gradient tolerance
+  double optim_ftol; ///< Final time cost tolerance
+  double optim_inftol; ///< Infidelity tolerance
+  size_t optim_maxiter; ///< Maximum iterations
   double optim_regul; ///< Coefficient of Tikhonov regularization for the design variables
   OptimPenalty penalty; ///< Grouped optimization penalty coefficients
   bool optim_regul_tik0; ///< Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
@@ -295,7 +286,11 @@ class Config {
   const std::vector<double>& getGateRotFreq() const { return gate_rot_freq; }
   ObjectiveType getOptimObjective() const { return optim_objective; }
   const std::vector<double>& getOptimWeights() const { return optim_weights; }
-  const OptimTolerance& getOptimTolerance() const { return tolerance; }
+  double getOptimAtol() const { return optim_atol; }
+  double getOptimRtol() const { return optim_rtol; }
+  double getOptimFtol() const { return optim_ftol; }
+  double getOptimInftol() const { return optim_inftol; }
+  size_t getOptimMaxiter() const { return optim_maxiter; }
   double getOptimRegul() const { return optim_regul; }
   const OptimPenalty& getOptimPenalty() const { return penalty; }
   bool getOptimRegulTik0() const { return optim_regul_tik0; }

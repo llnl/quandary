@@ -48,13 +48,6 @@ const double OPTIM_RTOL = 1e-4; ///< Default relative gradient tolerance
 const double OPTIM_FTOL = 1e-8; ///< Default final time cost tolerance
 const double OPTIM_INFTOL = 1e-5; ///< Default infidelity tolerance
 const size_t OPTIM_MAXITER = 200; ///< Default maximum optimization iterations
-const OptimTolerance OPTIM_TOLERANCE = OptimTolerance{
-    OPTIM_ATOL,
-    OPTIM_RTOL,
-    OPTIM_FTOL,
-    OPTIM_INFTOL,
-    OPTIM_MAXITER
-}; ///< Default optimization tolerance settings
 
 const double PENALTY = 0.0; ///< Default first integral penalty coefficient
 const double PENALTY_PARAM = 0.5; ///< Default Gaussian variance parameter
