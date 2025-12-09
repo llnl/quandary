@@ -83,7 +83,7 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     n_initial_conditions = computeNumInitialConditions();
 
     apply_pipulse = std::vector<std::vector<PiPulseSegment>>(nlevels.size());
-    auto apply_pipulse_array_of_tables = validators::getOptionalArrayOfTables(table, "apply_pipulse");
+    auto apply_pipulse_array_of_tables = validators::getArrayOfTables(table, "apply_pipulse");
     for (auto& elem : apply_pipulse_array_of_tables) {
       auto pipulse_table = *elem.as_table();
       size_t oscilID = validators::field<size_t>(pipulse_table, "oscID").value();
@@ -270,7 +270,7 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     datadir = table["datadir"].value_or(ConfigDefaults::DATADIR);
 
     output_to_write.resize(num_osc); // Empty vectors by default
-    auto write_array = validators::getOptionalArrayOfTables(table, "write");
+    auto write_array = validators::getArrayOfTables(table, "write");
     for (auto& elem : write_array) {
       auto write_table = *elem.as_table();
       size_t oscilID = validators::field<size_t>(write_table, "oscID").lessThan(num_osc).value();
