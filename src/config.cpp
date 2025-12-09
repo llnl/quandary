@@ -36,8 +36,8 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     copyLast(transfreq, num_osc);
 
     selfkerr = validators::vectorField<double>(table, "selfkerr")
-                  .minLength(1)
-                  .valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
+                   .minLength(1)
+                   .valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
     copyLast(selfkerr, num_osc);
 
     crosskerr = validators::vectorField<double>(table, "crosskerr")
@@ -53,12 +53,15 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     rotfreq = validators::vectorField<double>(table, "rotfreq").minLength(1).value();
     copyLast(rotfreq, num_osc);
 
-    collapse_type = parseEnum(table["collapse_type"].value<std::string>(), LINDBLAD_TYPE_MAP, ConfigDefaults::COLLAPSE_TYPE_ENUM);
+    collapse_type =
+        parseEnum(table["collapse_type"].value<std::string>(), LINDBLAD_TYPE_MAP, ConfigDefaults::COLLAPSE_TYPE_ENUM);
 
-    decay_time = validators::vectorField<double>(table, "decay_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
+    decay_time = validators::vectorField<double>(table, "decay_time")
+                     .valueOr(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
     copyLast(decay_time, num_osc);
 
-    dephase_time = validators::vectorField<double>(table, "dephase_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
+    dephase_time = validators::vectorField<double>(table, "dephase_time")
+                       .valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
     copyLast(dephase_time, num_osc);
 
     auto init_cond_table = validators::getRequiredTable(table, "initial_condition");
@@ -133,7 +136,7 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
             case ControlSegmentInitType::RANDOM: {
               size_t oscID = validators::field<size_t>(init_table, "oscID").value();
               double amplitude = validators::field<double>(init_table, "amplitude")
-                  .valueOr(ConfigDefaults::CONTROL_INIT_RANDOM_AMPLITUDE);
+                                     .valueOr(ConfigDefaults::CONTROL_INIT_RANDOM_AMPLITUDE);
               double phase = validators::field<double>(init_table, "phase").valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
               ControlSegmentInitialization init = {ControlSegmentInitType::RANDOM, amplitude, phase};
               osc_inits[oscID].push_back(init);
@@ -145,10 +148,9 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     }
 
     // Apply defaults to control segments and initializations if needed
-    std::vector<ControlSegment> default_segments = {{
-        ControlType::BSPLINE,
-        SplineParams{ConfigDefaults::CONTROL_SEG_SPLINE_COUNT, ConfigDefaults::CONTROL_SEG_TSTART, getTotalTime()}
-    }};
+    std::vector<ControlSegment> default_segments = {
+        {ControlType::BSPLINE,
+         SplineParams{ConfigDefaults::CONTROL_SEG_SPLINE_COUNT, ConfigDefaults::CONTROL_SEG_TSTART, getTotalTime()}}};
     std::vector<ControlSegmentInitialization> default_initialization = {ControlSegmentInitialization{
         ControlSegmentInitType::CONSTANT, ConfigDefaults::CONTROL_INIT_AMPLITUDE, ConfigDefaults::CONTROL_INIT_PHASE}};
 
@@ -171,7 +173,8 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
 
     // Parse control bounds
     auto control_bounds_array = validators::getArrayOfTables(table, "control_bounds");
-    control_bounds = parseOscillatorSettings<double>(control_bounds_array, num_osc, {ConfigDefaults::CONTROL_BOUND}, "values");
+    control_bounds =
+        parseOscillatorSettings<double>(control_bounds_array, num_osc, {ConfigDefaults::CONTROL_BOUND}, "values");
     // Extend bounds to match number of control segments
     for (size_t i = 0; i < control_bounds.size(); i++) {
       copyLast(control_bounds[i], control_segments[i].size());
@@ -179,7 +182,8 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
 
     // Parse carrier frequencies
     auto carrier_freq_array = validators::getArrayOfTables(table, "carrier_frequency");
-    carrier_frequencies = parseOscillatorSettings<double>(carrier_freq_array, num_osc, {ConfigDefaults::CARRIER_FREQ}, "values");
+    carrier_frequencies =
+        parseOscillatorSettings<double>(carrier_freq_array, num_osc, {ConfigDefaults::CARRIER_FREQ}, "values");
 
     // optim_target
     std::optional<OptimTargetData> optim_target_config;
@@ -195,10 +199,11 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     optim_target = parseOptimTarget(optim_target_config, nlevels);
 
     gate_rot_freq = validators::vectorField<double>(table, "gate_rot_freq")
-        .valueOr(std::vector<double>(num_osc, ConfigDefaults::GATE_ROT_FREQ));
+                        .valueOr(std::vector<double>(num_osc, ConfigDefaults::GATE_ROT_FREQ));
     copyLast(gate_rot_freq, num_osc);
 
-    optim_objective = parseEnum(table["optim_objective"].value<std::string>(), OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
+    optim_objective =
+        parseEnum(table["optim_objective"].value<std::string>(), OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
 
     std::optional<std::vector<double>> optim_weights_opt =
         validators::getOptionalVector<double>(table["optim_weights"]);
@@ -209,22 +214,23 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     optim_ftol = validators::field<double>(table, "optim_ftol").positive().valueOr(ConfigDefaults::OPTIM_FTOL);
     optim_inftol = validators::field<double>(table, "optim_inftol").positive().valueOr(ConfigDefaults::OPTIM_INFTOL);
     optim_maxiter = validators::field<size_t>(table, "optim_maxiter").positive().valueOr(ConfigDefaults::OPTIM_MAXITER);
-    optim_regul = validators::field<double>(table, "optim_regul").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_REGUL);
+    optim_regul =
+        validators::field<double>(table, "optim_regul").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_REGUL);
 
     optim_penalty =
         validators::field<double>(table, "optim_penalty").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY);
     optim_penalty_param = validators::field<double>(table, "optim_penalty_param")
-                                .greaterThanEqual(0.0)
-                                .valueOr(ConfigDefaults::OPTIM_PENALTY_PARAM);
+                              .greaterThanEqual(0.0)
+                              .valueOr(ConfigDefaults::OPTIM_PENALTY_PARAM);
     optim_penalty_dpdm = validators::field<double>(table, "optim_penalty_dpdm")
-                               .greaterThanEqual(0.0)
-                               .valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
+                             .greaterThanEqual(0.0)
+                             .valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
     optim_penalty_energy = validators::field<double>(table, "optim_penalty_energy")
-                                 .greaterThanEqual(0.0)
-                                 .valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
+                               .greaterThanEqual(0.0)
+                               .valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
     optim_penalty_variation = validators::field<double>(table, "optim_penalty_variation")
-                                    .greaterThanEqual(0.0)
-                                    .valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
+                                  .greaterThanEqual(0.0)
+                                  .valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
 
     if (!table.contains("optim_regul_tik0") && table.contains("optim_regul_interpolate")) {
       // Handle deprecated optim_regul_interpolate logic
@@ -249,11 +255,13 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
 
     usematfree = table["usematfree"].value_or(ConfigDefaults::USEMATFREE);
 
-    linearsolver_type = parseEnum(table["linearsolver_type"].value<std::string>(), LINEAR_SOLVER_TYPE_MAP, ConfigDefaults::LINEARSOLVER_TYPE);
+    linearsolver_type = parseEnum(table["linearsolver_type"].value<std::string>(), LINEAR_SOLVER_TYPE_MAP,
+                                  ConfigDefaults::LINEARSOLVER_TYPE);
 
     linearsolver_maxiter = table["linearsolver_maxiter"].value_or(ConfigDefaults::LINEARSOLVER_MAXITER);
 
-    timestepper_type = parseEnum(table["timestepper"].value<std::string>(), TIME_STEPPER_TYPE_MAP, ConfigDefaults::TIMESTEPPER_TYPE);
+    timestepper_type =
+        parseEnum(table["timestepper"].value<std::string>(), TIME_STEPPER_TYPE_MAP, ConfigDefaults::TIMESTEPPER_TYPE);
 
     int rand_seed_ = table["rand_seed"].value_or(ConfigDefaults::RAND_SEED);
     setRandSeed(rand_seed_);
@@ -830,8 +838,7 @@ std::vector<EnumType> Config::convertStringVectorToEnum(const std::vector<std::s
 }
 
 template <typename T>
-std::vector<std::vector<T>> Config::parseOscillatorSettings(const toml::array& array_of_tables,
-                                                            size_t num_entries,
+std::vector<std::vector<T>> Config::parseOscillatorSettings(const toml::array& array_of_tables, size_t num_entries,
                                                             std::vector<T> default_values,
                                                             const std::string& field_name) const {
   std::vector<std::vector<T>> result(num_entries, default_values);
@@ -983,10 +990,9 @@ std::vector<std::vector<PiPulseSegment>> Config::parsePiPulsesFromCfg(
 
 std::vector<std::vector<ControlSegment>> Config::parseControlSegments(
     const std::optional<std::map<int, std::vector<ControlSegmentData>>>& segments_opt) const {
-  std::vector<ControlSegment> default_segments = {{
-    ControlType::BSPLINE,
-    SplineParams{ConfigDefaults::CONTROL_SEG_SPLINE_COUNT, ConfigDefaults::CONTROL_SEG_TSTART, getTotalTime()}
-  }};
+  std::vector<ControlSegment> default_segments = {
+      {ControlType::BSPLINE,
+       SplineParams{ConfigDefaults::CONTROL_SEG_SPLINE_COUNT, ConfigDefaults::CONTROL_SEG_TSTART, getTotalTime()}}};
 
   if (!segments_opt.has_value()) {
     return std::vector<std::vector<ControlSegment>>(nlevels.size(), default_segments);
@@ -1097,7 +1103,8 @@ ControlSegment Config::parseControlSegment(const toml::table& table) const {
 
 std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlInitializations(
     const std::optional<std::map<int, std::vector<ControlInitializationData>>>& init_configs) const {
-  ControlSegmentInitialization default_init = ControlSegmentInitialization{ControlSegmentInitType::CONSTANT, ConfigDefaults::CONTROL_INIT_AMPLITUDE, ConfigDefaults::CONTROL_INIT_PHASE};
+  ControlSegmentInitialization default_init = ControlSegmentInitialization{
+      ControlSegmentInitType::CONSTANT, ConfigDefaults::CONTROL_INIT_AMPLITUDE, ConfigDefaults::CONTROL_INIT_PHASE};
 
   std::vector<std::vector<ControlSegmentInitialization>> control_initializations(nlevels.size());
   for (size_t i = 0; i < nlevels.size(); i++) {
@@ -1106,8 +1113,9 @@ std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlIniti
       continue;
     }
     for (const auto& init_config : init_configs->at(static_cast<int>(i))) {
-      ControlSegmentInitialization init = ControlSegmentInitialization{
-          init_config.init_seg_type, init_config.amplitude.value(), init_config.phase.value_or(ConfigDefaults::CONTROL_INIT_PHASE)};
+      ControlSegmentInitialization init =
+          ControlSegmentInitialization{init_config.init_seg_type, init_config.amplitude.value(),
+                                       init_config.phase.value_or(ConfigDefaults::CONTROL_INIT_PHASE)};
 
       default_init = init;
       control_initializations[i].push_back(init);
@@ -1123,8 +1131,9 @@ ControlSegmentInitialization Config::parseControlInitialization(const toml::tabl
   if (!type.has_value()) {
     logger.exitWithError("Unrecognized type '" + type_str + "' in control initialization.");
   }
-  return ControlSegmentInitialization{type.value(), validators::field<double>(table, "amplitude").value(),
-                                      validators::field<double>(table, "phase").valueOr(ConfigDefaults::CONTROL_INIT_PHASE)};
+  return ControlSegmentInitialization{
+      type.value(), validators::field<double>(table, "amplitude").value(),
+      validators::field<double>(table, "phase").valueOr(ConfigDefaults::CONTROL_INIT_PHASE)};
 }
 
 OptimTargetSettings Config::parseOptimTarget(const std::optional<OptimTargetData>& opt_config,
@@ -1168,10 +1177,9 @@ OptimTargetSettings Config::parseOptimTarget(const std::optional<OptimTargetData
 
         for (size_t i = 0; i < nlevels.size(); i++) {
           if (pure_levels[i] >= nlevels[i]) {
-            logger.exitWithError("ERROR in config setting. The requested pure state target |" +
-                                 std::to_string(pure_levels[i]) +
-                                 "> exceeds the number of modeled levels for that oscillator (" +
-                                 std::to_string(nlevels[i]) + ").\n");
+            logger.exitWithError(
+                "ERROR in config setting. The requested pure state target |" + std::to_string(pure_levels[i]) +
+                "> exceeds the number of modeled levels for that oscillator (" + std::to_string(nlevels[i]) + ").\n");
           }
         }
         target_settings.levels = pure_levels;

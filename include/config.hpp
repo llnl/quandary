@@ -21,9 +21,9 @@ struct InitialCondition {
   InitialConditionType type; ///< Type of initial condition
 
   // Optional fields - populate based on type
-  std::optional<std::string> filename;           ///< For FROMFILE: File to read initial condition from
-  std::optional<std::vector<size_t>> levels;     ///< For PURE: Quantum level for each oscillator
-  std::optional<std::vector<size_t>> osc_IDs;    ///< For ENSEMBLE, DIAGONAL, BASIS: Oscillator IDs
+  std::optional<std::string> filename; ///< For FROMFILE: File to read initial condition from
+  std::optional<std::vector<size_t>> levels; ///< For PURE: Quantum level for each oscillator
+  std::optional<std::vector<size_t>> osc_IDs; ///< For ENSEMBLE, DIAGONAL, BASIS: Oscillator IDs
 
   std::string toString() const;
 };
@@ -35,10 +35,10 @@ struct OptimTargetSettings {
   TargetType type; ///< Type of optimization target
 
   // Optional fields - populate based on type
-  std::optional<GateType> gate_type;              ///< For GATE: Gate type
-  std::optional<std::string> gate_file;           ///< For GATE with FILE type: Gate file path
-  std::optional<std::vector<size_t>> levels;      ///< For PURE: Pure state levels
-  std::optional<std::string> file;                ///< For FROMFILE: Target file path
+  std::optional<GateType> gate_type; ///< For GATE: Gate type
+  std::optional<std::string> gate_file; ///< For GATE with FILE type: Gate file path
+  std::optional<std::vector<size_t>> levels; ///< For PURE: Pure state levels
+  std::optional<std::string> file; ///< For FROMFILE: Target file path
 
   std::string toString() const;
 };
@@ -142,7 +142,8 @@ class Config {
   bool control_enforceBC; ///< Decide whether control pulses should start and end at zero
   std::optional<std::string> control_initialization_file; ///< Global control initialization file for all oscillators
   std::vector<std::vector<ControlSegment>> control_segments; ///< Control segments for each oscillator
-  std::vector<std::vector<ControlSegmentInitialization>> control_initializations; ///< Control initializations for each oscillator
+  std::vector<std::vector<ControlSegmentInitialization>>
+      control_initializations; ///< Control initializations for each oscillator
   std::vector<std::vector<double>> control_bounds; ///< Control bounds for each oscillator
   std::vector<std::vector<double>> carrier_frequencies; ///< Carrier frequencies for each oscillator
   OptimTargetSettings optim_target; ///< Grouped optimization target configuration
@@ -265,8 +266,7 @@ class Config {
 
   // Conversion helper methods
   template <typename T>
-  std::vector<std::vector<T>> parseOscillatorSettings(const toml::array& array_of_tables,
-                                                      size_t num_entries,
+  std::vector<std::vector<T>> parseOscillatorSettings(const toml::array& array_of_tables, size_t num_entries,
                                                       std::vector<T> default_values,
                                                       const std::string& field_name) const;
   template <typename T>
