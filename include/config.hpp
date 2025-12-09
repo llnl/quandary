@@ -382,6 +382,7 @@ class Config {
   template <typename T>
   std::vector<std::vector<T>> parseOscillatorSettings(const toml::array& array_of_tables,
                                                       size_t num_entries,
+                                                      std::vector<T> default_values,
                                                       const std::string& field_name) const;
   template <typename T>
   std::vector<std::vector<T>> parseIndexedWithDefaults(const std::optional<std::map<int, std::vector<T>>>& indexed,

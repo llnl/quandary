@@ -202,18 +202,8 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     }
 
     // Parse carrier frequencies
-    carrier_frequencies.resize(num_osc);
-    std::optional<std::map<int, std::vector<double>>> carrier_freq_opt = std::nullopt;
-    auto carrier_freq_node = table["carrier_frequency"];
-    if (carrier_freq_node.is_array_of_tables()) {
-      carrier_freq_opt = std::map<int, std::vector<double>>();
-      for (auto& elem : *carrier_freq_node.as_array()) {
-        auto freq_table = *elem.as_table();
-        size_t oscilID = validators::field<size_t>(freq_table, "oscID").value();
-        (*carrier_freq_opt)[oscilID] = validators::vectorField<double>(freq_table, "values").value();
-      }
-    }
-    carrier_frequencies = parseIndexedWithDefaults<double>(carrier_freq_opt, num_osc, {ConfigDefaults::CARRIER_FREQ});
+    auto carrier_freq_array = validators::getArrayOfTables(table, "carrier_frequency");
+    carrier_frequencies = parseOscillatorSettings<double>(carrier_freq_array, num_osc, {ConfigDefaults::CARRIER_FREQ}, "values");
 
     // optim_target
     std::optional<OptimTargetData> optim_target_config;
@@ -271,7 +261,7 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
 
     output_to_write.resize(num_osc); // Empty vectors by default
     auto write_array = validators::getArrayOfTables(table, "write");
-    auto write_str = parseOscillatorSettings<std::string>(write_array, num_osc, "type");
+    auto write_str = parseOscillatorSettings<std::string>(write_array, num_osc, {}, "type");
     for (size_t i = 0; i < write_str.size(); i++) {
       output_to_write[i] = convertStringVectorToEnum(write_str[i], OUTPUT_TYPE_MAP);
     }
@@ -814,8 +804,9 @@ std::vector<EnumType> Config::convertStringVectorToEnum(const std::vector<std::s
 template <typename T>
 std::vector<std::vector<T>> Config::parseOscillatorSettings(const toml::array& array_of_tables,
                                                             size_t num_entries,
+                                                            std::vector<T> default_values,
                                                             const std::string& field_name) const {
-  std::vector<std::vector<T>> result(num_entries);
+  std::vector<std::vector<T>> result(num_entries, default_values);
 
   for (auto& elem : array_of_tables) {
     auto table = *elem.as_table();

@@ -746,6 +746,30 @@ TEST_F(TomlParserTest, CarrierFrequencies) {
   EXPECT_EQ(carrier_freq0[1], 2.0);
 }
 
+TEST_F(TomlParserTest, CarrierFrequencies_AllOscillators) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2]
+        transfreq = [4.1, 4.1]
+        rotfreq = [0.0, 0.0]
+        initial_condition = {type = "basis"}
+
+        [[carrier_frequency]]
+        values = [1.0, 2.0]
+      )",
+      logger);
+
+  const auto& carrier_freq0 = config.getCarrierFrequencies(0);
+  EXPECT_EQ(carrier_freq0.size(), 2);
+  EXPECT_EQ(carrier_freq0[0], 1.0);
+  EXPECT_EQ(carrier_freq0[1], 2.0);
+
+  const auto& carrier_freq1 = config.getCarrierFrequencies(1);
+  EXPECT_EQ(carrier_freq1.size(), 2);
+  EXPECT_EQ(carrier_freq1[0], 1.0);
+  EXPECT_EQ(carrier_freq1[1], 2.0);
+}
+
 TEST_F(TomlParserTest, OptimTarget_GateType) {
   Config config = Config::fromTomlString(
       R"(
