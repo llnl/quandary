@@ -75,6 +75,27 @@ TEST_F(TomlParserTest, ParseOutputSettings) {
   EXPECT_EQ(output[1][1], OutputType::EXPECTED_ENERGY);
 }
 
+TEST_F(TomlParserTest, ParseOutputSettings_AllOscillators) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2]
+        transfreq = [4.1, 4.8]
+        rotfreq = [0.0, 0.0]
+        initial_condition = {type = "basis"}
+        [[write]]
+        type = ["population"]
+      )",
+      logger);
+
+  // Verify output settings
+  auto output = config.getOutput();
+  EXPECT_EQ(output.size(), 2); // 2 oscillators
+  EXPECT_EQ(output[0].size(), 1); // 1 output
+  EXPECT_EQ(output[0][0], OutputType::POPULATION);
+  EXPECT_EQ(output[1].size(), 1); // 1 output
+  EXPECT_EQ(output[1][0], OutputType::POPULATION);
+}
+
 TEST_F(TomlParserTest, ParseStructSettings) {
   Config config = Config::fromTomlString(
       R"(

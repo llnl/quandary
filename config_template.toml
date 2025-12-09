@@ -236,10 +236,11 @@ values = [0.0, -0.2252, -0.1]
 # "populationComposite" - time evolution of the energy level population (probabilities) for the full-dimensional composite system
 # "fullstate" - time-evolution of the full state of the composite system (full density matrix, or state vector)
 # (note: 'fullstate' can appear in *any* of the lines). WARNING: This might result in *huge* output files! Use with care.
+# Apply to all oscillators
 [[write]]
-oscID = 0
 type = ["population", "expectedEnergy"]
 
-[[write]]
-oscID = 1
-type = ["population", "expectedEnergy"]
+# Apply to oscillator with ID = 1
+# [[write]]
+# oscID = 1
+# type = ["population", "expectedEnergy"]

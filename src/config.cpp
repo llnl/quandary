@@ -271,12 +271,9 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
 
     output_to_write.resize(num_osc); // Empty vectors by default
     auto write_array = validators::getArrayOfTables(table, "write");
-    for (auto& elem : write_array) {
-      auto write_table = *elem.as_table();
-      size_t oscilID = validators::field<size_t>(write_table, "oscID").lessThan(num_osc).value();
-
-      std::vector<std::string> types_str = validators::vectorField<std::string>(write_table, "type").value();
-      output_to_write[oscilID] = convertStringVectorToEnum(types_str, OUTPUT_TYPE_MAP);
+    auto write_str = parseOscillatorSettings<std::string>(write_array, num_osc, "type");
+    for (size_t i = 0; i < write_str.size(); i++) {
+      output_to_write[i] = convertStringVectorToEnum(write_str[i], OUTPUT_TYPE_MAP);
     }
 
     output_frequency = table["output_frequency"].value_or(ConfigDefaults::OUTPUT_FREQUENCY);
@@ -811,6 +808,31 @@ std::vector<EnumType> Config::convertStringVectorToEnum(const std::vector<std::s
     }
     result.push_back(*enum_val);
   }
+  return result;
+}
+
+template <typename T>
+std::vector<std::vector<T>> Config::parseOscillatorSettings(const toml::array& array_of_tables,
+                                                            size_t num_entries,
+                                                            const std::string& field_name) const {
+  std::vector<std::vector<T>> result(num_entries);
+
+  for (auto& elem : array_of_tables) {
+    auto table = *elem.as_table();
+    std::vector<T> values = validators::vectorField<T>(table, field_name).value();
+
+    if (auto osc_id_node = table["oscID"]) {
+      // Apply to specific oscillator
+      size_t osc_id = validators::field<size_t>(table, "oscID").lessThan(num_entries).value();
+      result[osc_id] = values;
+    } else {
+      // Apply to ALL oscillators
+      for (size_t i = 0; i < num_entries; i++) {
+        result[i] = values;
+      }
+    }
+  }
+
   return result;
 }
 

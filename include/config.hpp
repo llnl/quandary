@@ -380,6 +380,10 @@ class Config {
 
   // Conversion helper methods
   template <typename T>
+  std::vector<std::vector<T>> parseOscillatorSettings(const toml::array& array_of_tables,
+                                                      size_t num_entries,
+                                                      const std::string& field_name) const;
+  template <typename T>
   std::vector<std::vector<T>> parseIndexedWithDefaults(const std::optional<std::map<int, std::vector<T>>>& indexed,
                                                        size_t num_entries,
                                                        const std::vector<T>& default_values = {}) const;
