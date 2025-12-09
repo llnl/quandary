@@ -113,9 +113,8 @@ TEST_F(TomlParserTest, ParseStructSettings) {
   EXPECT_EQ(gate_target.gate_type, GateType::CNOT);
 
   const auto& initcond = config.getInitialCondition();
-  EXPECT_TRUE(std::holds_alternative<DiagonalInitialCondition>(initcond));
-  const auto& diag_init = std::get<DiagonalInitialCondition>(initcond);
-  EXPECT_EQ(diag_init.osc_IDs, std::vector<size_t>{0});
+  EXPECT_EQ(initcond.type, InitialConditionType::DIAGONAL);
+  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>{0});
 }
 
 TEST_F(TomlParserTest, ApplyDefaults) {
@@ -144,8 +143,8 @@ TEST_F(TomlParserTest, InitialCondition_FromFile) {
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
-  EXPECT_TRUE(std::holds_alternative<FromFileInitialCondition>(initcond));
-  EXPECT_EQ(std::get<FromFileInitialCondition>(initcond).filename, "test.dat");
+  EXPECT_EQ(initcond.type, InitialConditionType::FROMFILE);
+  EXPECT_EQ(initcond.filename.value(), "test.dat");
   EXPECT_EQ(config.getNInitialConditions(), 1);
 }
 
@@ -159,9 +158,8 @@ TEST_F(TomlParserTest, InitialCondition_Pure) {
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
-  EXPECT_TRUE(std::holds_alternative<PureInitialCondition>(initcond));
-  const auto& pure_init = std::get<PureInitialCondition>(initcond);
-  EXPECT_EQ(pure_init.levels, std::vector<size_t>({1, 0}));
+  EXPECT_EQ(initcond.type, InitialConditionType::PURE);
+  EXPECT_EQ(initcond.levels.value(), std::vector<size_t>({1, 0}));
   EXPECT_EQ(config.getNInitialConditions(), 1);
 }
 
@@ -175,7 +173,7 @@ TEST_F(TomlParserTest, InitialCondition_Performance) {
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
-  EXPECT_TRUE(std::holds_alternative<PerformanceInitialCondition>(initcond));
+  EXPECT_EQ(initcond.type, InitialConditionType::PERFORMANCE);
   EXPECT_EQ(config.getNInitialConditions(), 1);
 }
 
@@ -190,9 +188,8 @@ TEST_F(TomlParserTest, InitialCondition_Ensemble) {
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
-  EXPECT_TRUE(std::holds_alternative<EnsembleInitialCondition>(initcond));
-  const auto& ensemble_init = std::get<EnsembleInitialCondition>(initcond);
-  EXPECT_EQ(ensemble_init.osc_IDs, std::vector<size_t>({0, 1}));
+  EXPECT_EQ(initcond.type, InitialConditionType::ENSEMBLE);
+  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({0, 1}));
   EXPECT_EQ(config.getNInitialConditions(), 1);
 }
 
@@ -207,7 +204,7 @@ TEST_F(TomlParserTest, InitialCondition_ThreeStates) {
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
-  EXPECT_TRUE(std::holds_alternative<ThreeStatesInitialCondition>(initcond));
+  EXPECT_EQ(initcond.type, InitialConditionType::THREESTATES);
   EXPECT_EQ(config.getNInitialConditions(), 3);
 }
 
@@ -222,7 +219,7 @@ TEST_F(TomlParserTest, InitialCondition_NPlusOne_SingleOscillator) {
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
-  EXPECT_TRUE(std::holds_alternative<NPlusOneInitialCondition>(initcond));
+  EXPECT_EQ(initcond.type, InitialConditionType::NPLUSONE);
   // For nlevels = [3], system dimension N = 3, so n_initial_conditions = N + 1 = 4
   EXPECT_EQ(config.getNInitialConditions(), 4);
 }
@@ -238,7 +235,7 @@ TEST_F(TomlParserTest, InitialCondition_NPlusOne_MultipleOscillators) {
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
-  EXPECT_TRUE(std::holds_alternative<NPlusOneInitialCondition>(initcond));
+  EXPECT_EQ(initcond.type, InitialConditionType::NPLUSONE);
   // For nlevels = [2, 3], system dimension N = 2 * 3 = 6, so n_initial_conditions = N + 1 = 7
   EXPECT_EQ(config.getNInitialConditions(), 7);
 }
@@ -255,9 +252,8 @@ TEST_F(TomlParserTest, InitialCondition_Diagonal_Schrodinger) {
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
-  EXPECT_TRUE(std::holds_alternative<DiagonalInitialCondition>(initcond));
-  const auto& diagonal_init = std::get<DiagonalInitialCondition>(initcond);
-  EXPECT_EQ(diagonal_init.osc_IDs, std::vector<size_t>({1}));
+  EXPECT_EQ(initcond.type, InitialConditionType::DIAGONAL);
+  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({1}));
   // For Schrodinger solver (collapse_type = none), n_initial_conditions = nessential[1] = 2
   EXPECT_EQ(config.getNInitialConditions(), 2);
 }
@@ -275,9 +271,8 @@ TEST_F(TomlParserTest, InitialCondition_Basis_Schrodinger) {
       logger);
   // For Schrodinger solver, BASIS is converted to DIAGONAL, so n_initial_conditions = nessential[1] = 2
   const auto& initcond = config.getInitialCondition();
-  EXPECT_TRUE(std::holds_alternative<DiagonalInitialCondition>(initcond));
-  const auto& diagonal_init = std::get<DiagonalInitialCondition>(initcond);
-  EXPECT_EQ(diagonal_init.osc_IDs, std::vector<size_t>({1}));
+  EXPECT_EQ(initcond.type, InitialConditionType::DIAGONAL);
+  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({1}));
   EXPECT_EQ(config.getNInitialConditions(), 2);
 }
 
@@ -293,9 +288,8 @@ TEST_F(TomlParserTest, InitialCondition_Basis_Lindblad) {
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
-  EXPECT_TRUE(std::holds_alternative<BasisInitialCondition>(initcond));
-  const auto& basis_init = std::get<BasisInitialCondition>(initcond);
-  EXPECT_EQ(basis_init.osc_IDs, std::vector<size_t>({1}));
+  EXPECT_EQ(initcond.type, InitialConditionType::BASIS);
+  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({1}));
   // For Lindblad solver, n_initial_conditions = nessential[1]^2 = 2^2 = 4
   EXPECT_EQ(config.getNInitialConditions(), 4);
 }

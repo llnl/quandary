@@ -469,10 +469,6 @@ std::string printVector(std::vector<T> vec) {
   return out;
 }
 
-std::string print(const InitialCondition& initial_condition) {
-  return std::visit([](const auto& opt) { return opt.toString(); }, initial_condition);
-}
-
 } //namespace
 
 std::string ControlSegmentInitialization::toString() const {
@@ -484,20 +480,43 @@ std::string ControlSegmentInitialization::toString() const {
   return str;
 }
 
-std::string FromFileInitialCondition::toString() const { return "{type = \"file\", filename = \"" + filename + "}"; }
-
-std::string PureInitialCondition::toString() const {
-  std::string out = "{type = \"pure\", levels = ";
-  out += printVector(levels);
-  out += "}";
-  return out;
-}
-
-std::string OscillatorIDsInitialCondition::toString(std::string name) const {
-  std::string out = "{type = \"" + name + "\", oscIDs = ";
-  out += printVector(osc_IDs);
-  out += "}";
-  return out;
+std::string InitialCondition::toString() const {
+  auto type_str = "type = \"" + enumToString(type, INITCOND_TYPE_MAP) + "\"";
+  switch (type) {
+    case InitialConditionType::FROMFILE:
+      return "{" + type_str + ", filename = \"" + filename.value() + "\"}";
+    case InitialConditionType::PURE: {
+      std::string out = "{" + type_str + ", levels = ";
+      out += printVector(levels.value());
+      out += "}";
+      return out;
+    }
+    case InitialConditionType::ENSEMBLE: {
+      std::string out = "{" + type_str + ", oscIDs = ";
+      out += printVector(osc_IDs.value());
+      out += "}";
+      return out;
+    }
+    case InitialConditionType::DIAGONAL: {
+      std::string out = "{" + type_str + ", oscIDs = ";
+      out += printVector(osc_IDs.value());
+      out += "}";
+      return out;
+    }
+    case InitialConditionType::BASIS: {
+      std::string out = "{" + type_str + ", oscIDs = ";
+      out += printVector(osc_IDs.value());
+      out += "}";
+      return out;
+    }
+    case InitialConditionType::THREESTATES:
+      return "{" + type_str + "}";
+    case InitialConditionType::NPLUSONE:
+      return "{" + type_str + "}";
+    case InitialConditionType::PERFORMANCE:
+      return "{" + type_str + "}";
+  }
+  return "unknown";
 }
 
 void Config::printConfig(std::stringstream& log) const {
@@ -519,7 +538,7 @@ void Config::printConfig(std::stringstream& log) const {
   log << "collapse_type = \"" << enumToString(collapse_type, LINDBLAD_TYPE_MAP) << "\"\n";
   log << "decay_time = " << printVector(decay_time) << "\n";
   log << "dephase_time = " << printVector(dephase_time) << "\n";
-  log << "initial_condition = " << print(initial_condition) << "\n";
+  log << "initial_condition = " << initial_condition.toString() << "\n";
 
   if (hamiltonian_file_Hsys.has_value()) {
     log << "hamiltonian_file_Hsys = \"" << hamiltonian_file_Hsys.value() << "\"\n";
@@ -691,46 +710,49 @@ void Config::validate() const {
 
 size_t Config::computeNumInitialConditions() const {
   size_t n_initial_conditions = 0;
-  if (std::holds_alternative<FromFileInitialCondition>(initial_condition))
-    n_initial_conditions = 1;
-  else if (std::holds_alternative<PureInitialCondition>(initial_condition))
-    n_initial_conditions = 1;
-  else if (std::holds_alternative<PerformanceInitialCondition>(initial_condition))
-    n_initial_conditions = 1;
-  else if (std::holds_alternative<EnsembleInitialCondition>(initial_condition))
-    n_initial_conditions = 1;
-  else if (std::holds_alternative<ThreeStatesInitialCondition>(initial_condition))
-    n_initial_conditions = 3;
-  else if (std::holds_alternative<NPlusOneInitialCondition>(initial_condition)) {
-    // compute system dimension N
-    n_initial_conditions = 1;
-    for (size_t i = 0; i < nlevels.size(); i++) {
-      n_initial_conditions *= nlevels[i];
-    }
-    n_initial_conditions += 1;
-  } else if (std::holds_alternative<DiagonalInitialCondition>(initial_condition)) {
-    /* Compute ninit = dim(subsystem defined by list of oscil IDs) */
-    const auto& diag_init = std::get<DiagonalInitialCondition>(initial_condition);
-    const auto& osc_IDs = diag_init.osc_IDs;
-
-    n_initial_conditions = 1;
-    for (size_t oscilID : osc_IDs) {
-      if (oscilID < nessential.size()) n_initial_conditions *= nessential[oscilID];
-    }
-  } else if (std::holds_alternative<BasisInitialCondition>(initial_condition)) {
-    /* Compute ninit = dim(subsystem defined by list of oscil IDs) */
-    const auto& basis_init = std::get<BasisInitialCondition>(initial_condition);
-    const auto& osc_IDs = basis_init.osc_IDs;
-
-    n_initial_conditions = 1;
-    for (size_t oscilID : osc_IDs) {
-      if (oscilID < nessential.size()) n_initial_conditions *= nessential[oscilID];
-    }
-    // if Schroedinger solver: ninit = N, do nothing.
-    // else Lindblad solver: ninit = N^2
-    if (collapse_type != LindbladType::NONE) {
-      n_initial_conditions = (size_t)pow(n_initial_conditions, 2.0);
-    }
+  switch (initial_condition.type) {
+    case InitialConditionType::FROMFILE:
+    case InitialConditionType::PURE:
+    case InitialConditionType::PERFORMANCE:
+    case InitialConditionType::ENSEMBLE:
+      n_initial_conditions = 1;
+      break;
+    case InitialConditionType::THREESTATES:
+      n_initial_conditions = 3;
+      break;
+    case InitialConditionType::NPLUSONE:
+      // compute system dimension N
+      n_initial_conditions = 1;
+      for (size_t i = 0; i < nlevels.size(); i++) {
+        n_initial_conditions *= nlevels[i];
+      }
+      n_initial_conditions += 1;
+      break;
+    case InitialConditionType::DIAGONAL:
+      /* Compute ninit = dim(subsystem defined by list of oscil IDs) */
+      if (initial_condition.osc_IDs.has_value()) {
+        const auto& osc_IDs = initial_condition.osc_IDs.value();
+        n_initial_conditions = 1;
+        for (size_t oscilID : osc_IDs) {
+          if (oscilID < nessential.size()) n_initial_conditions *= nessential[oscilID];
+        }
+      }
+      break;
+    case InitialConditionType::BASIS:
+      /* Compute ninit = dim(subsystem defined by list of oscil IDs) */
+      if (initial_condition.osc_IDs.has_value()) {
+        const auto& osc_IDs = initial_condition.osc_IDs.value();
+        n_initial_conditions = 1;
+        for (size_t oscilID : osc_IDs) {
+          if (oscilID < nessential.size()) n_initial_conditions *= nessential[oscilID];
+        }
+        // if Schroedinger solver: ninit = N, do nothing.
+        // else Lindblad solver: ninit = N^2
+        if (collapse_type != LindbladType::NONE) {
+          n_initial_conditions = (size_t)pow(n_initial_conditions, 2.0);
+        }
+      }
+      break;
   }
   logger.log("Number of initial conditions: " + std::to_string(n_initial_conditions) + "\n");
   return n_initial_conditions;
@@ -833,12 +855,16 @@ InitialCondition Config::parseInitialCondition(const InitialConditionData& confi
     }
   }
 
+  InitialCondition result;
+  result.type = type;
+
   switch (type) {
     case InitialConditionType::FROMFILE:
       if (!config.filename.has_value()) {
         logger.exitWithError("initialcondition of type FROMFILE must have a filename");
       }
-      return FromFileInitialCondition{config.filename.value()};
+      result.filename = config.filename.value();
+      break;
     case InitialConditionType::PURE:
       if (!config.levels.has_value()) {
         logger.exitWithError("initialcondition of type PURE must have 'levels'");
@@ -855,14 +881,16 @@ InitialCondition Config::parseInitialCondition(const InitialConditionData& confi
                                std::to_string(nlevels[k]) + ").\n");
         }
       }
-      return PureInitialCondition{config.levels.value()};
+      result.levels = config.levels.value();
+      break;
 
     case InitialConditionType::BASIS:
       if (collapse_type == LindbladType::NONE) {
         // DIAGONAL and BASIS initial conditions in the Schroedinger case are the same. Overwrite it to DIAGONAL
-        return DiagonalInitialCondition{init_cond_IDs};
+        result.type = InitialConditionType::DIAGONAL;
       }
-      return BasisInitialCondition{init_cond_IDs};
+      result.osc_IDs = init_cond_IDs;
+      break;
 
     case InitialConditionType::ENSEMBLE:
       if (init_cond_IDs.back() >= nlevels.size()) {
@@ -874,24 +902,21 @@ InitialCondition Config::parseInitialCondition(const InitialConditionData& confi
           logger.exitWithError("List of oscillators for ensemble initialization should be consecutive!\n");
         }
       }
-      return EnsembleInitialCondition{init_cond_IDs};
+      result.osc_IDs = init_cond_IDs;
+      break;
 
     case InitialConditionType::DIAGONAL:
-      return DiagonalInitialCondition{init_cond_IDs};
+      result.osc_IDs = init_cond_IDs;
+      break;
 
     case InitialConditionType::THREESTATES:
-      return ThreeStatesInitialCondition{};
-
     case InitialConditionType::NPLUSONE:
-      return NPlusOneInitialCondition{};
-
     case InitialConditionType::PERFORMANCE:
-      return PerformanceInitialCondition{};
+      // No additional fields needed for these types
+      break;
   }
 
-  // Should not happen, but make compiler happy
-  logger.exitWithError("Internal error: parseInitialCondition reached end of function.");
-  return BasisInitialCondition({});
+  return result;
 }
 
 void Config::addPiPulseSegment(std::vector<std::vector<PiPulseSegment>>& apply_pipulse, size_t oscilID, double tstart,

@@ -16,77 +16,18 @@
 #include "mpi_logger.hpp"
 
 /**
- * @brief Initial condition loaded from file.
+ * @brief Unified initial condition configuration.
  */
-struct FromFileInitialCondition {
-  std::string filename; ///< File to read initial condition from
+struct InitialCondition {
+  InitialConditionType type; ///< Type of initial condition
+
+  // Optional fields - populate based on type
+  std::optional<std::string> filename;           ///< For FROMFILE: File to read initial condition from
+  std::optional<std::vector<size_t>> levels;     ///< For PURE: Quantum level for each oscillator
+  std::optional<std::vector<size_t>> osc_IDs;    ///< For ENSEMBLE, DIAGONAL, BASIS: Oscillator IDs
+
   std::string toString() const;
 };
-
-/**
- * @brief Pure state initial condition (single quantum state).
- */
-struct PureInitialCondition {
-  std::vector<size_t> levels; ///< Quantum level for each oscillator
-  std::string toString() const;
-};
-
-/**
- * @brief Base class for initial conditions defined by oscillator IDs.
- */
-struct OscillatorIDsInitialCondition {
-  std::vector<size_t> osc_IDs; ///< Oscillator IDs
-  std::string toString(std::string name) const;
-};
-
-/**
- * @brief Ensemble initial condition for specified oscillators.
- */
-struct EnsembleInitialCondition : public OscillatorIDsInitialCondition {
-  std::string toString() const { return OscillatorIDsInitialCondition::toString("ensemble"); }
-};
-
-/**
- * @brief Diagonal initial condition for specified oscillators.
- */
-struct DiagonalInitialCondition : public OscillatorIDsInitialCondition {
-  std::string toString() const { return OscillatorIDsInitialCondition::toString("diagonal"); }
-};
-
-/**
- * @brief Basis initial condition for specified oscillators.
- */
-struct BasisInitialCondition : public OscillatorIDsInitialCondition {
-  std::string toString() const { return OscillatorIDsInitialCondition::toString("basis"); }
-};
-
-/**
- * @brief Three-state initial condition.
- */
-struct ThreeStatesInitialCondition {
-  std::string toString() const { return "type = \"3states\""; }
-};
-
-/**
- * @brief N+1 initial condition.
- */
-struct NPlusOneInitialCondition {
-  std::string toString() const { return "type = \"nplus1\""; }
-};
-
-/**
- * @brief Performance test initial condition.
- */
-struct PerformanceInitialCondition {
-  std::string toString() const { return "type = \"performance\""; }
-};
-
-/**
- * @brief Variant type representing any initial condition configuration.
- */
-using InitialCondition = std::variant<FromFileInitialCondition, PureInitialCondition, EnsembleInitialCondition,
-                                      DiagonalInitialCondition, BasisInitialCondition, ThreeStatesInitialCondition,
-                                      NPlusOneInitialCondition, PerformanceInitialCondition>;
 
 /**
  * @brief Grouped optimization tolerance settings.

@@ -44,9 +44,8 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
   initcond = config.getInitialCondition();
 
   /* Prepare initial state rho_t0 if PURE or FROMFILE or ENSEMBLE initialization. Otherwise they are set within prepareInitialState during evalF. */
-  if (std::holds_alternative<PureInitialCondition>(initcond)) {
-    const auto& pure_init = std::get<PureInitialCondition>(initcond);
-    const auto& level_indices = pure_init.levels;
+  if (initcond.type == InitialConditionType::PURE) {
+    const auto& level_indices = initcond.levels.value();
     // Find the id within the global composite system 
     PetscInt diag_id = 0;
     for (size_t k=0; k < level_indices.size(); k++) {
@@ -65,14 +64,14 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
       VecSetValue(rho_t0, id_global_x, 1.0, INSERT_VALUES);
     }
   }
-  else if (std::holds_alternative<FromFileInitialCondition>(initcond)) {
+  else if (initcond.type == InitialConditionType::FROMFILE) {
     /* Read initial condition from file */
     int nelems = 0;
     if (mastereq->lindbladtype != LindbladType::NONE) nelems = 2*dim_ess*dim_ess;
     else nelems = 2 * dim_ess;
     double * vec = new double[nelems];
     if (mpirank_world == 0) {
-      std::string filename = std::get<FromFileInitialCondition>(initcond).filename;
+      std::string filename = initcond.filename.value();
       read_vector(filename.c_str(), vec, nelems, quietmode);
     }
     MPI_Bcast(vec, nelems, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -105,9 +104,8 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
       }
     }
     delete [] vec;
-  } else if (std::holds_alternative<EnsembleInitialCondition>(initcond)) {
-    const auto& ensemble_init = std::get<EnsembleInitialCondition>(initcond);
-    const auto& osc_IDs = ensemble_init.osc_IDs;
+  } else if (initcond.type == InitialConditionType::ENSEMBLE) {
+    const auto& osc_IDs = initcond.osc_IDs.value();
 
     // get dimension of subsystems defined by ensemble_init.level_indices, as well as the one before and after. Span in essential levels only.
     PetscInt dimpost = 1;
@@ -383,7 +381,7 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
   int initID = 0;    // Output: ID for this initial condition */
 
   /* Conditionals over type of initial condition */
-  if (std::holds_alternative<PerformanceInitialCondition>(initcond)) {
+  if (initcond.type == InitialConditionType::PERFORMANCE) {
     /* Set up Input state psi = 1/sqrt(2N)*(Ones(N) + im*Ones(N)) or rho = psi*psi^\dag */
     VecZeroEntries(rho0);
 
@@ -404,13 +402,13 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
         }
       }
     }
-  } else if(std::holds_alternative<FromFileInitialCondition>(initcond)) {
+  } else if(initcond.type == InitialConditionType::FROMFILE) {
     /* Do nothing. Init cond is already stored */
-  } else if(std::holds_alternative<PureInitialCondition>(initcond)) {
+  } else if(initcond.type == InitialConditionType::PURE) {
     /* Do nothing. Init cond is already stored */
-  } else if(std::holds_alternative<EnsembleInitialCondition>(initcond)) {
+  } else if(initcond.type == InitialConditionType::ENSEMBLE) {
     /* Do nothing. Init cond is already stored */
-  } else if (std::holds_alternative<ThreeStatesInitialCondition>(initcond)) {
+  } else if (initcond.type == InitialConditionType::THREESTATES) {
     assert(lindbladtype != LindbladType::NONE);
     VecZeroEntries(rho0);
 
@@ -455,7 +453,7 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
       exit(1);
     }
     VecAssemblyBegin(rho0); VecAssemblyEnd(rho0);
-  } else if (std::holds_alternative<NPlusOneInitialCondition>(initcond)) {
+  } else if (initcond.type == InitialConditionType::NPLUSONE) {
     assert(lindbladtype != LindbladType::NONE);
 
     if (iinit < dim_rho) {// Diagonal e_j e_j^\dag
@@ -485,9 +483,8 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
     }
     initID = iinit;
     VecAssemblyBegin(rho0); VecAssemblyEnd(rho0);
-  } else if (std::holds_alternative<DiagonalInitialCondition>(initcond)) {
-    const auto& diag_init = std::get<DiagonalInitialCondition>(initcond);
-    const auto& initcond_IDs = diag_init.osc_IDs;
+  } else if (initcond.type == InitialConditionType::DIAGONAL) {
+    const auto& initcond_IDs = initcond.osc_IDs.value();
     PetscInt diagelem;
     VecZeroEntries(rho0);
 
@@ -516,9 +513,8 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
     if (lindbladtype != LindbladType::NONE) initID = iinit * ninit + iinit;
     else initID = iinit;
 
-  } else if (std::holds_alternative<BasisInitialCondition>(initcond)) {
-    const auto& basis_init = std::get<BasisInitialCondition>(initcond);
-    const auto& initcond_IDs = basis_init.osc_IDs;
+  } else if (initcond.type == InitialConditionType::BASIS) {
+    const auto& initcond_IDs = initcond.osc_IDs.value();
 
     assert(lindbladtype != LindbladType::NONE); // should never happen. For Schroedinger: BASIS equals DIAGONAL, and should go into the above switch case. 
 
