@@ -331,7 +331,12 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   initial_condition = parseInitialCondition(settings.initialcondition.value());
   n_initial_conditions = computeNumInitialConditions();
 
-  apply_pipulse = parsePiPulsesFromCfg(settings.apply_pipulse);
+  apply_pipulse = std::vector<std::vector<PiPulseSegment>>(nlevels.size());
+  if (settings.apply_pipulse.has_value()) {
+    for (const auto& pulse_config : settings.apply_pipulse.value()) {
+      addPiPulseSegment(apply_pipulse, pulse_config.oscil_id, pulse_config.tstart, pulse_config.tstop, pulse_config.amp);
+    }
+  }
 
   hamiltonian_file_Hsys = settings.hamiltonian_file_Hsys;
   hamiltonian_file_Hc = settings.hamiltonian_file_Hc;
@@ -964,19 +969,6 @@ void Config::addPiPulseSegment(std::vector<std::vector<PiPulseSegment>>& apply_p
       }
     }
   }
-}
-
-std::vector<std::vector<PiPulseSegment>> Config::parsePiPulsesFromCfg(
-    const std::optional<std::vector<PiPulseData>>& pulses) const {
-  auto apply_pipulse = std::vector<std::vector<PiPulseSegment>>(nlevels.size());
-
-  if (!pulses.has_value()) {
-    return apply_pipulse;
-  }
-  for (const auto& pulse_config : *pulses) {
-    addPiPulseSegment(apply_pipulse, pulse_config.oscil_id, pulse_config.tstart, pulse_config.tstop, pulse_config.amp);
-  }
-  return apply_pipulse;
 }
 
 std::vector<std::vector<ControlSegment>> Config::parseControlSegments(
