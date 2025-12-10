@@ -372,7 +372,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
     }
   }
 
-  control_bounds = parseIndexedWithDefaults<double>(settings.indexed_control_bounds, control_segments.size(),
+  control_bounds = parseOscillatorSettingsCfg<double>(settings.indexed_control_bounds, control_segments.size(),
                                                     {ConfigDefaults::CONTROL_BOUND});
   // Extend bounds to match number of control segments
   for (size_t i = 0; i < control_bounds.size(); i++) {
@@ -381,7 +381,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
 
   carrier_frequencies.resize(num_osc);
   carrier_frequencies =
-      parseIndexedWithDefaults<double>(settings.indexed_carrier_frequencies, num_osc, {ConfigDefaults::CARRIER_FREQ});
+      parseOscillatorSettingsCfg<double>(settings.indexed_carrier_frequencies, num_osc, {ConfigDefaults::CARRIER_FREQ});
   optim_target = parseOptimTarget(settings.optim_target, nlevels);
 
   gate_rot_freq = settings.gate_rot_freq.value_or(std::vector<double>(num_osc, ConfigDefaults::GATE_ROT_FREQ));
@@ -413,7 +413,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
 
   // Output parameters
   datadir = settings.datadir.value_or(ConfigDefaults::DATADIR);
-  output_to_write = parseIndexedWithDefaults<OutputType>(settings.indexed_output, num_osc);
+  output_to_write = parseOscillatorSettingsCfg<OutputType>(settings.indexed_output, num_osc);
   output_frequency = settings.output_frequency.value_or(ConfigDefaults::OUTPUT_FREQUENCY);
   optim_monitor_frequency = settings.optim_monitor_frequency.value_or(ConfigDefaults::OPTIM_MONITOR_FREQUENCY);
   runtype = settings.runtype.value_or(ConfigDefaults::RUNTYPE);
@@ -811,7 +811,7 @@ void Config::setRandSeed(std::optional<int> rand_seed_) {
 }
 
 template <typename T>
-std::vector<std::vector<T>> Config::parseIndexedWithDefaults(
+std::vector<std::vector<T>> Config::parseOscillatorSettingsCfg(
     const std::optional<std::map<int, std::vector<T>>>& indexed, size_t num_entries,
     const std::vector<T>& default_values) const {
   // Start with all defaults

@@ -270,9 +270,9 @@ class Config {
                                                       std::vector<T> default_values,
                                                       const std::string& field_name) const;
   template <typename T>
-  std::vector<std::vector<T>> parseIndexedWithDefaults(const std::optional<std::map<int, std::vector<T>>>& indexed,
-                                                       size_t num_entries,
-                                                       const std::vector<T>& default_values = {}) const;
+  std::vector<std::vector<T>> parseOscillatorSettingsCfg(const std::optional<std::map<int, std::vector<T>>>& indexed,
+                                                         size_t num_entries,
+                                                         const std::vector<T>& default_values = {}) const;
 
   InitialCondition parseInitialCondition(const InitialConditionData& config) const;
 
