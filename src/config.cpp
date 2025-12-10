@@ -245,7 +245,13 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     auto write_array = validators::getArrayOfTables(table, "write");
     auto write_str = parseOscillatorSettings<std::string>(write_array, num_osc, {}, "type");
     for (size_t i = 0; i < write_str.size(); i++) {
-      output_to_write[i] = convertStringVectorToEnum(write_str[i], OUTPUT_TYPE_MAP);
+      for (const auto& str : write_str[i]) {
+        auto enum_val = parseEnum(str, OUTPUT_TYPE_MAP);
+        if (!enum_val) {
+          logger.exitWithError("Unknown enum value: " + str);
+        }
+        output_to_write[i].push_back(*enum_val);
+      }
     }
 
     output_frequency = table["output_frequency"].value_or(ConfigDefaults::OUTPUT_FREQUENCY);
@@ -818,21 +824,6 @@ std::vector<std::vector<T>> Config::parseIndexedWithDefaults(
         result[idx] = vals;
       }
     }
-  }
-  return result;
-}
-
-template <typename EnumType>
-std::vector<EnumType> Config::convertStringVectorToEnum(const std::vector<std::string>& strings,
-                                                        const std::map<std::string, EnumType>& type_map) const {
-  std::vector<EnumType> result;
-  result.reserve(strings.size());
-  for (const auto& str : strings) {
-    auto enum_val = parseEnum(str, type_map);
-    if (!enum_val) {
-      logger.exitWithError("Unknown enum value: " + str);
-    }
-    result.push_back(*enum_val);
   }
   return result;
 }

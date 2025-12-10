@@ -274,10 +274,6 @@ class Config {
                                                        size_t num_entries,
                                                        const std::vector<T>& default_values = {}) const;
 
-  template <typename EnumType>
-  std::vector<EnumType> convertStringVectorToEnum(const std::vector<std::string>& strings,
-                                                  const std::map<std::string, EnumType>& type_map) const;
-
   InitialCondition parseInitialCondition(const InitialConditionData& config) const;
 
   void addPiPulseSegment(std::vector<std::vector<PiPulseSegment>>& apply_pipulse, size_t oscilID, double tstart,
