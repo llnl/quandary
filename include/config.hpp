@@ -281,7 +281,6 @@ class Config {
 
   std::vector<std::vector<ControlSegment>> parseControlSegments(
       const std::optional<std::map<int, std::vector<ControlSegmentData>>>& segments_opt) const;
-  std::vector<ControlSegment> parseOscControlSegments(const std::vector<ControlSegmentData>& segments) const;
   ControlSegment parseControlSegment(const ControlSegmentData& seg_config) const;
   ControlSegment parseControlSegment(const toml::table& table) const;
 

@@ -984,7 +984,10 @@ std::vector<std::vector<ControlSegment>> Config::parseControlSegments(
   auto parsed_segments = std::vector<std::vector<ControlSegment>>(nlevels.size());
   for (size_t i = 0; i < parsed_segments.size(); i++) {
     if (segments.find(static_cast<int>(i)) != segments.end()) {
-      auto parsed = parseOscControlSegments(segments.at(i));
+      std::vector<ControlSegment> parsed;
+      for (const auto& seg_config : segments.at(i)) {
+        parsed.push_back(parseControlSegment(seg_config));
+      }
       parsed_segments[i] = parsed;
       default_segments = parsed;
     } else {
@@ -994,14 +997,6 @@ std::vector<std::vector<ControlSegment>> Config::parseControlSegments(
   return parsed_segments;
 }
 
-std::vector<ControlSegment> Config::parseOscControlSegments(const std::vector<ControlSegmentData>& segments) const {
-  std::vector<ControlSegment> control_segs = std::vector<ControlSegment>();
-
-  for (const auto& seg_config : segments) {
-    control_segs.push_back(parseControlSegment(seg_config));
-  }
-  return control_segs;
-}
 
 ControlSegment Config::parseControlSegment(const ControlSegmentData& seg_config) const {
   const auto& params = seg_config.parameters;
