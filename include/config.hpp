@@ -286,7 +286,6 @@ class Config {
 
   std::vector<std::vector<ControlSegmentInitialization>> parseControlInitializations(
       const std::optional<std::map<int, std::vector<ControlInitializationData>>>& init_configs) const;
-  ControlSegmentInitialization parseControlInitialization(const toml::table& table) const;
 
   OptimTargetSettings parseOptimTarget(const std::optional<OptimTargetData>& opt_config,
                                        const std::vector<size_t>& nlevels) const;

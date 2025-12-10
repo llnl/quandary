@@ -1102,18 +1102,6 @@ std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlIniti
   return control_initializations;
 }
 
-ControlSegmentInitialization Config::parseControlInitialization(const toml::table& table) const {
-  std::string type_str = validators::field<std::string>(table, "type").value();
-
-  std::optional<ControlSegmentInitType> type = parseEnum(type_str, CONTROL_SEGMENT_INIT_TYPE_MAP);
-  if (!type.has_value()) {
-    logger.exitWithError("Unrecognized type '" + type_str + "' in control initialization.");
-  }
-  return ControlSegmentInitialization{
-      type.value(), validators::field<double>(table, "amplitude").value(),
-      validators::field<double>(table, "phase").valueOr(ConfigDefaults::CONTROL_INIT_PHASE)};
-}
-
 OptimTargetSettings Config::parseOptimTarget(const std::optional<OptimTargetData>& opt_config,
                                              const std::vector<size_t>& nlevels) const {
   if (!opt_config.has_value()) {
