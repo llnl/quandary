@@ -344,7 +344,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   // Control and optimization parameters
   control_enforceBC = settings.control_enforceBC.value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
 
-  control_segments = parseControlSegments(settings.indexed_control_segments);
+  control_segments = parseControlSegmentsCfg(settings.indexed_control_segments);
 
   // Control initialization
   if (settings.indexed_control_init.has_value()) {
@@ -971,7 +971,7 @@ void Config::addPiPulseSegment(std::vector<std::vector<PiPulseSegment>>& apply_p
   }
 }
 
-std::vector<std::vector<ControlSegment>> Config::parseControlSegments(
+std::vector<std::vector<ControlSegment>> Config::parseControlSegmentsCfg(
     const std::optional<std::map<int, std::vector<ControlSegmentData>>>& segments_opt) const {
   std::vector<ControlSegment> default_segments = {
       {ControlType::BSPLINE,
@@ -986,7 +986,7 @@ std::vector<std::vector<ControlSegment>> Config::parseControlSegments(
     if (segments.find(static_cast<int>(i)) != segments.end()) {
       std::vector<ControlSegment> parsed;
       for (const auto& seg_config : segments.at(i)) {
-        parsed.push_back(parseControlSegment(seg_config));
+        parsed.push_back(parseControlSegmentCfg(seg_config));
       }
       parsed_segments[i] = parsed;
       default_segments = parsed;
@@ -998,7 +998,7 @@ std::vector<std::vector<ControlSegment>> Config::parseControlSegments(
 }
 
 
-ControlSegment Config::parseControlSegment(const ControlSegmentData& seg_config) const {
+ControlSegment Config::parseControlSegmentCfg(const ControlSegmentData& seg_config) const {
   const auto& params = seg_config.parameters;
 
   // Create appropriate params variant based on type

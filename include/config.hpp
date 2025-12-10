@@ -279,9 +279,9 @@ class Config {
   void addPiPulseSegment(std::vector<std::vector<PiPulseSegment>>& apply_pipulse, size_t oscilID, double tstart,
                          double tstop, double amp) const;
 
-  std::vector<std::vector<ControlSegment>> parseControlSegments(
+  std::vector<std::vector<ControlSegment>> parseControlSegmentsCfg(
       const std::optional<std::map<int, std::vector<ControlSegmentData>>>& segments_opt) const;
-  ControlSegment parseControlSegment(const ControlSegmentData& seg_config) const;
+  ControlSegment parseControlSegmentCfg(const ControlSegmentData& seg_config) const;
   ControlSegment parseControlSegment(const toml::table& table) const;
 
   std::vector<std::vector<ControlSegmentInitialization>> parseControlInitializations(
