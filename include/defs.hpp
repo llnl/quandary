@@ -71,18 +71,6 @@ const std::map<std::string, InitialConditionType> INITCOND_TYPE_MAP = {
 };
 
 /**
- * @brief Initial condition configuration.
- */
-struct InitialCondition {
-  InitialConditionType type; ///< Type of initial condition
-
-  // Optional fields - populate based on type
-  std::optional<std::string> filename; ///< For FROMFILE: File to read initial condition from
-  std::optional<std::vector<size_t>> levels; ///< For PURE: Quantum level for each oscillator
-  std::optional<std::vector<size_t>> osc_IDs; ///< For ENSEMBLE, DIAGONAL, BASIS: Oscillator IDs
-};
-
-/**
  * @brief Types of optimization targets for quantum control.
  *
  * Defines the target quantum state or operation for optimization.
@@ -240,19 +228,6 @@ const std::map<std::string, GateType> GATE_TYPE_MAP = {
 };
 
 /**
- * @brief Optimization target configuration.
- */
-struct OptimTargetSettings {
-  TargetType type; ///< Type of optimization target
-
-  // Optional fields - populate based on type
-  std::optional<GateType> gate_type; ///< For GATE: Gate type
-  std::optional<std::string> gate_file; ///< For GATE with FILE type: Gate file path
-  std::optional<std::vector<size_t>> levels; ///< For PURE: Pure state levels
-  std::optional<std::string> file; ///< For FROMFILE: Target file path
-};
-
-/**
  * @brief Types of output files to be written
  */
 enum class OutputType {
@@ -269,4 +244,74 @@ const std::map<std::string, OutputType> OUTPUT_TYPE_MAP = {
   {"population", OutputType::POPULATION},
   {"populationcomposite", OutputType::POPULATION_COMPOSITE},
   {"fullstate", OutputType::FULLSTATE},
+};
+
+// Structs
+
+/**
+ * @brief Initial condition configuration.
+ */
+struct InitialCondition {
+  InitialConditionType type; ///< Type of initial condition
+
+  // Optional fields - populate based on type
+  std::optional<std::string> filename; ///< For FROMFILE: File to read initial condition from
+  std::optional<std::vector<size_t>> levels; ///< For PURE: Quantum level for each oscillator
+  std::optional<std::vector<size_t>> osc_IDs; ///< For ENSEMBLE, DIAGONAL, BASIS: Oscillator IDs
+};
+
+/**
+ * @brief Control segment initialization settings.
+ */
+struct ControlSegmentInitialization {
+  ControlSegmentInitType type; ///< Initialization type
+  double amplitude; ///< Initial control pulse amplitude
+  double phase; ///< Initial control pulse phase
+};
+
+/**
+ * @brief Optimization target configuration.
+ */
+struct OptimTargetSettings {
+  TargetType type; ///< Type of optimization target
+
+  // Optional fields - populate based on type
+  std::optional<GateType> gate_type; ///< For GATE: Gate type
+  std::optional<std::string> gate_file; ///< For GATE with FILE type: Gate file path
+  std::optional<std::vector<size_t>> levels; ///< For PURE: Pure state levels
+  std::optional<std::string> file; ///< For FROMFILE: Target file path
+};
+
+/**
+ * @brief Structure for storing pi-pulse parameters for one segment.
+ *
+ * Stores timing and amplitude information for pi-pulse sequences.
+ */
+struct PiPulseSegment {
+  double tstart; ///< Start time for pulse segment
+  double tstop; ///< Stop time for pulse segment
+  double amp; ///< Amplitude for pulse segment
+};
+
+/**
+ * @brief Structure for defining control segments.
+ *
+ * Defines a controllable segment for an oscillator and the type of parameterization,
+ * with corresponding starting and finish times. Which fields are used depends on the control type.
+ */
+struct ControlSegment {
+  ControlType type; ///< Type of control segment
+
+  // Common fields for B-spline types (BSPLINE, BSPLINEAMP, BSPLINE0)
+  std::optional<size_t> nspline; ///< Number of basis functions in this segment
+  std::optional<double> tstart; ///< Start time of the control segment
+  std::optional<double> tstop; ///< Stop time of the control segment
+
+  // Additional field for amplitude-scaled B-spline (BSPLINEAMP)
+  std::optional<double> scaling; ///< Amplitude scaling factor
+
+  // Fields for step function control (STEP)
+  std::optional<double> step_amp1; ///< Real part of amplitude of the step pulse
+  std::optional<double> step_amp2; ///< Imaginary part of amplitude of the step pulse
+  std::optional<double> tramp; ///< Ramp time
 };

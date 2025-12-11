@@ -506,18 +506,14 @@ std::string printVector(std::vector<T> vec) {
   return out;
 }
 
-} //namespace
-
-std::string ControlSegmentInitialization::toString() const {
+std::string toString(const ControlSegmentInitialization& seg_init) {
   std::string str = "type = \"";
-  str += enumToString(type, CONTROL_SEGMENT_INIT_TYPE_MAP);
+  str += enumToString(seg_init.type, CONTROL_SEGMENT_INIT_TYPE_MAP);
   str += "\"\n";
-  str += "amplitude = " + std::to_string(amplitude) + "\n";
-  str += "phase = " + std::to_string(phase);
+  str += "amplitude = " + std::to_string(seg_init.amplitude) + "\n";
+  str += "phase = " + std::to_string(seg_init.phase);
   return str;
 }
-
-namespace {
 
 std::string toString(const InitialCondition& initial_condition) {
   auto type_str = "type = \"" + enumToString(initial_condition.type, INITCOND_TYPE_MAP) + "\"";
@@ -701,7 +697,7 @@ void Config::printConfig(std::stringstream& log) const {
         const auto& init = control_initializations[i][0];
         log << "[[control_initialization]]\n";
         log << "oscID = " << i << "\n";
-        log << init.toString() << "\n\n";
+        log << toString(init) << "\n\n";
       }
     }
   }

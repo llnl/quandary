@@ -14,51 +14,6 @@
 #include "mpi_logger.hpp"
 
 /**
- * @brief Structure for storing pi-pulse parameters for one segment.
- *
- * Stores timing and amplitude information for pi-pulse sequences.
- */
-struct PiPulseSegment {
-  double tstart; ///< Start time for pulse segment
-  double tstop; ///< Stop time for pulse segment
-  double amp; ///< Amplitude for pulse segment
-};
-
-/**
- * @brief Structure for defining control segments.
- *
- * Defines a controllable segment for an oscillator and the type of parameterization,
- * with corresponding starting and finish times. Which fields are used depends on the control type.
- */
-struct ControlSegment {
-  ControlType type; ///< Type of control segment
-
-  // Common fields for B-spline types (BSPLINE, BSPLINEAMP, BSPLINE0)
-  std::optional<size_t> nspline; ///< Number of basis functions in this segment
-  std::optional<double> tstart; ///< Start time of the control segment
-  std::optional<double> tstop; ///< Stop time of the control segment
-
-  // Additional field for amplitude-scaled B-spline (BSPLINEAMP)
-  std::optional<double> scaling; ///< Amplitude scaling factor
-
-  // Fields for step function control (STEP)
-  std::optional<double> step_amp1; ///< Real part of amplitude of the step pulse
-  std::optional<double> step_amp2; ///< Imaginary part of amplitude of the step pulse
-  std::optional<double> tramp; ///< Ramp time
-};
-
-/**
- * @brief Control segment initialization settings.
- */
-struct ControlSegmentInitialization {
-  ControlSegmentInitType type; ///< Initialization type
-  double amplitude; ///< Initial control pulse amplitude
-  double phase; ///< Initial control pulse phase
-
-  std::string toString() const;
-};
-
-/**
  * @brief Final validated configuration class.
  *
  * Contains only validated, typed configuration parameters. All fields are required
