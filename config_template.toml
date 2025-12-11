@@ -220,6 +220,10 @@ values = [0.008]
 oscID = 1
 values = [0.008]
 
+# Apply to all oscillators
+# [[control_bounds]]
+# values = [0.008]
+
 # Carrier wave frequencies for each oscillator 0..Q-1. (GHz)
 [[carrier_frequency]]
 oscID = 0
@@ -228,6 +232,10 @@ values = [0.0, -0.2198, -0.1]
 [[carrier_frequency]]
 oscID = 1
 values = [0.0, -0.2252, -0.1]
+
+# Apply to all oscillators
+# [[carrier_frequency]]
+# values = [0.0, -0.2252, -0.1]
 
 # Specify the desired output for each oscillator. Format: list of either of the following options:
 # "expectedEnergy" - time evolution of the expected energy level for this oscillator (expected energy of the reduced density matrix)
