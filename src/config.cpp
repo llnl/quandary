@@ -6,8 +6,6 @@
 #include <optional>
 #include <random>
 #include <string>
-#include <toml++/impl/forward_declarations.hpp>
-#include <toml++/impl/table.hpp>
 #include <vector>
 
 #include "config_defaults.hpp"
