@@ -377,7 +377,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
         copyLast(control_initializations[i], num_segments);
       }
     } else {
-      control_initializations = parseControlInitializations(settings.indexed_control_init);
+      control_initializations = parseControlInitializationsCfg(settings.indexed_control_init);
     }
   } else {
     // Initialize with defaults when no control initialization is provided
@@ -1091,7 +1091,7 @@ ControlSegment Config::parseControlSegment(const toml::table& table) const {
   return segment;
 }
 
-std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlInitializations(
+std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlInitializationsCfg(
     const std::optional<std::map<int, std::vector<ControlInitializationData>>>& init_configs) const {
   ControlSegmentInitialization default_init = ControlSegmentInitialization{
       ControlSegmentInitType::CONSTANT, ConfigDefaults::CONTROL_INIT_AMPLITUDE, ConfigDefaults::CONTROL_INIT_PHASE};
