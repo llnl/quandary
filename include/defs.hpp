@@ -261,15 +261,6 @@ struct InitialCondition {
 };
 
 /**
- * @brief Control segment initialization settings.
- */
-struct ControlSegmentInitialization {
-  ControlSegmentInitType type; ///< Initialization type
-  double amplitude; ///< Initial control pulse amplitude
-  double phase; ///< Initial control pulse phase
-};
-
-/**
  * @brief Optimization target configuration.
  */
 struct OptimTargetSettings {
@@ -291,6 +282,15 @@ struct PiPulseSegment {
   double tstart; ///< Start time for pulse segment
   double tstop; ///< Stop time for pulse segment
   double amp; ///< Amplitude for pulse segment
+};
+
+/**
+ * @brief Control segment initialization settings.
+ */
+struct ControlSegmentInitialization {
+  ControlSegmentInitType type; ///< Initialization type
+  double amplitude; ///< Initial control pulse amplitude
+  double phase; ///< Initial control pulse phase
 };
 
 /**
