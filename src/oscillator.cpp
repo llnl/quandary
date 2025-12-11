@@ -75,40 +75,32 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
 
     switch (controlsegment.type) {
     case ControlType::STEP: {
-      StepParams params = std::get<StepParams>(controlsegment.params);
-
       // if (mpirank_world == 0) printf("%d: Creating step basis with amplitude (%f, %f) (tramp %f) in control segment [%f, %f]\n", myid, step_amp1, step_amp2, tramp, tstart, tstop);
-      ControlBasis* mystep = new Step(params.step_amp1, params.step_amp2, params.tstart, params.tstop, params.tramp, control_enforceBC);
+      ControlBasis* mystep = new Step(*controlsegment.step_amp1, *controlsegment.step_amp2, *controlsegment.tstart, *controlsegment.tstop, *controlsegment.tramp, control_enforceBC);
       mystep->setSkip(nparams_per_seg);
       nparams_per_seg += mystep->getNparams() * carrier_freq.size();
       basisfunctions.push_back(mystep);
       break;
     }
     case ControlType::BSPLINE: {
-      SplineParams params = std::get<SplineParams>(controlsegment.params);
-
       // if (mpirank_world==0) printf("%d: Creating %d-spline basis in control segment [%f, %f]\n", myid, nspline,tstart, tstop);
-      ControlBasis* mysplinebasis = new BSpline2nd(params.nspline, params.tstart, params.tstop, control_enforceBC);
+      ControlBasis* mysplinebasis = new BSpline2nd(*controlsegment.nspline, *controlsegment.tstart, *controlsegment.tstop, control_enforceBC);
       mysplinebasis->setSkip(nparams_per_seg);
       nparams_per_seg += mysplinebasis->getNparams() * carrier_freq.size();
       basisfunctions.push_back(mysplinebasis);
       break;
     }
     case ControlType::BSPLINE0: {
-      SplineParams params = std::get<SplineParams>(controlsegment.params);
-
       // if (mpirank_world==0) printf("%d: Creating %d-spline basis in control segment [%f, %f]\n", myid, nspline,tstart, tstop);
-      ControlBasis* mysplinebasis = new BSpline0(params.nspline, params.tstart, params.tstop, control_enforceBC);
+      ControlBasis* mysplinebasis = new BSpline0(*controlsegment.nspline, *controlsegment.tstart, *controlsegment.tstop, control_enforceBC);
       mysplinebasis->setSkip(nparams_per_seg);
       nparams_per_seg += mysplinebasis->getNparams() * carrier_freq.size();
       basisfunctions.push_back(mysplinebasis);
       break;
     }
     case ControlType::BSPLINEAMP: {
-      SplineAmpParams params = std::get<SplineAmpParams>(controlsegment.params);
-
       // if (mpirank_world==0) printf("%d: Creating %d-spline basis in control segment [%f, %f]\n", myid, nspline,tstart, tstop);
-      ControlBasis* mysplinebasis = new BSpline2ndAmplitude(params.nspline, params.scaling, params.tstart, params.tstop, control_enforceBC);
+      ControlBasis* mysplinebasis = new BSpline2ndAmplitude(*controlsegment.nspline, *controlsegment.scaling, *controlsegment.tstart, *controlsegment.tstop, control_enforceBC);
       mysplinebasis->setSkip(nparams_per_seg);
       nparams_per_seg += mysplinebasis->getNparams() * carrier_freq.size();
       basisfunctions.push_back(mysplinebasis);

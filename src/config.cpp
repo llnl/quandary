@@ -148,9 +148,12 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     }
 
     // Apply defaults to control segments and initializations if needed
-    std::vector<ControlSegment> default_segments = {
-        {ControlType::BSPLINE,
-         SplineParams{ConfigDefaults::CONTROL_SEG_SPLINE_COUNT, ConfigDefaults::CONTROL_SEG_TSTART, getTotalTime()}}};
+    ControlSegment default_segment;
+    default_segment.type = ControlType::BSPLINE;
+    default_segment.nspline = ConfigDefaults::CONTROL_SEG_SPLINE_COUNT;
+    default_segment.tstart = ConfigDefaults::CONTROL_SEG_TSTART;
+    default_segment.tstop = getTotalTime();
+    std::vector<ControlSegment> default_segments = {{default_segment}};
     std::vector<ControlSegmentInitialization> default_initialization = {ControlSegmentInitialization{
         ControlSegmentInitType::CONSTANT, ConfigDefaults::CONTROL_INIT_AMPLITUDE, ConfigDefaults::CONTROL_INIT_PHASE}};
 
@@ -678,24 +681,21 @@ void Config::printConfig(std::stringstream& log) const {
       log << "type = \"" << enumToString(seg.type, CONTROL_TYPE_MAP) << "\"\n";
 
       // Add segment-specific parameters
-      if (std::holds_alternative<SplineParams>(seg.params)) {
-        auto params = std::get<SplineParams>(seg.params);
-        log << "num = " << params.nspline << "\n";
-        if (params.tstart != 0.0) log << "tstart = " << params.tstart << "\n";
-        if (params.tstop != dt * ntime) log << "tstop = " << params.tstop << "\n";
-      } else if (std::holds_alternative<SplineAmpParams>(seg.params)) {
-        auto params = std::get<SplineAmpParams>(seg.params);
-        log << "num = " << params.nspline << "\n";
-        log << "scaling = " << params.scaling << "\n";
-        if (params.tstart != 0.0) log << "tstart = " << params.tstart << "\n";
-        if (params.tstop != dt * ntime) log << "tstop = " << params.tstop << "\n";
-      } else if (std::holds_alternative<StepParams>(seg.params)) {
-        auto params = std::get<StepParams>(seg.params);
-        log << "step_amp1 = " << params.step_amp1 << "\n";
-        log << "step_amp2 = " << params.step_amp2 << "\n";
-        log << "tramp = " << params.tramp << "\n";
-        log << "tstart = " << params.tstart << "\n";
-        log << "tstop = " << params.tstop << "\n";
+      if (seg.type == ControlType::BSPLINE || seg.type == ControlType::BSPLINE0) {
+        log << "num = " << seg.nspline.value() << "\n";
+        log << "tstart = " << seg.tstart.value() << "\n";
+        log << "tstop = " << seg.tstop.value() << "\n";
+      } else if (seg.type == ControlType::BSPLINEAMP) {
+        log << "num = " << seg.nspline.value() << "\n";
+        log << "scaling = " << seg.scaling.value() << "\n";
+        log << "tstart = " << seg.tstart.value() << "\n";
+        log << "tstop = " << seg.tstop.value() << "\n";
+      } else if (seg.type == ControlType::STEP) {
+        log << "step_amp1 = " << seg.step_amp1.value() << "\n";
+        log << "step_amp2 = " << seg.step_amp2.value() << "\n";
+        log << "tramp = " << seg.tramp.value() << "\n";
+        log << "tstart = " << seg.tstart.value() << "\n";
+        log << "tstop = " << seg.tstop.value() << "\n";
       }
       log << "\n";
     }
@@ -1003,9 +1003,12 @@ void Config::addPiPulseSegment(std::vector<std::vector<PiPulseSegment>>& apply_p
 
 std::vector<std::vector<ControlSegment>> Config::parseControlSegmentsCfg(
     const std::optional<std::map<int, std::vector<ControlSegmentData>>>& segments_opt) const {
-  std::vector<ControlSegment> default_segments = {
-      {ControlType::BSPLINE,
-       SplineParams{ConfigDefaults::CONTROL_SEG_SPLINE_COUNT, ConfigDefaults::CONTROL_SEG_TSTART, getTotalTime()}}};
+  ControlSegment default_segment;
+  default_segment.type = ControlType::BSPLINE;
+  default_segment.nspline = ConfigDefaults::CONTROL_SEG_SPLINE_COUNT;
+  default_segment.tstart = ConfigDefaults::CONTROL_SEG_TSTART;
+  default_segment.tstop = getTotalTime();
+  std::vector<ControlSegment> default_segments = {{default_segment}};
 
   if (!segments_opt.has_value()) {
     return std::vector<std::vector<ControlSegment>>(nlevels.size(), default_segments);
@@ -1030,34 +1033,27 @@ std::vector<std::vector<ControlSegment>> Config::parseControlSegmentsCfg(
 ControlSegment Config::parseControlSegmentCfg(const ControlSegmentData& seg_config) const {
   const auto& params = seg_config.parameters;
 
-  // Create appropriate params variant based on type
   ControlSegment segment;
   segment.type = seg_config.control_type;
 
   if (seg_config.control_type == ControlType::BSPLINE || seg_config.control_type == ControlType::BSPLINE0) {
-    SplineParams spline_params;
     assert(params.size() >= 1); // nspline is required, should be validated in CfgParser
-    spline_params.nspline = static_cast<size_t>(params[0]);
-    spline_params.tstart = params.size() > 1 ? params[1] : 0.0;
-    spline_params.tstop = params.size() > 2 ? params[2] : ntime * dt;
-    segment.params = spline_params;
+    segment.nspline = static_cast<size_t>(params[0]);
+    segment.tstart = params.size() > 1 ? params[1] : ConfigDefaults::CONTROL_SEG_TSTART;
+    segment.tstop = params.size() > 2 ? params[2] : getTotalTime();
   } else if (seg_config.control_type == ControlType::BSPLINEAMP) {
-    SplineAmpParams spline_amp_params;
     assert(params.size() >= 2); // nspline and scaling are required, should be validated in CfgParser
-    spline_amp_params.nspline = static_cast<size_t>(params[0]);
-    spline_amp_params.scaling = static_cast<double>(params[1]);
-    spline_amp_params.tstart = params.size() > 2 ? params[2] : 0.0;
-    spline_amp_params.tstop = params.size() > 3 ? params[3] : ntime * dt;
-    segment.params = spline_amp_params;
+    segment.nspline = static_cast<size_t>(params[0]);
+    segment.scaling = static_cast<double>(params[1]);
+    segment.tstart = params.size() > 2 ? params[2] : ConfigDefaults::CONTROL_SEG_TSTART;
+    segment.tstop = params.size() > 3 ? params[3] : getTotalTime();
   } else if (seg_config.control_type == ControlType::STEP) {
-    StepParams step_params;
     assert(params.size() >= 3); // step_amp1, step_amp2, tramp are required, should be validated in CfgParser
-    step_params.step_amp1 = static_cast<double>(params[0]);
-    step_params.step_amp2 = static_cast<double>(params[1]);
-    step_params.tramp = static_cast<double>(params[2]);
-    step_params.tstart = params.size() > 3 ? params[3] : 0.0;
-    step_params.tstop = params.size() > 4 ? params[4] : ntime * dt;
-    segment.params = step_params;
+    segment.step_amp1 = static_cast<double>(params[0]);
+    segment.step_amp2 = static_cast<double>(params[1]);
+    segment.tramp = static_cast<double>(params[2]);
+    segment.tstart = params.size() > 3 ? params[3] : ConfigDefaults::CONTROL_SEG_TSTART;
+    segment.tstop = params.size() > 4 ? params[4] : getTotalTime();
   }
 
   return segment;
@@ -1076,30 +1072,24 @@ ControlSegment Config::parseControlSegment(const toml::table& table) const {
   switch (*type) {
     case ControlType::BSPLINE:
     case ControlType::BSPLINE0: {
-      SplineParams spline_params;
-      spline_params.nspline = validators::field<size_t>(table, "num").value();
-      spline_params.tstart = validators::field<double>(table, "tstart").valueOr(ConfigDefaults::CONTROL_SEG_TSTART);
-      spline_params.tstop = validators::field<double>(table, "tstop").valueOr(getTotalTime());
-      segment.params = spline_params;
+      segment.nspline = validators::field<size_t>(table, "num").value();
+      segment.tstart = validators::field<double>(table, "tstart").valueOr(ConfigDefaults::CONTROL_SEG_TSTART);
+      segment.tstop = validators::field<double>(table, "tstop").valueOr(getTotalTime());
       break;
     }
     case ControlType::BSPLINEAMP: {
-      SplineAmpParams spline_amp_params;
-      spline_amp_params.nspline = validators::field<size_t>(table, "num").value();
-      spline_amp_params.scaling = validators::field<double>(table, "scaling").value();
-      spline_amp_params.tstart = validators::field<double>(table, "tstart").valueOr(ConfigDefaults::CONTROL_SEG_TSTART);
-      spline_amp_params.tstop = validators::field<double>(table, "tstop").valueOr(getTotalTime());
-      segment.params = spline_amp_params;
+      segment.nspline = validators::field<size_t>(table, "num").value();
+      segment.scaling = validators::field<double>(table, "scaling").value();
+      segment.tstart = validators::field<double>(table, "tstart").valueOr(ConfigDefaults::CONTROL_SEG_TSTART);
+      segment.tstop = validators::field<double>(table, "tstop").valueOr(getTotalTime());
       break;
     }
     case ControlType::STEP:
-      StepParams step_params;
-      step_params.step_amp1 = validators::field<double>(table, "step_amp1").value();
-      step_params.step_amp2 = validators::field<double>(table, "step_amp2").value();
-      step_params.tramp = validators::field<double>(table, "tramp").value();
-      step_params.tstart = validators::field<double>(table, "tstart").valueOr(ConfigDefaults::CONTROL_SEG_TSTART);
-      step_params.tstop = validators::field<double>(table, "tstop").valueOr(getTotalTime());
-      segment.params = step_params;
+      segment.step_amp1 = validators::field<double>(table, "step_amp1").value();
+      segment.step_amp2 = validators::field<double>(table, "step_amp2").value();
+      segment.tramp = validators::field<double>(table, "tramp").value();
+      segment.tstart = validators::field<double>(table, "tstart").valueOr(ConfigDefaults::CONTROL_SEG_TSTART);
+      segment.tstop = validators::field<double>(table, "tstop").valueOr(getTotalTime());
       break;
     case ControlType::NONE:
       logger.exitWithError("Unexpected control type " + type_str);

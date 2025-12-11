@@ -386,10 +386,9 @@ TEST_F(TomlParserTest, ControlSegments_Spline0) {
   const auto& control_segments = config.getControlSegments(0);
   EXPECT_EQ(control_segments.size(), 1);
   EXPECT_EQ(control_segments[0].type, ControlType::BSPLINE0);
-  SplineParams params0 = std::get<SplineParams>(control_segments[0].params);
-  EXPECT_EQ(params0.nspline, 150);
-  EXPECT_DOUBLE_EQ(params0.tstart, 0.0);
-  EXPECT_DOUBLE_EQ(params0.tstop, 1.0);
+  EXPECT_EQ(control_segments[0].nspline.value(), 150);
+  EXPECT_DOUBLE_EQ(control_segments[0].tstart.value(), 0.0);
+  EXPECT_DOUBLE_EQ(control_segments[0].tstop.value(), 1.0);
 }
 
 TEST_F(TomlParserTest, ControlSegments_Spline) {
@@ -423,26 +422,23 @@ TEST_F(TomlParserTest, ControlSegments_Spline) {
   const auto& control_seg0 = config.getControlSegments(0);
   EXPECT_EQ(control_seg0.size(), 1);
   EXPECT_EQ(control_seg0[0].type, ControlType::BSPLINE);
-  SplineParams params0 = std::get<SplineParams>(control_seg0[0].params);
-  EXPECT_EQ(params0.nspline, 10);
-  EXPECT_DOUBLE_EQ(params0.tstart, 0.0);
-  EXPECT_DOUBLE_EQ(params0.tstop, config.getNTime() * config.getDt());
+  EXPECT_EQ(control_seg0[0].nspline.value(), 10);
+  EXPECT_DOUBLE_EQ(control_seg0[0].tstart.value(), 0.0);
+  EXPECT_DOUBLE_EQ(control_seg0[0].tstop.value(), config.getNTime() * config.getDt());
 
   // Check second oscillator with two segments
   const auto& control_seg1 = config.getControlSegments(1);
   EXPECT_EQ(control_seg1.size(), 2);
 
   EXPECT_EQ(control_seg1[0].type, ControlType::BSPLINE);
-  SplineParams params1 = std::get<SplineParams>(control_seg1[0].params);
-  EXPECT_EQ(params1.nspline, 20);
-  EXPECT_DOUBLE_EQ(params1.tstart, 0.0);
-  EXPECT_DOUBLE_EQ(params1.tstop, 1.0);
+  EXPECT_EQ(control_seg1[0].nspline.value(), 20);
+  EXPECT_DOUBLE_EQ(control_seg1[0].tstart.value(), 0.0);
+  EXPECT_DOUBLE_EQ(control_seg1[0].tstop.value(), 1.0);
 
   EXPECT_EQ(control_seg1[1].type, ControlType::BSPLINE);
-  SplineParams params2 = std::get<SplineParams>(control_seg1[1].params);
-  EXPECT_EQ(params2.nspline, 30);
-  EXPECT_DOUBLE_EQ(params2.tstart, 1.0);
-  EXPECT_DOUBLE_EQ(params2.tstop, 2.0);
+  EXPECT_EQ(control_seg1[1].nspline.value(), 30);
+  EXPECT_DOUBLE_EQ(control_seg1[1].tstart.value(), 1.0);
+  EXPECT_DOUBLE_EQ(control_seg1[1].tstop.value(), 2.0);
 }
 
 TEST_F(TomlParserTest, ControlSegments_Step) {
@@ -474,23 +470,21 @@ TEST_F(TomlParserTest, ControlSegments_Step) {
   const auto& control_seg0 = config.getControlSegments(0);
   EXPECT_EQ(control_seg0.size(), 1);
   EXPECT_EQ(control_seg0[0].type, ControlType::STEP);
-  StepParams params0 = std::get<StepParams>(control_seg0[0].params);
-  EXPECT_EQ(params0.step_amp1, 0.1);
-  EXPECT_DOUBLE_EQ(params0.step_amp2, 0.2);
-  EXPECT_DOUBLE_EQ(params0.tramp, 0.3);
-  EXPECT_DOUBLE_EQ(params0.tstart, 0.4);
-  EXPECT_DOUBLE_EQ(params0.tstop, 0.5);
+  EXPECT_EQ(control_seg0[0].step_amp1.value(), 0.1);
+  EXPECT_DOUBLE_EQ(control_seg0[0].step_amp2.value(), 0.2);
+  EXPECT_DOUBLE_EQ(control_seg0[0].tramp.value(), 0.3);
+  EXPECT_DOUBLE_EQ(control_seg0[0].tstart.value(), 0.4);
+  EXPECT_DOUBLE_EQ(control_seg0[0].tstop.value(), 0.5);
 
   // Check second oscillator
   const auto& control_seg1 = config.getControlSegments(1);
   EXPECT_EQ(control_seg1.size(), 1);
   EXPECT_EQ(control_seg1[0].type, ControlType::STEP);
-  StepParams params1 = std::get<StepParams>(control_seg1[0].params);
-  EXPECT_EQ(params1.step_amp1, 0.1);
-  EXPECT_DOUBLE_EQ(params1.step_amp2, 0.2);
-  EXPECT_DOUBLE_EQ(params1.tramp, 0.3);
-  EXPECT_DOUBLE_EQ(params1.tstart, 0.0); // default start time
-  EXPECT_DOUBLE_EQ(params1.tstop, config.getNTime() * config.getDt()); // default stop time
+  EXPECT_EQ(control_seg1[0].step_amp1.value(), 0.1);
+  EXPECT_DOUBLE_EQ(control_seg1[0].step_amp2.value(), 0.2);
+  EXPECT_DOUBLE_EQ(control_seg1[0].tramp.value(), 0.3);
+  EXPECT_DOUBLE_EQ(control_seg1[0].tstart.value(), 0.0); // default start time
+  EXPECT_DOUBLE_EQ(control_seg1[0].tstop.value(), config.getNTime() * config.getDt()); // default stop time
 }
 
 TEST_F(TomlParserTest, ControlSegments_Defaults) {
@@ -517,10 +511,9 @@ TEST_F(TomlParserTest, ControlSegments_Defaults) {
   const auto& control_seg0 = config.getControlSegments(0);
   EXPECT_EQ(control_seg0.size(), 1);
   EXPECT_EQ(control_seg0[0].type, ControlType::BSPLINE);
-  SplineParams params0 = std::get<SplineParams>(control_seg0[0].params);
-  EXPECT_EQ(params0.nspline, 10);
-  EXPECT_DOUBLE_EQ(params0.tstart, 0.0);
-  EXPECT_DOUBLE_EQ(params0.tstop, config.getNTime() * config.getDt());
+  EXPECT_EQ(control_seg0[0].nspline.value(), 10);
+  EXPECT_DOUBLE_EQ(control_seg0[0].tstart.value(), 0.0);
+  EXPECT_DOUBLE_EQ(control_seg0[0].tstop.value(), config.getNTime() * config.getDt());
 
   // Check second oscillator has given settings
   const auto& control_seg1 = config.getControlSegments(1);
@@ -529,19 +522,17 @@ TEST_F(TomlParserTest, ControlSegments_Defaults) {
   EXPECT_EQ(control_seg1[0].type, ControlType::BSPLINE0);
   EXPECT_EQ(control_bounds1.size(), 1);
   EXPECT_DOUBLE_EQ(control_bounds1[0], 2.0);
-  SplineParams params1 = std::get<SplineParams>(control_seg1[0].params);
-  EXPECT_EQ(params1.nspline, 150);
-  EXPECT_DOUBLE_EQ(params1.tstart, 0.0);
-  EXPECT_DOUBLE_EQ(params1.tstop, 1.0);
+  EXPECT_EQ(control_seg1[0].nspline.value(), 150);
+  EXPECT_DOUBLE_EQ(control_seg1[0].tstart.value(), 0.0);
+  EXPECT_DOUBLE_EQ(control_seg1[0].tstop.value(), 1.0);
 
   // Check third oscillator defaults to the second's settings
   const auto& control_seg2 = config.getControlSegments(2);
   EXPECT_EQ(control_seg2.size(), 1);
   EXPECT_EQ(control_seg2[0].type, ControlType::BSPLINE0);
-  SplineParams params2 = std::get<SplineParams>(control_seg2[0].params);
-  EXPECT_EQ(params2.nspline, 150);
-  EXPECT_DOUBLE_EQ(params2.tstart, 0.0);
-  EXPECT_DOUBLE_EQ(params2.tstop, 1.0);
+  EXPECT_EQ(control_seg2[0].nspline.value(), 150);
+  EXPECT_DOUBLE_EQ(control_seg2[0].tstart.value(), 0.0);
+  EXPECT_DOUBLE_EQ(control_seg2[0].tstop.value(), 1.0);
 }
 
 TEST_F(TomlParserTest, ControlInitialization_Defaults) {
@@ -970,6 +961,7 @@ amp = 0.75
 oscID = 0
 type = "spline"
 num = 25
+tstart = 0.5
 tstop = 1.5
 
 [[control_initialization]]

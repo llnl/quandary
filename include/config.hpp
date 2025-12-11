@@ -7,7 +7,6 @@
 #include <sstream>
 #include <string>
 #include <toml++/toml.hpp>
-#include <variant>
 #include <vector>
 
 #include "config_types.hpp"
@@ -26,46 +25,26 @@ struct PiPulseSegment {
 };
 
 /**
- * @brief Parameters for B-spline control segments.
- */
-struct SplineParams {
-  size_t nspline; ///< Number of basis functions in this segment
-  double tstart; ///< Start time of the control segment
-  double tstop; ///< Stop time of the control segment
-};
-
-/**
- * @brief Parameters for amplitude-scaled B-spline control segments.
- */
-struct SplineAmpParams : SplineParams {
-  double scaling; ///< Amplitude scaling factor
-};
-
-/**
- * @brief Parameters for step function control segments.
- */
-struct StepParams {
-  double step_amp1; ///< Real part of amplitude of the step pulse
-  double step_amp2; ///< Imaginary part of amplitude of the step pulse
-  double tramp; ///< Ramp time
-  double tstart; ///< Start time of the control segment
-  double tstop; ///< Stop time of the control segment
-};
-
-/**
- * @brief Variant type for control segment parameters.
- */
-using ControlParams = std::variant<SplineParams, SplineAmpParams, StepParams>;
-
-/**
  * @brief Structure for defining control segments.
  *
  * Defines a controllable segment for an oscillator and the type of parameterization,
- * with corresponding starting and finish times.
+ * with corresponding starting and finish times. Which fields are used depends on the control type.
  */
 struct ControlSegment {
   ControlType type; ///< Type of control segment
-  ControlParams params; ///< Parameters for control pulse for segment
+
+  // Common fields for B-spline types (BSPLINE, BSPLINEAMP, BSPLINE0)
+  std::optional<size_t> nspline; ///< Number of basis functions in this segment
+  std::optional<double> tstart; ///< Start time of the control segment
+  std::optional<double> tstop; ///< Stop time of the control segment
+
+  // Additional field for amplitude-scaled B-spline (BSPLINEAMP)
+  std::optional<double> scaling; ///< Amplitude scaling factor
+
+  // Fields for step function control (STEP)
+  std::optional<double> step_amp1; ///< Real part of amplitude of the step pulse
+  std::optional<double> step_amp2; ///< Imaginary part of amplitude of the step pulse
+  std::optional<double> tramp; ///< Ramp time
 };
 
 /**
