@@ -10,11 +10,8 @@
 #include <toml++/impl/table.hpp>
 #include <vector>
 
-#include "cfgparser.hpp"
 #include "config_defaults.hpp"
-#include "config_types.hpp"
 #include "config_validators.hpp"
-#include "defs.hpp"
 #include "util.hpp"
 
 Config::Config(const MPILogger& logger, const toml::table& table) : logger(logger) {

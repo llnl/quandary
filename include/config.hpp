@@ -9,7 +9,7 @@
 #include <toml++/toml.hpp>
 #include <vector>
 
-#include "config_types.hpp"
+#include "cfgparser.hpp"
 #include "defs.hpp"
 #include "mpi_logger.hpp"
 

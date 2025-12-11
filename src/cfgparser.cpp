@@ -5,7 +5,6 @@
 #include <fstream>
 #include <vector>
 
-#include "config_types.hpp"
 #include "defs.hpp"
 #include "mpi_logger.hpp"
 #include "util.hpp"
