@@ -293,37 +293,37 @@ ControlSegmentInitType CfgParser::convertFromString<ControlSegmentInitType>(cons
 
 // Struct converter implementations
 template <>
-InitialConditionData CfgParser::convertFromString<InitialConditionData>(const std::string& str) {
+InitialCondition CfgParser::convertFromString<InitialCondition>(const std::string& str) {
   auto parts = split(str);
   if (parts.empty()) {
     logger.exitWithError("Empty initialcondition specification");
   }
 
-  InitialConditionData config;
+  InitialCondition init_cond;
   auto type = convertFromString<InitialConditionType>(parts[0]);
-  config.type = parts[0];
+  init_cond.type = type;
 
   if (type == InitialConditionType::FROMFILE) {
     if (parts.size() < 2) {
       logger.exitWithError("initialcondition of type FROMFILE must have a filename");
     }
-    config.filename = parts[1];
+    init_cond.filename = parts[1];
   } else if (type == InitialConditionType::PURE) {
-    config.levels = std::vector<size_t>();
+    init_cond.levels = std::vector<size_t>();
     for (size_t i = 1; i < parts.size(); ++i) {
-      config.levels.value().push_back(convertFromString<int>(parts[i]));
+      init_cond.levels.value().push_back(convertFromString<int>(parts[i]));
     }
   } else if (type == InitialConditionType::ENSEMBLE || type == InitialConditionType::DIAGONAL ||
              type == InitialConditionType::BASIS) {
     if (parts.size() > 1) {
-      config.osc_IDs = std::vector<size_t>();
+      init_cond.osc_IDs = std::vector<size_t>();
       for (size_t i = 1; i < parts.size(); ++i) {
-        config.osc_IDs.value().push_back(convertFromString<int>(parts[i]));
+        init_cond.osc_IDs.value().push_back(convertFromString<int>(parts[i]));
       }
     }
   }
 
-  return config;
+  return init_cond;
 }
 
 template <>

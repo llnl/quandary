@@ -69,6 +69,18 @@ const std::map<std::string, InitialConditionType> INITCOND_TYPE_MAP = {
 };
 
 /**
+ * @brief Initial condition configuration.
+ */
+struct InitialCondition {
+  InitialConditionType type; ///< Type of initial condition
+
+  // Optional fields - populate based on type
+  std::optional<std::string> filename; ///< For FROMFILE: File to read initial condition from
+  std::optional<std::vector<size_t>> levels; ///< For PURE: Quantum level for each oscillator
+  std::optional<std::vector<size_t>> osc_IDs; ///< For ENSEMBLE, DIAGONAL, BASIS: Oscillator IDs
+};
+
+/**
  * @brief Types of optimization targets for quantum control.
  *
  * Defines the target quantum state or operation for optimization.

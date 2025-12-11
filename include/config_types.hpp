@@ -7,21 +7,6 @@
 
 #include "defs.hpp"
 
-/**
- * @brief Common configuration structures shared between CfgParser and Config
- *
- * These structs represent parsed configuration data in an intermediate form,
- * used by CfgParser for parsing and by Config for initialization.
- * TODO cfg: delete this when .cfg format is removed.
- */
-
-struct InitialConditionData {
-  std::string type; ///< Type of initial condition
-  std::optional<std::vector<size_t>> osc_IDs; ///< Oscillator IDs
-  std::optional<std::vector<size_t>> levels; ///< Levels for each oscillator
-  std::optional<std::string> filename; ///< Filename (if type is FILE)
-};
-
 struct OptimTargetData {
   std::string target_type; ///< Target type (gate, pure, file)
   std::optional<std::string> gate_type; ///< Gate type (for "gate, cnot")
@@ -69,7 +54,7 @@ struct ParsedConfigData {
   std::optional<LindbladType> collapse_type;
   std::optional<std::vector<double>> decay_time;
   std::optional<std::vector<double>> dephase_time;
-  std::optional<InitialConditionData> initialcondition;
+  std::optional<InitialCondition> initialcondition;
   std::optional<std::vector<PiPulseData>> apply_pipulse;
   std::optional<std::string> hamiltonian_file_Hsys;
   std::optional<std::string> hamiltonian_file_Hc;

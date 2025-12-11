@@ -65,11 +65,11 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     copyLast(dephase_time, num_osc);
 
     auto init_cond_table = validators::getRequiredTable(table, "initial_condition");
-    std::string type_str = validators::field<std::string>(init_cond_table, "type").value();
+    auto type_opt = parseEnum(validators::field<std::string>(init_cond_table, "type").value(), INITCOND_TYPE_MAP);
     std::optional<std::vector<size_t>> levels = validators::getOptionalVector<size_t>(init_cond_table["levels"]);
     std::optional<std::vector<size_t>> osc_IDs = validators::getOptionalVector<size_t>(init_cond_table["oscIDs"]);
     std::optional<std::string> filename = init_cond_table["filename"].value<std::string>();
-    initial_condition = parseInitialCondition({type_str, osc_IDs, levels, filename});
+    initial_condition = parseInitialCondition(type_opt, filename, levels, osc_IDs);
     n_initial_conditions = computeNumInitialConditions();
 
     apply_pipulse = std::vector<std::vector<PiPulseSegment>>(nlevels.size());
@@ -328,7 +328,10 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   if (!settings.initialcondition.has_value()) {
     logger.exitWithError("initialcondition cannot be empty");
   }
-  initial_condition = parseInitialCondition(settings.initialcondition.value());
+  initial_condition = parseInitialCondition(settings.initialcondition.value().type,
+                                            settings.initialcondition.value().filename,
+                                            settings.initialcondition.value().levels,
+                                            settings.initialcondition.value().osc_IDs);
   n_initial_conditions = computeNumInitialConditions();
 
   apply_pipulse = std::vector<std::vector<PiPulseSegment>>(nlevels.size());
@@ -495,32 +498,34 @@ std::string ControlSegmentInitialization::toString() const {
   return str;
 }
 
-std::string InitialCondition::toString() const {
-  auto type_str = "type = \"" + enumToString(type, INITCOND_TYPE_MAP) + "\"";
-  switch (type) {
+namespace {
+
+std::string toString(const InitialCondition& initial_condition) {
+  auto type_str = "type = \"" + enumToString(initial_condition.type, INITCOND_TYPE_MAP) + "\"";
+  switch (initial_condition.type) {
     case InitialConditionType::FROMFILE:
-      return "{" + type_str + ", filename = \"" + filename.value() + "\"}";
+      return "{" + type_str + ", filename = \"" + initial_condition.filename.value() + "\"}";
     case InitialConditionType::PURE: {
       std::string out = "{" + type_str + ", levels = ";
-      out += printVector(levels.value());
+      out += printVector(initial_condition.levels.value());
       out += "}";
       return out;
     }
     case InitialConditionType::ENSEMBLE: {
       std::string out = "{" + type_str + ", oscIDs = ";
-      out += printVector(osc_IDs.value());
+      out += printVector(initial_condition.osc_IDs.value());
       out += "}";
       return out;
     }
     case InitialConditionType::DIAGONAL: {
       std::string out = "{" + type_str + ", oscIDs = ";
-      out += printVector(osc_IDs.value());
+      out += printVector(initial_condition.osc_IDs.value());
       out += "}";
       return out;
     }
     case InitialConditionType::BASIS: {
       std::string out = "{" + type_str + ", oscIDs = ";
-      out += printVector(osc_IDs.value());
+      out += printVector(initial_condition.osc_IDs.value());
       out += "}";
       return out;
     }
@@ -533,6 +538,8 @@ std::string InitialCondition::toString() const {
   }
   return "unknown";
 }
+
+} // namespace
 
 std::string OptimTargetSettings::toString() const {
   auto type_str = "target_type = \"" + enumToString(type, TARGET_TYPE_MAP) + "\"";
@@ -587,7 +594,7 @@ void Config::printConfig(std::stringstream& log) const {
   log << "collapse_type = \"" << enumToString(collapse_type, LINDBLAD_TYPE_MAP) << "\"\n";
   log << "decay_time = " << printVector(decay_time) << "\n";
   log << "dephase_time = " << printVector(dephase_time) << "\n";
-  log << "initial_condition = " << initial_condition.toString() << "\n";
+  log << "initial_condition = " << toString(initial_condition) << "\n";
 
   if (hamiltonian_file_Hsys.has_value()) {
     log << "hamiltonian_file_Hsys = \"" << hamiltonian_file_Hsys.value() << "\"\n";
@@ -733,6 +740,11 @@ void Config::finalize() {
         "Switching to sparse-matrix solver now.\n");
     usematfree = false;
   }
+
+  if (collapse_type == LindbladType::NONE && initial_condition.type == InitialConditionType::BASIS) {
+    // DIAGONAL and BASIS initial conditions in the Schroedinger case are the same. Overwrite it to DIAGONAL
+    initial_condition.type = InitialConditionType::DIAGONAL;
+  }
 }
 
 void Config::validate() const {
@@ -753,6 +765,19 @@ void Config::validate() const {
     if (nessential[i] > nlevels[i]) {
       logger.exitWithError("nessential[" + std::to_string(i) + "] = " + std::to_string(nessential[i]) +
                            " cannot exceed nlevels[" + std::to_string(i) + "] = " + std::to_string(nlevels[i]));
+    }
+  }
+
+  /* Sanity check for Schrodinger solver initial conditions */
+  if (collapse_type == LindbladType::NONE) {
+    if (initial_condition.type == InitialConditionType::ENSEMBLE ||
+        initial_condition.type == InitialConditionType::THREESTATES ||
+        initial_condition.type == InitialConditionType::NPLUSONE) {
+      logger.exitWithError(
+          "\n\n ERROR for initial condition setting: \n When running Schroedingers solver"
+          " (collapse_type == NONE), the initial condition needs to be either 'pure' or 'from file' or 'diagonal' or "
+          "'basis'."
+          " Note that 'diagonal' and 'basis' in the Schroedinger case are the same (all unit vectors).\n\n");
     }
   }
 }
@@ -858,29 +883,18 @@ std::vector<std::vector<T>> Config::parseOscillatorSettings(const toml::array& a
   return result;
 }
 
-InitialCondition Config::parseInitialCondition(const InitialConditionData& config) const {
-  auto opt_type = parseEnum(config.type, INITCOND_TYPE_MAP);
-
+InitialCondition Config::parseInitialCondition(std::optional<InitialConditionType> opt_type,
+                                               const std::optional<std::string>& filename,
+                                               const std::optional<std::vector<size_t>>& levels,
+                                               const std::optional<std::vector<size_t>>& osc_IDs) const {
   if (!opt_type.has_value()) {
     logger.exitWithError("initial condition type not found.");
   }
   InitialConditionType type = opt_type.value();
 
-  /* Sanity check for Schrodinger solver initial conditions */
-  if (collapse_type == LindbladType::NONE) {
-    if (type == InitialConditionType::ENSEMBLE || type == InitialConditionType::THREESTATES ||
-        type == InitialConditionType::NPLUSONE) {
-      logger.exitWithError(
-          "\n\n ERROR for initial condition setting: \n When running Schroedingers solver"
-          " (collapse_type == NONE), the initial condition needs to be either 'pure' or 'from file' or 'diagonal' or "
-          "'basis'."
-          " Note that 'diagonal' and 'basis' in the Schroedinger case are the same (all unit vectors).\n\n");
-    }
-  }
-
   // If no params are given for BASIS, ENSEMBLE, or DIAGONAL, default to all oscillators
-  auto init_cond_IDs = config.osc_IDs.value_or(std::vector<size_t>{});
-  if (!config.osc_IDs.has_value() &&
+  auto init_cond_IDs = osc_IDs.value_or(std::vector<size_t>{});
+  if (!osc_IDs.has_value() &&
       (type == InitialConditionType::BASIS || type == InitialConditionType::ENSEMBLE ||
        type == InitialConditionType::DIAGONAL)) {
     for (size_t i = 0; i < nlevels.size(); i++) {
@@ -893,35 +907,31 @@ InitialCondition Config::parseInitialCondition(const InitialConditionData& confi
 
   switch (type) {
     case InitialConditionType::FROMFILE:
-      if (!config.filename.has_value()) {
+      if (!filename.has_value()) {
         logger.exitWithError("initialcondition of type FROMFILE must have a filename");
       }
-      result.filename = config.filename.value();
+      result.filename = filename.value();
       break;
     case InitialConditionType::PURE:
-      if (!config.levels.has_value()) {
+      if (!levels.has_value()) {
         logger.exitWithError("initialcondition of type PURE must have 'levels'");
       }
-      if (config.levels.value().size() != nlevels.size()) {
+      if (levels.value().size() != nlevels.size()) {
         logger.exitWithError("initialcondition of type PURE must have exactly " + std::to_string(nlevels.size()) +
-                             " parameters, got " + std::to_string(config.levels.value().size()));
+                             " parameters, got " + std::to_string(levels.value().size()));
       }
-      for (size_t k = 0; k < config.levels.value().size(); k++) {
-        if (config.levels.value()[k] >= nlevels[k]) {
+      for (size_t k = 0; k < levels.value().size(); k++) {
+        if (levels.value()[k] >= nlevels[k]) {
           logger.exitWithError("ERROR in config setting. The requested pure state initialization " +
-                               std::to_string(config.levels.value()[k]) +
+                               std::to_string(levels.value()[k]) +
                                " exceeds the number of allowed levels for that oscillator (" +
                                std::to_string(nlevels[k]) + ").\n");
         }
       }
-      result.levels = config.levels.value();
+      result.levels = levels.value();
       break;
 
     case InitialConditionType::BASIS:
-      if (collapse_type == LindbladType::NONE) {
-        // DIAGONAL and BASIS initial conditions in the Schroedinger case are the same. Overwrite it to DIAGONAL
-        result.type = InitialConditionType::DIAGONAL;
-      }
       result.osc_IDs = init_cond_IDs;
       break;
 
