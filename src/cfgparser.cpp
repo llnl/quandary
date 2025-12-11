@@ -327,15 +327,15 @@ InitialCondition CfgParser::convertFromString<InitialCondition>(const std::strin
 }
 
 template <>
-OptimTargetData CfgParser::convertFromString<OptimTargetData>(const std::string& str) {
+OptimTargetSettings CfgParser::convertFromString<OptimTargetSettings>(const std::string& str) {
   auto parts = split(str);
   if (parts.empty()) {
     logger.exitWithError("optim_target must have at least a target type specified.");
   }
 
-  OptimTargetData config;
+  OptimTargetSettings target_settings;
   auto target_type = convertFromString<TargetType>(parts[0]);
-  config.target_type = parts[0];
+  target_settings.type = target_type;
 
   switch (target_type) {
     case TargetType::GATE: {
@@ -343,31 +343,31 @@ OptimTargetData CfgParser::convertFromString<OptimTargetData>(const std::string&
         logger.exitWithError("Target type 'gate' requires a gate name.");
       }
       auto gate_type = convertFromString<GateType>(parts[1]);
-      config.gate_type = parts[1];
+      target_settings.gate_type = gate_type;
 
       if (gate_type == GateType::FILE) {
         if (parts.size() < 3) {
           logger.exitWithError("Gate type 'file' requires a filename.");
         }
-        config.gate_file = parts[2];
+        target_settings.gate_file = parts[2];
       }
       break;
     }
     case TargetType::PURE:
-      config.levels = std::vector<size_t>{};
+      target_settings.levels = std::vector<size_t>{};
       for (size_t i = 1; i < parts.size(); ++i) {
-        config.levels->push_back(convertFromString<int>(parts[i]));
+        target_settings.levels->push_back(convertFromString<int>(parts[i]));
       }
       break;
     case TargetType::FROMFILE:
       if (parts.size() < 2) {
-        logger.exitWithError("Gate type 'file' requires a filename.");
+        logger.exitWithError("Target type 'file' requires a filename.");
       }
-      config.filename = parts[1];
+      target_settings.file = parts[1];
       break;
   }
 
-  return config;
+  return target_settings;
 }
 
 template <>

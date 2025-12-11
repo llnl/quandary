@@ -238,6 +238,19 @@ const std::map<std::string, GateType> GATE_TYPE_MAP = {
 };
 
 /**
+ * @brief Optimization target configuration.
+ */
+struct OptimTargetSettings {
+  TargetType type; ///< Type of optimization target
+
+  // Optional fields - populate based on type
+  std::optional<GateType> gate_type; ///< For GATE: Gate type
+  std::optional<std::string> gate_file; ///< For GATE with FILE type: Gate file path
+  std::optional<std::vector<size_t>> levels; ///< For PURE: Pure state levels
+  std::optional<std::string> file; ///< For FROMFILE: Target file path
+};
+
+/**
  * @brief Types of output files to be written
  */
 enum class OutputType {

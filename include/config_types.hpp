@@ -7,14 +7,6 @@
 
 #include "defs.hpp"
 
-struct OptimTargetData {
-  std::string target_type; ///< Target type (gate, pure, file)
-  std::optional<std::string> gate_type; ///< Gate type (for "gate, cnot")
-  std::optional<std::string> filename; ///< Filename (for "file, path.dat")
-  std::optional<std::string> gate_file; ///< Gate filename (for "gate, file, path.dat")
-  std::optional<std::vector<size_t>> levels; ///< Pure state levels (for "pure, 0, 1")
-};
-
 struct PiPulseData {
   size_t oscil_id; ///< Oscillator ID
   double tstart; ///< Start time
@@ -65,7 +57,7 @@ struct ParsedConfigData {
   std::optional<std::map<int, std::vector<ControlInitializationData>>> indexed_control_init;
   std::optional<std::map<int, std::vector<double>>> indexed_control_bounds;
   std::optional<std::map<int, std::vector<double>>> indexed_carrier_frequencies;
-  std::optional<OptimTargetData> optim_target;
+  std::optional<OptimTargetSettings> optim_target;
   std::optional<std::vector<double>> gate_rot_freq;
   std::optional<ObjectiveType> optim_objective;
   std::optional<std::vector<double>> optim_weights;

@@ -186,17 +186,30 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
         parseOscillatorSettings<double>(carrier_freq_array, num_osc, {ConfigDefaults::CARRIER_FREQ}, "values");
 
     // optim_target
-    std::optional<OptimTargetData> optim_target_config;
     if (table.contains("optim_target")) {
       auto target_table = *table["optim_target"].as_table();
       std::string type_str = validators::field<std::string>(target_table, "target_type").value();
+      auto target_type_opt = parseEnum(type_str, TARGET_TYPE_MAP);
+
+      if (!target_type_opt.has_value()) {
+        logger.exitWithError("Unknown optimization target type: " + type_str);
+      }
+
+      std::optional<GateType> gate_type_opt;
       std::optional<std::string> gate_type_str = target_table["gate_type"].value<std::string>();
-      std::optional<std::string> gate_file = target_table["gate_file"].value<std::string>();
-      std::optional<std::vector<size_t>> levels = validators::getOptionalVector<size_t>(target_table["levels"]);
-      std::optional<std::string> filename = target_table["filename"].value<std::string>();
-      optim_target_config = {type_str, gate_type_str, filename, gate_file, levels};
+      if (gate_type_str.has_value()) {
+        gate_type_opt = parseEnum(gate_type_str.value(), GATE_TYPE_MAP);
+      }
+
+      auto gate_file_opt = target_table["gate_file"].value<std::string>();
+      auto target_levels = validators::getOptionalVector<size_t>(target_table["levels"]);
+      auto target_filename = target_table["filename"].value<std::string>();
+
+      optim_target = parseOptimTarget(target_type_opt.value(), gate_type_opt, gate_file_opt, target_levels, target_filename);
+    } else {
+      optim_target = parseOptimTarget(ConfigDefaults::OPTIM_TARGET, std::nullopt, std::nullopt,
+                                     std::nullopt, std::nullopt);
     }
-    optim_target = parseOptimTarget(optim_target_config, nlevels);
 
     gate_rot_freq = validators::vectorField<double>(table, "gate_rot_freq")
                         .valueOr(std::vector<double>(num_osc, ConfigDefaults::GATE_ROT_FREQ));
@@ -390,7 +403,14 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   carrier_frequencies.resize(num_osc);
   carrier_frequencies =
       parseOscillatorSettingsCfg<double>(settings.indexed_carrier_frequencies, num_osc, {ConfigDefaults::CARRIER_FREQ});
-  optim_target = parseOptimTarget(settings.optim_target, nlevels);
+  if (settings.optim_target.has_value()) {
+    const OptimTargetSettings& target_config = settings.optim_target.value();
+    optim_target = parseOptimTarget(target_config.type, target_config.gate_type, target_config.gate_file,
+                                   target_config.levels, target_config.file);
+  } else {
+    optim_target = parseOptimTarget(ConfigDefaults::OPTIM_TARGET, std::nullopt, std::nullopt,
+                                   std::nullopt, std::nullopt);
+  }
 
   gate_rot_freq = settings.gate_rot_freq.value_or(std::vector<double>(num_osc, ConfigDefaults::GATE_ROT_FREQ));
   copyLast(gate_rot_freq, num_osc);
@@ -539,34 +559,32 @@ std::string toString(const InitialCondition& initial_condition) {
   return "unknown";
 }
 
-} // namespace
-
-std::string OptimTargetSettings::toString() const {
-  auto type_str = "target_type = \"" + enumToString(type, TARGET_TYPE_MAP) + "\"";
-  switch (type) {
+std::string toString(const OptimTargetSettings& optim_target) {
+  auto type_str = "target_type = \"" + enumToString(optim_target.type, TARGET_TYPE_MAP) + "\"";
+  switch (optim_target.type) {
     case TargetType::GATE: {
       std::string out = "{" + type_str;
-      if (gate_type.has_value()) {
-        out += ", gate_type = \"" + enumToString(gate_type.value(), GATE_TYPE_MAP) + "\"";
+      if (optim_target.gate_type.has_value()) {
+        out += ", gate_type = \"" + enumToString(optim_target.gate_type.value(), GATE_TYPE_MAP) + "\"";
       }
-      if (gate_file.has_value() && !gate_file.value().empty()) {
-        out += ", gate_file = \"" + gate_file.value() + "\"";
+      if (optim_target.gate_file.has_value() && !optim_target.gate_file.value().empty()) {
+        out += ", gate_file = \"" + optim_target.gate_file.value() + "\"";
       }
       out += "}";
       return out;
     }
     case TargetType::PURE: {
       std::string out = "{" + type_str;
-      if (levels.has_value()) {
-        out += ", levels = " + printVector(levels.value());
+      if (optim_target.levels.has_value()) {
+        out += ", levels = " + printVector(optim_target.levels.value());
       }
       out += "}";
       return out;
     }
     case TargetType::FROMFILE: {
       std::string out = "{" + type_str;
-      if (file.has_value()) {
-        out += ", file = \"" + file.value() + "\"";
+      if (optim_target.file.has_value()) {
+        out += ", file = \"" + optim_target.file.value() + "\"";
       }
       out += "}";
       return out;
@@ -574,6 +592,8 @@ std::string OptimTargetSettings::toString() const {
   }
   return "unknown";
 }
+
+} // namespace
 
 void Config::printConfig(std::stringstream& log) const {
   log << "# Configuration settings\n";
@@ -605,7 +625,7 @@ void Config::printConfig(std::stringstream& log) const {
 
   // Optimization parameters
   log << "control_enforceBC = " << (control_enforceBC ? "true" : "false") << "\n";
-  log << "optim_target = " << optim_target.toString() << "\n";
+  log << "optim_target = " << toString(optim_target) << "\n";
   log << "gate_rot_freq = " << printVector(gate_rot_freq) << "\n";
   log << "optim_objective = \"" << enumToString(optim_objective, OBJECTIVE_TYPE_MAP) << "\"\n";
   log << "optim_weights = " << printVector(optim_weights) << "\n";
@@ -1112,43 +1132,24 @@ std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlIniti
   return control_initializations;
 }
 
-OptimTargetSettings Config::parseOptimTarget(const std::optional<OptimTargetData>& opt_config,
-                                             const std::vector<size_t>& nlevels) const {
-  if (!opt_config.has_value()) {
-    OptimTargetSettings default_target = ConfigDefaults::OPTIM_TARGET;
-    // For default pure state target, set levels to ground state
-    if (default_target.type == TargetType::PURE && !default_target.levels.has_value()) {
-      default_target.levels = std::vector<size_t>(nlevels.size(), 0);
-    }
-    return default_target;
-  }
-
-  const OptimTargetData& config = opt_config.value();
-
-  // Convert target type string to enum
-  auto type = parseEnum(config.target_type, TARGET_TYPE_MAP);
-  if (!type.has_value()) {
-    logger.exitWithError("Unknown optimization target type: " + config.target_type);
-  }
-
+OptimTargetSettings Config::parseOptimTarget(TargetType type,
+                                             const std::optional<GateType>& gate_type,
+                                             const std::optional<std::string>& gate_file,
+                                             const std::optional<std::vector<size_t>>& levels,
+                                             const std::optional<std::string>& file) const {
   OptimTargetSettings target_settings;
-  target_settings.type = *type;
+  target_settings.type = type;
 
-  switch (*type) {
+  switch (type) {
     case TargetType::GATE: {
-      target_settings.gate_type = parseEnum(config.gate_type, GATE_TYPE_MAP, ConfigDefaults::GATE_TYPE);
-      target_settings.gate_file = config.gate_file.value_or("");
+      target_settings.gate_type = gate_type.value_or(ConfigDefaults::GATE_TYPE);
+      target_settings.gate_file = gate_file.value_or("");
       break;
     }
 
     case TargetType::PURE: {
-      if (!config.levels.has_value() || config.levels->empty()) {
-        logger.log(
-            "# Warning: You want to prepare a pure state, but didn't specify which one."
-            " Taking default: ground-state |0...0> \n");
-        target_settings.levels = std::vector<size_t>(nlevels.size(), 0);
-      } else {
-        std::vector<size_t> pure_levels = config.levels.value();
+      if (levels.has_value() && !levels->empty()) {
+        std::vector<size_t> pure_levels = levels.value();
         pure_levels.resize(nlevels.size(), nlevels.back());
 
         for (size_t i = 0; i < nlevels.size(); i++) {
@@ -1159,15 +1160,20 @@ OptimTargetSettings Config::parseOptimTarget(const std::optional<OptimTargetData
           }
         }
         target_settings.levels = pure_levels;
+      } else {
+        logger.log(
+            "# Warning: You want to prepare a pure state, but didn't specify which one."
+            " Taking default: ground-state |0...0> \n");
+        target_settings.levels = std::vector<size_t>(nlevels.size(), 0);
       }
       break;
     }
 
     case TargetType::FROMFILE: {
-      if (!config.filename.has_value()) {
+      if (!file.has_value()) {
         logger.exitWithError("Optimization target of type FROMFILE must have a filename");
       }
-      target_settings.file = config.filename.value();
+      target_settings.file = file.value();
       break;
     }
   }

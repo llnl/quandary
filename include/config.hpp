@@ -15,21 +15,6 @@
 #include "mpi_logger.hpp"
 
 /**
- * @brief Optimization target configuration.
- */
-struct OptimTargetSettings {
-  TargetType type; ///< Type of optimization target
-
-  // Optional fields - populate based on type
-  std::optional<GateType> gate_type; ///< For GATE: Gate type
-  std::optional<std::string> gate_file; ///< For GATE with FILE type: Gate file path
-  std::optional<std::vector<size_t>> levels; ///< For PURE: Pure state levels
-  std::optional<std::string> file; ///< For FROMFILE: Target file path
-
-  std::string toString() const;
-};
-
-/**
  * @brief Structure for storing pi-pulse parameters for one segment.
  *
  * Stores timing and amplitude information for pi-pulse sequences.
@@ -277,8 +262,11 @@ InitialCondition parseInitialCondition(std::optional<InitialConditionType> opt_t
   std::vector<std::vector<ControlSegmentInitialization>> parseControlInitializations(
       const std::optional<std::map<int, std::vector<ControlInitializationData>>>& init_configs) const;
 
-  OptimTargetSettings parseOptimTarget(const std::optional<OptimTargetData>& opt_config,
-                                       const std::vector<size_t>& nlevels) const;
+  OptimTargetSettings parseOptimTarget(TargetType type,
+                                       const std::optional<GateType>& gate_type,
+                                       const std::optional<std::string>& gate_file,
+                                       const std::optional<std::vector<size_t>>& levels,
+                                       const std::optional<std::string>& file) const;
 
   std::vector<double> parseOptimWeights(const std::optional<std::vector<double>>& optim_weights_) const;
 };
