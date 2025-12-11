@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <string>
 
-#include "config.hpp"
 #include "defs.hpp"
 
 /**
