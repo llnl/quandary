@@ -14,54 +14,54 @@
 #include "config_validators.hpp"
 #include "util.hpp"
 
-Config::Config(const MPILogger& logger, const toml::table& table) : logger(logger) {
+Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger) {
   try {
     // General options
-    nlevels = validators::vectorField<size_t>(table, "nlevels").minLength(1).positive().value();
+    nlevels = validators::vectorField<size_t>(toml, "nlevels").minLength(1).positive().value();
 
     size_t num_osc = nlevels.size();
     size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
 
-    nessential = validators::vectorField<size_t>(table, "nessential").minLength(1).positive().valueOr(nlevels);
+    nessential = validators::vectorField<size_t>(toml, "nessential").minLength(1).positive().valueOr(nlevels);
     copyLast(nessential, num_osc);
 
-    ntime = table["ntime"].value_or(ConfigDefaults::NTIME);
+    ntime = toml["ntime"].value_or(ConfigDefaults::NTIME);
 
-    dt = table["dt"].value_or(ConfigDefaults::DT);
+    dt = toml["dt"].value_or(ConfigDefaults::DT);
 
-    transfreq = validators::vectorField<double>(table, "transfreq").minLength(1).value();
+    transfreq = validators::vectorField<double>(toml, "transfreq").minLength(1).value();
     copyLast(transfreq, num_osc);
 
-    selfkerr = validators::vectorField<double>(table, "selfkerr")
+    selfkerr = validators::vectorField<double>(toml, "selfkerr")
                    .minLength(1)
                    .valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
     copyLast(selfkerr, num_osc);
 
-    crosskerr = validators::vectorField<double>(table, "crosskerr")
+    crosskerr = validators::vectorField<double>(toml, "crosskerr")
                     .minLength(1)
                     .valueOr(std::vector<double>(num_pairs_osc, ConfigDefaults::CROSSKERR));
     copyLast(crosskerr, num_pairs_osc);
 
-    Jkl = validators::vectorField<double>(table, "Jkl")
+    Jkl = validators::vectorField<double>(toml, "Jkl")
               .minLength(1)
               .valueOr(std::vector<double>(num_pairs_osc, ConfigDefaults::JKL));
     copyLast(Jkl, num_pairs_osc);
 
-    rotfreq = validators::vectorField<double>(table, "rotfreq").minLength(1).value();
+    rotfreq = validators::vectorField<double>(toml, "rotfreq").minLength(1).value();
     copyLast(rotfreq, num_osc);
 
     collapse_type =
-        parseEnum(table["collapse_type"].value<std::string>(), LINDBLAD_TYPE_MAP, ConfigDefaults::COLLAPSE_TYPE_ENUM);
+        parseEnum(toml["collapse_type"].value<std::string>(), LINDBLAD_TYPE_MAP, ConfigDefaults::COLLAPSE_TYPE_ENUM);
 
-    decay_time = validators::vectorField<double>(table, "decay_time")
+    decay_time = validators::vectorField<double>(toml, "decay_time")
                      .valueOr(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
     copyLast(decay_time, num_osc);
 
-    dephase_time = validators::vectorField<double>(table, "dephase_time")
+    dephase_time = validators::vectorField<double>(toml, "dephase_time")
                        .valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
     copyLast(dephase_time, num_osc);
 
-    auto init_cond_table = validators::getRequiredTable(table, "initial_condition");
+    auto init_cond_table = validators::getRequiredTable(toml, "initial_condition");
     auto type_opt = parseEnum(validators::field<std::string>(init_cond_table, "type").value(), INITCOND_TYPE_MAP);
     std::optional<std::vector<size_t>> levels = validators::getOptionalVector<size_t>(init_cond_table["levels"]);
     std::optional<std::vector<size_t>> osc_IDs = validators::getOptionalVector<size_t>(init_cond_table["oscIDs"]);
@@ -70,7 +70,7 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     n_initial_conditions = computeNumInitialConditions();
 
     apply_pipulse = std::vector<std::vector<PiPulseSegment>>(nlevels.size());
-    auto apply_pipulse_array_of_tables = validators::getArrayOfTables(table, "apply_pipulse");
+    auto apply_pipulse_array_of_tables = validators::getArrayOfTables(toml, "apply_pipulse");
     for (auto& elem : apply_pipulse_array_of_tables) {
       auto pipulse_table = *elem.as_table();
       size_t oscilID = validators::field<size_t>(pipulse_table, "oscID").value();
@@ -81,16 +81,16 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
       addPiPulseSegment(apply_pipulse, oscilID, tstart, tstop, amp);
     }
 
-    hamiltonian_file_Hsys = table["hamiltonian_file_Hsys"].value<std::string>();
-    hamiltonian_file_Hc = table["hamiltonian_file_Hc"].value<std::string>();
+    hamiltonian_file_Hsys = toml["hamiltonian_file_Hsys"].value<std::string>();
+    hamiltonian_file_Hc = toml["hamiltonian_file_Hc"].value<std::string>();
 
     // Optimization options
-    control_enforceBC = table["control_enforceBC"].value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
+    control_enforceBC = toml["control_enforceBC"].value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
 
     // Parse control segments
     control_segments.resize(num_osc);
     std::map<size_t, std::vector<ControlSegment>> control_segments_parsed;
-    auto control_seg_node = table["control_segments"];
+    auto control_seg_node = toml["control_segments"];
     if (control_seg_node.is_array_of_tables()) {
       for (auto& elem : *control_seg_node.as_array()) {
         auto seg_table = *elem.as_table();
@@ -104,8 +104,8 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     control_initializations.resize(num_osc);
     std::map<size_t, std::vector<ControlSegmentInitialization>> osc_inits;
 
-    if (table.contains("control_initialization")) {
-      auto init_node = table["control_initialization"];
+    if (toml.contains("control_initialization")) {
+      auto init_node = toml["control_initialization"];
       if (init_node.is_array_of_tables()) {
         for (auto& elem : *init_node.as_array()) {
           auto init_table = *elem.as_table();
@@ -172,7 +172,7 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     }
 
     // Parse control bounds
-    auto control_bounds_array = validators::getArrayOfTables(table, "control_bounds");
+    auto control_bounds_array = validators::getArrayOfTables(toml, "control_bounds");
     control_bounds =
         parseOscillatorSettings<double>(control_bounds_array, num_osc, {ConfigDefaults::CONTROL_BOUND}, "values");
     // Extend bounds to match number of control segments
@@ -181,13 +181,13 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
     }
 
     // Parse carrier frequencies
-    auto carrier_freq_array = validators::getArrayOfTables(table, "carrier_frequency");
+    auto carrier_freq_array = validators::getArrayOfTables(toml, "carrier_frequency");
     carrier_frequencies =
         parseOscillatorSettings<double>(carrier_freq_array, num_osc, {ConfigDefaults::CARRIER_FREQ}, "values");
 
     // optim_target
-    if (table.contains("optim_target")) {
-      auto target_table = *table["optim_target"].as_table();
+    if (toml.contains("optim_target")) {
+      auto target_table = *toml["optim_target"].as_table();
       std::string type_str = validators::field<std::string>(target_table, "target_type").value();
       auto target_type_opt = parseEnum(type_str, TARGET_TYPE_MAP);
 
@@ -212,51 +212,51 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
           parseOptimTarget(ConfigDefaults::OPTIM_TARGET, std::nullopt, std::nullopt, std::nullopt, std::nullopt);
     }
 
-    gate_rot_freq = validators::vectorField<double>(table, "gate_rot_freq")
+    gate_rot_freq = validators::vectorField<double>(toml, "gate_rot_freq")
                         .valueOr(std::vector<double>(num_osc, ConfigDefaults::GATE_ROT_FREQ));
     copyLast(gate_rot_freq, num_osc);
 
     optim_objective =
-        parseEnum(table["optim_objective"].value<std::string>(), OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
+        parseEnum(toml["optim_objective"].value<std::string>(), OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
 
     std::optional<std::vector<double>> optim_weights_opt =
-        validators::getOptionalVector<double>(table["optim_weights"]);
+        validators::getOptionalVector<double>(toml["optim_weights"]);
     optim_weights = parseOptimWeights(optim_weights_opt);
 
-    optim_atol = validators::field<double>(table, "optim_atol").positive().valueOr(ConfigDefaults::OPTIM_ATOL);
-    optim_rtol = validators::field<double>(table, "optim_rtol").positive().valueOr(ConfigDefaults::OPTIM_RTOL);
-    optim_ftol = validators::field<double>(table, "optim_ftol").positive().valueOr(ConfigDefaults::OPTIM_FTOL);
-    optim_inftol = validators::field<double>(table, "optim_inftol").positive().valueOr(ConfigDefaults::OPTIM_INFTOL);
-    optim_maxiter = validators::field<size_t>(table, "optim_maxiter").positive().valueOr(ConfigDefaults::OPTIM_MAXITER);
+    optim_atol = validators::field<double>(toml, "optim_atol").positive().valueOr(ConfigDefaults::OPTIM_ATOL);
+    optim_rtol = validators::field<double>(toml, "optim_rtol").positive().valueOr(ConfigDefaults::OPTIM_RTOL);
+    optim_ftol = validators::field<double>(toml, "optim_ftol").positive().valueOr(ConfigDefaults::OPTIM_FTOL);
+    optim_inftol = validators::field<double>(toml, "optim_inftol").positive().valueOr(ConfigDefaults::OPTIM_INFTOL);
+    optim_maxiter = validators::field<size_t>(toml, "optim_maxiter").positive().valueOr(ConfigDefaults::OPTIM_MAXITER);
     optim_regul =
-        validators::field<double>(table, "optim_regul").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_REGUL);
+        validators::field<double>(toml, "optim_regul").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_REGUL);
 
     optim_penalty =
-        validators::field<double>(table, "optim_penalty").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY);
-    optim_penalty_param = validators::field<double>(table, "optim_penalty_param")
+        validators::field<double>(toml, "optim_penalty").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY);
+    optim_penalty_param = validators::field<double>(toml, "optim_penalty_param")
                               .greaterThanEqual(0.0)
                               .valueOr(ConfigDefaults::OPTIM_PENALTY_PARAM);
-    optim_penalty_dpdm = validators::field<double>(table, "optim_penalty_dpdm")
+    optim_penalty_dpdm = validators::field<double>(toml, "optim_penalty_dpdm")
                              .greaterThanEqual(0.0)
                              .valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
-    optim_penalty_energy = validators::field<double>(table, "optim_penalty_energy")
+    optim_penalty_energy = validators::field<double>(toml, "optim_penalty_energy")
                                .greaterThanEqual(0.0)
                                .valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
-    optim_penalty_variation = validators::field<double>(table, "optim_penalty_variation")
+    optim_penalty_variation = validators::field<double>(toml, "optim_penalty_variation")
                                   .greaterThanEqual(0.0)
                                   .valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
 
-    if (!table.contains("optim_regul_tik0") && table.contains("optim_regul_interpolate")) {
+    if (!toml.contains("optim_regul_tik0") && toml.contains("optim_regul_interpolate")) {
       // Handle deprecated optim_regul_interpolate logic
-      optim_regul_tik0 = validators::field<bool>(table, "optim_regul_interpolate").value();
+      optim_regul_tik0 = validators::field<bool>(toml, "optim_regul_interpolate").value();
       logger.log("# Warning: 'optim_regul_interpolate' is deprecated. Please use 'optim_regul_tik0' instead.\n");
     }
-    optim_regul_tik0 = table["optim_regul_tik0"].value_or(ConfigDefaults::OPTIM_REGUL_TIK0);
+    optim_regul_tik0 = toml["optim_regul_tik0"].value_or(ConfigDefaults::OPTIM_REGUL_TIK0);
 
-    datadir = table["datadir"].value_or(ConfigDefaults::DATADIR);
+    datadir = toml["datadir"].value_or(ConfigDefaults::DATADIR);
 
     output_to_write.resize(num_osc); // Empty vectors by default
-    auto write_array = validators::getArrayOfTables(table, "write");
+    auto write_array = validators::getArrayOfTables(toml, "write");
     auto write_str = parseOscillatorSettings<std::string>(write_array, num_osc, {}, "type");
     for (size_t i = 0; i < write_str.size(); i++) {
       for (const auto& str : write_str[i]) {
@@ -268,22 +268,22 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
       }
     }
 
-    output_frequency = table["output_frequency"].value_or(ConfigDefaults::OUTPUT_FREQUENCY);
-    optim_monitor_frequency = table["optim_monitor_frequency"].value_or(ConfigDefaults::OPTIM_MONITOR_FREQUENCY);
+    output_frequency = toml["output_frequency"].value_or(ConfigDefaults::OUTPUT_FREQUENCY);
+    optim_monitor_frequency = toml["optim_monitor_frequency"].value_or(ConfigDefaults::OPTIM_MONITOR_FREQUENCY);
 
-    runtype = parseEnum(table["runtype"].value<std::string>(), RUN_TYPE_MAP, ConfigDefaults::RUNTYPE);
+    runtype = parseEnum(toml["runtype"].value<std::string>(), RUN_TYPE_MAP, ConfigDefaults::RUNTYPE);
 
-    usematfree = table["usematfree"].value_or(ConfigDefaults::USEMATFREE);
+    usematfree = toml["usematfree"].value_or(ConfigDefaults::USEMATFREE);
 
-    linearsolver_type = parseEnum(table["linearsolver_type"].value<std::string>(), LINEAR_SOLVER_TYPE_MAP,
+    linearsolver_type = parseEnum(toml["linearsolver_type"].value<std::string>(), LINEAR_SOLVER_TYPE_MAP,
                                   ConfigDefaults::LINEARSOLVER_TYPE);
 
-    linearsolver_maxiter = table["linearsolver_maxiter"].value_or(ConfigDefaults::LINEARSOLVER_MAXITER);
+    linearsolver_maxiter = toml["linearsolver_maxiter"].value_or(ConfigDefaults::LINEARSOLVER_MAXITER);
 
     timestepper_type =
-        parseEnum(table["timestepper"].value<std::string>(), TIME_STEPPER_TYPE_MAP, ConfigDefaults::TIMESTEPPER_TYPE);
+        parseEnum(toml["timestepper"].value<std::string>(), TIME_STEPPER_TYPE_MAP, ConfigDefaults::TIMESTEPPER_TYPE);
 
-    int rand_seed_ = table["rand_seed"].value_or(ConfigDefaults::RAND_SEED);
+    int rand_seed_ = toml["rand_seed"].value_or(ConfigDefaults::RAND_SEED);
     setRandSeed(rand_seed_);
 
   } catch (const validators::ValidationError& e) {
