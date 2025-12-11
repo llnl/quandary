@@ -245,11 +245,10 @@ class Config {
                                                          size_t num_entries,
                                                          const std::vector<T>& default_values = {}) const;
 
-
-InitialCondition parseInitialCondition(std::optional<InitialConditionType> opt_type,
-                                       const std::optional<std::string>& filename,
-                                       const std::optional<std::vector<size_t>>& levels,
-                                       const std::optional<std::vector<size_t>>& osc_IDs) const;
+  InitialCondition parseInitialCondition(std::optional<InitialConditionType> opt_type,
+                                         const std::optional<std::string>& filename,
+                                         const std::optional<std::vector<size_t>>& levels,
+                                         const std::optional<std::vector<size_t>>& osc_IDs) const;
 
   void addPiPulseSegment(std::vector<std::vector<PiPulseSegment>>& apply_pipulse, size_t oscilID, double tstart,
                          double tstop, double amp) const;
@@ -262,8 +261,7 @@ InitialCondition parseInitialCondition(std::optional<InitialConditionType> opt_t
   std::vector<std::vector<ControlSegmentInitialization>> parseControlInitializations(
       const std::optional<std::map<int, std::vector<ControlInitializationData>>>& init_configs) const;
 
-  OptimTargetSettings parseOptimTarget(TargetType type,
-                                       const std::optional<GateType>& gate_type,
+  OptimTargetSettings parseOptimTarget(TargetType type, const std::optional<GateType>& gate_type,
                                        const std::optional<std::string>& gate_file,
                                        const std::optional<std::vector<size_t>>& levels,
                                        const std::optional<std::string>& file) const;

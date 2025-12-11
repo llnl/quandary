@@ -205,10 +205,11 @@ Config::Config(const MPILogger& logger, const toml::table& table) : logger(logge
       auto target_levels = validators::getOptionalVector<size_t>(target_table["levels"]);
       auto target_filename = target_table["filename"].value<std::string>();
 
-      optim_target = parseOptimTarget(target_type_opt.value(), gate_type_opt, gate_file_opt, target_levels, target_filename);
+      optim_target =
+          parseOptimTarget(target_type_opt.value(), gate_type_opt, gate_file_opt, target_levels, target_filename);
     } else {
-      optim_target = parseOptimTarget(ConfigDefaults::OPTIM_TARGET, std::nullopt, std::nullopt,
-                                     std::nullopt, std::nullopt);
+      optim_target =
+          parseOptimTarget(ConfigDefaults::OPTIM_TARGET, std::nullopt, std::nullopt, std::nullopt, std::nullopt);
     }
 
     gate_rot_freq = validators::vectorField<double>(table, "gate_rot_freq")
@@ -341,16 +342,16 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   if (!settings.initialcondition.has_value()) {
     logger.exitWithError("initialcondition cannot be empty");
   }
-  initial_condition = parseInitialCondition(settings.initialcondition.value().type,
-                                            settings.initialcondition.value().filename,
-                                            settings.initialcondition.value().levels,
-                                            settings.initialcondition.value().osc_IDs);
+  initial_condition =
+      parseInitialCondition(settings.initialcondition.value().type, settings.initialcondition.value().filename,
+                            settings.initialcondition.value().levels, settings.initialcondition.value().osc_IDs);
   n_initial_conditions = computeNumInitialConditions();
 
   apply_pipulse = std::vector<std::vector<PiPulseSegment>>(nlevels.size());
   if (settings.apply_pipulse.has_value()) {
     for (const auto& pulse_config : settings.apply_pipulse.value()) {
-      addPiPulseSegment(apply_pipulse, pulse_config.oscil_id, pulse_config.tstart, pulse_config.tstop, pulse_config.amp);
+      addPiPulseSegment(apply_pipulse, pulse_config.oscil_id, pulse_config.tstart, pulse_config.tstop,
+                        pulse_config.amp);
     }
   }
 
@@ -394,7 +395,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   }
 
   control_bounds = parseOscillatorSettingsCfg<double>(settings.indexed_control_bounds, control_segments.size(),
-                                                    {ConfigDefaults::CONTROL_BOUND});
+                                                      {ConfigDefaults::CONTROL_BOUND});
   // Extend bounds to match number of control segments
   for (size_t i = 0; i < control_bounds.size(); i++) {
     copyLast(control_bounds[i], control_segments[i].size());
@@ -406,10 +407,10 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   if (settings.optim_target.has_value()) {
     const OptimTargetSettings& target_config = settings.optim_target.value();
     optim_target = parseOptimTarget(target_config.type, target_config.gate_type, target_config.gate_file,
-                                   target_config.levels, target_config.file);
+                                    target_config.levels, target_config.file);
   } else {
-    optim_target = parseOptimTarget(ConfigDefaults::OPTIM_TARGET, std::nullopt, std::nullopt,
-                                   std::nullopt, std::nullopt);
+    optim_target =
+        parseOptimTarget(ConfigDefaults::OPTIM_TARGET, std::nullopt, std::nullopt, std::nullopt, std::nullopt);
   }
 
   gate_rot_freq = settings.gate_rot_freq.value_or(std::vector<double>(num_osc, ConfigDefaults::GATE_ROT_FREQ));
@@ -942,10 +943,9 @@ InitialCondition Config::parseInitialCondition(std::optional<InitialConditionTyp
       }
       for (size_t k = 0; k < levels.value().size(); k++) {
         if (levels.value()[k] >= nlevels[k]) {
-          logger.exitWithError("ERROR in config setting. The requested pure state initialization " +
-                               std::to_string(levels.value()[k]) +
-                               " exceeds the number of allowed levels for that oscillator (" +
-                               std::to_string(nlevels[k]) + ").\n");
+          logger.exitWithError(
+              "ERROR in config setting. The requested pure state initialization " + std::to_string(levels.value()[k]) +
+              " exceeds the number of allowed levels for that oscillator (" + std::to_string(nlevels[k]) + ").\n");
         }
       }
       result.levels = levels.value();
@@ -1026,7 +1026,6 @@ std::vector<std::vector<ControlSegment>> Config::parseControlSegmentsCfg(
   }
   return parsed_segments;
 }
-
 
 ControlSegment Config::parseControlSegmentCfg(const ControlSegmentData& seg_config) const {
   const auto& params = seg_config.parameters;
@@ -1132,8 +1131,7 @@ std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlIniti
   return control_initializations;
 }
 
-OptimTargetSettings Config::parseOptimTarget(TargetType type,
-                                             const std::optional<GateType>& gate_type,
+OptimTargetSettings Config::parseOptimTarget(TargetType type, const std::optional<GateType>& gate_type,
                                              const std::optional<std::string>& gate_file,
                                              const std::optional<std::vector<size_t>>& levels,
                                              const std::optional<std::string>& file) const {
