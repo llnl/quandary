@@ -41,6 +41,7 @@ OptimProblem::OptimProblem(Config config, TimeStepper* timestepper_, MPI_Comm co
 
   // Check for new Riemannian objective function:
   use_new_objective = config.GetBoolParam("use_new_objective", false, true);
+  phase_invariant = config.GetBoolParam("phase_invariant", false, true);
   if (timestepper->mastereq->lindbladtype != LindbladType::NONE) {
     use_new_objective = false;
   }
@@ -57,16 +58,20 @@ OptimProblem::OptimProblem(Config config, TimeStepper* timestepper_, MPI_Comm co
 
   // Allocate storage for final-time unitary if new objective function is used
   if (use_new_objective) {
-    MatCreateSeqDense(PETSC_COMM_SELF, ninit, timestepper->mastereq->getDim(), NULL, &U_final_re);
-    MatCreateSeqDense(PETSC_COMM_SELF, ninit, timestepper->mastereq->getDim(), NULL, &U_final_im);
+    PetscInt globalsize_rows = timestepper->mastereq->getDim();
+    PetscInt globalsize_cols = ninit;;
+    PetscInt localsize_rows = globalsize_rows / mpisize_petsc;
+    PetscInt localsize_cols = globalsize_cols / mpisize_petsc;
+    MatCreateDense(PETSC_COMM_WORLD, localsize_rows, localsize_cols, globalsize_rows, globalsize_cols, NULL, &U_final_re);
+    MatCreateDense(PETSC_COMM_WORLD, localsize_rows, localsize_cols, globalsize_rows, globalsize_cols, NULL, &U_final_im);
     MatSetUp(U_final_re);
     MatSetUp(U_final_im);
+    MatZeroEntries(U_final_re);
+    MatZeroEntries(U_final_im);
     MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
-    MatZeroEntries(U_final_re);
-    MatZeroEntries(U_final_im);
   }
 
 
@@ -298,8 +303,8 @@ double OptimProblem::evalF(const Vec x) {
       for (size_t row = 0; row < timestepper->mastereq->getDim(); row++) {
         int id_re = row;
         int id_im = row + timestepper->mastereq->getDim();
-        MatSetValue(U_final_re, iinit_global, row, finalstate_array[id_re], INSERT_VALUES);
-        MatSetValue(U_final_im, iinit_global, row, finalstate_array[id_im], INSERT_VALUES);
+        MatSetValue(U_final_re, row, iinit_global, finalstate_array[id_re], INSERT_VALUES);
+        MatSetValue(U_final_im, row, iinit_global, finalstate_array[id_im], INSERT_VALUES);
       }
       VecRestoreArrayRead(finalstate, &finalstate_array);
     }
@@ -367,11 +372,7 @@ double OptimProblem::evalF(const Vec x) {
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-    MatType mtype;
-    MatGetType(U_final_re, &mtype);
-    PetscPrintf(PETSC_COMM_WORLD, "U_final_re type: %s\n", mtype);
-
-    /* First, allreduce the U_final matrix */
+    /* allreduce the U_final matrix */
     PetscScalar *data;
     MatDenseGetArray(U_final_re, &data);
     int size = timestepper->mastereq->getDim();
@@ -382,26 +383,9 @@ double OptimProblem::evalF(const Vec x) {
     MPI_Allreduce(MPI_IN_PLACE, data, size * size, MPIU_SCALAR, MPI_SUM, comm_init);
     MatDenseRestoreArray(U_final_im, &data);
 
-    // Look at the matrices. Each one separately
-    if (mpirank_world == 0) {
-      printf("%d: U_final_re:\n", mpirank_world);
-      MatView(U_final_re, PETSC_VIEWER_STDOUT_SELF);
-      printf("%d: U_final_im:\n", mpirank_world);
-      MatView(U_final_im, PETSC_VIEWER_STDOUT_SELF);
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (mpirank_world == 1) {
-      printf("%d: U_final_re:\n", mpirank_world);
-      MatView(U_final_re, PETSC_VIEWER_STDOUT_SELF);
-      printf("%d: U_final_im:\n", mpirank_world);
-      MatView(U_final_im, PETSC_VIEWER_STDOUT_SELF);
-    }
+    double obj_riemannian = optim_target->RiemannianDistance(U_final_re, U_final_im, phase_invariant);
 
-    double obj_riemannian = optim_target->RiemannianDistance(U_final_re, U_final_im);
-    if (mpirank_world == 0) {
-      printf("Final fidelity from U_final: %1.14e\n", obj_riemannian);
-      printf("Final fidelity from before: %1.14e\n", fidelity);
-    }
+    if (mpirank_world == 0) printf("\nRiemannian distance objective: %1.14e\n\n", obj_riemannian);
   }
 
   /* Evaluate Tikhonov regularization term: gamma/2 * ||x-x0||^2*/

@@ -652,3 +652,85 @@ bool isUnitary(const Mat V_re, const Mat V_im){
 
   return isunitary;
 }
+
+
+void getEigvalsComplex(const Mat A_re, const Mat A_im, const int neigvals, std::vector<double>& eigvals_re, std::vector<double>& eigvals_im){
+
+  /* Set up the larger matrix A = [A_re -A_im; A_im A_re] */
+  PetscInt dim;
+  MatGetSize(A_re, &dim, NULL);
+  Mat A;
+  MatCreate(PETSC_COMM_WORLD, &A);
+  MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, 2*dim, 2*dim);
+  MatSetFromOptions(A);
+  MatSetUp(A);
+  for (PetscInt i=0; i<dim; i++){
+    for (PetscInt j=0; j<dim; j++){
+      double val_re, val_im;
+      MatGetValue(A_re, i, j, &val_re);
+      MatGetValue(A_im, i, j, &val_im);
+      // Set A_ij
+      MatSetValue(A, i, j, val_re, INSERT_VALUES);               // Top-left
+      MatSetValue(A, i, j + dim, -val_im, INSERT_VALUES);       // Top-right
+      MatSetValue(A, i + dim, j, val_im, INSERT_VALUES);        // Bottom-left
+      MatSetValue(A, i + dim, j + dim, val_re, INSERT_VALUES);  // Bottom-right
+    }
+  }
+  MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY); 
+  MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
+
+  /* Create Slepc's eigensolver */
+  EPS eigensolver;       
+  EPSCreate(PETSC_COMM_WORLD, &eigensolver);
+  EPSSetOperators(eigensolver, A, NULL);
+  EPSSetProblemType(eigensolver, EPS_NHEP);
+  EPSSetFromOptions(eigensolver);
+
+  /* Number of requested eigenvalues */
+  EPSSetDimensions(eigensolver,neigvals,PETSC_DEFAULT,PETSC_DEFAULT);
+
+  // Solve eigenvalue problem
+  EPSSolve(eigensolver);
+
+  /* Get information about convergence */
+  // int its, nev, maxit;
+  // EPSType type;
+  // double tol;
+  // EPSGetIterationNumber(eigensolver,&its);
+  // EPSGetType(eigensolver,&type);
+  // EPSGetDimensions(eigensolver,&nev,NULL,NULL);
+  // EPSGetTolerances(eigensolver,&tol,&maxit);
+
+  int nconv = 0;
+  EPSGetConverged(eigensolver, &nconv );
+  if (nconv < neigvals){
+    printf("ERROR: Only %d eigenvalues converged, but %d requested!\n", nconv, neigvals);
+    exit(1);
+  }
+
+  // PetscPrintf(PETSC_COMM_WORLD," Solution method: %s\n",type);
+  // PetscPrintf(PETSC_COMM_WORLD," Number of requested eigenpairs: %D\n",nev);
+  // PetscPrintf(PETSC_COMM_WORLD," Number of iterations taken: %D / %D\n",its, maxit);
+  // PetscPrintf(PETSC_COMM_WORLD," Stopping condition: tol=%.4g\n",(double)tol);
+  // PetscPrintf(PETSC_COMM_WORLD," Number of converged eigenpairs: %D\n\n",nconv);
+
+   // Get the result
+  double kr, ki;
+  // printf("%d Eigenvalues: \n", neigvals);
+  for (int j=0; j<nconv; j++) {
+    EPSGetEigenvalue(eigensolver, j, &kr, &ki);
+    // double error;
+    // EPSComputeError( eigensolver, j, EPS_ERROR_RELATIVE, &error );
+    // printf("%1.8e + i%1.8e (err %f)\n", kr, ki, error);
+
+    /* Store the eigenvalues */
+    eigvals_re.push_back(kr);
+    eigvals_im.push_back(ki);
+  }
+  // printf("\n");
+  // EPSView(eigensolver, PETSC_VIEWER_STDOUT_WORLD);
+
+  /* Clean up*/
+  EPSDestroy(&eigensolver);
+  MatDestroy(&A);
+}

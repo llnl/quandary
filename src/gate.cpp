@@ -50,13 +50,11 @@ Gate::Gate(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nesse
   PetscInt dim_gate;
   if (lindbladtype != LindbladType::NONE) dim_gate = dim_rho*dim_rho;
   else dim_gate = dim_rho;
-  MatCreate(PETSC_COMM_WORLD, &VxV_re);
-  MatCreate(PETSC_COMM_WORLD, &VxV_im);
   // parallel matrix, TODO: Preallocate!
   PetscInt globalsize_u = dim_gate; // Size to be applied to global subvectors u and v
   PetscInt localsize_u = dim_gate / mpisize_petsc;  
-  MatSetSizes(VxV_re, localsize_u, localsize_u, globalsize_u, globalsize_u);
-  MatSetSizes(VxV_im, localsize_u, localsize_u, globalsize_u, globalsize_u);
+  MatCreateDense(PETSC_COMM_WORLD, localsize_u, localsize_u, globalsize_u, globalsize_u, NULL, &VxV_re);
+  MatCreateDense(PETSC_COMM_WORLD, localsize_u, localsize_u, globalsize_u, globalsize_u, NULL, &VxV_im);
   MatSetUp(VxV_re);
   MatSetUp(VxV_im);
   MatAssemblyBegin(VxV_re, MAT_FINAL_ASSEMBLY);

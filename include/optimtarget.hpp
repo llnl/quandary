@@ -37,6 +37,7 @@ class OptimTarget{
     InitialConditionType initcond_type; ///< Type of initial conditions
     std::vector<size_t> initcond_IDs; ///< Integer list for pure-state initialization
     LindbladType lindbladtype; ///< Type of Lindblad decoherence operators, or NONE for Schroedinger solver
+    int mpirank_world; ///< Rank of MPI_COMM_WORLD communicator
     int mpisize_petsc; ///< Size of PETSc communicator
     int mpirank_petsc; ///< Rank of PETSc communicator
     PetscInt localsize_u; ///< Size of local sub vector u or v in state x=[u,v]
@@ -142,8 +143,12 @@ class OptimTarget{
 
     /**
      * @brief Computes the Riemannian distance between target and current unitary: J(U) = 1/2 || log(U^\dagger V) ||^2_F
+     * @param U_final_re Real part of final-time unitary matrix
+     * @param U_final_im Imaginary part of final-time unitary matrix
+     * @param phase_invariant Flag to use phase-invariant version of Riemannian
+     * @return double Riemannian distance objective value
      */
-    double RiemannianDistance(const Mat U_final_re, const Mat U_final_im);
+    double RiemannianDistance(const Mat U_final_re, const Mat U_final_im, bool phase_invariant);
 
     /**
      * @brief Derivative of objective function finalization.

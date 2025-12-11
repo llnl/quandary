@@ -16,6 +16,7 @@ OptimTarget::OptimTarget(){
   targetstate = NULL;
   mpisize_petsc=0;
   mpirank_petsc=0;
+  mpirank_world=0;
 }
 
 
@@ -29,10 +30,7 @@ OptimTarget::OptimTarget(std::vector<std::string> target_str, const std::string&
   lindbladtype = mastereq->lindbladtype;
   MPI_Comm_size(PETSC_COMM_WORLD, &mpisize_petsc);
   MPI_Comm_rank(PETSC_COMM_WORLD, &mpirank_petsc);
-  int mpirank_world;
-  int mpisize_petsc;
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
-  MPI_Comm_size(PETSC_COMM_WORLD, &mpisize_petsc);
   // Set local sizes of subvectors u,v in state x=[u,v]
   localsize_u = dim / mpisize_petsc; 
   ilow = mpirank_petsc * localsize_u;
@@ -897,41 +895,55 @@ void OptimTarget::finalizeJ_diff(const double obj_cost_re, const double obj_cost
 }
 
 
-double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_im){
+double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_im, bool phase_invariant){
+  /* Compute the Riemannian distance J = 1/2 || log(U^\dagger V)||_F^2 */
 
-  /* First, allreduce the U_final matrix */
-  if (lindbladtype == LindbladType::NONE) {
-    PetscScalar *data;
-    MatDenseGetArray(U_final_re, &data);
-    MPI_Allreduce(MPI_IN_PLACE, data, 2*dim * 2*dim, MPIU_SCALAR, MPI_SUM, PETSC_COMM_WORLD);
-    MatDenseRestoreArray(U_final_re, &data);
+  /* First, get U^\dagger V */
+  Mat UdagV_re, UdagV_im;
+  // UdagV_re = U_final_re^T * VxV_re + U_final_im^T * VxV_im
+  MatTransposeMatMult(U_final_re, targetgate->VxV_re, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &UdagV_re);
+  Mat tmp;
+  MatTransposeMatMult(U_final_im, targetgate->VxV_im,MAT_INITIAL_MATRIX, PETSC_DETERMINE, &tmp);
+  MatAXPY(UdagV_re, 1.0, tmp, SAME_NONZERO_PATTERN);
+  // UdagV_im = U_final_re^T * VxV_im - U_final_im^T * VxV_re
+  MatTransposeMatMult(U_final_re, targetgate->VxV_im, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &UdagV_im);
+  MatTransposeMatMult(U_final_im, targetgate->VxV_re,MAT_REUSE_MATRIX, PETSC_DETERMINE, &tmp);
+  MatAXPY(UdagV_im, -1.0, tmp, SAME_NONZERO_PATTERN);
+  MatDestroy(&tmp);
 
-    MatDenseGetArray(U_final_im, &data);
-    MPI_Allreduce(MPI_IN_PLACE, data, 2*dim * 2*dim, MPIU_SCALAR, MPI_SUM, PETSC_COMM_WORLD);
-    MatDenseRestoreArray(U_final_im, &data);
+  /* Now get the eigenvalues of A. Note, only the first half is needed, since the second half will be their complex conjugate */
+  std::vector<double> eigenvals_re;
+  std::vector<double> eigenvals_im;
+  int neigvals = 2*dim; // All? Weird... even if I request dim eigenvalues, somehow I anyways get all of them?? TEST! TODO.
+  getEigvalsComplex(UdagV_re, UdagV_im, neigvals, eigenvals_re, eigenvals_im);
+
+  /* Now get the phases (theta) of the eigenvalues such that eigvals_re + i*eigvals_im = e^{i*theta}, and sum up the objective function */
+  // Note only take every second eigenvalue, since they come in pairs of complex conjugates.
+  // first sum up to get the average
+  double avg_theta = 0.0;
+  if (phase_invariant) {
+    for (int i=0; i<dim; i++){
+      int j = 2*i;
+      double theta = atan2(eigenvals_im[j], eigenvals_re[j]);
+      avg_theta += theta;
+    }
+    avg_theta = avg_theta / double(dim);
   }
 
-  /* Compute the Riemannian distance */
-  // Use the util getEigenvalues function. 
+  // Now sum up the objective function 
+  double obj = 0.0;
+  for (int i=0; i<dim; i++){
+    int j = 2*i;
+    double theta = atan2(eigenvals_im[j], eigenvals_re[j]);
+    obj += (theta - avg_theta) * (theta - avg_theta);
 
-  // Here, for testing, reimplement the final fidelity using U and VxV from the targetgate, just to make sure that U_final is correct. 
-
-  // Compute fidelity = 1/N | Tr(U_final^\dagger V) |^2, where U_final = U_final_re + i U_final_im and V = VxV_re + i VxV_im
-  double trace_re = 0.0;
-  double trace_im = 0.0;
-  for (PetscInt i=0; i<dim; i++){
-    for (PetscInt j=0; j<dim; j++){
-      double U_re_ji, U_im_ji, V_re_ij, V_im_ij;
-      MatGetValue(U_final_re, j, i, &U_re_ji);
-      MatGetValue(U_final_im, j, i, &U_im_ji);
-      MatGetValue(targetgate->VxV_re, i, j, &V_re_ij);
-      MatGetValue(targetgate->VxV_im, i, j, &V_im_ij);
-      // Conjugate U_final
-      trace_re += U_re_ji * V_re_ij + U_im_ji * V_im_ij;
-      trace_im += -U_im_ji * V_re_ij + U_re_ji * V_im_ij;
-    } 
+    if (mpirank_world == 0) printf("Eigenvalue %d: %f + i*%f  -> theta (degree)= %f \n", j, eigenvals_re[j], eigenvals_im[j], theta*180.0/M_PI);
   }
-  double obj = (trace_re * trace_re + trace_im * trace_im) / (dim * dim);
+  obj = obj / 2.0;
+
+  /* Clean up */
+  MatDestroy(&UdagV_re);
+  MatDestroy(&UdagV_im);
 
   return obj; 
 }

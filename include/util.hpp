@@ -206,7 +206,7 @@ PetscErrorCode SanityTests(Vec x, PetscReal time);
 int read_vector(const char *filename, double *var, int dim, bool quietmode=false, int skiplines=0, const std::string testheader="");
 
 /**
- * @brief Computes eigenvalues and eigenvectors of matrix A.
+ * @brief Computes eigenvalues and eigenvectors of a symmetric real matrix A.
  *
  * Requires compilation with SLEPc for eigenvalue computations.
  *
@@ -217,6 +217,19 @@ int read_vector(const char *filename, double *var, int dim, bool quietmode=false
  * @return int Error code
  */
 int getEigvals(const Mat A, const int neigvals, std::vector<double>& eigvals, std::vector<Vec>& eigvecs);
+
+/**
+ * @brief Computes eigenvalues of a complex matrix A+iB.
+ *
+ * Requires compilation with SLEPc for eigenvalue computations.
+ *
+ * @param A Real part of complex matrix
+ * @param B Imaginary part of complex matrix
+ * @param neigvals Number of eigenvalues to compute
+ * @param eigvals_re Vector of real parts of eigenvalues
+ * @param eigvals_im Vector to store imaginary parts of eigenvalues
+ */
+void getEigvalsComplex(const Mat A_re, const Mat A_im, const int neigvals, std::vector<double>& eigvals_re, std::vector<double>& eigvals_im);
 
 /**
  * @brief Tests if complex matrix A+iB is unitary.
