@@ -38,7 +38,7 @@ const double CARRIER_FREQ = 0.0; ///< Default carrier frequency
 const TargetType OPTIM_TARGET = TargetType::PURE; ///< Default optimization target: pure state transfer
 const GateType GATE_TYPE = GateType::NONE; ///< Default gate type
 const double GATE_ROT_FREQ = 0.0; ///< Default gate rotational frequency
-const ObjectiveType OPTIM_OBJECTIVE = ObjectiveType::JFROBENIUS; ///< Default objective function
+const ObjectiveType OPTIM_OBJECTIVE = ObjectiveType::JTRACE; ///< Default objective function
 const double OPTIM_WEIGHT = 1.0; ///< Default optimization weight per initial condition
 
 const double OPTIM_REGUL = 1e-4; ///< Default Tikhonov regularization coefficient
@@ -66,6 +66,6 @@ const bool USEMATFREE = false; ///< Default matrix-free solver setting
 const LinearSolverType LINEARSOLVER_TYPE = LinearSolverType::GMRES; ///< Default linear solver type
 const size_t LINEARSOLVER_MAXITER = 10; ///< Default linear solver max iterations
 const TimeStepperType TIMESTEPPER_TYPE = TimeStepperType::IMR; ///< Default time stepper type
-const int RAND_SEED = -1; ///< Default random seed
+const int RAND_SEED = 1; ///< Default random seed
 
 } // namespace ConfigDefaults
