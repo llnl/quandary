@@ -895,3 +895,43 @@ void OptimTarget::finalizeJ_diff(const double obj_cost_re, const double obj_cost
     *obj_cost_im_bar = 0.0;
   }
 }
+
+
+double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_im){
+
+  /* First, allreduce the U_final matrix */
+  if (lindbladtype == LindbladType::NONE) {
+    PetscScalar *data;
+    MatDenseGetArray(U_final_re, &data);
+    MPI_Allreduce(MPI_IN_PLACE, data, 2*dim * 2*dim, MPIU_SCALAR, MPI_SUM, PETSC_COMM_WORLD);
+    MatDenseRestoreArray(U_final_re, &data);
+
+    MatDenseGetArray(U_final_im, &data);
+    MPI_Allreduce(MPI_IN_PLACE, data, 2*dim * 2*dim, MPIU_SCALAR, MPI_SUM, PETSC_COMM_WORLD);
+    MatDenseRestoreArray(U_final_im, &data);
+  }
+
+  /* Compute the Riemannian distance */
+  // Use the util getEigenvalues function. 
+
+  // Here, for testing, reimplement the final fidelity using U and VxV from the targetgate, just to make sure that U_final is correct. 
+
+  // Compute fidelity = 1/N | Tr(U_final^\dagger V) |^2, where U_final = U_final_re + i U_final_im and V = VxV_re + i VxV_im
+  double trace_re = 0.0;
+  double trace_im = 0.0;
+  for (PetscInt i=0; i<dim; i++){
+    for (PetscInt j=0; j<dim; j++){
+      double U_re_ji, U_im_ji, V_re_ij, V_im_ij;
+      MatGetValue(U_final_re, j, i, &U_re_ji);
+      MatGetValue(U_final_im, j, i, &U_im_ji);
+      MatGetValue(targetgate->VxV_re, i, j, &V_re_ij);
+      MatGetValue(targetgate->VxV_im, i, j, &V_im_ij);
+      // Conjugate U_final
+      trace_re += U_re_ji * V_re_ij + U_im_ji * V_im_ij;
+      trace_im += -U_im_ji * V_re_ij + U_re_ji * V_im_ij;
+    } 
+  }
+  double obj = (trace_re * trace_re + trace_im * trace_im) / (dim * dim);
+
+  return obj; 
+}

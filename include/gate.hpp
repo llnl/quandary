@@ -36,8 +36,10 @@ class Gate {
     LindbladType lindbladtype; ///< Type of Lindblad operators for open system dynamics.
 
 
-  private:
+  public:
     Mat VxV_re, VxV_im;     ///< Real and imaginary parts of vectorized gate \f$\bar V \kron V\f$.
+
+  private:
     Vec x;                  ///< Auxiliary state vector for computations.
     IS isu, isv;            ///< Vector strides for accessing real and imaginary parts of the state.
 

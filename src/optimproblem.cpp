@@ -38,6 +38,38 @@ OptimProblem::OptimProblem(Config config, TimeStepper* timestepper_, MPI_Comm co
     }
   }
 
+
+  // Check for new Riemannian objective function:
+  use_new_objective = config.GetBoolParam("use_new_objective", false, true);
+  if (timestepper->mastereq->lindbladtype != LindbladType::NONE) {
+    use_new_objective = false;
+  }
+  if (use_new_objective) {
+    if (mpisize_petsc>1){
+      printf("New objective function only works with one petsc core right now.\n");
+      exit(1);
+    }
+    if (timestepper->mastereq->getDimEss() != timestepper->mastereq->getDim()){
+      printf("New objective function does not work with guard levels right now.\n");
+      exit(1);
+    }
+  }
+
+  // Allocate storage for final-time unitary if new objective function is used
+  if (use_new_objective) {
+    MatCreateSeqDense(PETSC_COMM_SELF, ninit, timestepper->mastereq->getDim(), NULL, &U_final_re);
+    MatCreateSeqDense(PETSC_COMM_SELF, ninit, timestepper->mastereq->getDim(), NULL, &U_final_im);
+    MatSetUp(U_final_re);
+    MatSetUp(U_final_im);
+    MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
+    MatZeroEntries(U_final_re);
+    MatZeroEntries(U_final_im);
+  }
+
+
   /* Store number of design parameters */
   int n = 0;
   for (size_t ioscil = 0; ioscil < timestepper->mastereq->getNOscillators(); ioscil++) {
@@ -215,6 +247,10 @@ OptimProblem::~OptimProblem() {
   for (size_t i = 0; i < store_finalstates.size(); i++) {
     VecDestroy(&(store_finalstates[i]));
   }
+  if (use_new_objective) {
+    MatDestroy(&U_final_re);
+    MatDestroy(&U_final_im);
+  }
 
   TaoDestroy(&tao);
 }
@@ -255,6 +291,19 @@ double OptimProblem::evalF(const Vec x) {
     /* Run forward with initial condition initid */
     Vec finalstate = timestepper->solveODE(initid, rho_t0);
 
+    /* Store the final state for Riemannian objective function */
+    if (use_new_objective) {
+      const PetscScalar *finalstate_array;
+      VecGetArrayRead(finalstate, &finalstate_array);
+      for (size_t row = 0; row < timestepper->mastereq->getDim(); row++) {
+        int id_re = row;
+        int id_im = row + timestepper->mastereq->getDim();
+        MatSetValue(U_final_re, iinit_global, row, finalstate_array[id_re], INSERT_VALUES);
+        MatSetValue(U_final_im, iinit_global, row, finalstate_array[id_im], INSERT_VALUES);
+      }
+      VecRestoreArrayRead(finalstate, &finalstate_array);
+    }
+
     /* Add to integral penalty term */
     obj_penal += obj_weights[iinit] * gamma_penalty * timestepper->penalty_integral;
 
@@ -279,6 +328,12 @@ double OptimProblem::evalF(const Vec x) {
     fidelity_im += 1./ ninit * fidelity_iinit_im;
 
     // printf("%d, %d: iinit obj_iinit: %f * (%1.14e + i %1.14e, Overlap=%1.14e + i %1.14e\n", mpirank_world, mpirank_init, obj_weights[iinit], obj_iinit_re, obj_iinit_im, fidelity_iinit_re, fidelity_iinit_im);
+  }
+  if (use_new_objective) {
+    MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
   }
 
   /* Sum up from initial conditions processors */
@@ -306,6 +361,48 @@ double OptimProblem::evalF(const Vec x) {
  
   /* Finalize the objective function */
   obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im);
+
+  /* New objective function: Riemannian distance */
+  if (use_new_objective) {
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    MatType mtype;
+    MatGetType(U_final_re, &mtype);
+    PetscPrintf(PETSC_COMM_WORLD, "U_final_re type: %s\n", mtype);
+
+    /* First, allreduce the U_final matrix */
+    PetscScalar *data;
+    MatDenseGetArray(U_final_re, &data);
+    int size = timestepper->mastereq->getDim();
+    MPI_Allreduce(MPI_IN_PLACE, data, size * size, MPIU_SCALAR, MPI_SUM, comm_init);
+    MatDenseRestoreArray(U_final_re, &data);
+
+    MatDenseGetArray(U_final_im, &data);
+    MPI_Allreduce(MPI_IN_PLACE, data, size * size, MPIU_SCALAR, MPI_SUM, comm_init);
+    MatDenseRestoreArray(U_final_im, &data);
+
+    // Look at the matrices. Each one separately
+    if (mpirank_world == 0) {
+      printf("%d: U_final_re:\n", mpirank_world);
+      MatView(U_final_re, PETSC_VIEWER_STDOUT_SELF);
+      printf("%d: U_final_im:\n", mpirank_world);
+      MatView(U_final_im, PETSC_VIEWER_STDOUT_SELF);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (mpirank_world == 1) {
+      printf("%d: U_final_re:\n", mpirank_world);
+      MatView(U_final_re, PETSC_VIEWER_STDOUT_SELF);
+      printf("%d: U_final_im:\n", mpirank_world);
+      MatView(U_final_im, PETSC_VIEWER_STDOUT_SELF);
+    }
+
+    double obj_riemannian = optim_target->RiemannianDistance(U_final_re, U_final_im);
+    if (mpirank_world == 0) {
+      printf("Final fidelity from U_final: %1.14e\n", obj_riemannian);
+      printf("Final fidelity from before: %1.14e\n", fidelity);
+    }
+  }
 
   /* Evaluate Tikhonov regularization term: gamma/2 * ||x-x0||^2*/
   double xnorm;

@@ -141,6 +141,11 @@ class OptimTarget{
     double finalizeJ(const double obj_cost_re, const double obj_cost_im); 
 
     /**
+     * @brief Computes the Riemannian distance between target and current unitary: J(U) = 1/2 || log(U^\dagger V) ||^2_F
+     */
+    double RiemannianDistance(const Mat U_final_re, const Mat U_final_im);
+
+    /**
      * @brief Derivative of objective function finalization.
      *
      * @param[in] obj_cost_re Real part of objective cost
