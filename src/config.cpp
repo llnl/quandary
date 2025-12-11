@@ -554,9 +554,7 @@ std::string toString(const InitialCondition& initial_condition) {
       return out;
     }
     case InitialConditionType::THREESTATES:
-      return "{" + type_str + "}";
     case InitialConditionType::NPLUSONE:
-      return "{" + type_str + "}";
     case InitialConditionType::PERFORMANCE:
       return "{" + type_str + "}";
   }
