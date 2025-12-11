@@ -134,9 +134,9 @@ timestepper = "IMR"
 rand_seed = 1234
 
 # ---------------------------------------------------------------
-# ------------------- Table settings ----------------------------
+# ------------------- Per oscillator settings -------------------
 # ---------------------------------------------------------------
-# Note: these must go after the above root table settings
+# NOTE: these are toml arrays of tables and so they must go after the above root table settings
 
 # Apply a pi-pulse to oscillator <oscID> from <tstart> to <tstop> using a control strength of <amp> rad/ns.
 # This ignores the codes control parameters inside [tstart,tstop], and instead applies the constant control
