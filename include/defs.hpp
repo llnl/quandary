@@ -1,6 +1,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <vector>
 
 /**
  * @file defs.hpp
