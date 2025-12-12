@@ -187,6 +187,11 @@ num = 150
 # tstart = 0.0  # optional
 # tstop = 100.0  # optional
 
+# Apply to all oscillators
+# [[control_segments]]
+# type = "spline0"
+# num = 300
+
 # Control initialization options:
 # Option 1: File initialization (applies to all oscillators)
 # [[control_initialization]]
@@ -208,6 +213,11 @@ amplitude = 0.005
 
 # [[control_initialization]]
 # oscID = 0
+# type = "random"
+# amplitude = 0.005
+
+# Apply to all oscillators
+# [[control_initialization]]
 # type = "random"
 # amplitude = 0.005
 
