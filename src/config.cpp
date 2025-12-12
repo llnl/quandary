@@ -211,7 +211,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     logger.exitWithError(std::string(e.what()));
   }
 
-  // Finalize and validate
+  // Finalize interdependent settings, then validate
   finalize();
   validate();
 }
