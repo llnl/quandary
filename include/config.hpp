@@ -195,13 +195,15 @@ class Config {
   ControlSegment parseControlSegmentCfg(const ControlSegmentData& seg_config) const;
 
   ControlSegment parseControlSegment(const toml::table& table) const;
-  std::vector<std::vector<ControlSegment>> parseControlSegments(const toml::array& array_of_tables, size_t num_entries) const;
+  std::vector<std::vector<ControlSegment>> parseControlSegments(const toml::array& array_of_tables,
+                                                                size_t num_entries) const;
 
   // TODO cfg: delete when .cfg format is removed.
   std::vector<std::vector<ControlSegmentInitialization>> parseControlInitializationsCfg(
       const std::optional<std::map<int, std::vector<ControlInitializationData>>>& init_configs) const;
 
-  std::vector<std::vector<ControlSegmentInitialization>> parseControlInitializations(const toml::array& array_of_tables, size_t num_entries, std::optional<std::string>& control_init_file) const;
+  std::vector<std::vector<ControlSegmentInitialization>> parseControlInitializations(
+      const toml::array& array_of_tables, size_t num_entries, std::optional<std::string>& control_init_file) const;
 
   OptimTargetSettings parseOptimTarget(TargetType type, const std::optional<GateType>& gate_type,
                                        const std::optional<std::string>& gate_file,

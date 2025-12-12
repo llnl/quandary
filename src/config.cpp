@@ -141,8 +141,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     optim_objective =
         parseEnum(toml["optim_objective"].value<std::string>(), OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
 
-    std::optional<std::vector<double>> optim_weights_opt =
-        validators::getOptionalVector<double>(toml["optim_weights"]);
+    std::optional<std::vector<double>> optim_weights_opt = validators::getOptionalVector<double>(toml["optim_weights"]);
     optim_weights = parseOptimWeights(optim_weights_opt);
 
     optim_atol = validators::field<double>(toml, "optim_atol").positive().valueOr(ConfigDefaults::OPTIM_ATOL);
@@ -1011,7 +1010,8 @@ ControlSegment Config::parseControlSegment(const toml::table& table) const {
   return segment;
 }
 
-std::vector<std::vector<ControlSegment>> Config::parseControlSegments(const toml::array& array_of_tables, size_t num_entries) const {
+std::vector<std::vector<ControlSegment>> Config::parseControlSegments(const toml::array& array_of_tables,
+                                                                      size_t num_entries) const {
   ControlSegment default_segment;
   default_segment.type = ControlType::BSPLINE;
   default_segment.nspline = ConfigDefaults::CONTROL_SEG_SPLINE_COUNT;
@@ -1069,7 +1069,8 @@ std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlIniti
   return control_initializations;
 }
 
-std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlInitializations(const toml::array& array_of_tables, size_t num_entries, std::optional<std::string>& control_init_file) const {
+std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlInitializations(
+    const toml::array& array_of_tables, size_t num_entries, std::optional<std::string>& control_init_file) const {
   ControlSegmentInitialization default_init = ControlSegmentInitialization{
       ControlSegmentInitType::CONSTANT, ConfigDefaults::CONTROL_INIT_AMPLITUDE, ConfigDefaults::CONTROL_INIT_PHASE};
   std::vector<ControlSegmentInitialization> default_initialization = {default_init};
@@ -1100,8 +1101,8 @@ std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlIniti
         break;
       }
       case ControlSegmentInitType::RANDOM: {
-        double amplitude = validators::field<double>(table, "amplitude")
-                               .valueOr(ConfigDefaults::CONTROL_INIT_RANDOM_AMPLITUDE);
+        double amplitude =
+            validators::field<double>(table, "amplitude").valueOr(ConfigDefaults::CONTROL_INIT_RANDOM_AMPLITUDE);
         double phase = validators::field<double>(table, "phase").valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
         init = {ControlSegmentInitType::RANDOM, amplitude, phase};
         break;
