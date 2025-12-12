@@ -938,7 +938,6 @@ std::vector<std::vector<ControlSegment>> Config::parseControlSegments(const toml
   default_segment.nspline = ConfigDefaults::CONTROL_SEG_SPLINE_COUNT;
   default_segment.tstart = ConfigDefaults::CONTROL_SEG_TSTART;
   default_segment.tstop = getTotalTime();
-  std::vector<ControlSegment> default_segments = {default_segment};
 
   std::vector<std::vector<ControlSegment>> result(num_entries);
 
@@ -960,7 +959,7 @@ std::vector<std::vector<ControlSegment>> Config::parseControlSegments(const toml
 
   for (auto& elem : result) {
     if (elem.empty()) {
-      elem = default_segments;
+      elem.push_back(default_segment);
     }
   }
 
