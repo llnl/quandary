@@ -167,7 +167,7 @@ class Config {
   void validate() const;
 
   size_t computeNumInitialConditions() const;
-  void setRandSeed(std::optional<int> rand_seed_);
+  void setRandSeed(int rand_seed_);
 
   // Conversion helper methods
   template <typename T>

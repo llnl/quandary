@@ -371,7 +371,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   linearsolver_type = settings.linearsolver_type.value_or(ConfigDefaults::LINEARSOLVER_TYPE);
   linearsolver_maxiter = settings.linearsolver_maxiter.value_or(ConfigDefaults::LINEARSOLVER_MAXITER);
   timestepper_type = settings.timestepper_type.value_or(ConfigDefaults::TIMESTEPPER_TYPE);
-  setRandSeed(settings.rand_seed);
+  setRandSeed(settings.rand_seed.value_or(ConfigDefaults::RAND_SEED));
 
   // Finalize interdependent settings, then validate
   finalize();
@@ -765,8 +765,8 @@ size_t Config::computeNumInitialConditions() const {
   return n_initial_conditions;
 }
 
-void Config::setRandSeed(std::optional<int> rand_seed_) {
-  rand_seed = rand_seed_.value_or(ConfigDefaults::RAND_SEED);
+void Config::setRandSeed(int rand_seed_) {
+  rand_seed = rand_seed_;
   if (rand_seed < 0) {
     std::random_device rd;
     rand_seed = rd(); // random non-reproducable seed
