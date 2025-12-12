@@ -864,6 +864,7 @@ InitialCondition Config::parseInitialCondition(std::optional<InitialConditionTyp
       break;
 
     case InitialConditionType::BASIS:
+    case InitialConditionType::DIAGONAL:
       result.osc_IDs = init_cond_IDs;
       break;
 
@@ -877,10 +878,6 @@ InitialCondition Config::parseInitialCondition(std::optional<InitialConditionTyp
           logger.exitWithError("List of oscillators for ensemble initialization should be consecutive!\n");
         }
       }
-      result.osc_IDs = init_cond_IDs;
-      break;
-
-    case InitialConditionType::DIAGONAL:
       result.osc_IDs = init_cond_IDs;
       break;
 
