@@ -737,27 +737,27 @@ size_t Config::computeNumInitialConditions() const {
       break;
     case InitialConditionType::DIAGONAL:
       /* Compute ninit = dim(subsystem defined by list of oscil IDs) */
-      if (initial_condition.osc_IDs.has_value()) {
-        const auto& osc_IDs = initial_condition.osc_IDs.value();
-        n_initial_conditions = 1;
-        for (size_t oscilID : osc_IDs) {
-          if (oscilID < nessential.size()) n_initial_conditions *= nessential[oscilID];
-        }
+      if (!initial_condition.osc_IDs.has_value()) {
+        logger.exitWithError("expected diagonal initial condition to have list of oscIDs");
+      }
+      n_initial_conditions = 1;
+      for (size_t oscilID : initial_condition.osc_IDs.value()) {
+        if (oscilID < nessential.size()) n_initial_conditions *= nessential[oscilID];
       }
       break;
     case InitialConditionType::BASIS:
       /* Compute ninit = dim(subsystem defined by list of oscil IDs) */
-      if (initial_condition.osc_IDs.has_value()) {
-        const auto& osc_IDs = initial_condition.osc_IDs.value();
-        n_initial_conditions = 1;
-        for (size_t oscilID : osc_IDs) {
-          if (oscilID < nessential.size()) n_initial_conditions *= nessential[oscilID];
-        }
-        // if Schroedinger solver: ninit = N, do nothing.
-        // else Lindblad solver: ninit = N^2
-        if (collapse_type != LindbladType::NONE) {
-          n_initial_conditions = (size_t)pow(n_initial_conditions, 2.0);
-        }
+      if (!initial_condition.osc_IDs.has_value()) {
+        logger.exitWithError("expected diagonal initial condition to have list of oscIDs");
+      }
+      n_initial_conditions = 1;
+      for (size_t oscilID : initial_condition.osc_IDs.value()) {
+        if (oscilID < nessential.size()) n_initial_conditions *= nessential[oscilID];
+      }
+      // if Schroedinger solver: ninit = N, do nothing.
+      // else Lindblad solver: ninit = N^2
+      if (collapse_type != LindbladType::NONE) {
+        n_initial_conditions = (size_t)pow(n_initial_conditions, 2.0);
       }
       break;
   }
