@@ -970,7 +970,6 @@ std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlIniti
     const toml::array& array_of_tables, size_t num_entries, std::optional<std::string>& control_init_file) const {
   ControlSegmentInitialization default_init = ControlSegmentInitialization{
       ControlSegmentInitType::CONSTANT, ConfigDefaults::CONTROL_INIT_AMPLITUDE, ConfigDefaults::CONTROL_INIT_PHASE};
-  std::vector<ControlSegmentInitialization> default_initialization = {default_init};
 
   std::vector<std::vector<ControlSegmentInitialization>> result(num_entries);
 
@@ -1019,7 +1018,7 @@ std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlIniti
 
   for (auto& elem : result) {
     if (elem.empty()) {
-      elem = default_initialization;
+      elem.push_back(default_init);
     }
   }
 
