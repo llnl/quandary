@@ -182,10 +182,10 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     for (size_t i = 0; i < write_str.size(); i++) {
       for (const auto& str : write_str[i]) {
         auto enum_val = parseEnum(str, OUTPUT_TYPE_MAP);
-        if (!enum_val) {
-          logger.exitWithError("Unknown enum value: " + str);
+        if (!enum_val.has_value()) {
+          logger.exitWithError("Unknown output type: " + str);
         }
-        output_to_write[i].push_back(*enum_val);
+        output_to_write[i].push_back(enum_val.value());
       }
     }
 
