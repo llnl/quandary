@@ -1087,24 +1087,23 @@ std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlIniti
     }
 
     ControlSegmentInitialization init;
+    init.type = type_enum.value();
+
     switch (type_enum.value()) {
       case ControlSegmentInitType::FILE: {
         std::string filename = validators::field<std::string>(table, "filename").value();
         control_init_file = filename;
-        // FILE type applies globally, no per-oscillator logic needed
-        return result; // Exit early for FILE type
+        break;
       }
       case ControlSegmentInitType::CONSTANT: {
-        double amplitude = validators::field<double>(table, "amplitude").value();
-        double phase = validators::field<double>(table, "phase").valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
-        init = {ControlSegmentInitType::CONSTANT, amplitude, phase};
+        init.amplitude = validators::field<double>(table, "amplitude").value();
+        init.phase = validators::field<double>(table, "phase").valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
         break;
       }
       case ControlSegmentInitType::RANDOM: {
-        double amplitude =
+        init.amplitude =
             validators::field<double>(table, "amplitude").valueOr(ConfigDefaults::CONTROL_INIT_RANDOM_AMPLITUDE);
-        double phase = validators::field<double>(table, "phase").valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
-        init = {ControlSegmentInitType::RANDOM, amplitude, phase};
+        init.phase = validators::field<double>(table, "phase").valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
         break;
       }
     }
