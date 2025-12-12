@@ -417,16 +417,15 @@ Config Config::fromCfgString(const std::string& cfg_content, const MPILogger& lo
 namespace {
 
 template <typename T>
-std::string printVector(std::vector<T> vec) {
-  std::string out = "[";
-  for (size_t i = 0; i < vec.size(); ++i) {
-    out += std::to_string(vec[i]);
-    if (i < vec.size() - 1) {
-      out += ", ";
-    }
+std::string printVector(const std::vector<T>& vec) {
+  if (vec.empty()) return "[]";
+
+  std::string result = "[" + std::to_string(vec[0]);
+  for (size_t i = 1; i < vec.size(); ++i) {
+    result += ", " + std::to_string(vec[i]);
   }
-  out += "]";
-  return out;
+  result += "]";
+  return result;
 }
 
 std::string toString(const ControlSegmentInitialization& seg_init) {
