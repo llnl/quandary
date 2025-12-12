@@ -86,88 +86,12 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     control_enforceBC = toml["control_enforceBC"].value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
 
     // Parse control segments
-    control_segments.resize(num_osc);
-    std::map<size_t, std::vector<ControlSegment>> control_segments_parsed;
-    auto control_seg_node = toml["control_segments"];
-    if (control_seg_node.is_array_of_tables()) {
-      for (auto& elem : *control_seg_node.as_array()) {
-        auto seg_table = *elem.as_table();
-        size_t oscilID = validators::field<size_t>(seg_table, "oscID").value();
-        ControlSegment control_seg = parseControlSegment(seg_table);
-        control_segments_parsed[oscilID].push_back(control_seg);
-      }
-    }
+    auto control_seg_array = validators::getArrayOfTables(toml, "control_segments");
+    control_segments = parseControlSegments(control_seg_array, num_osc);
 
     // Parse control initialization
-    control_initializations.resize(num_osc);
-    std::map<size_t, std::vector<ControlSegmentInitialization>> osc_inits;
-
-    if (toml.contains("control_initialization")) {
-      auto init_node = toml["control_initialization"];
-      if (init_node.is_array_of_tables()) {
-        for (auto& elem : *init_node.as_array()) {
-          auto init_table = *elem.as_table();
-          std::string type = validators::field<std::string>(init_table, "type").value();
-
-          auto type_enum = parseEnum(type, CONTROL_SEGMENT_INIT_TYPE_MAP);
-          if (!type_enum.has_value()) {
-            logger.exitWithError("Unknown control initialization type: " + type);
-          }
-
-          switch (type_enum.value()) {
-            case ControlSegmentInitType::FILE: {
-              std::string filename = validators::field<std::string>(init_table, "filename").value();
-              control_initialization_file = filename;
-              break;
-            }
-            case ControlSegmentInitType::CONSTANT: {
-              size_t oscID = validators::field<size_t>(init_table, "oscID").value();
-              double amplitude = validators::field<double>(init_table, "amplitude").value();
-              double phase = validators::field<double>(init_table, "phase").valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
-              ControlSegmentInitialization init = {ControlSegmentInitType::CONSTANT, amplitude, phase};
-              osc_inits[oscID].push_back(init);
-              break;
-            }
-            case ControlSegmentInitType::RANDOM: {
-              size_t oscID = validators::field<size_t>(init_table, "oscID").value();
-              double amplitude = validators::field<double>(init_table, "amplitude")
-                                     .valueOr(ConfigDefaults::CONTROL_INIT_RANDOM_AMPLITUDE);
-              double phase = validators::field<double>(init_table, "phase").valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
-              ControlSegmentInitialization init = {ControlSegmentInitType::RANDOM, amplitude, phase};
-              osc_inits[oscID].push_back(init);
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    // Apply defaults to control segments and initializations if needed
-    ControlSegment default_segment;
-    default_segment.type = ControlType::BSPLINE;
-    default_segment.nspline = ConfigDefaults::CONTROL_SEG_SPLINE_COUNT;
-    default_segment.tstart = ConfigDefaults::CONTROL_SEG_TSTART;
-    default_segment.tstop = getTotalTime();
-    std::vector<ControlSegment> default_segments = {{default_segment}};
-    std::vector<ControlSegmentInitialization> default_initialization = {ControlSegmentInitialization{
-        ControlSegmentInitType::CONSTANT, ConfigDefaults::CONTROL_INIT_AMPLITUDE, ConfigDefaults::CONTROL_INIT_PHASE}};
-
-    for (size_t i = 0; i < control_segments.size(); i++) {
-      if (control_segments_parsed.find(i) != control_segments_parsed.end()) {
-        control_segments[i] = control_segments_parsed[i];
-        default_segments = control_segments_parsed[i];
-      } else {
-        control_segments[i] = default_segments;
-      }
-      if (osc_inits.find(i) != osc_inits.end()) {
-        control_initializations[i] = osc_inits[i];
-        default_initialization = osc_inits[i];
-      } else {
-        control_initializations[i] = default_initialization;
-        size_t num_segments = control_segments[i].size();
-        copyLast(control_initializations[i], num_segments);
-      }
-    }
+    auto control_init_array = validators::getArrayOfTables(toml, "control_initialization");
+    control_initializations = parseControlInitializations(control_init_array, num_osc, control_initialization_file);
 
     // Parse control bounds
     auto control_bounds_array = validators::getArrayOfTables(toml, "control_bounds");
@@ -1087,6 +1011,41 @@ ControlSegment Config::parseControlSegment(const toml::table& table) const {
   return segment;
 }
 
+std::vector<std::vector<ControlSegment>> Config::parseControlSegments(const toml::array& array_of_tables, size_t num_entries) const {
+  ControlSegment default_segment;
+  default_segment.type = ControlType::BSPLINE;
+  default_segment.nspline = ConfigDefaults::CONTROL_SEG_SPLINE_COUNT;
+  default_segment.tstart = ConfigDefaults::CONTROL_SEG_TSTART;
+  default_segment.tstop = getTotalTime();
+  std::vector<ControlSegment> default_segments = {default_segment};
+
+  std::vector<std::vector<ControlSegment>> result(num_entries);
+
+  for (auto& elem : array_of_tables) {
+    auto table = *elem.as_table();
+    ControlSegment segment = parseControlSegment(table);
+
+    if (auto osc_id_node = table["oscID"]) {
+      // Apply to specific oscillator
+      size_t osc_id = validators::field<size_t>(table, "oscID").lessThan(num_entries).value();
+      result[osc_id].push_back(segment);
+    } else {
+      // Apply to ALL oscillators
+      for (size_t i = 0; i < num_entries; i++) {
+        result[i].push_back(segment);
+      }
+    }
+  }
+
+  for (auto& elem : result) {
+    if (elem.empty()) {
+      elem = default_segments;
+    }
+  }
+
+  return result;
+}
+
 std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlInitializationsCfg(
     const std::optional<std::map<int, std::vector<ControlInitializationData>>>& init_configs) const {
   ControlSegmentInitialization default_init = ControlSegmentInitialization{
@@ -1108,6 +1067,72 @@ std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlIniti
     }
   }
   return control_initializations;
+}
+
+std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlInitializations(const toml::array& array_of_tables, size_t num_entries, std::optional<std::string>& control_init_file) const {
+  ControlSegmentInitialization default_init = ControlSegmentInitialization{
+      ControlSegmentInitType::CONSTANT, ConfigDefaults::CONTROL_INIT_AMPLITUDE, ConfigDefaults::CONTROL_INIT_PHASE};
+  std::vector<ControlSegmentInitialization> default_initialization = {default_init};
+
+  std::vector<std::vector<ControlSegmentInitialization>> result(num_entries);
+
+  for (auto& elem : array_of_tables) {
+    auto table = *elem.as_table();
+    std::string type = validators::field<std::string>(table, "type").value();
+
+    auto type_enum = parseEnum(type, CONTROL_SEGMENT_INIT_TYPE_MAP);
+    if (!type_enum.has_value()) {
+      logger.exitWithError("Unknown control initialization type: " + type);
+    }
+
+    ControlSegmentInitialization init;
+    switch (type_enum.value()) {
+      case ControlSegmentInitType::FILE: {
+        std::string filename = validators::field<std::string>(table, "filename").value();
+        control_init_file = filename;
+        // FILE type applies globally, no per-oscillator logic needed
+        return result; // Exit early for FILE type
+      }
+      case ControlSegmentInitType::CONSTANT: {
+        double amplitude = validators::field<double>(table, "amplitude").value();
+        double phase = validators::field<double>(table, "phase").valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
+        init = {ControlSegmentInitType::CONSTANT, amplitude, phase};
+        break;
+      }
+      case ControlSegmentInitType::RANDOM: {
+        double amplitude = validators::field<double>(table, "amplitude")
+                               .valueOr(ConfigDefaults::CONTROL_INIT_RANDOM_AMPLITUDE);
+        double phase = validators::field<double>(table, "phase").valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
+        init = {ControlSegmentInitType::RANDOM, amplitude, phase};
+        break;
+      }
+    }
+
+    if (auto osc_id_node = table["oscID"]) {
+      // Apply to specific oscillator
+      size_t osc_id = validators::field<size_t>(table, "oscID").lessThan(num_entries).value();
+      result[osc_id].push_back(init);
+    } else {
+      // Apply to ALL oscillators
+      for (size_t i = 0; i < num_entries; i++) {
+        result[i].push_back(init);
+      }
+    }
+  }
+
+  for (auto& elem : result) {
+    if (elem.empty()) {
+      elem = default_initialization;
+    }
+  }
+
+  // Extend initializations to match number of control segments
+  for (size_t i = 0; i < control_initializations.size(); i++) {
+    size_t num_segments = control_segments[i].size();
+    copyLast(result[i], num_segments);
+  }
+
+  return result;
 }
 
 OptimTargetSettings Config::parseOptimTarget(TargetType type, const std::optional<GateType>& gate_type,

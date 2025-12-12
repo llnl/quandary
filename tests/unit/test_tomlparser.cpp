@@ -424,7 +424,7 @@ TEST_F(TomlParserTest, ControlSegments_Spline) {
   EXPECT_EQ(control_seg0[0].type, ControlType::BSPLINE);
   EXPECT_EQ(control_seg0[0].nspline.value(), 10);
   EXPECT_DOUBLE_EQ(control_seg0[0].tstart.value(), 0.0);
-  EXPECT_DOUBLE_EQ(control_seg0[0].tstop.value(), config.getNTime() * config.getDt());
+  EXPECT_DOUBLE_EQ(control_seg0[0].tstop.value(), config.getTotalTime());
 
   // Check second oscillator with two segments
   const auto& control_seg1 = config.getControlSegments(1);
@@ -484,7 +484,7 @@ TEST_F(TomlParserTest, ControlSegments_Step) {
   EXPECT_DOUBLE_EQ(control_seg1[0].step_amp2.value(), 0.2);
   EXPECT_DOUBLE_EQ(control_seg1[0].tramp.value(), 0.3);
   EXPECT_DOUBLE_EQ(control_seg1[0].tstart.value(), 0.0); // default start time
-  EXPECT_DOUBLE_EQ(control_seg1[0].tstop.value(), config.getNTime() * config.getDt()); // default stop time
+  EXPECT_DOUBLE_EQ(control_seg1[0].tstop.value(), config.getTotalTime()); // default stop time
 }
 
 TEST_F(TomlParserTest, ControlSegments_Defaults) {
@@ -513,7 +513,7 @@ TEST_F(TomlParserTest, ControlSegments_Defaults) {
   EXPECT_EQ(control_seg0[0].type, ControlType::BSPLINE);
   EXPECT_EQ(control_seg0[0].nspline.value(), 10);
   EXPECT_DOUBLE_EQ(control_seg0[0].tstart.value(), 0.0);
-  EXPECT_DOUBLE_EQ(control_seg0[0].tstop.value(), config.getNTime() * config.getDt());
+  EXPECT_DOUBLE_EQ(control_seg0[0].tstop.value(), config.getTotalTime());
 
   // Check second oscillator has given settings
   const auto& control_seg1 = config.getControlSegments(1);
@@ -526,13 +526,46 @@ TEST_F(TomlParserTest, ControlSegments_Defaults) {
   EXPECT_DOUBLE_EQ(control_seg1[0].tstart.value(), 0.0);
   EXPECT_DOUBLE_EQ(control_seg1[0].tstop.value(), 1.0);
 
-  // Check third oscillator defaults to the second's settings
+  // Check third oscillator has default settings
   const auto& control_seg2 = config.getControlSegments(2);
   EXPECT_EQ(control_seg2.size(), 1);
-  EXPECT_EQ(control_seg2[0].type, ControlType::BSPLINE0);
-  EXPECT_EQ(control_seg2[0].nspline.value(), 150);
+  EXPECT_EQ(control_seg2[0].type, ControlType::BSPLINE);
+  EXPECT_EQ(control_seg2[0].nspline.value(), 10);
   EXPECT_DOUBLE_EQ(control_seg2[0].tstart.value(), 0.0);
-  EXPECT_DOUBLE_EQ(control_seg2[0].tstop.value(), 1.0);
+  EXPECT_DOUBLE_EQ(control_seg2[0].tstop.value(), config.getTotalTime());
+}
+
+TEST_F(TomlParserTest, ControlSegments_AllOscillators) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2]
+        transfreq = [4.1, 4.8]
+        rotfreq = [0.0, 0.0]
+        initial_condition = {type = "basis"}
+
+        [[control_segments]]
+        type = "spline0"
+        num = 150
+        tstart = 0.0
+        tstop = 1.0
+      )",
+      logger);
+
+  // Check first oscillator has given settings
+  const auto& control_seg0 = config.getControlSegments(0);
+  EXPECT_EQ(control_seg0.size(), 1);
+  EXPECT_EQ(control_seg0[0].type, ControlType::BSPLINE0);
+  EXPECT_EQ(control_seg0[0].nspline.value(), 150);
+  EXPECT_DOUBLE_EQ(control_seg0[0].tstart.value(), 0.0);
+  EXPECT_DOUBLE_EQ(control_seg0[0].tstop.value(), 1.0);
+
+  // Check second oscillator has given settings
+  const auto& control_seg1 = config.getControlSegments(1);
+  EXPECT_EQ(control_seg1.size(), 1);
+  EXPECT_EQ(control_seg1[0].type, ControlType::BSPLINE0);
+  EXPECT_EQ(control_seg1[0].nspline.value(), 150);
+  EXPECT_DOUBLE_EQ(control_seg1[0].tstart.value(), 0.0);
+  EXPECT_DOUBLE_EQ(control_seg1[0].tstop.value(), 1.0);
 }
 
 TEST_F(TomlParserTest, ControlInitialization_Defaults) {
@@ -564,11 +597,11 @@ TEST_F(TomlParserTest, ControlInitialization_Defaults) {
   EXPECT_DOUBLE_EQ(control_init1[0].amplitude, 2.0);
   EXPECT_DOUBLE_EQ(control_init1[0].phase, 0.0);
 
-  // Check third oscillator defaults to the second's settings
+  // Check third oscillator has default settings
   const auto& control_init2 = config.getControlInitializations(2);
   EXPECT_EQ(control_init2.size(), 1);
-  EXPECT_EQ(control_init2[0].type, ControlSegmentInitType::RANDOM);
-  EXPECT_DOUBLE_EQ(control_init2[0].amplitude, 2.0);
+  EXPECT_EQ(control_init2[0].type, ControlSegmentInitType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init2[0].amplitude, 0.0);
   EXPECT_DOUBLE_EQ(control_init2[0].phase, 0.0);
 }
 
@@ -668,6 +701,36 @@ TEST_F(TomlParserTest, ControlInitialization_File) {
   EXPECT_EQ(config.getControlInitializationFile().value(), "params.dat");
 }
 
+TEST_F(TomlParserTest, ControlInitialization_AllOscillators) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2]
+        transfreq = [4.1, 4.1]
+        rotfreq = [0.0, 0.0]
+        initial_condition = {type = "basis"}
+
+        [[control_initialization]]
+        type = "constant"
+        amplitude = 1.0
+        phase = 1.1
+      )",
+      logger);
+
+  // Check first oscillator
+  const auto& control_init0 = config.getControlInitializations(0);
+  EXPECT_EQ(control_init0.size(), 1);
+  EXPECT_EQ(control_init0[0].type, ControlSegmentInitType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init0[0].amplitude, 1.0);
+  EXPECT_DOUBLE_EQ(control_init0[0].phase, 1.1);
+
+  // Check second oscillator
+  const auto& control_init1 = config.getControlInitializations(1);
+  EXPECT_EQ(control_init1.size(), 1);
+  EXPECT_EQ(control_init1[0].type, ControlSegmentInitType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init1[0].amplitude, 1.0);
+  EXPECT_DOUBLE_EQ(control_init1[0].phase, 1.1);
+}
+
 TEST_F(TomlParserTest, ControlBounds) {
   Config config = Config::fromTomlString(
       R"(
@@ -719,13 +782,11 @@ TEST_F(TomlParserTest, ControlBounds_AllOscillators) {
         initial_condition = {type = "basis"}
 
         [[control_segments]]
-        oscID = 0
         type = "spline"
         num = 10
         tstart = 0.0
         tstop = 1.0
         [[control_segments]]
-        oscID = 0
         type = "step"
         step_amp1 = 0.1
         step_amp2 = 0.2
@@ -733,7 +794,6 @@ TEST_F(TomlParserTest, ControlBounds_AllOscillators) {
         tstart = 0.4
         tstop = 0.5
         [[control_segments]]
-        oscID = 0
         num = 20
         type = "spline0"
         tstart = 1.0
