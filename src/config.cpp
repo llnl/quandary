@@ -774,24 +774,6 @@ void Config::setRandSeed(std::optional<int> rand_seed_) {
 }
 
 template <typename T>
-std::vector<std::vector<T>> Config::parseOscillatorSettingsCfg(
-    const std::optional<std::map<int, std::vector<T>>>& indexed, size_t num_entries,
-    const std::vector<T>& default_values) const {
-  // Start with all defaults
-  std::vector<std::vector<T>> result(num_entries, default_values);
-
-  // Overwrite with specified values
-  if (indexed.has_value()) {
-    for (const auto& [idx, vals] : *indexed) {
-      if (idx >= 0 && static_cast<size_t>(idx) < num_entries) {
-        result[idx] = vals;
-      }
-    }
-  }
-  return result;
-}
-
-template <typename T>
 std::vector<std::vector<T>> Config::parseOscillatorSettings(const toml::array& array_of_tables, size_t num_entries,
                                                             std::vector<T> default_values,
                                                             const std::string& field_name) const {
@@ -910,64 +892,6 @@ void Config::addPiPulseSegment(std::vector<std::vector<PiPulseSegment>>& apply_p
   }
 }
 
-std::vector<std::vector<ControlSegment>> Config::parseControlSegmentsCfg(
-    const std::optional<std::map<int, std::vector<ControlSegmentData>>>& segments_opt) const {
-  ControlSegment default_segment;
-  default_segment.type = ControlType::BSPLINE;
-  default_segment.nspline = ConfigDefaults::CONTROL_SEG_SPLINE_COUNT;
-  default_segment.tstart = ConfigDefaults::CONTROL_SEG_TSTART;
-  default_segment.tstop = getTotalTime();
-  std::vector<ControlSegment> default_segments = {{default_segment}};
-
-  if (!segments_opt.has_value()) {
-    return std::vector<std::vector<ControlSegment>>(nlevels.size(), default_segments);
-  }
-  const auto segments = segments_opt.value();
-  auto parsed_segments = std::vector<std::vector<ControlSegment>>(nlevels.size());
-  for (size_t i = 0; i < parsed_segments.size(); i++) {
-    if (segments.find(static_cast<int>(i)) != segments.end()) {
-      std::vector<ControlSegment> parsed;
-      for (const auto& seg_config : segments.at(i)) {
-        parsed.push_back(parseControlSegmentCfg(seg_config));
-      }
-      parsed_segments[i] = parsed;
-      default_segments = parsed;
-    } else {
-      parsed_segments[i] = default_segments;
-    }
-  }
-  return parsed_segments;
-}
-
-ControlSegment Config::parseControlSegmentCfg(const ControlSegmentData& seg_config) const {
-  const auto& params = seg_config.parameters;
-
-  ControlSegment segment;
-  segment.type = seg_config.control_type;
-
-  if (seg_config.control_type == ControlType::BSPLINE || seg_config.control_type == ControlType::BSPLINE0) {
-    assert(params.size() >= 1); // nspline is required, should be validated in CfgParser
-    segment.nspline = static_cast<size_t>(params[0]);
-    segment.tstart = params.size() > 1 ? params[1] : ConfigDefaults::CONTROL_SEG_TSTART;
-    segment.tstop = params.size() > 2 ? params[2] : getTotalTime();
-  } else if (seg_config.control_type == ControlType::BSPLINEAMP) {
-    assert(params.size() >= 2); // nspline and scaling are required, should be validated in CfgParser
-    segment.nspline = static_cast<size_t>(params[0]);
-    segment.scaling = static_cast<double>(params[1]);
-    segment.tstart = params.size() > 2 ? params[2] : ConfigDefaults::CONTROL_SEG_TSTART;
-    segment.tstop = params.size() > 3 ? params[3] : getTotalTime();
-  } else if (seg_config.control_type == ControlType::STEP) {
-    assert(params.size() >= 3); // step_amp1, step_amp2, tramp are required, should be validated in CfgParser
-    segment.step_amp1 = static_cast<double>(params[0]);
-    segment.step_amp2 = static_cast<double>(params[1]);
-    segment.tramp = static_cast<double>(params[2]);
-    segment.tstart = params.size() > 3 ? params[3] : ConfigDefaults::CONTROL_SEG_TSTART;
-    segment.tstop = params.size() > 4 ? params[4] : getTotalTime();
-  }
-
-  return segment;
-}
-
 ControlSegment Config::parseControlSegment(const toml::table& table) const {
   ControlSegment segment;
 
@@ -1041,29 +965,6 @@ std::vector<std::vector<ControlSegment>> Config::parseControlSegments(const toml
   }
 
   return result;
-}
-
-std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlInitializationsCfg(
-    const std::optional<std::map<int, std::vector<ControlInitializationData>>>& init_configs) const {
-  ControlSegmentInitialization default_init = ControlSegmentInitialization{
-      ControlSegmentInitType::CONSTANT, ConfigDefaults::CONTROL_INIT_AMPLITUDE, ConfigDefaults::CONTROL_INIT_PHASE};
-
-  std::vector<std::vector<ControlSegmentInitialization>> control_initializations(nlevels.size());
-  for (size_t i = 0; i < nlevels.size(); i++) {
-    if (!init_configs.has_value() || init_configs->find(static_cast<int>(i)) == init_configs->end()) {
-      control_initializations[i] = {default_init};
-      continue;
-    }
-    for (const auto& init_config : init_configs->at(static_cast<int>(i))) {
-      ControlSegmentInitialization init =
-          ControlSegmentInitialization{init_config.init_seg_type, init_config.amplitude.value(),
-                                       init_config.phase.value_or(ConfigDefaults::CONTROL_INIT_PHASE)};
-
-      default_init = init;
-      control_initializations[i].push_back(init);
-    }
-  }
-  return control_initializations;
 }
 
 std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlInitializations(
@@ -1194,4 +1095,106 @@ std::vector<double> Config::parseOptimWeights(const std::optional<std::vector<do
   for (size_t i = 0; i < n_initial_conditions; i++) scaleweights += optim_weights[i];
   for (size_t i = 0; i < n_initial_conditions; i++) optim_weights[i] = optim_weights[i] / scaleweights;
   return optim_weights;
+}
+
+// CFG parsing helpers
+// TODO cfg: delete these when .cfg format is removed.
+
+template <typename T>
+std::vector<std::vector<T>> Config::parseOscillatorSettingsCfg(
+    const std::optional<std::map<int, std::vector<T>>>& indexed, size_t num_entries,
+    const std::vector<T>& default_values) const {
+  // Start with all defaults
+  std::vector<std::vector<T>> result(num_entries, default_values);
+
+  // Overwrite with specified values
+  if (indexed.has_value()) {
+    for (const auto& [idx, vals] : *indexed) {
+      if (idx >= 0 && static_cast<size_t>(idx) < num_entries) {
+        result[idx] = vals;
+      }
+    }
+  }
+  return result;
+}
+
+std::vector<std::vector<ControlSegment>> Config::parseControlSegmentsCfg(
+    const std::optional<std::map<int, std::vector<ControlSegmentData>>>& segments_opt) const {
+  ControlSegment default_segment;
+  default_segment.type = ControlType::BSPLINE;
+  default_segment.nspline = ConfigDefaults::CONTROL_SEG_SPLINE_COUNT;
+  default_segment.tstart = ConfigDefaults::CONTROL_SEG_TSTART;
+  default_segment.tstop = getTotalTime();
+  std::vector<ControlSegment> default_segments = {{default_segment}};
+
+  if (!segments_opt.has_value()) {
+    return std::vector<std::vector<ControlSegment>>(nlevels.size(), default_segments);
+  }
+  const auto segments = segments_opt.value();
+  auto parsed_segments = std::vector<std::vector<ControlSegment>>(nlevels.size());
+  for (size_t i = 0; i < parsed_segments.size(); i++) {
+    if (segments.find(static_cast<int>(i)) != segments.end()) {
+      std::vector<ControlSegment> parsed;
+      for (const auto& seg_config : segments.at(i)) {
+        parsed.push_back(parseControlSegmentCfg(seg_config));
+      }
+      parsed_segments[i] = parsed;
+      default_segments = parsed;
+    } else {
+      parsed_segments[i] = default_segments;
+    }
+  }
+  return parsed_segments;
+}
+
+ControlSegment Config::parseControlSegmentCfg(const ControlSegmentData& seg_config) const {
+  const auto& params = seg_config.parameters;
+
+  ControlSegment segment;
+  segment.type = seg_config.control_type;
+
+  if (seg_config.control_type == ControlType::BSPLINE || seg_config.control_type == ControlType::BSPLINE0) {
+    assert(params.size() >= 1); // nspline is required, should be validated in CfgParser
+    segment.nspline = static_cast<size_t>(params[0]);
+    segment.tstart = params.size() > 1 ? params[1] : ConfigDefaults::CONTROL_SEG_TSTART;
+    segment.tstop = params.size() > 2 ? params[2] : getTotalTime();
+  } else if (seg_config.control_type == ControlType::BSPLINEAMP) {
+    assert(params.size() >= 2); // nspline and scaling are required, should be validated in CfgParser
+    segment.nspline = static_cast<size_t>(params[0]);
+    segment.scaling = static_cast<double>(params[1]);
+    segment.tstart = params.size() > 2 ? params[2] : ConfigDefaults::CONTROL_SEG_TSTART;
+    segment.tstop = params.size() > 3 ? params[3] : getTotalTime();
+  } else if (seg_config.control_type == ControlType::STEP) {
+    assert(params.size() >= 3); // step_amp1, step_amp2, tramp are required, should be validated in CfgParser
+    segment.step_amp1 = static_cast<double>(params[0]);
+    segment.step_amp2 = static_cast<double>(params[1]);
+    segment.tramp = static_cast<double>(params[2]);
+    segment.tstart = params.size() > 3 ? params[3] : ConfigDefaults::CONTROL_SEG_TSTART;
+    segment.tstop = params.size() > 4 ? params[4] : getTotalTime();
+  }
+
+  return segment;
+}
+
+std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlInitializationsCfg(
+    const std::optional<std::map<int, std::vector<ControlInitializationData>>>& init_configs) const {
+  ControlSegmentInitialization default_init = ControlSegmentInitialization{
+      ControlSegmentInitType::CONSTANT, ConfigDefaults::CONTROL_INIT_AMPLITUDE, ConfigDefaults::CONTROL_INIT_PHASE};
+
+  std::vector<std::vector<ControlSegmentInitialization>> control_initializations(nlevels.size());
+  for (size_t i = 0; i < nlevels.size(); i++) {
+    if (!init_configs.has_value() || init_configs->find(static_cast<int>(i)) == init_configs->end()) {
+      control_initializations[i] = {default_init};
+      continue;
+    }
+    for (const auto& init_config : init_configs->at(static_cast<int>(i))) {
+      ControlSegmentInitialization init =
+          ControlSegmentInitialization{init_config.init_seg_type, init_config.amplitude.value(),
+                                       init_config.phase.value_or(ConfigDefaults::CONTROL_INIT_PHASE)};
+
+      default_init = init;
+      control_initializations[i].push_back(init);
+    }
+  }
+  return control_initializations;
 }

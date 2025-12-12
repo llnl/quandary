@@ -174,11 +174,6 @@ class Config {
   std::vector<std::vector<T>> parseOscillatorSettings(const toml::array& array_of_tables, size_t num_entries,
                                                       std::vector<T> default_values,
                                                       const std::string& field_name) const;
-  // TODO cfg: delete when .cfg format is removed.
-  template <typename T>
-  std::vector<std::vector<T>> parseOscillatorSettingsCfg(const std::optional<std::map<int, std::vector<T>>>& indexed,
-                                                         size_t num_entries,
-                                                         const std::vector<T>& default_values = {}) const;
 
   InitialCondition parseInitialCondition(std::optional<InitialConditionType> opt_type,
                                          const std::optional<std::string>& filename,
@@ -188,19 +183,9 @@ class Config {
   void addPiPulseSegment(std::vector<std::vector<PiPulseSegment>>& apply_pipulse, size_t oscilID, double tstart,
                          double tstop, double amp) const;
 
-  // TODO cfg: delete when .cfg format is removed.
-  std::vector<std::vector<ControlSegment>> parseControlSegmentsCfg(
-      const std::optional<std::map<int, std::vector<ControlSegmentData>>>& segments_opt) const;
-  // TODO cfg: delete when .cfg format is removed.
-  ControlSegment parseControlSegmentCfg(const ControlSegmentData& seg_config) const;
-
   ControlSegment parseControlSegment(const toml::table& table) const;
   std::vector<std::vector<ControlSegment>> parseControlSegments(const toml::array& array_of_tables,
                                                                 size_t num_entries) const;
-
-  // TODO cfg: delete when .cfg format is removed.
-  std::vector<std::vector<ControlSegmentInitialization>> parseControlInitializationsCfg(
-      const std::optional<std::map<int, std::vector<ControlInitializationData>>>& init_configs) const;
 
   std::vector<std::vector<ControlSegmentInitialization>> parseControlInitializations(
       const toml::array& array_of_tables, size_t num_entries, std::optional<std::string>& control_init_file) const;
@@ -211,4 +196,16 @@ class Config {
                                        const std::optional<std::string>& file) const;
 
   std::vector<double> parseOptimWeights(const std::optional<std::vector<double>>& optim_weights_) const;
+
+  // TODO cfg: delete these when .cfg format is removed.
+  template <typename T>
+  std::vector<std::vector<T>> parseOscillatorSettingsCfg(const std::optional<std::map<int, std::vector<T>>>& indexed,
+                                                         size_t num_entries,
+                                                         const std::vector<T>& default_values = {}) const;
+
+  std::vector<std::vector<ControlSegment>> parseControlSegmentsCfg(
+      const std::optional<std::map<int, std::vector<ControlSegmentData>>>& segments_opt) const;
+  ControlSegment parseControlSegmentCfg(const ControlSegmentData& seg_config) const;
+  std::vector<std::vector<ControlSegmentInitialization>> parseControlInitializationsCfg(
+      const std::optional<std::map<int, std::vector<ControlInitializationData>>>& init_configs) const;
 };
