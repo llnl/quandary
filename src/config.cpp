@@ -393,13 +393,13 @@ Config Config::fromFile(const std::string& filename, const MPILogger& logger) {
 }
 
 Config Config::fromToml(const std::string& filename, const MPILogger& logger) {
-  toml::table config = toml::parse_file(filename);
-  return Config(logger, config);
+  toml::table toml = toml::parse_file(filename);
+  return Config(logger, toml);
 }
 
 Config Config::fromTomlString(const std::string& toml_content, const MPILogger& logger) {
-  toml::table config = toml::parse(toml_content);
-  return Config(logger, config);
+  toml::table toml = toml::parse(toml_content);
+  return Config(logger, toml);
 }
 
 Config Config::fromCfg(const std::string& filename, const MPILogger& logger) {
