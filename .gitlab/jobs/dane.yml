@@ -18,16 +18,10 @@ oneapi_2025_2_0_gcc_10_3_1:
     ON_DANE: "OFF"
   extends: .job_on_dane
 
-# Force mvapich2 to be built with gcc
-gcc_10_3_1:
-  variables:
-    SPEC: "${PROJECT_DANE_VARIANTS} %gcc@=10.3.1 ${PROJECT_DANE_DEPS} ^mvapich2%gcc@=10.3.1"
-  extends: .job_on_dane
-
 ########################
 # Extra jobs
 ########################
-gcc_10_3_1_int64:
+gcc_13_3_1_int64:
   variables:
-    SPEC: "${PROJECT_DANE_VARIANTS} +int64 %gcc@=10.3.1 ${PROJECT_DANE_DEPS} ^mvapich2%gcc@=10.3.1"
+    SPEC: "${PROJECT_DANE_VARIANTS} +int64 %gcc@=13.3.1 ${PROJECT_DANE_DEPS}"
   extends: .job_on_dane
