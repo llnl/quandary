@@ -13,7 +13,7 @@
 ########################
 # Overridden shared jobs
 ########################
-oneapi_2023_2_1:
+oneapi_2025_2_0_gcc_10_3_1:
   variables:
     ON_DANE: "OFF"
   extends: .job_on_dane
