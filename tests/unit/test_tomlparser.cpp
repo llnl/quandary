@@ -1083,3 +1083,113 @@ type = ["population", "expectedenergy"]
     }
   }
 }
+
+TEST_F(TomlParserTest, ApplyPipulse_UnknownKey) {
+  ASSERT_DEATH({
+    Config config = Config::fromTomlString(
+        R"(
+          nlevels = [2]
+          transfreq = [4.1]
+          rotfreq = [0.0]
+          initial_condition = {type = "basis"}
+
+          [[apply_pipulse]]
+          oscID = 0
+          tstart = 0.0
+          tstop = 1.0
+          amp = 0.5
+          invalid_param = 123
+        )",
+        logger);
+  }, "ERROR: Unknown key 'invalid_param' in apply_pipulse\\.");
+}
+
+TEST_F(TomlParserTest, ControlSegments_UnknownKey) {
+  ASSERT_DEATH({
+    Config config = Config::fromTomlString(
+        R"(
+          nlevels = [2]
+          transfreq = [4.1]
+          rotfreq = [0.0]
+          initial_condition = {type = "basis"}
+
+          [[control_segments]]
+          type = "spline"
+          num = 5
+          wrong_field = 99
+        )",
+        logger);
+  }, "ERROR: Unknown key 'wrong_field' in control_segments\\.");
+}
+
+TEST_F(TomlParserTest, ControlInitialization_UnknownKey) {
+  ASSERT_DEATH({
+    Config config = Config::fromTomlString(
+        R"(
+          nlevels = [2]
+          transfreq = [4.1]
+          rotfreq = [0.0]
+          initial_condition = {type = "basis"}
+
+          [[control_initialization]]
+          type = "file"
+          filename = "params.dat"
+          foo = 42
+        )",
+        logger);
+  }, "ERROR: Unknown key 'foo' in control_initialization\\.");
+}
+
+TEST_F(TomlParserTest, ControlBounds_UnknownKey) {
+  ASSERT_DEATH({
+    Config config = Config::fromTomlString(
+        R"(
+          nlevels = [2]
+          transfreq = [4.1]
+          rotfreq = [0.0]
+          initial_condition = {type = "basis"}
+
+          [[control_bounds]]
+          oscID = 0
+          values = [1.0, 2.0]
+          extra_key = "not_allowed"
+        )",
+        logger);
+  }, "ERROR: Unknown key 'extra_key' in control_bounds\\.");
+}
+
+TEST_F(TomlParserTest, CarrierFrequency_UnknownKey) {
+  ASSERT_DEATH({
+    Config config = Config::fromTomlString(
+        R"(
+          nlevels = [2]
+          transfreq = [4.1]
+          rotfreq = [0.0]
+          initial_condition = {type = "basis"}
+
+          [[carrier_frequency]]
+          oscID = 0
+          values = [4.0]
+          forbidden_key = 42
+        )",
+        logger);
+  }, "ERROR: Unknown key 'forbidden_key' in carrier_frequency\\.");
+}
+
+TEST_F(TomlParserTest, Write_UnknownKey) {
+  ASSERT_DEATH({
+    Config config = Config::fromTomlString(
+        R"(
+          nlevels = [2]
+          transfreq = [4.1]
+          rotfreq = [0.0]
+          initial_condition = {type = "basis"}
+
+          [[write]]
+          oscID = 0
+          type = ["expectedenergy"]
+          unsupported_option = true
+        )",
+        logger);
+  }, "ERROR: Unknown key 'unsupported_option' in write\\.");
+}

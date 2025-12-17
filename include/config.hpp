@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string>
 #include <toml++/toml.hpp>
@@ -169,11 +170,16 @@ class Config {
   size_t computeNumInitialConditions() const;
   void setRandSeed(int rand_seed_);
 
+  // Table validation helper
+  void validateTableKeys(const toml::table& table, const std::set<std::string>& allowed_keys,
+                         const std::string& table_name) const;
+
   // Conversion helper methods
   template <typename T>
   std::vector<std::vector<T>> parseOscillatorSettings(const toml::array& array_of_tables, size_t num_entries,
-                                                      std::vector<T> default_values,
-                                                      const std::string& field_name) const;
+                                                      std::vector<T> default_values, const std::string& field_name,
+                                                      const std::set<std::string>& allowed_keys,
+                                                      const std::string& table_name) const;
 
   InitialCondition parseInitialCondition(std::optional<InitialConditionType> opt_type,
                                          const std::optional<std::string>& filename,

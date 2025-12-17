@@ -12,6 +12,11 @@
 #include "config_validators.hpp"
 #include "util.hpp"
 
+// Common TOML table key constants
+namespace {
+const std::string OSC_ID_KEY = "oscID";
+}
+
 Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger) {
   try {
     // General options
@@ -71,10 +76,18 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     auto apply_pipulse_array_of_tables = validators::getArrayOfTables(toml, "apply_pipulse");
     for (auto& elem : apply_pipulse_array_of_tables) {
       auto pipulse_table = *elem.as_table();
-      size_t oscilID = validators::field<size_t>(pipulse_table, "oscID").value();
-      double tstart = validators::field<double>(pipulse_table, "tstart").value();
-      double tstop = validators::field<double>(pipulse_table, "tstop").value();
-      double amp = validators::field<double>(pipulse_table, "amp").value();
+
+      // Validate allowed keys in apply_pipulse table
+      const std::string tstart_key = "tstart";
+      const std::string tstop_key = "tstop";
+      const std::string amp_key = "amp";
+      const std::set<std::string> allowed_keys = {OSC_ID_KEY, tstart_key, tstop_key, amp_key};
+      validateTableKeys(pipulse_table, allowed_keys, "apply_pipulse");
+
+      size_t oscilID = validators::field<size_t>(pipulse_table, OSC_ID_KEY).value();
+      double tstart = validators::field<double>(pipulse_table, tstart_key).value();
+      double tstop = validators::field<double>(pipulse_table, tstop_key).value();
+      double amp = validators::field<double>(pipulse_table, amp_key).value();
 
       addPiPulseSegment(apply_pipulse, oscilID, tstart, tstop, amp);
     }
@@ -95,8 +108,13 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     // Parse control bounds
     auto control_bounds_array = validators::getArrayOfTables(toml, "control_bounds");
-    control_bounds =
-        parseOscillatorSettings<double>(control_bounds_array, num_osc, {ConfigDefaults::CONTROL_BOUND}, "values");
+
+    // Allowed keys for control_bounds table
+    const std::string values_key = "values";
+    const std::set<std::string> control_bounds_allowed_keys = {OSC_ID_KEY, values_key};
+
+    control_bounds = parseOscillatorSettings<double>(control_bounds_array, num_osc, {ConfigDefaults::CONTROL_BOUND},
+                                                     values_key, control_bounds_allowed_keys, "control_bounds");
     // Extend bounds to match number of control segments
     for (size_t i = 0; i < control_bounds.size(); i++) {
       copyLast(control_bounds[i], control_segments[i].size());
@@ -104,8 +122,14 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     // Parse carrier frequencies
     auto carrier_freq_array = validators::getArrayOfTables(toml, "carrier_frequency");
+
+    // Allowed keys for carrier_frequency table
+    const std::string carrier_values_key = "values";
+    const std::set<std::string> carrier_freq_allowed_keys = {OSC_ID_KEY, carrier_values_key};
+
     carrier_frequencies =
-        parseOscillatorSettings<double>(carrier_freq_array, num_osc, {ConfigDefaults::CARRIER_FREQ}, "values");
+        parseOscillatorSettings<double>(carrier_freq_array, num_osc, {ConfigDefaults::CARRIER_FREQ}, carrier_values_key,
+                                        carrier_freq_allowed_keys, "carrier_frequency");
 
     // optim_target
     if (toml.contains("optim_target")) {
@@ -178,7 +202,13 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     output_to_write.resize(num_osc); // Empty vectors by default
     auto write_array = validators::getArrayOfTables(toml, "write");
-    auto write_str = parseOscillatorSettings<std::string>(write_array, num_osc, {}, "type");
+
+    // Allowed keys for write table
+    const std::string write_type_key = "type";
+    const std::set<std::string> write_allowed_keys = {OSC_ID_KEY, write_type_key};
+
+    auto write_str =
+        parseOscillatorSettings<std::string>(write_array, num_osc, {}, write_type_key, write_allowed_keys, "write");
     for (size_t i = 0; i < write_str.size(); i++) {
       for (const auto& str : write_str[i]) {
         auto enum_val = parseEnum(str, OUTPUT_TYPE_MAP);
@@ -772,19 +802,32 @@ void Config::setRandSeed(int rand_seed_) {
   }
 }
 
+void Config::validateTableKeys(const toml::table& table, const std::set<std::string>& allowed_keys,
+                               const std::string& table_name) const {
+  for (const auto& [key, _] : table) {
+    if (allowed_keys.find(std::string(key.str())) == allowed_keys.end()) {
+      logger.exitWithError("Unknown key '" + std::string(key.str()) + "' in " + table_name + ".");
+    }
+  }
+}
+
 template <typename T>
 std::vector<std::vector<T>> Config::parseOscillatorSettings(const toml::array& array_of_tables, size_t num_entries,
                                                             std::vector<T> default_values,
-                                                            const std::string& field_name) const {
+                                                            const std::string& field_name,
+                                                            const std::set<std::string>& allowed_keys,
+                                                            const std::string& table_name) const {
   std::vector<std::vector<T>> result(num_entries, default_values);
 
   for (auto& elem : array_of_tables) {
     auto table = *elem.as_table();
+    validateTableKeys(table, allowed_keys, table_name);
+
     std::vector<T> values = validators::vectorField<T>(table, field_name).value();
 
-    if (auto osc_id_node = table["oscID"]) {
+    if (auto osc_id_node = table[OSC_ID_KEY]) {
       // Apply to specific oscillator
-      size_t osc_id = validators::field<size_t>(table, "oscID").lessThan(num_entries).value();
+      size_t osc_id = validators::field<size_t>(table, OSC_ID_KEY).lessThan(num_entries).value();
       result[osc_id] = values;
     } else {
       // Apply to ALL oscillators
@@ -901,27 +944,40 @@ ControlSegment Config::parseControlSegment(const toml::table& table) const {
   }
   segment.type = *type;
 
+  const std::string type_key = "type";
+  const std::string num_key = "num";
+  const std::string scaling_key = "scaling";
+  const std::string tstart_key = "tstart";
+  const std::string tstop_key = "tstop";
+  const std::string step_amp1_key = "step_amp1";
+  const std::string step_amp2_key = "step_amp2";
+  const std::string tramp_key = "tramp";
+
+  std::set<std::string> allowed_keys = {OSC_ID_KEY, type_key,      num_key,       scaling_key, tstart_key,
+                                        tstop_key,  step_amp1_key, step_amp2_key, tramp_key};
+  validateTableKeys(table, allowed_keys, "control_segments");
+
   switch (*type) {
     case ControlType::BSPLINE:
     case ControlType::BSPLINE0: {
-      segment.nspline = validators::field<size_t>(table, "num").value();
-      segment.tstart = validators::field<double>(table, "tstart").valueOr(ConfigDefaults::CONTROL_SEG_TSTART);
-      segment.tstop = validators::field<double>(table, "tstop").valueOr(getTotalTime());
+      segment.nspline = validators::field<size_t>(table, num_key).value();
+      segment.tstart = validators::field<double>(table, tstart_key).valueOr(ConfigDefaults::CONTROL_SEG_TSTART);
+      segment.tstop = validators::field<double>(table, tstop_key).valueOr(getTotalTime());
       break;
     }
     case ControlType::BSPLINEAMP: {
-      segment.nspline = validators::field<size_t>(table, "num").value();
-      segment.scaling = validators::field<double>(table, "scaling").value();
-      segment.tstart = validators::field<double>(table, "tstart").valueOr(ConfigDefaults::CONTROL_SEG_TSTART);
-      segment.tstop = validators::field<double>(table, "tstop").valueOr(getTotalTime());
+      segment.nspline = validators::field<size_t>(table, num_key).value();
+      segment.scaling = validators::field<double>(table, scaling_key).value();
+      segment.tstart = validators::field<double>(table, tstart_key).valueOr(ConfigDefaults::CONTROL_SEG_TSTART);
+      segment.tstop = validators::field<double>(table, tstop_key).valueOr(getTotalTime());
       break;
     }
     case ControlType::STEP:
-      segment.step_amp1 = validators::field<double>(table, "step_amp1").value();
-      segment.step_amp2 = validators::field<double>(table, "step_amp2").value();
-      segment.tramp = validators::field<double>(table, "tramp").value();
-      segment.tstart = validators::field<double>(table, "tstart").valueOr(ConfigDefaults::CONTROL_SEG_TSTART);
-      segment.tstop = validators::field<double>(table, "tstop").valueOr(getTotalTime());
+      segment.step_amp1 = validators::field<double>(table, step_amp1_key).value();
+      segment.step_amp2 = validators::field<double>(table, step_amp2_key).value();
+      segment.tramp = validators::field<double>(table, tramp_key).value();
+      segment.tstart = validators::field<double>(table, tstart_key).valueOr(ConfigDefaults::CONTROL_SEG_TSTART);
+      segment.tstop = validators::field<double>(table, tstop_key).valueOr(getTotalTime());
       break;
     case ControlType::NONE:
       logger.exitWithError("Unexpected control type " + type_str);
@@ -944,9 +1000,9 @@ std::vector<std::vector<ControlSegment>> Config::parseControlSegments(const toml
     auto table = *elem.as_table();
     ControlSegment segment = parseControlSegment(table);
 
-    if (auto osc_id_node = table["oscID"]) {
+    if (auto osc_id_node = table[OSC_ID_KEY]) {
       // Apply to specific oscillator
-      size_t osc_id = validators::field<size_t>(table, "oscID").lessThan(num_entries).value();
+      size_t osc_id = validators::field<size_t>(table, OSC_ID_KEY).lessThan(num_entries).value();
       result[osc_id].push_back(segment);
     } else {
       // Apply to ALL oscillators
@@ -970,11 +1026,17 @@ std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlIniti
   ControlSegmentInitialization default_init = ControlSegmentInitialization{
       ControlSegmentInitType::CONSTANT, ConfigDefaults::CONTROL_INIT_AMPLITUDE, ConfigDefaults::CONTROL_INIT_PHASE};
 
+  const std::string type_key = "type";
+  const std::string filename_key = "filename";
+  const std::string amplitude_key = "amplitude";
+  const std::string phase_key = "phase";
+  const std::set allowed_keys = {OSC_ID_KEY, type_key, filename_key, amplitude_key, phase_key};
   std::vector<std::vector<ControlSegmentInitialization>> result(num_entries);
 
   for (auto& elem : array_of_tables) {
     auto table = *elem.as_table();
-    std::string type = validators::field<std::string>(table, "type").value();
+    validateTableKeys(table, allowed_keys, "control_initialization");
+    std::string type = validators::field<std::string>(table, type_key).value();
 
     auto type_enum = parseEnum(type, CONTROL_SEGMENT_INIT_TYPE_MAP);
     if (!type_enum.has_value()) {
@@ -986,26 +1048,26 @@ std::vector<std::vector<ControlSegmentInitialization>> Config::parseControlIniti
 
     switch (type_enum.value()) {
       case ControlSegmentInitType::FILE: {
-        std::string filename = validators::field<std::string>(table, "filename").value();
+        std::string filename = validators::field<std::string>(table, filename_key).value();
         control_init_file = filename;
         break;
       }
       case ControlSegmentInitType::CONSTANT: {
-        init.amplitude = validators::field<double>(table, "amplitude").value();
-        init.phase = validators::field<double>(table, "phase").valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
+        init.amplitude = validators::field<double>(table, amplitude_key).value();
+        init.phase = validators::field<double>(table, phase_key).valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
         break;
       }
       case ControlSegmentInitType::RANDOM: {
         init.amplitude =
-            validators::field<double>(table, "amplitude").valueOr(ConfigDefaults::CONTROL_INIT_RANDOM_AMPLITUDE);
-        init.phase = validators::field<double>(table, "phase").valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
+            validators::field<double>(table, amplitude_key).valueOr(ConfigDefaults::CONTROL_INIT_RANDOM_AMPLITUDE);
+        init.phase = validators::field<double>(table, phase_key).valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
         break;
       }
     }
 
-    if (auto osc_id_node = table["oscID"]) {
+    if (table.contains(OSC_ID_KEY)) {
       // Apply to specific oscillator
-      size_t osc_id = validators::field<size_t>(table, "oscID").lessThan(num_entries).value();
+      size_t osc_id = validators::field<size_t>(table, OSC_ID_KEY).lessThan(num_entries).value();
       result[osc_id].push_back(init);
     } else {
       // Apply to ALL oscillators
