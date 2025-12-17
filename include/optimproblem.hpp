@@ -54,6 +54,8 @@ class OptimProblem {
   std::vector<Vec> store_finalstates; ///< Storage for final states for each initial condition
   Mat U_final_re; ///< Storage for final-time unitary matrix. TODO: Remove the above store_finalstates, and use this one instead.
   Mat U_final_im; ///< Storage for final-time unitary matrix. TODO: Remove the above store_finalstates, and use this one instead.
+  Mat U_final_re_bar; ///< Storage for derivative of final-time unitary matrix
+  Mat U_final_im_bar; ///< Storage for derivative of final-time unitary matrix
   bool use_new_objective; ///< Flag to use new objective function based on Riemannian distance
   bool phase_invariant; ///< Flag to use phase-invariant version of Riemannian distance objective
 

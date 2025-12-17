@@ -47,6 +47,10 @@ class OptimTarget{
     Vec aux; ///< Auxiliary vector for gate optimization objective computation
     bool quietmode; ///< Flag for quiet mode operation
 
+
+    std::unique_ptr<std::vector<double>> eigenvals_re; ///< Storage for eigenvalues log(U^\dagger V)
+    std::unique_ptr<std::vector<double>> eigenvals_im; ///< Storage for eigenvalues log(U^\dagger V)
+
   public:
     OptimTarget();
 
@@ -149,6 +153,17 @@ class OptimTarget{
      * @return double Riemannian distance objective value
      */
     double RiemannianDistance(const Mat U_final_re, const Mat U_final_im, bool phase_invariant);
+
+    /**
+     * @brief Derivative of Riemannian distance computation.
+     * 
+     * @param[in] U_final_re Real part of final-time unitary matrix
+     * @param[in] U_final_im Imaginary part of final-time unitary matrix
+     * @param[out] U_final_re_bar Real part of adjoint matrix to update
+     * @param[out] U_final_im_bar Imaginary part of adjoint matrix to update
+     * @param[in] phase_invariant Flag to use phase-invariant version of Riemannian
+     */
+    void RiemannianDistance_diff(const Mat U_final_re, const Mat U_final_im, Mat U_final_re_bar, Mat U_final_im_bar, bool phase_invariant);
 
     /**
      * @brief Derivative of objective function finalization.

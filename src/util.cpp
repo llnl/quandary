@@ -654,7 +654,7 @@ bool isUnitary(const Mat V_re, const Mat V_im){
 }
 
 
-void getEigvalsComplex(const Mat A_re, const Mat A_im, const int neigvals, std::vector<double>& eigvals_re, std::vector<double>& eigvals_im){
+void getEigenComplex(const Mat A_re, const Mat A_im, const int neigvals, std::unique_ptr<std::vector<double>>& eigvals_re, std::unique_ptr<std::vector<double>>& eigvals_im, Mat& Evecs_re, Mat& Evecs_im){
 
   /* Set up the larger matrix A = [A_re -A_im; A_im A_re] */
   PetscInt dim;
@@ -664,6 +664,16 @@ void getEigvalsComplex(const Mat A_re, const Mat A_im, const int neigvals, std::
   MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, 2*dim, 2*dim);
   MatSetFromOptions(A);
   MatSetUp(A);
+
+  MatCreate(PETSC_COMM_WORLD, &Evecs_re);
+  MatSetSizes(Evecs_re, PETSC_DECIDE, PETSC_DECIDE, 2*dim, 2*dim);
+  MatSetFromOptions(Evecs_re);
+  MatSetUp(Evecs_re);
+  MatCreate(PETSC_COMM_WORLD, &Evecs_im);
+  MatSetSizes(Evecs_im, PETSC_DECIDE, PETSC_DECIDE, 2*dim, 2*dim);
+  MatSetFromOptions(Evecs_im);
+  MatSetUp(Evecs_im);
+
   for (PetscInt i=0; i<dim; i++){
     for (PetscInt j=0; j<dim; j++){
       double val_re, val_im;
@@ -714,23 +724,48 @@ void getEigvalsComplex(const Mat A_re, const Mat A_im, const int neigvals, std::
   // PetscPrintf(PETSC_COMM_WORLD," Stopping condition: tol=%.4g\n",(double)tol);
   // PetscPrintf(PETSC_COMM_WORLD," Number of converged eigenpairs: %D\n\n",nconv);
 
-   // Get the result
+  // Get the result
+  eigvals_re->clear();
+  eigvals_im->clear();
+  eigvals_re->resize(nconv);
+  eigvals_im->resize(nconv);
+  MatZeroEntries(Evecs_re);
+  MatZeroEntries(Evecs_im);
+  Vec eigvec_re;
+  Vec eigvec_im;
+  MatCreateVecs(A, &eigvec_re, NULL);
+  MatCreateVecs(A, &eigvec_im, NULL);
   double kr, ki;
-  // printf("%d Eigenvalues: \n", neigvals);
   for (int j=0; j<nconv; j++) {
     EPSGetEigenvalue(eigensolver, j, &kr, &ki);
     // double error;
     // EPSComputeError( eigensolver, j, EPS_ERROR_RELATIVE, &error );
     // printf("%1.8e + i%1.8e (err %f)\n", kr, ki, error);
 
+    // Store eigenvector in Evecs_re and Evecs_im
+    EPSGetEigenvector( eigensolver, j, eigvec_re, eigvec_im);
+    for (PetscInt i=0; i<2*dim; i++){
+      double val_re, val_im;
+      VecGetValues(eigvec_re, 1, &i, &val_re);
+      VecGetValues(eigvec_im, 1, &i, &val_im);
+      MatSetValue(Evecs_re, i, j, val_re, INSERT_VALUES);
+      MatSetValue(Evecs_im, i, j, val_im, INSERT_VALUES);
+    }
     /* Store the eigenvalues */
-    eigvals_re.push_back(kr);
-    eigvals_im.push_back(ki);
+    eigvals_re->at(j) = kr;
+    eigvals_im->at(j) = ki;
   }
   // printf("\n");
   // EPSView(eigensolver, PETSC_VIEWER_STDOUT_WORLD);
 
+  MatAssemblyBegin(Evecs_re, MAT_FINAL_ASSEMBLY); 
+  MatAssemblyEnd(Evecs_re, MAT_FINAL_ASSEMBLY);
+  MatAssemblyBegin(Evecs_im, MAT_FINAL_ASSEMBLY); 
+  MatAssemblyEnd(Evecs_im, MAT_FINAL_ASSEMBLY);
+
   /* Clean up*/
   EPSDestroy(&eigensolver);
   MatDestroy(&A);
+  VecDestroy(&eigvec_re);
+  VecDestroy(&eigvec_im);
 }

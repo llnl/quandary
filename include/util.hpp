@@ -229,7 +229,7 @@ int getEigvals(const Mat A, const int neigvals, std::vector<double>& eigvals, st
  * @param eigvals_re Vector of real parts of eigenvalues
  * @param eigvals_im Vector to store imaginary parts of eigenvalues
  */
-void getEigvalsComplex(const Mat A_re, const Mat A_im, const int neigvals, std::vector<double>& eigvals_re, std::vector<double>& eigvals_im);
+void getEigenComplex(const Mat A_re, const Mat A_im, const int neigvals, std::unique_ptr<std::vector<double>>& eigvals_re, std::unique_ptr<std::vector<double>>& eigvals_im, Mat& Evecs_re, Mat& Evecs_im);
 
 /**
  * @brief Tests if complex matrix A+iB is unitary.

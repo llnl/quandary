@@ -311,6 +311,10 @@ OptimTarget::OptimTarget(std::vector<std::string> target_str, const std::string&
     VecSetSizes(aux,localsize, globalsize);
     VecSetFromOptions(aux);
   }
+
+  /* Allocate storage of eigenvalues of U_final, size dim */
+  eigenvals_re = std::make_unique<std::vector<double>>(mastereq->getDim());
+  eigenvals_im = std::make_unique<std::vector<double>>(mastereq->getDim());
 }
 
 OptimTarget::~OptimTarget(){
@@ -912,10 +916,16 @@ double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_i
   MatDestroy(&tmp);
 
   /* Now get the eigenvalues of A. Note, only the first half is needed, since the second half will be their complex conjugate */
-  std::vector<double> eigenvals_re;
-  std::vector<double> eigenvals_im;
   int neigvals = 2*dim; // All? Weird... even if I request dim eigenvalues, somehow I anyways get all of them?? TEST! TODO.
-  getEigvalsComplex(UdagV_re, UdagV_im, neigvals, eigenvals_re, eigenvals_im);
+  Mat Evecs_re, Evecs_im;
+  getEigenComplex(UdagV_re, UdagV_im, neigvals, eigenvals_re, eigenvals_im, Evecs_re, Evecs_im);
+  
+  MatView(Evecs_re, NULL);
+  MatView(Evecs_im, NULL);
+  MatDestroy(&Evecs_re);
+  MatDestroy(&Evecs_im);
+
+  /* TODO: Get every second eigenvectors, so that the Diff function will be able to recover log(U^dagger V) from X*D*X^dagger without doing the eigendecomposition again! */
 
   /* Now get the phases (theta) of the eigenvalues such that eigvals_re + i*eigvals_im = e^{i*theta}, and sum up the objective function */
   // Note only take every second eigenvalue, since they come in pairs of complex conjugates.
@@ -924,7 +934,7 @@ double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_i
   if (phase_invariant) {
     for (int i=0; i<dim; i++){
       int j = 2*i;
-      double theta = atan2(eigenvals_im[j], eigenvals_re[j]);
+      double theta = atan2(eigenvals_im->at(j), eigenvals_re->at(j));
       avg_theta += theta;
     }
     avg_theta = avg_theta / double(dim);
@@ -934,10 +944,10 @@ double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_i
   double obj = 0.0;
   for (int i=0; i<dim; i++){
     int j = 2*i;
-    double theta = atan2(eigenvals_im[j], eigenvals_re[j]);
+    double theta = atan2(eigenvals_im->at(j), eigenvals_re->at(j));
     obj += (theta - avg_theta) * (theta - avg_theta);
 
-    if (mpirank_world == 0) printf("Eigenvalue %d: %f + i*%f  -> theta (degree)= %f \n", j, eigenvals_re[j], eigenvals_im[j], theta*180.0/M_PI);
+    if (mpirank_world == 0) printf("Eigenvalue %d: %f + i*%f  -> theta (degree)= %f \n", j, eigenvals_re->at(j), eigenvals_im->at(j), theta*180.0/M_PI);
   }
   obj = obj / 2.0;
 
@@ -946,4 +956,17 @@ double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_i
   MatDestroy(&UdagV_im);
 
   return obj; 
+}
+
+
+void OptimTarget::RiemannianDistance_diff(const Mat U_final_re, const Mat U_final_im, Mat U_final_re_bar, Mat U_final_im_bar, bool phase_invariant){
+  // Compute the derivative of the Riemannian distance J = 1/2 || log(U^\dagger V)||_F^2
+  // Gradient: U_final_bar = - U_final * log(U_final^\dagger V)^\dagger + phase correction term if phase_invariant
+
+  printf("In grad:\n");
+  for (size_t j=0; j<eigenvals_re->size(); j+=2) {
+    double theta = atan2(eigenvals_im->at(j), eigenvals_re->at(j));
+    printf("Eigenvalue %d: %f + i*%f  -> theta (degree)= %f \n", j, eigenvals_re->at(j), eigenvals_im->at(j), theta*180.0/M_PI);
+  }
+
 }

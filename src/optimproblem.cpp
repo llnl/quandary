@@ -38,7 +38,6 @@ OptimProblem::OptimProblem(Config config, TimeStepper* timestepper_, MPI_Comm co
     }
   }
 
-
   // Check for new Riemannian objective function:
   use_new_objective = config.GetBoolParam("use_new_objective", false, true);
   phase_invariant = config.GetBoolParam("phase_invariant", false, true);
@@ -64,14 +63,24 @@ OptimProblem::OptimProblem(Config config, TimeStepper* timestepper_, MPI_Comm co
     PetscInt localsize_cols = globalsize_cols / mpisize_petsc;
     MatCreateDense(PETSC_COMM_WORLD, localsize_rows, localsize_cols, globalsize_rows, globalsize_cols, NULL, &U_final_re);
     MatCreateDense(PETSC_COMM_WORLD, localsize_rows, localsize_cols, globalsize_rows, globalsize_cols, NULL, &U_final_im);
+    MatCreateDense(PETSC_COMM_WORLD, localsize_rows, localsize_cols, globalsize_rows, globalsize_cols, NULL, &U_final_re_bar);
+    MatCreateDense(PETSC_COMM_WORLD, localsize_rows, localsize_cols, globalsize_rows, globalsize_cols, NULL, &U_final_im_bar);
     MatSetUp(U_final_re);
     MatSetUp(U_final_im);
+    MatSetUp(U_final_re_bar);
+    MatSetUp(U_final_im_bar);
     MatZeroEntries(U_final_re);
     MatZeroEntries(U_final_im);
+    MatZeroEntries(U_final_re_bar);
+    MatZeroEntries(U_final_im_bar);
     MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_re_bar, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_im_bar, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_re_bar, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_im_bar, MAT_FINAL_ASSEMBLY);
   }
 
 
@@ -255,6 +264,8 @@ OptimProblem::~OptimProblem() {
   if (use_new_objective) {
     MatDestroy(&U_final_re);
     MatDestroy(&U_final_im);
+    MatDestroy(&U_final_re_bar);
+    MatDestroy(&U_final_im_bar);
   }
 
   TaoDestroy(&tao);
@@ -385,7 +396,8 @@ double OptimProblem::evalF(const Vec x) {
 
     double obj_riemannian = optim_target->RiemannianDistance(U_final_re, U_final_im, phase_invariant);
 
-    if (mpirank_world == 0) printf("\nRiemannian distance objective: %1.14e\n\n", obj_riemannian);
+    // if (mpirank_world == 0) printf("\nRiemannian distance objective: %1.14e\n\n", obj_riemannian);
+    obj_cost = obj_riemannian;
   }
 
   /* Evaluate Tikhonov regularization term: gamma/2 * ||x-x0||^2*/
@@ -479,6 +491,19 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
     /* Run forward with initial condition rho_t0 */
     Vec finalstate = timestepper->solveODE(initid, rho_t0);
 
+    /* Store the final state for Riemannian objective function */
+    if (use_new_objective) {
+      const PetscScalar *finalstate_array;
+      VecGetArrayRead(finalstate, &finalstate_array);
+      for (size_t row = 0; row < timestepper->mastereq->getDim(); row++) {
+        int id_re = row;
+        int id_im = row + timestepper->mastereq->getDim();
+        MatSetValue(U_final_re, row, iinit_global, finalstate_array[id_re], INSERT_VALUES);
+        MatSetValue(U_final_im, row, iinit_global, finalstate_array[id_im], INSERT_VALUES);
+      }
+      VecRestoreArrayRead(finalstate, &finalstate_array);
+    }
+
     /* Store the final state for the Schroedinger solver */
     if (timestepper->mastereq->lindbladtype == LindbladType::NONE) VecCopy(finalstate, store_finalstates[iinit]);
 
@@ -523,6 +548,12 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
       VecAXPY(G, 1.0, timestepper->redgrad);
     }
   }
+  if (use_new_objective) {
+    MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
+  }
 
   /* Sum up from initial conditions processors */
   double mypen = obj_penal;
@@ -551,6 +582,28 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
      If Schroedingers solver, need to take the absolute value */
   obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im);
 
+  /* New objective function: Riemannian distance */
+  if (use_new_objective) {
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    /* allreduce the U_final matrix */
+    PetscScalar *data;
+    MatDenseGetArray(U_final_re, &data);
+    int size = timestepper->mastereq->getDim();
+    MPI_Allreduce(MPI_IN_PLACE, data, size * size, MPIU_SCALAR, MPI_SUM, comm_init);
+    MatDenseRestoreArray(U_final_re, &data);
+
+    MatDenseGetArray(U_final_im, &data);
+    MPI_Allreduce(MPI_IN_PLACE, data, size * size, MPIU_SCALAR, MPI_SUM, comm_init);
+    MatDenseRestoreArray(U_final_im, &data);
+
+    double obj_riemannian = optim_target->RiemannianDistance(U_final_re, U_final_im, phase_invariant);
+
+    // if (mpirank_world == 0) printf("\nRiemannian distance objective: %1.14e\n\n", obj_riemannian);
+    obj_cost = obj_riemannian;
+  }
+
   /* Evaluate Tikhonov regularization term += gamma/2 * ||x||^2*/
   double xnorm;
   if (!gamma_tik_interpolate){  // ||x||^2
@@ -571,6 +624,12 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
 
   /* Sum, store and return objective value */
   objective = obj_cost + obj_regul + obj_penal + obj_penal_dpdm + obj_penal_energy + obj_penal_variation;
+
+  /* Derivative of new objective function */
+  if (use_new_objective) {
+    optim_target->RiemannianDistance_diff(U_final_re, U_final_im, U_final_re_bar, U_final_im_bar, phase_invariant);
+  }
+
 
   /* For Schroedinger solver: Solve adjoint equations for all initial conditions here. */
   if (timestepper->mastereq->lindbladtype == LindbladType::NONE) {
