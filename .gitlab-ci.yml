@@ -49,7 +49,7 @@ include:
       github_token: $GITHUB_TOKEN
 
   # Draft PR filter
-  - component: $CI_SERVER_FQDN/radiuss/radiuss-shared-ci/utility-draft-pr-filter@v2025.12.0
+  - component: $CI_SERVER_FQDN/radiuss/radiuss-shared-ci/utility-branch-skip@v2025.12.0
     inputs:
       github_token: $GITHUB_TOKEN
       github_project_name: $GITHUB_PROJECT_NAME
