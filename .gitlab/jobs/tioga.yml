@@ -13,9 +13,3 @@
 ########################
 # Overridden shared jobs
 ########################
-
-# Force use of petsc >= 3.23 as 3.22 doesn't seem to work with rocm 6.4.1
-rocmcc_6_4_1_hip:
-  variables:
-    SPEC: "${PROJECT_TIOGA_VARIANTS} +rocm amdgpu_target=gfx90a %rocmcc@=6.4.1 ^hip@6.4.1 ${PROJECT_TIOGA_DEPS} ^petsc@3.23:"
-  extends: .job_on_tioga
