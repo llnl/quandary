@@ -20,6 +20,9 @@ blt_add_executable(
     DEPENDS_ON quandary_lib
 )
 
+# Toml settings
+target_compile_definitions(quandary_lib PUBLIC TOML_ENABLE_UNRELEASED_FEATURES=1)
+
 # PETSc
 find_package(PkgConfig REQUIRED)
 pkg_search_module(PETSC REQUIRED IMPORTED_TARGET PETSc)
