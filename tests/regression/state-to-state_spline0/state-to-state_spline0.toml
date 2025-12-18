@@ -5,8 +5,8 @@ dt = 0.15
 transfreq = [4.10595]
 rotfreq = [4.10595]
 selfkerr = [0.2198]
-crosskerr = [0.0]
-Jkl = [0.0]
+crosskerr = {}
+Jkl = {}
 collapse_type = "none"
 initial_condition = {type = "pure", levels = [1]}
 

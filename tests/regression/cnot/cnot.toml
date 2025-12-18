@@ -9,8 +9,8 @@ selfkerr = [0.2198, 0.2252]
 collapse_type = "none"
 decay_time = [0.0, 0.0]
 dephase_time = [0.0, 0.0]
-crosskerr = [0.1]
-Jkl = [0.0]
+crosskerr = { "0-1" = 0.100000 }
+Jkl = {  }
 control_enforceBC = false
 optim_target = {target_type = "gate", gate_type = "cnot"}
 gate_rot_freq = [4.10595, 4.81526]

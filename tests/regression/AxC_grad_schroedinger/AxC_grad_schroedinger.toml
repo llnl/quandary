@@ -3,8 +3,8 @@ ntime = 1000
 dt = 0.0001
 transfreq = [4416.66, 6840.815]
 selfkerr = [230.56, 1.0]
-crosskerr = [1.176]
-Jkl = [10.0]
+crosskerr = { "0-1" = 1.176000 }
+Jkl = { "0-1" = 10.000000 }
 rotfreq = [4416.66, 6840.815]
 collapse_type = "none"
 decay_time = [80.0, 0.3892042]
