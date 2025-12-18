@@ -48,7 +48,7 @@ include:
       github_project_org: $GITHUB_PROJECT_ORG
       github_token: $GITHUB_TOKEN
 
-  # Draft PR filter
+  # Skips CI for branches that are not a PR
   - component: $CI_SERVER_FQDN/radiuss/radiuss-shared-ci/utility-branch-skip@v2025.12.0
     inputs:
       github_token: $GITHUB_TOKEN
