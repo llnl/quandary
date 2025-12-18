@@ -13,12 +13,12 @@ dt = 0.1
 transfreq = [4.10595, 4.81526]
 # Self-kerr frequencies for each oscillator ("\xi_k", multiplying a_k^d a_k^d a_k a_k, GHz)
 selfkerr = [0.2198, 0.2252]
-# Cross-kerr coupling frequencies for each oscillator coupling k<->l ("\xi_kl", multiplying a_k^d a_k a_l^d a_l, GHz).
-# Format: xi_01, xi_02, xi03, ... ,xi_12, xi_13, ...
-crosskerr = [0.1]
-# Dipole-dipole coupling frequencies for each oscillator coupling k<->l ("J_kl", multiplying a_k^d a_l + a_k a_l^d, GHz).
-# Format Jkl = J_01, J_02, ..., J12, J13, ...
-Jkl = [0.0]
+# Cross-kerr coupling strength for oscillators k<->l ("\xi_kl", multiplying a_k^d a_k a_l^d a_l, GHz).
+# Format: table with keys "k-l" (e.g., "0-1") specifying coupling between oscillators k and l. Unspecified couplings default to zero. E.g. { "0-1" = <val>, "2-4" = <val>}
+crosskerr = { "0-1" = 0.1 }
+# Dipole-dipole coupling strength for oscillators k<->l ("J_kl", multiplying a_k^d a_l + a_k a_l^d, GHz).
+# Format: table with keys "k-l" (e.g., "0-1") specifying coupling between oscillators k and l. Unspecified couplings default to zero. E.g. { "0-1" = <val>, "2-4" = <val>}
+Jkl = { "0-1" = 0.0 }
 # Rotational wave approximation frequencies for each subsystem ("\omega_rot", GHz).
 # Note: The target gate rotation can be specified separately with option "gate_rot_freq", see below.
 rotfreq = [4.10595, 4.81526]

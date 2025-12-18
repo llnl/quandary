@@ -17,13 +17,13 @@ namespace {
 const std::string OSC_ID_KEY = "oscID";
 }
 
+
 Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger) {
   try {
     // General options
     nlevels = validators::vectorField<size_t>(toml, "nlevels").minLength(1).positive().value();
 
     size_t num_osc = nlevels.size();
-    size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
 
     nessential = validators::vectorField<size_t>(toml, "nessential").minLength(1).positive().valueOr(nlevels);
     copyLast(nessential, num_osc);
@@ -40,15 +40,8 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
                    .valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
     copyLast(selfkerr, num_osc);
 
-    crosskerr = validators::vectorField<double>(toml, "crosskerr")
-                    .minLength(1)
-                    .valueOr(std::vector<double>(num_pairs_osc, ConfigDefaults::CROSSKERR));
-    copyLast(crosskerr, num_pairs_osc);
-
-    Jkl = validators::vectorField<double>(toml, "Jkl")
-              .minLength(1)
-              .valueOr(std::vector<double>(num_pairs_osc, ConfigDefaults::JKL));
-    copyLast(Jkl, num_pairs_osc);
+    crosskerr = parseCouplingParameters(toml, "crosskerr", num_osc, ConfigDefaults::CROSSKERR);
+    Jkl = parseCouplingParameters(toml, "Jkl", num_osc, ConfigDefaults::JKL);
 
     rotfreq = validators::vectorField<double>(toml, "rotfreq").minLength(1).value();
     copyLast(rotfreq, num_osc);
@@ -444,6 +437,90 @@ Config Config::fromCfgString(const std::string& cfg_content, const MPILogger& lo
   return Config(logger, settings);
 }
 
+std::vector<double> Config::parseCouplingParameters(const toml::table& toml, const std::string& key, size_t num_osc, double default_value) const {
+  size_t num_pairs = (num_osc - 1) * num_osc / 2;
+  std::vector<double> result(num_pairs, default_value);
+
+  // If the key doesn't exist, return default vector, otherwise grab the table
+  if (!toml.contains(key)) {
+    return result;
+  }
+  auto* table = toml[key].as_table();
+
+  // If it's not a table, fall back to the old vector format for backwards compatibility
+  if (!table) {
+    auto* arr = toml[key].as_array();
+    if (arr) {
+      for (size_t i = 0; i < arr->size() && i < result.size(); i++) {
+        auto val = arr->at(i).value<double>();
+        if (val) {
+          result[i] = *val;
+        }
+      }
+    }
+    return result;
+  }
+
+  // Parse table format: keys are "i-j" pairs
+  for (auto& [pair_key, value_node] : *table) { // This iterates over key-value pairs in the table
+
+    std::string key_str(pair_key.str()); 
+    size_t dash_pos = key_str.find('-'); 
+    if (dash_pos == std::string::npos) {
+      throw validators::ValidationError(key, "coupling key must be in format 'i-j' (e.g., '0-1')");
+    }
+    size_t i = std::stoul(key_str.substr(0, dash_pos));
+    size_t j = std::stoul(key_str.substr(dash_pos + 1));
+
+    // Ensure i < j and i,j < num_oscillators
+    if (i >= num_osc || j >= num_osc) {
+      throw validators::ValidationError(key, "oscillator index out of range for key '" + key_str + "'");
+    }
+    if (i > j) {
+      std::swap(i, j);
+    }
+
+    // Convert (i,j) pair to linear index: (0,1), (0,2), ..., (0,n-1), (1,2), ..., (1,n-1), ..., (n-2,n-1). Formula: pair_index = i * (num_osc - 1) - i * (i + 1) / 2 + (j - i - 1)
+    size_t pair_index = i * (num_osc - 1) - i * (i + 1) / 2 + (j - i - 1);
+    auto coupling_val = value_node.value<double>();
+    if (!coupling_val) {
+      throw validators::ValidationError(key, "coupling value for key '" + key_str + "' must be a number");
+    }
+    result[pair_index] = *coupling_val;
+  }
+
+  return result;
+}
+
+std::string Config::printCouplingParameters(const std::vector<double>& couplings, size_t num_osc) const {
+  if (couplings.empty()) return "{}";
+
+  // Collect non-zero couplings with their pair indices
+  std::vector<std::pair<std::pair<size_t, size_t>, double>> nonzero_couplings;
+  size_t pair_idx = 0;
+  for (size_t i = 0; i < num_osc - 1; i++) {
+    for (size_t j = i + 1; j < num_osc; j++) {
+      if (pair_idx < couplings.size() && couplings[pair_idx] != 0.0) {
+        nonzero_couplings.push_back({{i, j}, couplings[pair_idx]});
+      }
+      pair_idx++;
+    }
+  }
+
+  // Build TOML table format
+  std::string result = "{ ";
+  for (size_t i = 0; i < nonzero_couplings.size(); ++i) {
+    auto [pair, value] = nonzero_couplings[i];
+    auto [first, second] = pair;
+    result += "\"" + std::to_string(first) + "-" + std::to_string(second) + "\" = " + std::to_string(value);
+    if (i < nonzero_couplings.size() - 1) {
+      result += ", ";
+    }
+  }
+  result += " }";
+  return result;
+}
+
 namespace {
 
 template <typename T>
@@ -553,8 +630,8 @@ void Config::printConfig(std::stringstream& log) const {
   log << "dt = " << dt << "\n";
   log << "transfreq = " << printVector(transfreq) << "\n";
   log << "selfkerr = " << printVector(selfkerr) << "\n";
-  log << "crosskerr = " << printVector(crosskerr) << "\n";
-  log << "Jkl = " << printVector(Jkl) << "\n";
+  log << "crosskerr = " << printCouplingParameters(crosskerr, nlevels.size()) << "\n";
+  log << "Jkl = " << printCouplingParameters(Jkl, nlevels.size()) << "\n";
   log << "rotfreq = " << printVector(rotfreq) << "\n";
   log << "collapse_type = \"" << enumToString(collapse_type, LINDBLAD_TYPE_MAP) << "\"\n";
   log << "decay_time = " << printVector(decay_time) << "\n";
