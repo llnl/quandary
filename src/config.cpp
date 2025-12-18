@@ -480,8 +480,10 @@ std::vector<double> Config::parseCouplingParameters(const toml::table& toml, con
       std::swap(i, j);
     }
 
-    // Convert (i,j) pair to linear index: (0,1), (0,2), ..., (0,n-1), (1,2), ..., (1,n-1), ..., (n-2,n-1). Formula: pair_index = i * (num_osc - 1) - i * (i + 1) / 2 + (j - i - 1)
-    size_t pair_index = i * (num_osc - 1) - i * (i + 1) / 2 + (j - i - 1);
+    // Convert (i,j) pair to linear index: (0,1), (0,2), ..., (0,n-1), (1,2), ..., (1,n-1), ..., (n-2,n-1)
+    // Offset for first element i: i*num_osc - i - i*(i-1)/2
+    // Index within pairs starting with i: j - i - 1
+    size_t pair_index = i * num_osc - i - i * (i - 1) / 2 + (j - i - 1);
     auto coupling_val = value_node.value<double>();
     if (!coupling_val) {
       throw validators::ValidationError(key, "coupling value for key '" + key_str + "' must be a number");
