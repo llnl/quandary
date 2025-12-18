@@ -49,6 +49,38 @@ TEST_F(TomlParserTest, ParseVectorSettings) {
   EXPECT_DOUBLE_EQ(transfreq[2], 5.2);
 }
 
+TEST_F(TomlParserTest, ParseJklAndCrossKerrSettings) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2, 2, 2]
+        transfreq = [4.1, 4.8, 5.2]
+        rotfreq = [0.0, 0.0]
+        initial_condition = {type = "basis"}
+        Jkl = { "0-1" = 0.15, "1-2" = 0.25, "2-3" = 0.35 }
+        crosskerr = { "0-1" = 0.1, "2-3" = 0.05 }
+      )",
+      logger);
+
+  auto Jkl = config.getJkl();
+  size_t num_osc = config.getNumOsc();
+  size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
+  EXPECT_EQ(Jkl.size(), num_pairs_osc);
+  EXPECT_DOUBLE_EQ(Jkl[0], 0.15); // 0-1
+  EXPECT_DOUBLE_EQ(Jkl[1], 0.0);  // 0-2
+  EXPECT_DOUBLE_EQ(Jkl[2], 0.0);  // 0-3
+  EXPECT_DOUBLE_EQ(Jkl[3], 0.25); // 1-2
+  EXPECT_DOUBLE_EQ(Jkl[4], 0.0);  // 1-3
+  EXPECT_DOUBLE_EQ(Jkl[5], 0.35); // 2-3
+  auto crosskerr = config.getCrossKerr();
+  EXPECT_EQ(crosskerr.size(), num_pairs_osc);
+  EXPECT_DOUBLE_EQ(crosskerr[0], 0.1); // 0-1
+  EXPECT_DOUBLE_EQ(crosskerr[1], 0.0); // 0-2
+  EXPECT_DOUBLE_EQ(crosskerr[2], 0.0); // 0-3
+  EXPECT_DOUBLE_EQ(crosskerr[3], 0.0); // 1-2
+  EXPECT_DOUBLE_EQ(crosskerr[4], 0.0); // 1-3
+  EXPECT_DOUBLE_EQ(crosskerr[5], 0.05); // 2-3
+}
+
 TEST_F(TomlParserTest, ParseOutputSettings) {
   Config config = Config::fromTomlString(
       R"(
@@ -977,8 +1009,8 @@ ntime = 2500
 dt = 0.02
 transfreq = [5.500000]
 selfkerr = [-0.200000]
-crosskerr = [0.050000]
-Jkl = [0.010000]
+crosskerr = {}
+Jkl = {}
 rotfreq = [2.100000]
 collapse_type = "decay"
 decay_time = [25.000000]
