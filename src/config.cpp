@@ -3,9 +3,12 @@
 #include <cassert>
 #include <cstddef>
 #include <iostream>
+#include <iomanip>
+#include <limits>
 #include <optional>
 #include <random>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "config_defaults.hpp"
@@ -550,12 +553,17 @@ template <typename T>
 std::string printVector(const std::vector<T>& vec) {
   if (vec.empty()) return "[]";
 
-  std::string result = "[" + std::to_string(vec[0]);
-  for (size_t i = 1; i < vec.size(); ++i) {
-    result += ", " + std::to_string(vec[i]);
+  std::ostringstream oss;
+  if constexpr (std::is_floating_point_v<T>) {
+    oss << std::setprecision(std::numeric_limits<T>::max_digits10);
   }
-  result += "]";
-  return result;
+
+  oss << "[" << vec[0];
+  for (size_t i = 1; i < vec.size(); ++i) {
+    oss << ", " << vec[i];
+  }
+  oss << "]";
+  return oss.str();
 }
 
 std::string toString(const ControlSegmentInitialization& seg_init) {
