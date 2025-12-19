@@ -68,14 +68,12 @@ optim_objective = "Jtrace"
 optim_weights = [1.0]
 # optim_weights = [0.5, 0.5]
 
-# Optimization stopping tolerance based on gradient norm (absolute: ||G|| < atol)
-optim_atol = 1e-7
-# Optimization stopping tolerance based on gradient norm (relative: ||G||/||G0|| < rtol)
-optim_rtol = 1e-8
-# Optimization stopping criterion based on the final time cost (absolute: J(T) < ftol)
-optim_ftol = 1e-5
-# Optimization stopping criterion based on the infidelity (absolute: 1-Favg < inf_tol)
-optim_inftol = 1e-5
+# Optimization tolerances (stopping criteria):
+optim_tolerance = { grad_abs = 1e-7,     # absolute gradient norm tolerance (||G|| < grad_abs)
+                    grad_rel = 1e-8,     # relative gradient norm tolerance (||G||/||G0|| < grad_rel)
+                    final_cost = 1e-5,   # final-time cost tolerance (J(T) < final_cost)
+                    infidelity = 1e-5    # infidelity tolerance (1 - F_avg < infidelity)
+                }
 # Maximum number of optimization iterations
 optim_maxiter = 200
 # Coefficient (gamma_1) of Tikhonov regularization for the design variables (gamma_1/2 || design ||^2)

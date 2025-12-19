@@ -12,10 +12,7 @@ control_enforceBC = false
 optim_target = {target_type = "pure", levels = [0, 0, 0, 0]}
 optim_objective = "Jtrace"
 optim_weights = 1.0
-optim_atol = 1e-07
-optim_rtol = 1e-08
-optim_ftol = 1e-05
-optim_inftol = 1e-05
+optim_tolerance = { grad_abs = 1e-07, grad_rel = 1e-08, final_cost = 1e-05, infidelity = 1e-05 }
 optim_maxiter = 200
 optim_regul = 1e-05
 optim_penalty = 0.0

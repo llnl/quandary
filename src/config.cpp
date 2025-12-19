@@ -166,10 +166,22 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     std::optional<std::vector<double>> optim_weights_opt = validators::getOptionalVector<double>(toml["optim_weights"]);
     optim_weights = parseOptimWeights(optim_weights_opt);
 
-    optim_atol = validators::field<double>(toml, "optim_atol").positive().valueOr(ConfigDefaults::OPTIM_ATOL);
-    optim_rtol = validators::field<double>(toml, "optim_rtol").positive().valueOr(ConfigDefaults::OPTIM_RTOL);
-    optim_ftol = validators::field<double>(toml, "optim_ftol").positive().valueOr(ConfigDefaults::OPTIM_FTOL);
-    optim_inftol = validators::field<double>(toml, "optim_inftol").positive().valueOr(ConfigDefaults::OPTIM_INFTOL);
+    // Optimization tolerances: use nested table `optim_tolerance` only; default all if missing
+    if (toml.contains("optim_tolerance")) {
+      auto* tol_table = toml["optim_tolerance"].as_table();
+      if (!tol_table) {
+        logger.exitWithError("optim_tolerance must be a table");
+      }
+      optim_atol = validators::field<double>(*tol_table, "grad_abs").positive().valueOr(ConfigDefaults::OPTIM_ATOL);
+      optim_rtol = validators::field<double>(*tol_table, "grad_rel").positive().valueOr(ConfigDefaults::OPTIM_RTOL);
+      optim_ftol = validators::field<double>(*tol_table, "final_cost").positive().valueOr(ConfigDefaults::OPTIM_FTOL);
+      optim_inftol = validators::field<double>(*tol_table, "infidelity").positive().valueOr(ConfigDefaults::OPTIM_INFTOL);
+    } else {
+      optim_atol = ConfigDefaults::OPTIM_ATOL;
+      optim_rtol = ConfigDefaults::OPTIM_RTOL;
+      optim_ftol = ConfigDefaults::OPTIM_FTOL;
+      optim_inftol = ConfigDefaults::OPTIM_INFTOL;
+    }
     optim_maxiter = validators::field<size_t>(toml, "optim_maxiter").positive().valueOr(ConfigDefaults::OPTIM_MAXITER);
     optim_regul =
         validators::field<double>(toml, "optim_regul").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_REGUL);
@@ -660,10 +672,10 @@ void Config::printConfig(std::stringstream& log) const {
   log << "gate_rot_freq = " << printVector(gate_rot_freq) << "\n";
   log << "optim_objective = \"" << enumToString(optim_objective, OBJECTIVE_TYPE_MAP) << "\"\n";
   log << "optim_weights = " << printVector(optim_weights) << "\n";
-  log << "optim_atol = " << optim_atol << "\n";
-  log << "optim_rtol = " << optim_rtol << "\n";
-  log << "optim_ftol = " << optim_ftol << "\n";
-  log << "optim_inftol = " << optim_inftol << "\n";
+    log << "optim_tolerance = { grad_abs = " << optim_atol
+      << ", grad_rel = " << optim_rtol
+      << ", final_cost = " << optim_ftol
+      << ", infidelity = " << optim_inftol << " }\n";
   log << "optim_maxiter = " << optim_maxiter << "\n";
   log << "optim_regul = " << optim_regul << "\n";
   log << "optim_penalty = " << optim_penalty << "\n";
