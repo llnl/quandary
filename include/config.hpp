@@ -201,7 +201,6 @@ class Config {
                                        const std::optional<std::vector<size_t>>& levels,
                                        const std::optional<std::string>& file) const;
 
-  std::vector<double> parseOptimWeights(const std::optional<std::vector<double>>& optim_weights_) const;
 
   /**
    * @brief Parses coupling parameters from TOML table format

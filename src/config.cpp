@@ -164,7 +164,9 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
         parseEnum(toml["optim_objective"].value<std::string>(), OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
 
     std::optional<std::vector<double>> optim_weights_opt = validators::getOptionalVector<double>(toml["optim_weights"]);
-    optim_weights = parseOptimWeights(optim_weights_opt);
+    optim_weights = optim_weights_opt.value_or(std::vector<double>{ConfigDefaults::OPTIM_WEIGHT});
+    copyLast(optim_weights, n_initial_conditions);
+    optim_weights.resize(n_initial_conditions);
 
     // Optimization tolerances: use nested table `optim_tolerance` only; default all if missing
     if (toml.contains("optim_tolerance")) {
@@ -379,7 +381,9 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
 
   optim_objective = settings.optim_objective.value_or(ConfigDefaults::OPTIM_OBJECTIVE);
 
-  optim_weights = parseOptimWeights(settings.optim_weights);
+  optim_weights = settings.optim_weights.value_or(std::vector<double>{ConfigDefaults::OPTIM_WEIGHT});
+  copyLast(optim_weights, n_initial_conditions);
+  optim_weights.resize(n_initial_conditions);
 
   optim_atol = settings.optim_atol.value_or(ConfigDefaults::OPTIM_ATOL);
   optim_rtol = settings.optim_rtol.value_or(ConfigDefaults::OPTIM_RTOL);
@@ -812,6 +816,13 @@ void Config::finalize() {
   } else if (collapse_type == LindbladType::DEPHASE) {
     std::fill(decay_time.begin(), decay_time.end(), 0);
   }
+
+  // Scale optimization weights such that they sum up to one
+  double scaleweights = 0.0;
+  assert(n_initial_conditions == optim_weights.size());
+  for (size_t i = 0; i < optim_weights.size(); i++) scaleweights += optim_weights[i];
+  for (size_t i = 0; i < optim_weights.size(); i++) optim_weights[i] = optim_weights[i] / scaleweights;
+ 
 }
 
 void Config::validate() const {
@@ -1245,21 +1256,6 @@ OptimTargetSettings Config::parseOptimTarget(TargetType type, const std::optiona
   return target_settings;
 }
 
-std::vector<double> Config::parseOptimWeights(const std::optional<std::vector<double>>& optim_weights_) const {
-  // Set optimization weights, default to uniform weights summing to one
-  std::vector<double> optim_weights = optim_weights_.value_or(std::vector<double>{ConfigDefaults::OPTIM_WEIGHT});
-  copyLast(optim_weights, n_initial_conditions);
-
-  if (optim_weights.size() != n_initial_conditions) {
-    logger.log("Warning: optim_weights size must be less than or equal to number of initial conditions");
-    optim_weights.resize(n_initial_conditions);
-  }
-  // Scale the weights such that they sum up to one: beta_i <- beta_i / (\sum_i beta_i)
-  double scaleweights = 0.0;
-  for (size_t i = 0; i < n_initial_conditions; i++) scaleweights += optim_weights[i];
-  for (size_t i = 0; i < n_initial_conditions; i++) optim_weights[i] = optim_weights[i] / scaleweights;
-  return optim_weights;
-}
 
 // CFG parsing helpers
 // TODO cfg: delete these when .cfg format is removed.
