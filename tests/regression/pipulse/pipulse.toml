@@ -7,9 +7,7 @@ selfkerr = [230.56]
 crosskerr = {}
 Jkl = {}
 rotfreq = [4416.66]
-collapse_type = "both"
-decay_time = [20.0]
-dephase_time = [26.0]
+decoherence = {type = "both",  decay_time = [20.0], dephase_time = [26.0]}
 initial_condition = {type = "basis"}
 
 control_enforceBC = true

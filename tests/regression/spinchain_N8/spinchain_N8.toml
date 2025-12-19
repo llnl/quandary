@@ -16,7 +16,6 @@ Jkl = { "0-1" = 0.3183098861837907,
         "6-7" = 0.3183098861837907
         }
 
-collapse_type = "none"
 initial_condition = {type = "pure", levels = [1, 1, 1, 1, 0, 0, 0, 0]}
 
 control_enforceBC = false

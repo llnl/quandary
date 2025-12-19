@@ -46,16 +46,21 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     rotfreq = validators::vectorField<double>(toml, "rotfreq").minLength(1).value();
     copyLast(rotfreq, num_osc);
 
-    collapse_type =
-        parseEnum(toml["collapse_type"].value<std::string>(), LINDBLAD_TYPE_MAP, ConfigDefaults::COLLAPSE_TYPE_ENUM);
-
-    decay_time = validators::vectorField<double>(toml, "decay_time")
-                     .valueOr(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
-    copyLast(decay_time, num_osc);
-
-    dephase_time = validators::vectorField<double>(toml, "dephase_time")
-                       .valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
-    copyLast(dephase_time, num_osc);
+    collapse_type = ConfigDefaults::COLLAPSE_TYPE_ENUM;
+    decay_time = std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME);
+    dephase_time = std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME);
+    if (toml.contains("decoherence")) {
+      auto* decoherence_table = toml["decoherence"].as_table();
+      if (decoherence_table) {
+        auto type_str = validators::field<std::string>(*decoherence_table, "type")
+                            .valueOr("none");
+        collapse_type = parseEnum(type_str, LINDBLAD_TYPE_MAP, ConfigDefaults::COLLAPSE_TYPE_ENUM);
+        decay_time = validators::vectorField<double>(*decoherence_table, "decay_time")
+                         .valueOr(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
+        dephase_time = validators::vectorField<double>(*decoherence_table, "dephase_time")
+                           .valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
+      }
+    }
 
     auto init_cond_table = validators::getRequiredTable(toml, "initial_condition");
     auto type_opt = parseEnum(validators::field<std::string>(init_cond_table, "type").value(), INITCOND_TYPE_MAP);
@@ -635,9 +640,11 @@ void Config::printConfig(std::stringstream& log) const {
   log << "crosskerr = " << printCouplingParameters(crosskerr, nlevels.size()) << "\n";
   log << "Jkl = " << printCouplingParameters(Jkl, nlevels.size()) << "\n";
   log << "rotfreq = " << printVector(rotfreq) << "\n";
-  log << "collapse_type = \"" << enumToString(collapse_type, LINDBLAD_TYPE_MAP) << "\"\n";
-  log << "decay_time = " << printVector(decay_time) << "\n";
-  log << "dephase_time = " << printVector(dephase_time) << "\n";
+  log << "decoherence = {\n";
+  log << "  type = \"" << enumToString(collapse_type, LINDBLAD_TYPE_MAP) << "\",\n";
+  log << "  decay_time = " << printVector(decay_time) << ",\n";
+  log << "  dephase_time = " << printVector(dephase_time) << "\n";
+  log << "}\n";
   log << "initial_condition = " << toString(initial_condition) << "\n";
 
   if (hamiltonian_file_Hsys.has_value()) {

@@ -6,9 +6,6 @@ selfkerr = [230.56, 1.0]
 crosskerr = { "0-1" = 1.176000 }
 Jkl = { "0-1" = 10.000000 }
 rotfreq = [4416.66, 6840.815]
-collapse_type = "none"
-decay_time = [80.0, 0.3892042]
-dephase_time = [26.0, 5.0]
 initial_condition = {type = "pure", levels = [2, 0]}
 
 control_enforceBC = true

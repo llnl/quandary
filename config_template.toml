@@ -22,18 +22,12 @@ Jkl = { "0-1" = 0.0 }
 # Rotational wave approximation frequencies for each subsystem ("\omega_rot", GHz).
 # Note: The target gate rotation can be specified separately with option "gate_rot_freq", see below.
 rotfreq = [4.10595, 4.81526]
-# Switch between Schroedinger and Lindblad solver. "none" solves Schroedinger solver (state vector dynamics),
-# all other options solve Lindblads master equation (density matrix dynamics)
-# Options: "none", "decay", "dephase", "both"
-collapse_type = "none"
-# collapse_type = "decay"
-# collapse_type = "dephase"
-# collapse_type = "both"
-# Time of decay collapse operation (T1) per oscillator (gamma_1 = 1/T_1) (for Lindblad solver)
-decay_time = [0.0, 0.0]
-# Time of dephase collapse operation (T2) per oscillator (gamma_2 = 1/T_2) (for Lindblad solver)
-dephase_time = [0.0, 0.0]
 
+# Decoherence setting: Switch between Schroedinger and Lindblad solver. Default is "none" which solves Schroedinger equation (state vector dynamics), all other types solve Lindblads master equation for the density matrix.
+decoherence = { type = "none",              # "none", "decay", "dephase", or "both"
+            #    decay_time = [0.0, 0.0],   # Decay times T1 for each oscillator (ns)
+            #    dephase_time = [0.0, 0.0]  # Dephasing times T2 for each oscillator (ns)
+              } 
 # Specify the initial conditions that are to be propagated
 initial_condition = {type = "basis"}
 # initial_condition = {type = "basis", oscIDs = [0, 1]}
