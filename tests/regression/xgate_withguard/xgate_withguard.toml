@@ -1,0 +1,68 @@
+# Configuration settings
+# =============================================
+
+nlevels = [3]
+nessential = [2]
+ntime = 700
+dt = 0.1
+transfreq = [4.0999999999999996]
+selfkerr = [0.2198]
+crosskerr = [0]
+Jkl = [0]
+rotfreq = [4]
+collapse_type = "both"
+decay_time = [56000]
+dephase_time = [28000]
+initial_condition = {type = "3states"}
+control_enforceBC = true
+optim_target = {target_type = "gate", gate_type = "xgate"}
+gate_rot_freq = [0]
+optim_objective = "jfrobenius"
+optim_weights = [0.33333333333333331, 0.33333333333333331, 0.33333333333333331]
+optim_atol = 0.0001
+optim_rtol = 1e-05
+optim_ftol = 1e-05
+optim_inftol = 1e-05
+optim_maxiter = 100
+optim_regul = 1e-05
+optim_penalty = 0.01
+optim_penalty_param = 0.5
+optim_penalty_dpdm = 0
+optim_penalty_energy = 0
+optim_penalty_variation = 0
+optim_regul_tik0 = false
+datadir = "./data_out"
+output_frequency = 1
+optim_monitor_frequency = 1
+runtype = "optimization"
+usematfree = true
+linearsolver_type = "gmres"
+linearsolver_maxiter = 20
+timestepper = "imr"
+rand_seed = 1234
+
+[[control_segments]]
+oscID = 0
+type = "spline"
+num = 150
+tstart = 0
+tstop = 70
+
+[[control_initialization]]
+oscID = 0
+type = "constant"
+amplitude = 0.010000
+phase = 0.000000
+
+[[control_bounds]]
+oscID = 0
+values = [0.050000000000000003]
+
+[[carrier_frequency]]
+oscID = 0
+values = [0.10000000000000001]
+
+[[write]]
+oscID = 0
+type = ["population", "expectedenergy", "fullstate"]
+
