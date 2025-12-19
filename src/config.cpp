@@ -793,6 +793,13 @@ void Config::finalize() {
     // DIAGONAL and BASIS initial conditions in the Schroedinger case are the same. Overwrite it to DIAGONAL
     initial_condition.type = InitialConditionType::DIAGONAL;
   }
+
+  // overwrite decay or dephase times with zeros, if the collapse type is only one of them.
+  if (collapse_type == LindbladType::DECAY) {
+    std::fill(dephase_time.begin(), dephase_time.end(), 0);
+  } else if (collapse_type == LindbladType::DEPHASE) {
+    std::fill(decay_time.begin(), decay_time.end(), 0);
+  }
 }
 
 void Config::validate() const {
