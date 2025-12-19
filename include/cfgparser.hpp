@@ -70,10 +70,10 @@ struct ParsedConfigData {
   std::optional<std::vector<double>> gate_rot_freq;
   std::optional<ObjectiveType> optim_objective;
   std::optional<std::vector<double>> optim_weights;
-  std::optional<double> optim_atol;
-  std::optional<double> optim_rtol;
-  std::optional<double> optim_ftol;
-  std::optional<double> optim_inftol;
+  std::optional<double> optim_tol_grad_abs;
+  std::optional<double> optim_tol_grad_rel;
+  std::optional<double> optim_tol_finalcost;
+  std::optional<double> optim_tol_infidelity;
   std::optional<size_t> optim_maxiter;
   std::optional<double> optim_regul;
   std::optional<double> optim_penalty;

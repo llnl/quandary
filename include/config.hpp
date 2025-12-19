@@ -56,10 +56,10 @@ class Config {
   std::vector<double> gate_rot_freq; ///< Frequency of rotation of the target gate, for each oscillator (GHz)
   ObjectiveType optim_objective; ///< Objective function measure
   std::vector<double> optim_weights; ///< Weights for summing up the objective function
-  double optim_atol; ///< Absolute gradient tolerance
-  double optim_rtol; ///< Relative gradient tolerance
-  double optim_ftol; ///< Final time cost tolerance
-  double optim_inftol; ///< Infidelity tolerance
+  double optim_tol_grad_abs; ///< Absolute gradient tolerance
+  double optim_tol_grad_rel; ///< Relative gradient tolerance
+  double optim_tol_finalcost; ///< Final time cost tolerance
+  double optim_tol_infidelity; ///< Infidelity tolerance
   size_t optim_maxiter; ///< Maximum iterations
   double optim_regul; ///< Coefficient of Tikhonov regularization for the design variables
   double optim_penalty; ///< First integral penalty coefficient
@@ -138,10 +138,10 @@ class Config {
   const std::vector<double>& getGateRotFreq() const { return gate_rot_freq; }
   ObjectiveType getOptimObjective() const { return optim_objective; }
   const std::vector<double>& getOptimWeights() const { return optim_weights; }
-  double getOptimAtol() const { return optim_atol; }
-  double getOptimRtol() const { return optim_rtol; }
-  double getOptimFtol() const { return optim_ftol; }
-  double getOptimInftol() const { return optim_inftol; }
+  double getOptimTolGradAbs() const { return optim_tol_grad_abs; }
+  double getOptimTolGradRel() const { return optim_tol_grad_rel; }
+  double getOptimTolFinalCost() const { return optim_tol_finalcost; }
+  double getOptimTolInfidelity() const { return optim_tol_infidelity; }
   size_t getOptimMaxiter() const { return optim_maxiter; }
   double getOptimRegul() const { return optim_regul; }
   double getOptimPenalty() const { return optim_penalty; }

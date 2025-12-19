@@ -82,10 +82,10 @@ class OptimProblem {
   double gamma_penalty_energy; ///< Parameter multiplying energy penalty
   double gamma_penalty_variation; ///< Parameter multiplying finite-difference squared regularization term
   double penalty_param; ///< Parameter inside integral penalty term w(t) (Gaussian variance)
-  double gatol; ///< Stopping criterion based on absolute gradient norm
-  double fatol; ///< Stopping criterion based on objective function value
-  double inftol; ///< Stopping criterion based on infidelity
-  double grtol; ///< Stopping criterion based on relative gradient norm
+  double tol_grad_abs; ///< Stopping criterion based on absolute gradient norm
+  double tol_grad_rel; ///< Stopping criterion based on relative gradient norm
+  double tol_finalcost; ///< Stopping criterion based on objective function value
+  double tol_infidelity; ///< Stopping criterion based on infidelity
   int maxiter; ///< Stopping criterion based on maximum number of iterations
   Tao tao; ///< PETSc's TAO optimization solver
   std::vector<double> initguess_fromfile; ///< Initial guess read from file
@@ -182,21 +182,21 @@ class OptimProblem {
    *
    * @return double Absolute tolerance for objective function convergence
    */
-  double getFaTol()    { return fatol; };
+  double getTolFinalCost()    { return tol_finalcost; };
 
   /**
    * @brief Retrieves the gradient tolerance.
    *
    * @return double Absolute tolerance for gradient norm convergence
    */
-  double getGaTol()    { return gatol; };
+  double getTolGradAbs()    { return tol_grad_abs; };
 
   /**
    * @brief Retrieves the infidelity tolerance.
    *
    * @return double Tolerance for infidelity convergence
    */
-  double getInfTol()   { return inftol; };
+  double getTolInfidelity()   { return tol_infidelity; };
 
   /**
    * @brief Retrieves the MPI rank in the world communicator.

@@ -174,15 +174,15 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       if (!tol_table) {
         logger.exitWithError("optim_tolerance must be a table");
       }
-      optim_atol = validators::field<double>(*tol_table, "grad_abs").positive().valueOr(ConfigDefaults::OPTIM_ATOL);
-      optim_rtol = validators::field<double>(*tol_table, "grad_rel").positive().valueOr(ConfigDefaults::OPTIM_RTOL);
-      optim_ftol = validators::field<double>(*tol_table, "final_cost").positive().valueOr(ConfigDefaults::OPTIM_FTOL);
-      optim_inftol = validators::field<double>(*tol_table, "infidelity").positive().valueOr(ConfigDefaults::OPTIM_INFTOL);
+      optim_tol_grad_abs = validators::field<double>(*tol_table, "grad_abs").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_ABS);
+      optim_tol_grad_rel = validators::field<double>(*tol_table, "grad_rel").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_REL);
+      optim_tol_finalcost = validators::field<double>(*tol_table, "final_cost").positive().valueOr(ConfigDefaults::OPTIM_TOL_FINALCOST);
+      optim_tol_infidelity = validators::field<double>(*tol_table, "infidelity").positive().valueOr(ConfigDefaults::OPTIM_TOL_INFIDELITY);
     } else {
-      optim_atol = ConfigDefaults::OPTIM_ATOL;
-      optim_rtol = ConfigDefaults::OPTIM_RTOL;
-      optim_ftol = ConfigDefaults::OPTIM_FTOL;
-      optim_inftol = ConfigDefaults::OPTIM_INFTOL;
+      optim_tol_grad_abs = ConfigDefaults::OPTIM_TOL_GRAD_ABS;
+      optim_tol_grad_rel = ConfigDefaults::OPTIM_TOL_GRAD_REL;
+      optim_tol_finalcost = ConfigDefaults::OPTIM_TOL_FINALCOST;
+      optim_tol_infidelity = ConfigDefaults::OPTIM_TOL_INFIDELITY;
     }
     optim_maxiter = validators::field<size_t>(toml, "optim_maxiter").positive().valueOr(ConfigDefaults::OPTIM_MAXITER);
     optim_regul =
@@ -385,10 +385,10 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   copyLast(optim_weights, n_initial_conditions);
   optim_weights.resize(n_initial_conditions);
 
-  optim_atol = settings.optim_atol.value_or(ConfigDefaults::OPTIM_ATOL);
-  optim_rtol = settings.optim_rtol.value_or(ConfigDefaults::OPTIM_RTOL);
-  optim_ftol = settings.optim_ftol.value_or(ConfigDefaults::OPTIM_FTOL);
-  optim_inftol = settings.optim_inftol.value_or(ConfigDefaults::OPTIM_INFTOL);
+  optim_tol_grad_abs = settings.optim_tol_grad_abs.value_or(ConfigDefaults::OPTIM_TOL_GRAD_ABS);
+  optim_tol_grad_rel = settings.optim_tol_grad_rel.value_or(ConfigDefaults::OPTIM_TOL_GRAD_REL);
+  optim_tol_finalcost = settings.optim_tol_finalcost.value_or(ConfigDefaults::OPTIM_TOL_FINALCOST);
+  optim_tol_infidelity = settings.optim_tol_infidelity.value_or(ConfigDefaults::OPTIM_TOL_INFIDELITY);
   optim_maxiter = settings.optim_maxiter.value_or(ConfigDefaults::OPTIM_MAXITER);
 
   optim_regul = settings.optim_regul.value_or(ConfigDefaults::OPTIM_REGUL);
@@ -676,10 +676,10 @@ void Config::printConfig(std::stringstream& log) const {
   log << "gate_rot_freq = " << printVector(gate_rot_freq) << "\n";
   log << "optim_objective = \"" << enumToString(optim_objective, OBJECTIVE_TYPE_MAP) << "\"\n";
   log << "optim_weights = " << printVector(optim_weights) << "\n";
-    log << "optim_tolerance = { grad_abs = " << optim_atol
-      << ", grad_rel = " << optim_rtol
-      << ", final_cost = " << optim_ftol
-      << ", infidelity = " << optim_inftol << " }\n";
+    log << "optim_tolerance = { grad_abs = " << optim_tol_grad_abs
+      << ", grad_rel = " << optim_tol_grad_rel
+      << ", final_cost = " << optim_tol_finalcost
+      << ", infidelity = " << optim_tol_infidelity << " }\n";
   log << "optim_maxiter = " << optim_maxiter << "\n";
   log << "optim_regul = " << optim_regul << "\n";
   log << "optim_penalty = " << optim_penalty << "\n";

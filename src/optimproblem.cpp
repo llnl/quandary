@@ -68,10 +68,10 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
   gamma_tik = config.getOptimRegul();
 
   // Get tolerance settings
-  gatol = config.getOptimAtol();
-  fatol = config.getOptimFtol();
-  inftol = config.getOptimInftol();
-  grtol = config.getOptimRtol();
+  tol_grad_abs = config.getOptimTolGradAbs();
+  tol_finalcost = config.getOptimTolFinalCost();
+  tol_infidelity = config.getOptimTolInfidelity();
+  tol_grad_rel = config.getOptimTolGradRel();
   maxiter = config.getOptimMaxiter();
 
   // Get penalty settings
@@ -140,7 +140,7 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
   /* Set optimization type and parameters */
   TaoSetType(tao,TAOBQNLS);         // Optim type: taoblmvm vs BQNLS ??
   TaoSetMaximumIterations(tao, maxiter);
-  TaoSetTolerances(tao, gatol, PETSC_DEFAULT, grtol);
+  TaoSetTolerances(tao, tol_grad_abs, PETSC_DEFAULT, tol_grad_rel);
   TaoMonitorSet(tao, TaoMonitor, (void*)this, NULL);
   TaoSetVariableBounds(tao, xlower, xupper);
   TaoSetFromOptions(tao);
@@ -568,18 +568,18 @@ PetscErrorCode TaoMonitor(Tao tao,void*ptr){
   /* Additional Stopping criteria */
   bool lastIter = false;
   std::string finalReason_str = "";
-  if (1.0 - F_avg <= ctx->getInfTol()) {
+  if (1.0 - F_avg <= ctx->getTolInfidelity()) {
     finalReason_str = "Optimization converged with small infidelity.";
     TaoSetConvergedReason(tao, TAO_CONVERGED_USER);
     lastIter = true;
-  } else if (obj_cost <= ctx->getFaTol()) {
+  } else if (obj_cost <= ctx->getTolFinalCost()) {
     finalReason_str = "Optimization converged with small final time cost.";
     TaoSetConvergedReason(tao, TAO_CONVERGED_USER);
     lastIter = true;
   } else if (iter == ctx->getMaxIter()) {
     finalReason_str = "Optimization stopped at maximum number of iterations.";
     lastIter = true;
-  } else if (gnorm < ctx->getGaTol()) {
+  } else if (gnorm < ctx->getTolGradAbs()) {
     finalReason_str = "OPtimization converged with small gradient norm.";
     lastIter=true;
   }

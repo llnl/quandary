@@ -42,10 +42,10 @@ const ObjectiveType OPTIM_OBJECTIVE = ObjectiveType::JTRACE; ///< Default object
 const double OPTIM_WEIGHT = 1.0; ///< Default optimization weight per initial condition
 
 const double OPTIM_REGUL = 1e-4; ///< Default Tikhonov regularization coefficient
-const double OPTIM_ATOL = 1e-8; ///< Default absolute gradient tolerance
-const double OPTIM_RTOL = 1e-4; ///< Default relative gradient tolerance
-const double OPTIM_FTOL = 1e-8; ///< Default final time cost tolerance
-const double OPTIM_INFTOL = 1e-5; ///< Default infidelity tolerance
+const double OPTIM_TOL_GRAD_ABS = 1e-8; ///< Default absolute gradient tolerance
+const double OPTIM_TOL_GRAD_REL = 1e-4; ///< Default relative gradient tolerance
+const double OPTIM_TOL_FINALCOST = 1e-8; ///< Default final time cost tolerance
+const double OPTIM_TOL_INFIDELITY = 1e-5; ///< Default infidelity tolerance
 const size_t OPTIM_MAXITER = 200; ///< Default maximum optimization iterations
 
 const double OPTIM_PENALTY = 0.0; ///< Default first integral penalty coefficient
