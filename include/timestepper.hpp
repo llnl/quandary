@@ -37,13 +37,23 @@ class TimeStepper{
     Vec xprimal; ///< Auxiliary vector for backward time stepping
     std::vector<Vec> store_states; ///< Storage for primal states during forward evolution
     std::vector<Vec> dpdm_states; ///< Storage for states needed for second-order derivative penalty
-    bool addLeakagePrevent; ///< Flag to include leakage prevention penalty term
     int mpirank_world; ///< MPI rank in global communicator
     int mpisize_petsc; ///< MPI size in Petsc communicator
     int mpirank_petsc; ///< MPI rank in Petsc communicator
     PetscInt localsize_u; ///< Size of local sub vector u or v in state x=[u,v]
     PetscInt ilow; ///< First index of the local sub vector u,v
     PetscInt iupp; ///< Last index (+1) of the local sub vector u,v
+
+    bool eval_leakage; ///< Flag to compute leakage integral term
+    bool eval_energy; ///< Flag to compute energy integral term
+    bool eval_dpdm; ///< Flag to compute second-order derivative integral term
+    bool eval_weightedcost; ///< Flag to compute weighted cost integral term
+
+    double leakage_integral; ///< Sums the integral over leakage 
+    double energy_integral; ///< Sums the energy term
+    double dpdm_integral; ///< Sums second-order derivative variation value
+    double weightedcost_integral; ///< Sums the integral over weighted cost function
+    double weightedcost_width; ///< Width parameter for weighted cost function
 
   public:
     MasterEq* mastereq; ///< Pointer to master equation solver
@@ -53,14 +63,6 @@ class TimeStepper{
     bool writeTrajectoryDataFiles;  ///< Flag to determine whether or not trajectory data will be written to files during forward simulation */
 
     Vec redgrad; ///< Reduced gradient vector for optimization
-
-    double penalty_integral; ///< Sums the integral penalty term 
-    double energy_penalty_integral; ///< Sums the energy penalty term
-    double penalty_dpdm; ///< Sums second-order derivative penalty value
-    double penalty_param; ///< Parameter for penalty term (Gaussian variance)
-    double gamma_penalty; ///< Weight for integral penalty term
-    double gamma_penalty_dpdm; ///< Weight for second-order derivative penalty
-    double gamma_penalty_energy; ///< Weight for energy penalty
 
     OptimTarget* optim_target; ///< Pointer to optimization target specification
     Output* output; ///< Pointer to output handler
@@ -91,6 +93,16 @@ class TimeStepper{
      */
     Vec getState(size_t tindex);
 
+    void setEvalLeakage(bool flag){ eval_leakage = flag; };
+    void setEvalWeightedCost(bool flag, double width){ eval_weightedcost = flag; weightedcost_width = width; };
+    void setEvalDPDM(bool flag){ eval_dpdm = flag; };
+    void setEvalEnergy(bool flag){ eval_energy = flag; };
+
+    double getLeakageIntegral(){ return leakage_integral; };
+    double getWeightedCostIntegral(){ return weightedcost_integral; };
+    double getEnergyIntegral(){ return energy_integral; };
+    double getDPDMIntegral(){ return dpdm_integral; };
+
     /**
      * @brief Solves the ODE forward in time.
      * 
@@ -110,66 +122,83 @@ class TimeStepper{
      *
      * @param rho_t0_bar Terminal condition for adjoint state
      * @param finalstate Final state from forward evolution
-     * @param Jbar_penalty Adjoint of penalty integral term
-     * @param Jbar_penalty_dpdm Adjoint of second-order derivative penalty
-     * @param Jbar_penalty_energy Adjoint of energy penalty term
+     * @param Jbar_leakage Adjoint of leakage integral term
+     * @param Jbar_weightedcost Adjoint of weighted cost integral term
+     * @param Jbar_dpdm Adjoint of second-order derivative variation
+     * @param Jbar_energy Adjoint of energy integral term
      */
-    void solveAdjointODE(Vec rho_t0_bar, Vec finalstate, double Jbar_penalty, double Jbar_penalty_dpdm, double Jbar_penalty_energy);
+    void solveAdjointODE(Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy);
+    /**
+     * @brief Evaluates leakage into guard levels 
+     *
+     * @param x Current state vector
+     * @return double Leakage term value / ntime
+     */
+    double evalLeakage(const Vec x);
 
     /**
-     * @brief Evaluates the penalty integral term.
+     * @brief Computes derivative of leakage term.
+     *
+     * @param x Current state vector
+     * @param xbar Adjoint state vector to update
+     * @param Jbar Adjoint of leakage integral term
+     */
+    void evalLeakage_diff(const Vec x, Vec xbar, double Jbar);
+
+    /**
+     * @brief Evaluates the weighted cost function term.
      *
      * @param time Current time
      * @param x Current state vector
-     * @return double Penalty term value
+     * @return double Weighted cost integral term value
      */
-    double penaltyIntegral(double time, const Vec x);
+    double evalWeightedCost(double time, const Vec x);
 
     /**
-     * @brief Computes derivative of penalty integral term.
+     * @brief Computes derivative of weighted cost function term.
      *
      * @param time Current time
      * @param x Current state vector
      * @param xbar Adjoint state vector to update
-     * @param Jbar Adjoint of penalty term
+     * @param Jbar Adjoint of weighted cost term
      */
-    void penaltyIntegral_diff(double time, const Vec x, Vec xbar, double Jbar);
+    void evalWeightedCost_diff(double time, const Vec x, Vec xbar, double Jbar);
 
     /**
-     * @brief Evaluates second-order derivative penalty for the state.
+     * @brief Evaluates second-order derivative variation for the state.
      *
      * @param x Current state vector
      * @param xm1 State vector at previous time step
      * @param xm2 State vector at two time steps ago
-     * @return double Second-order penalty value
+     * @return double Second-order variation value
      */
-    double penaltyDpDm(Vec x, Vec xm1, Vec xm2);
+    double evalDpDm(Vec x, Vec xm1, Vec xm2);
 
     /**
-     * @brief Computes derivative of second-order penalty term.
+     * @brief Computes derivative of second-order derivative variation term.
      *
      * @param n Time step index
      * @param xbar Adjoint state vector to update
-     * @param Jbar Adjoint of penalty term
+     * @param Jbar Adjoint of dpdm term
      */
-    void penaltyDpDm_diff(int n, Vec xbar, double Jbar);
+    void evalDpDm_diff(int n, Vec xbar, double Jbar);
     
     /**
-     * @brief Evaluates energy penalty integral term.
+     * @brief Evaluates energy integral term.
      *
      * @param time Current time
-     * @return double Energy penalty value
+     * @return double Energy value
      */
-    double energyPenaltyIntegral(double time);
+    double evalEnergy(double time);
 
     /**
-     * @brief Computes derivative of energy penalty integral.
+     * @brief Computes derivative of energy integral.
      *
      * @param time Current time
-     * @param Jbar Adjoint of energy penalty
+     * @param Jbar Adjoint of energy 
      * @param redgrad Reduced gradient vector to update
      */
-    void energyPenaltyIntegral_diff(double time, double Jbar, Vec redgrad);
+    void evalEnergy_diff(double time, double Jbar, Vec redgrad);
 
     /**
      * @brief Evolves state forward by one time-step from tstart to tstop.

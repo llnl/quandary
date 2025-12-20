@@ -69,7 +69,8 @@ class OptimProblem {
   double objective; ///< Current objective function value (sum over final-time cost, regularization terms and penalty terms)
   double obj_cost; ///< Final-time measure J(T) in objective
   double obj_regul; ///< Regularization term in objective
-  double obj_penal; ///< Penalty integral term for pure-state preparation in objective 
+  double obj_penal_leakage; ///< Penalty term for leakage into guard levels
+  double obj_penal_weightedcost; ///< Penalty term for weighted running cost 
   double obj_penal_dpdm; ///< Penalty term second-order state derivatives (penalizes variations of the state evolution)
   double obj_penal_variation; ///< Penalty term for variation of control parameters
   double obj_penal_energy; ///< Energy penalty term in objective
@@ -77,11 +78,11 @@ class OptimProblem {
   double gnorm; ///< Current norm of gradient
   double gamma_tik; ///< Parameter for Tikhonov regularization
   bool gamma_tik_interpolate; ///< Switch to use ||x - x0||^2 for Tikhonov regularization instead of ||x||^2
-  double gamma_penalty; ///< Parameter multiplying integral penalty term on infidelity
+  double gamma_penalty_leakage; ///< Parameter multiplying integral leakage term
+  double gamma_penalty_weightedcost; ///< Parameter multiplying integral weighted cost function 
   double gamma_penalty_dpdm; ///< Parameter multiplying integral penalty term for 2nd derivative of state variation
   double gamma_penalty_energy; ///< Parameter multiplying energy penalty
   double gamma_penalty_variation; ///< Parameter multiplying finite-difference squared regularization term
-  double penalty_param; ///< Parameter inside integral penalty term w(t) (Gaussian variance)
   double gatol; ///< Stopping criterion based on absolute gradient norm
   double fatol; ///< Stopping criterion based on objective function value
   double inftol; ///< Stopping criterion based on infidelity
@@ -144,11 +145,20 @@ class OptimProblem {
   double getRegul()    { return obj_regul; };
 
   /**
-   * @brief Retrieves the integral penalty term for pure-state preparation.
+   * @brief Retrieves the integral term for leakage.
    *
    * @return double Penalty term contribution
    */
-  double getPenalty()  { return obj_penal; };
+  double getPenaltyLeakage()  { return obj_penal_leakage; };
+
+  /**
+   * @brief Retrieves the integral penalty term for weighted running cost.
+   *
+   * @return double Penalty term contribution
+   */
+  double getPenaltyWeightedCost()  { return obj_penal_weightedcost; };
+
+
 
   /**
    * @brief Retrieves the second-order state derivative penalty term.
