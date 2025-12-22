@@ -191,24 +191,38 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     optim_regul =
         validators::field<double>(toml, "optim_regul").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_REGUL);
 
-    optim_penalty_leakage = validators::field<double>(toml, "optim_penalty_leakage")
-        .greaterThanEqual(0.0)
-        .valueOr(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
-    optim_penalty_weightedcost = validators::field<double>(toml, "optim_penalty_weightedcost")
-        .greaterThanEqual(0.0)
-        .valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
-    optim_penalty_weightedcost_width = validators::field<double>(toml, "optim_penalty_weightedcost_width")
-        .greaterThanEqual(0.0)
-        .valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH);
-    optim_penalty_dpdm = validators::field<double>(toml, "optim_penalty_dpdm")
-                             .greaterThanEqual(0.0)
-                             .valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
-    optim_penalty_energy = validators::field<double>(toml, "optim_penalty_energy")
-                               .greaterThanEqual(0.0)
-                               .valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
-    optim_penalty_variation = validators::field<double>(toml, "optim_penalty_variation")
-                                  .greaterThanEqual(0.0)
-                                  .valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
+    // Parse optim_penalty inline table
+    if (toml.contains("optim_penalty")) {
+      auto penalty_table = toml["optim_penalty"].as_table();
+      if (penalty_table) {
+        optim_penalty_leakage = validators::field<double>(*penalty_table, "leakage")
+            .greaterThanEqual(0.0)
+            .valueOr(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
+        optim_penalty_weightedcost = validators::field<double>(*penalty_table, "weightedcost")
+            .greaterThanEqual(0.0)
+            .valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
+        optim_penalty_weightedcost_width = validators::field<double>(*penalty_table, "weightedcost_width")
+            .greaterThanEqual(0.0)
+            .valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH);
+        optim_penalty_dpdm = validators::field<double>(*penalty_table, "dpdm")
+                                 .greaterThanEqual(0.0)
+                                 .valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
+        optim_penalty_energy = validators::field<double>(*penalty_table, "energy")
+                                   .greaterThanEqual(0.0)
+                                   .valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
+        optim_penalty_variation = validators::field<double>(*penalty_table, "variation")
+                                      .greaterThanEqual(0.0)
+                                      .valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
+      }
+    } else {
+      // Set defaults of optim_penalty table is not given 
+      optim_penalty_leakage = ConfigDefaults::OPTIM_PENALTY_LEAKAGE;
+      optim_penalty_weightedcost = ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST;
+      optim_penalty_weightedcost_width = ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH;
+      optim_penalty_dpdm = ConfigDefaults::OPTIM_PENALTY_DPDM;
+      optim_penalty_energy = ConfigDefaults::OPTIM_PENALTY_ENERGY;
+      optim_penalty_variation = ConfigDefaults::OPTIM_PENALTY_VARIATION;
+    }
 
     if (!toml.contains("optim_regul_tik0") && toml.contains("optim_regul_interpolate")) {
       // Handle deprecated optim_regul_interpolate logic
@@ -695,13 +709,13 @@ void Config::printConfig(std::stringstream& log) const {
       << ", infidelity = " << optim_tol_infidelity << " }\n";
   log << "optim_maxiter = " << optim_maxiter << "\n";
   log << "optim_regul = " << optim_regul << "\n";
-  log << "optim_penalty_leakage = " << optim_penalty_leakage << "\n";
-  log << "optim_penalty_weightedcost = " << optim_penalty_weightedcost << "\n";
-  log << "optim_penalty_weightedcost_width = " << optim_penalty_weightedcost_width << "\n";
-  log << "optim_penalty_dpdm = " << optim_penalty_dpdm << "\n";
-  log << "optim_penalty_energy = " << optim_penalty_energy << "\n";
-  log << "optim_penalty_variation = " << optim_penalty_variation << "\n";
   log << "optim_regul_tik0 = " << (optim_regul_tik0 ? "true" : "false") << "\n";
+  log << "optim_penalty = { leakage = " << optim_penalty_leakage
+      << ", energy = " << optim_penalty_energy
+      << ", dpdm = " << optim_penalty_dpdm
+      << ", variation = " << optim_penalty_variation
+      << ", weightedcost = " << optim_penalty_weightedcost
+      << ", weightedcost_width = " << optim_penalty_weightedcost_width << " }\n";
 
   // Output parameters
   log << "datadir = \"" << datadir << "\"\n";
@@ -840,6 +854,14 @@ void Config::finalize() {
   // Set weightedcost width to zero if weightedcost penalty is zero
   if (optim_penalty_weightedcost == 0.0) {
     optim_penalty_weightedcost_width = 0.0;
+  }
+  
+  // Set control variation penalty to zero if not using 2nd order Bspline parameterization 
+  for (size_t i = 0; i < control_segments.size(); i++) {
+    if (control_segments[i].empty() || control_segments[i][0].type != ControlType::BSPLINE0) {
+      optim_penalty_variation = 0.0;
+      break;
+    }
   }
  
 }

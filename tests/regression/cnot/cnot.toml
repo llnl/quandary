@@ -16,13 +16,8 @@ optim_weights = [1.0]
 optim_regul = 1e-05
 optim_tolerance = { grad_abs = 1e-07, grad_rel = 1e-08, final_cost = 1e-05, infidelity = 1e-05 }
 optim_maxiter = 200
-optim_penalty_leakage = 0.0
-optim_penalty_weightedcost = 0.0
-optim_penalty_weightedcost_width = 0.0
-optim_penalty_energy = 0.0
+optim_penalty = { leakage = 0.0, weightedcost = 0.0, weightedcost_width = 0.0, dpdm = 0.0, energy = 0.0, variation = 0.0 }
 optim_regul_tik0 = false
-optim_penalty_dpdm = 0.0
-optim_penalty_variation = 0.0
 
 runtype = "optimization"
 usematfree = true

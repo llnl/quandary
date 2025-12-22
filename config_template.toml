@@ -76,22 +76,19 @@ optim_tolerance = { grad_abs = 1e-7,     # absolute gradient norm tolerance (||G
                 }
 # Maximum number of optimization iterations
 optim_maxiter = 200
-# Coefficient for Tikhonov regularization for the optimization variables 
+# Coefficient for Tikhonov regularization of the optimization variables
 optim_regul = 0.00001
-# Coefficient for penalizing leakage out of the computational subspace 
-optim_penalty_leakage  = 0.0
-# Coefficient for penalizing a weighted integral over running objective function (\int_0^T w(t)J(t) dt where w(t) is gaussian centered at T
-optim_penalty_weightedcost = 0.0
-# Parameter for changing the width of the gaussian in weighted cost integral penalty
-optim_penalty_weightedcost_width = 0.0
-# Coefficient for penalizing the integral of the second derivative of state populations ( \int_0^T d^2/dt^2(Pop(rho)) dt )
-optim_penalty_dpdm = 0.0
-# Coefficient for penalizing the control pulse energy integral (\int_0^T p^2 + q^2 dt )
-optim_penalty_energy = 0.0
-# Coefficient for penalizing variations in control amplitudes. Only used for piece-wise constant control paramterizations (spline0)
-optim_penalty_variation = 0.0
 # Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
 optim_regul_tik0 = false
+
+# Coefficients for Penalty terms added to the optimization cost function
+optim_penalty = { leakage = 0.0,                # Penalize leakage into guard levels
+                  energy = 0.0,                 # Penalize integral over control pulse energy
+                  dpdm = 0.0,                   # Penalize 2nd derivative of state populations
+                  variation = 0.0,              # Penalize control pulse variation (for 0-th order Bsplines)
+                  weightedcost = 0.0,           # Penalize time-weighted cost function integral
+                  weightedcost_width = 0.0      # Width paramter for weighted cost function integral
+                }
 
 # ---------------------------------------------------------------
 # ------------------- Output and runtypes -----------------------

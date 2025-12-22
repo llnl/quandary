@@ -27,12 +27,7 @@ optim_tolerance = { grad_abs = 0.0001, grad_rel = 0.0001, final_cost = 0.0001, i
 optim_maxiter = 200
 optim_regul = 0.0001
 optim_regul_tik0 = false
-optim_penalty_leakage = 0.1
-optim_penalty_weightedcost = 0.0
-optim_penalty_weightedcost_width = 0.0
-optim_penalty_dpdm = 0.01
-optim_penalty_variation = 0.01
-optim_penalty_energy = 0.1
+optim_penalty = { leakage = 0.1, weightedcost = 0.0, weightedcost_width = 0.0, dpdm = 0.01, energy = 0.1, variation = 0.01 }
 
 datadir = "./data_out"
 output_frequency = 1

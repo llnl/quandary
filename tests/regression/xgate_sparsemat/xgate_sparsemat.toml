@@ -17,10 +17,7 @@ optim_weights = 1.0
 optim_tolerance = { grad_abs = 0.0001, grad_rel = 1e-05, final_cost = 1e-05, infidelity = 1e-05 }
 optim_maxiter = 100
 optim_regul = 1e-05
-optim_penalty_leakage = 0.0
-optim_penalty_dpdm = 0.0
-optim_penalty_energy = 0.0
-optim_penalty_variation = 0.0
+optim_penalty = { leakage = 0.0, weightedcost = 0.0, weightedcost_width = 0.0, dpdm = 0.0, energy = 0.0, variation = 0.0 }
 
 datadir = "./data_out"
 output_frequency = 1
