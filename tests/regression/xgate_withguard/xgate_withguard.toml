@@ -11,24 +11,23 @@ crosskerr = {  }
 Jkl = {  }
 rotfreq = [4]
 decoherence = {
-  type = "both",
-  decay_time = [56000],
-  dephase_time = [28000]
+  type = "none",
 }
-initial_condition = {type = "3states"}
+initial_condition = {type = "basis"}
 control_enforceBC = true
 optim_target = {target_type = "gate", gate_type = "xgate"}
 gate_rot_freq = [0]
 optim_objective = "jfrobenius"
-optim_weights = [0.33333333333333331, 0.33333333333333331, 0.33333333333333331]
+optim_weights = [0.5, 0.5]
 optim_tolerance = { grad_abs = 0.0001, grad_rel = 1e-05, final_cost = 1e-05, infidelity = 1e-05 }
 optim_maxiter = 100
 optim_regul = 1e-05
-optim_penalty = 0.01
-optim_penalty_param = 0.5
-optim_penalty_dpdm = 0
-optim_penalty_energy = 0
-optim_penalty_variation = 0
+optim_penalty_leakage = 0.01
+optim_penalty_weightedcost = 0.0
+optim_penalty_weightedcost_width = 0.5
+optim_penalty_dpdm = 0.01
+optim_penalty_energy = 0.01
+optim_penalty_variation = 0.01
 optim_regul_tik0 = false
 datadir = "./data_out"
 output_frequency = 1

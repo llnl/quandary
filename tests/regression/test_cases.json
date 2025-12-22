@@ -104,6 +104,15 @@
             "population*.dat"
         ],
         "number_of_processes": [
+            1,3
+        ]
+    },
+    {
+        "simulation_name": "xgate_withguard",
+        "files_to_compare": [
+            "optim_history.dat"
+        ],
+        "number_of_processes": [
             1,2
         ]
     },
@@ -119,16 +128,6 @@
             1,2,4
         ]
     },
-    {
-        "simulation_name": "xgate_withguard",
-        "files_to_compare": [
-            "optim_history.dat"
-        ],
-        "number_of_processes": [
-            1,3
-        ]
-    },
-
     {
         "simulation_name": "state-to-state_spline0",
         "files_to_compare": [

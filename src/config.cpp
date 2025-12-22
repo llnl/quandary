@@ -191,11 +191,15 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     optim_regul =
         validators::field<double>(toml, "optim_regul").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_REGUL);
 
-    optim_penalty =
-        validators::field<double>(toml, "optim_penalty").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY);
-    optim_penalty_param = validators::field<double>(toml, "optim_penalty_param")
-                              .greaterThanEqual(0.0)
-                              .valueOr(ConfigDefaults::OPTIM_PENALTY_PARAM);
+    optim_penalty_leakage = validators::field<double>(toml, "optim_penalty_leakage")
+        .greaterThanEqual(0.0)
+        .valueOr(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
+    optim_penalty_weightedcost = validators::field<double>(toml, "optim_penalty_weightedcost")
+        .greaterThanEqual(0.0)
+        .valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
+    optim_penalty_weightedcost_width = validators::field<double>(toml, "optim_penalty_weightedcost_width")
+        .greaterThanEqual(0.0)
+        .valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH);
     optim_penalty_dpdm = validators::field<double>(toml, "optim_penalty_dpdm")
                              .greaterThanEqual(0.0)
                              .valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
@@ -396,8 +400,9 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
 
   optim_regul = settings.optim_regul.value_or(ConfigDefaults::OPTIM_REGUL);
 
-  optim_penalty = settings.optim_penalty.value_or(ConfigDefaults::OPTIM_PENALTY);
-  optim_penalty_param = settings.optim_penalty_param.value_or(ConfigDefaults::OPTIM_PENALTY_PARAM);
+  optim_penalty_leakage = settings.optim_penalty.value_or(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
+  optim_penalty_weightedcost = settings.optim_penalty.value_or(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
+  optim_penalty_weightedcost_width = settings.optim_penalty_param.value_or(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH);
   optim_penalty_dpdm = settings.optim_penalty_dpdm.value_or(ConfigDefaults::OPTIM_PENALTY_DPDM);
   optim_penalty_energy = settings.optim_penalty_energy.value_or(ConfigDefaults::OPTIM_PENALTY_ENERGY);
   optim_penalty_variation = settings.optim_penalty_variation.value_or(ConfigDefaults::OPTIM_PENALTY_VARIATION);
@@ -690,8 +695,9 @@ void Config::printConfig(std::stringstream& log) const {
       << ", infidelity = " << optim_tol_infidelity << " }\n";
   log << "optim_maxiter = " << optim_maxiter << "\n";
   log << "optim_regul = " << optim_regul << "\n";
-  log << "optim_penalty = " << optim_penalty << "\n";
-  log << "optim_penalty_param = " << optim_penalty_param << "\n";
+  log << "optim_penalty_leakage = " << optim_penalty_leakage << "\n";
+  log << "optim_penalty_weightedcost = " << optim_penalty_weightedcost << "\n";
+  log << "optim_penalty_weightedcost_width = " << optim_penalty_weightedcost_width << "\n";
   log << "optim_penalty_dpdm = " << optim_penalty_dpdm << "\n";
   log << "optim_penalty_energy = " << optim_penalty_energy << "\n";
   log << "optim_penalty_variation = " << optim_penalty_variation << "\n";
@@ -830,6 +836,11 @@ void Config::finalize() {
   assert(n_initial_conditions == optim_weights.size());
   for (size_t i = 0; i < optim_weights.size(); i++) scaleweights += optim_weights[i];
   for (size_t i = 0; i < optim_weights.size(); i++) optim_weights[i] = optim_weights[i] / scaleweights;
+
+  // Set weightedcost width to zero if weightedcost penalty is zero
+  if (optim_penalty_weightedcost == 0.0) {
+    optim_penalty_weightedcost_width = 0.0;
+  }
  
 }
 

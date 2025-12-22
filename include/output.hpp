@@ -73,12 +73,13 @@ class Output{
      * @param Favg Average fidelity
      * @param cost Final-time cost term
      * @param tikh_regul Tikhonov regularization term
-     * @param penalty Penalty term
+     * @param penalty_leakage Penalty term for leakage
+     * @param penalty_weightedcost Weighted cost penalty
      * @param penalty_dpdm Second-order derivative penalty
      * @param penalty_energy Energy penalty term
      * @param penalty_variation Control variation penalty
      */
-    void writeOptimFile(int optim_iter, double objective, double gnorm, double stepsize, double Favg, double cost, double tikh_regul,  double penalty, double penalty_dpdm, double penalty_energy, double penalty_variation);
+    void writeOptimFile(int optim_iter, double objective, double gnorm, double stepsize, double Favg, double cost, double tikh_regul,  double penalty_leakage, double penalty_dpdm, double penalty_energy, double penalty_variation, double penalty_weightedcost);
 
     /**
      * @brief Writes current control pulses per oscillator and control parameters.

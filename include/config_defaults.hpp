@@ -48,8 +48,9 @@ const double OPTIM_TOL_FINALCOST = 1e-8; ///< Default final time cost tolerance
 const double OPTIM_TOL_INFIDELITY = 1e-5; ///< Default infidelity tolerance
 const size_t OPTIM_MAXITER = 200; ///< Default maximum optimization iterations
 
-const double OPTIM_PENALTY = 0.0; ///< Default first integral penalty coefficient
-const double OPTIM_PENALTY_PARAM = 0.5; ///< Default Gaussian variance parameter
+const double OPTIM_PENALTY_LEAKAGE = 0.0; ///< Default first integral penalty coefficient
+const double OPTIM_PENALTY_WEIGHTEDCOST = 0.0; ///< Default weighted cost penalty coefficient
+const double OPTIM_PENALTY_WEIGHTEDCOST_WIDTH = 0.5; ///< Default weighted cost penalty width
 const double OPTIM_PENALTY_DPDM = 0.0; ///< Default second derivative penalty coefficient
 const double OPTIM_PENALTY_ENERGY = 0.0; ///< Default energy penalty coefficient
 const double OPTIM_PENALTY_VARIATION = 0.01; ///< Default amplitude variation penalty coefficient

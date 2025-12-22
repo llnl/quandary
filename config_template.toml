@@ -76,19 +76,19 @@ optim_tolerance = { grad_abs = 1e-7,     # absolute gradient norm tolerance (||G
                 }
 # Maximum number of optimization iterations
 optim_maxiter = 200
-# Coefficient (gamma_1) of Tikhonov regularization for the design variables (gamma_1/2 || design ||^2)
+# Coefficient for Tikhonov regularization for the optimization variables 
 optim_regul = 0.00001
-# Coefficient (gamma_2) for adding first integral penalty term (gamma_1 ∫_0^T P(rho(t) dt )
-optim_penalty = 0.0
-# integral penalty parameter inside the weight in P(rho(t)) (gaussian variance a)
-optim_penalty_param = 0.0
-# Coefficient (gamma_3) for penalizing the integral of the second derivative of state populations
-# (gamma_3 \int_0^T d^2/dt^2(Pop(rho)) dt )
+# Coefficient for penalizing leakage out of the computational subspace 
+optim_penalty_leakage  = 0.0
+# Coefficient for penalizing a weighted integral over running objective function (\int_0^T w(t)J(t) dt where w(t) is gaussian centered at T
+optim_penalty_weightedcost = 0.0
+# Parameter for changing the width of the gaussian in weighted cost integral penalty
+optim_penalty_weightedcost_width = 0.0
+# Coefficient for penalizing the integral of the second derivative of state populations ( \int_0^T d^2/dt^2(Pop(rho)) dt )
 optim_penalty_dpdm = 0.0
-# Coefficient (gamma_4) for penalizing the control pulse energy integral (gamma_4 \int_0^T p^2 + q^2 dt )
+# Coefficient for penalizing the control pulse energy integral (\int_0^T p^2 + q^2 dt )
 optim_penalty_energy = 0.0
-# Coefficient (gamma_5) for penalizing variations in control amplitudes.
-# Only used for piece-wise constant control parameterizations (spline0)
+# Coefficient for penalizing variations in control amplitudes. Only used for piece-wise constant control paramterizations (spline0)
 optim_penalty_variation = 0.0
 # Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
 optim_regul_tik0 = false

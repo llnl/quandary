@@ -62,8 +62,9 @@ class Config {
   double optim_tol_infidelity; ///< Infidelity tolerance
   size_t optim_maxiter; ///< Maximum iterations
   double optim_regul; ///< Coefficient of Tikhonov regularization for the design variables
-  double optim_penalty; ///< First integral penalty coefficient
-  double optim_penalty_param; ///< Gaussian variance parameter
+  double optim_penalty_leakage; ///< Leakage penalty coefficient
+  double optim_penalty_weightedcost; ///< Weighted cost penalty coefficient
+  double optim_penalty_weightedcost_width; ///< Width parameter for weighted cost penalty
   double optim_penalty_dpdm; ///< Second derivative penalty coefficient
   double optim_penalty_energy; ///< Energy penalty coefficient
   double optim_penalty_variation; ///< Amplitude variation penalty coefficient
@@ -144,8 +145,9 @@ class Config {
   double getOptimTolInfidelity() const { return optim_tol_infidelity; }
   size_t getOptimMaxiter() const { return optim_maxiter; }
   double getOptimRegul() const { return optim_regul; }
-  double getOptimPenalty() const { return optim_penalty; }
-  double getOptimPenaltyParam() const { return optim_penalty_param; }
+  double getOptimPenaltyLeakage() const { return optim_penalty_leakage; }
+  double getOptimPenaltyWeightedCost() const { return optim_penalty_weightedcost; }
+  double getOptimPenaltyWeightedCostWidth() const { return optim_penalty_weightedcost_width; }
   double getOptimPenaltyDpdm() const { return optim_penalty_dpdm; }
   double getOptimPenaltyEnergy() const { return optim_penalty_energy; }
   double getOptimPenaltyVariation() const { return optim_penalty_variation; }
