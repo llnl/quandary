@@ -76,10 +76,11 @@ optim_tolerance = { grad_abs = 1e-7,     # absolute gradient norm tolerance (||G
                 }
 # Maximum number of optimization iterations
 optim_maxiter = 200
-# Coefficient for Tikhonov regularization of the optimization variables
-optim_regul = 0.00001
-# Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
-optim_regul_tik0 = false
+
+# Tikhonov regularization for the optimization variables (gamma * ||x||^2)
+optim_tikhonov = { coeff = 0.00001,   # Coefficient (gamma) for Tikhonov regularization
+                   use_x0 = false     # use gamma * ||x - x_0||^2 instead (default: false)
+                 }
 
 # Coefficients for Penalty terms added to the optimization cost function
 optim_penalty = { leakage = 0.0,                # Penalize leakage into guard levels

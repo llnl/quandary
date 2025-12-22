@@ -16,8 +16,7 @@ gate_rot_freq = [0.0, 0.0]
 optim_weights = 1.0
 optim_tolerance = { grad_abs = 0.0001, grad_rel = 0.0001, final_cost = 0.0001, infidelity = 1e-05 }
 optim_maxiter = 200
-optim_regul = 0.0001
-optim_regul_tik0 = false
+optim_tikhonov = { coeff = 0.0001, use_x0 = false }
 optim_penalty = { leakage = 0.1, weightedcost = 0.0, weightedcost_width = 0.0, dpdm = 0.0, energy = 0.0, variation = 0.0 }
 
 datadir = "./data_out"

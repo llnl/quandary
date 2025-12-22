@@ -21,9 +21,8 @@ optim_objective = "jfrobenius"
 optim_weights = [0.5, 0.5]
 optim_tolerance = { grad_abs = 0.0001, grad_rel = 1e-05, final_cost = 1e-05, infidelity = 1e-05 }
 optim_maxiter = 100
-optim_regul = 1e-05
+optim_tikhonov = { coeff = 1e-05, use_x0 = false }
 optim_penalty = { leakage = 0.01, weightedcost = 0.0, weightedcost_width = 0.5, dpdm = 0.01, energy = 0.01, variation = 0.01 }
-optim_regul_tik0 = false
 datadir = "./data_out"
 output_frequency = 1
 optim_monitor_frequency = 1

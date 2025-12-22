@@ -65,7 +65,8 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
   obj_weights = config.getOptimWeights();
 
   /* Store other optimization parameters */
-  gamma_tik = config.getOptimRegul();
+  gamma_tikhonov = config.getOptimTikhonovCoeff();
+  tikhonov_use_x0 = config.getOptimTikhonovUseX0();
 
   // Get tolerance settings
   tol_grad_abs = config.getOptimTolGradAbs();
@@ -81,8 +82,6 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
   gamma_penalty_energy = config.getOptimPenaltyEnergy();
   gamma_penalty_dpdm = config.getOptimPenaltyDpdm();
   gamma_penalty_variation = config.getOptimPenaltyVariation();
-
-  gamma_tik_interpolate = config.getOptimRegulTik0();
 
   if (gamma_penalty_dpdm > 1e-13 && timestepper->mastereq->lindbladtype != LindbladType::NONE){
     if (mpirank_world == 0 && !quietmode) {
@@ -285,14 +284,14 @@ double OptimProblem::evalF(const Vec x) {
 
   /* Evaluate Tikhonov regularization term: gamma/2 * ||x-x0||^2*/
   double xnorm;
-  if (!gamma_tik_interpolate){  // ||x||^2
+  if (!tikhonov_use_x0){  // ||x||^2
     VecNorm(x, NORM_2, &xnorm);
   } else {
     VecCopy(x, xtmp);
     VecAXPY(xtmp, -1.0, xinit);    // xtmp =  x - x_0
     VecNorm(xtmp, NORM_2, &xnorm);
   }
-  obj_regul = gamma_tik / 2. * pow(xnorm,2.0);
+  obj_regul = gamma_tikhonov / 2. * pow(xnorm,2.0);
 
   /* Evaluate penality term for control variation */
   double var_reg = 0.0;
@@ -331,10 +330,10 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   // if (mpirank_init == 0 && mpirank_optim == 0) { // TODO: Which one?? 
   if (mpirank_init == 0 ) {
 
-    // Derivative of Tikhonov 0.5*gamma * ||x||^2 
-    VecAXPY(G, gamma_tik, x);   // + gamma_tik * x
-    if (gamma_tik_interpolate){
-      VecAXPY(G, -1.0*gamma_tik, xinit); // -gamma_tik * xinit
+    // Derivative of Tikhonov 0.5 * gamma * ||x||^2 
+    VecAXPY(G, gamma_tikhonov, x);   // + gamma * x
+    if (tikhonov_use_x0){
+      VecAXPY(G, -1.0*gamma_tikhonov, xinit); // -gamma * xinit
     }
 
     // Derivative of penalization of control variation 
@@ -454,14 +453,14 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
 
   /* Evaluate Tikhonov regularization term += gamma/2 * ||x||^2*/
   double xnorm;
-  if (!gamma_tik_interpolate){  // ||x||^2
+  if (!tikhonov_use_x0){  // ||x||^2
     VecNorm(x, NORM_2, &xnorm);
   } else {
     VecCopy(x, xtmp);
     VecAXPY(xtmp, -1.0, xinit);    // xtmp =  x_k - x_0
     VecNorm(xtmp, NORM_2, &xnorm);
   }
-  obj_regul = gamma_tik / 2. * pow(xnorm,2.0);
+  obj_regul = gamma_tikhonov / 2. * pow(xnorm,2.0);
 
   /* Evaluate penalty term for control parameter variation */
   double var_reg = 0.0;

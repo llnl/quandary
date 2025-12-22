@@ -76,8 +76,8 @@ class OptimProblem {
   double obj_penal_energy; ///< Energy penalty term in objective
   double fidelity; ///< Final-time fidelity: 1/ninit sum_i Tr(rho_target^dag rho(T)) for Lindblad, |1/ninit sum_i phi_target^dag phi|^2 for Schrodinger
   double gnorm; ///< Current norm of gradient
-  double gamma_tik; ///< Parameter for Tikhonov regularization
-  bool gamma_tik_interpolate; ///< Switch to use ||x - x0||^2 for Tikhonov regularization instead of ||x||^2
+  double gamma_tikhonov; ///< Parameter for Tikhonov regularization
+  bool tikhonov_use_x0; ///< Switch to use ||x - x0||^2 for Tikhonov regularization instead of ||x||^2
   double gamma_penalty_leakage; ///< Parameter multiplying integral leakage term
   double gamma_penalty_weightedcost; ///< Parameter multiplying integral weighted cost function 
   double gamma_penalty_dpdm; ///< Parameter multiplying integral penalty term for 2nd derivative of state variation

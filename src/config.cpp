@@ -188,32 +188,47 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       optim_tol_infidelity = ConfigDefaults::OPTIM_TOL_INFIDELITY;
     }
     optim_maxiter = validators::field<size_t>(toml, "optim_maxiter").positive().valueOr(ConfigDefaults::OPTIM_MAXITER);
-    optim_regul =
-        validators::field<double>(toml, "optim_regul").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_REGUL);
+
+    // Parse optim_tikhonov inline table
+    if (toml.contains("optim_tikhonov")) {
+      auto regul_table = toml["optim_tikhonov"].as_table();
+      if (!regul_table) {
+        logger.exitWithError("optim_tikhonov must be a table");
+      }
+      optim_tikhonov_coeff= validators::field<double>(*regul_table, "coeff")
+          .greaterThanEqual(0.0)
+          .valueOr(ConfigDefaults::OPTIM_TIKHONOV_COEFF);
+      optim_tikhonov_use_x0 = validators::field<bool>(*regul_table, "use_x0")
+          .valueOr(ConfigDefaults::OPTIM_TIKHONOV_USE_X0);
+    } else {
+      optim_tikhonov_coeff = ConfigDefaults::OPTIM_TIKHONOV_COEFF;
+      optim_tikhonov_use_x0 = ConfigDefaults::OPTIM_TIKHONOV_USE_X0;
+    }
 
     // Parse optim_penalty inline table
     if (toml.contains("optim_penalty")) {
       auto penalty_table = toml["optim_penalty"].as_table();
-      if (penalty_table) {
-        optim_penalty_leakage = validators::field<double>(*penalty_table, "leakage")
-            .greaterThanEqual(0.0)
-            .valueOr(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
-        optim_penalty_weightedcost = validators::field<double>(*penalty_table, "weightedcost")
-            .greaterThanEqual(0.0)
-            .valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
-        optim_penalty_weightedcost_width = validators::field<double>(*penalty_table, "weightedcost_width")
-            .greaterThanEqual(0.0)
-            .valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH);
-        optim_penalty_dpdm = validators::field<double>(*penalty_table, "dpdm")
-                                 .greaterThanEqual(0.0)
-                                 .valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
-        optim_penalty_energy = validators::field<double>(*penalty_table, "energy")
-                                   .greaterThanEqual(0.0)
-                                   .valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
-        optim_penalty_variation = validators::field<double>(*penalty_table, "variation")
-                                      .greaterThanEqual(0.0)
-                                      .valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
+      if (!penalty_table) {
+        logger.exitWithError("optim_penalty must be a table");
       }
+      optim_penalty_leakage = validators::field<double>(*penalty_table, "leakage")
+          .greaterThanEqual(0.0)
+          .valueOr(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
+      optim_penalty_weightedcost = validators::field<double>(*penalty_table, "weightedcost")
+          .greaterThanEqual(0.0)
+          .valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
+      optim_penalty_weightedcost_width = validators::field<double>(*penalty_table, "weightedcost_width")
+          .greaterThanEqual(0.0)
+          .valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH);
+      optim_penalty_dpdm = validators::field<double>(*penalty_table, "dpdm")
+                               .greaterThanEqual(0.0)
+                               .valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
+      optim_penalty_energy = validators::field<double>(*penalty_table, "energy")
+                                 .greaterThanEqual(0.0)
+                                 .valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
+      optim_penalty_variation = validators::field<double>(*penalty_table, "variation")
+                                    .greaterThanEqual(0.0)
+                                    .valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
     } else {
       // Set defaults of optim_penalty table is not given 
       optim_penalty_leakage = ConfigDefaults::OPTIM_PENALTY_LEAKAGE;
@@ -223,13 +238,6 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       optim_penalty_energy = ConfigDefaults::OPTIM_PENALTY_ENERGY;
       optim_penalty_variation = ConfigDefaults::OPTIM_PENALTY_VARIATION;
     }
-
-    if (!toml.contains("optim_regul_tik0") && toml.contains("optim_regul_interpolate")) {
-      // Handle deprecated optim_regul_interpolate logic
-      optim_regul_tik0 = validators::field<bool>(toml, "optim_regul_interpolate").value();
-      logger.log("# Warning: 'optim_regul_interpolate' is deprecated. Please use 'optim_regul_tik0' instead.\n");
-    }
-    optim_regul_tik0 = toml["optim_regul_tik0"].value_or(ConfigDefaults::OPTIM_REGUL_TIK0);
 
     datadir = toml["datadir"].value_or(ConfigDefaults::DATADIR);
 
@@ -412,7 +420,13 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   optim_tol_infidelity = settings.optim_tol_infidelity.value_or(ConfigDefaults::OPTIM_TOL_INFIDELITY);
   optim_maxiter = settings.optim_maxiter.value_or(ConfigDefaults::OPTIM_MAXITER);
 
-  optim_regul = settings.optim_regul.value_or(ConfigDefaults::OPTIM_REGUL);
+  optim_tikhonov_coeff = settings.optim_regul.value_or(ConfigDefaults::OPTIM_TIKHONOV_COEFF);
+  optim_tikhonov_use_x0 = settings.optim_regul_tik0.value_or(ConfigDefaults::OPTIM_TIKHONOV_USE_X0);
+  if (settings.optim_regul_interpolate.has_value()) {
+    // Handle deprecated optim_regul_interpolate logic
+    optim_tikhonov_use_x0 = settings.optim_regul_interpolate.value();
+    logger.log("# Warning: 'optim_regul_interpolate' is deprecated. Please use 'optim_regul_tik0' instead.\n");
+  }
 
   optim_penalty_leakage = settings.optim_penalty.value_or(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
   optim_penalty_weightedcost = settings.optim_penalty.value_or(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
@@ -420,12 +434,6 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   optim_penalty_dpdm = settings.optim_penalty_dpdm.value_or(ConfigDefaults::OPTIM_PENALTY_DPDM);
   optim_penalty_energy = settings.optim_penalty_energy.value_or(ConfigDefaults::OPTIM_PENALTY_ENERGY);
   optim_penalty_variation = settings.optim_penalty_variation.value_or(ConfigDefaults::OPTIM_PENALTY_VARIATION);
-  optim_regul_tik0 = settings.optim_regul_tik0.value_or(ConfigDefaults::OPTIM_REGUL_TIK0);
-  if (settings.optim_regul_interpolate.has_value()) {
-    // Handle deprecated optim_regul_interpolate logic
-    optim_regul_tik0 = settings.optim_regul_interpolate.value();
-    logger.log("# Warning: 'optim_regul_interpolate' is deprecated. Please use 'optim_regul_tik0' instead.\n");
-  }
 
   // Output parameters
   datadir = settings.datadir.value_or(ConfigDefaults::DATADIR);
@@ -703,13 +711,13 @@ void Config::printConfig(std::stringstream& log) const {
   log << "gate_rot_freq = " << printVector(gate_rot_freq) << "\n";
   log << "optim_objective = \"" << enumToString(optim_objective, OBJECTIVE_TYPE_MAP) << "\"\n";
   log << "optim_weights = " << printVector(optim_weights) << "\n";
-    log << "optim_tolerance = { grad_abs = " << optim_tol_grad_abs
+  log << "optim_tolerance = { grad_abs = " << optim_tol_grad_abs
       << ", grad_rel = " << optim_tol_grad_rel
       << ", final_cost = " << optim_tol_finalcost
       << ", infidelity = " << optim_tol_infidelity << " }\n";
   log << "optim_maxiter = " << optim_maxiter << "\n";
-  log << "optim_regul = " << optim_regul << "\n";
-  log << "optim_regul_tik0 = " << (optim_regul_tik0 ? "true" : "false") << "\n";
+  log << "optim_tikhonov = { coeff = " << optim_tikhonov_coeff   
+      << ", use_x0 = " << (optim_tikhonov_use_x0 ? "true" : "false") << " }\n";
   log << "optim_penalty = { leakage = " << optim_penalty_leakage
       << ", energy = " << optim_penalty_energy
       << ", dpdm = " << optim_penalty_dpdm

@@ -61,14 +61,14 @@ class Config {
   double optim_tol_finalcost; ///< Final time cost tolerance
   double optim_tol_infidelity; ///< Infidelity tolerance
   size_t optim_maxiter; ///< Maximum iterations
-  double optim_regul; ///< Coefficient of Tikhonov regularization for the design variables
+  double optim_tikhonov_coeff; ///< Coefficient of Tikhonov regularization for the design variables
+  bool optim_tikhonov_use_x0; ///< Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
   double optim_penalty_leakage; ///< Leakage penalty coefficient
   double optim_penalty_weightedcost; ///< Weighted cost penalty coefficient
   double optim_penalty_weightedcost_width; ///< Width parameter for weighted cost penalty
   double optim_penalty_dpdm; ///< Second derivative penalty coefficient
   double optim_penalty_energy; ///< Energy penalty coefficient
   double optim_penalty_variation; ///< Amplitude variation penalty coefficient
-  bool optim_regul_tik0; ///< Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
 
   // Output and runtypes
   std::string datadir; ///< Directory for output files
@@ -144,14 +144,14 @@ class Config {
   double getOptimTolFinalCost() const { return optim_tol_finalcost; }
   double getOptimTolInfidelity() const { return optim_tol_infidelity; }
   size_t getOptimMaxiter() const { return optim_maxiter; }
-  double getOptimRegul() const { return optim_regul; }
+  double getOptimTikhonovCoeff() const { return optim_tikhonov_coeff; }
+  bool getOptimTikhonovUseX0() const { return optim_tikhonov_use_x0; }
   double getOptimPenaltyLeakage() const { return optim_penalty_leakage; }
   double getOptimPenaltyWeightedCost() const { return optim_penalty_weightedcost; }
   double getOptimPenaltyWeightedCostWidth() const { return optim_penalty_weightedcost_width; }
   double getOptimPenaltyDpdm() const { return optim_penalty_dpdm; }
   double getOptimPenaltyEnergy() const { return optim_penalty_energy; }
   double getOptimPenaltyVariation() const { return optim_penalty_variation; }
-  bool getOptimRegulTik0() const { return optim_regul_tik0; }
 
   const std::string& getDataDir() const { return datadir; }
   const std::vector<std::vector<OutputType>>& getOutput() const { return output_to_write; }

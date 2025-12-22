@@ -41,7 +41,8 @@ const double GATE_ROT_FREQ = 0.0; ///< Default gate rotational frequency
 const ObjectiveType OPTIM_OBJECTIVE = ObjectiveType::JTRACE; ///< Default objective function
 const double OPTIM_WEIGHT = 1.0; ///< Default optimization weight per initial condition
 
-const double OPTIM_REGUL = 1e-4; ///< Default Tikhonov regularization coefficient
+const double OPTIM_TIKHONOV_COEFF = 1e-4; ///< Default Tikhonov regularization coefficient
+const bool OPTIM_TIKHONOV_USE_X0 = false; ///< Default Tikhonov regularization type
 const double OPTIM_TOL_GRAD_ABS = 1e-8; ///< Default absolute gradient tolerance
 const double OPTIM_TOL_GRAD_REL = 1e-4; ///< Default relative gradient tolerance
 const double OPTIM_TOL_FINALCOST = 1e-8; ///< Default final time cost tolerance
@@ -54,8 +55,6 @@ const double OPTIM_PENALTY_WEIGHTEDCOST_WIDTH = 0.5; ///< Default weighted cost 
 const double OPTIM_PENALTY_DPDM = 0.0; ///< Default second derivative penalty coefficient
 const double OPTIM_PENALTY_ENERGY = 0.0; ///< Default energy penalty coefficient
 const double OPTIM_PENALTY_VARIATION = 0.01; ///< Default amplitude variation penalty coefficient
-
-const bool OPTIM_REGUL_TIK0 = false; ///< Default Tikhonov regularization type
 
 const std::string DATADIR = "./data_out"; ///< Default output directory
 
