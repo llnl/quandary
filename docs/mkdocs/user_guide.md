@@ -227,13 +227,14 @@ In order to regularize the optimization problem (stabilize optimization converge
 In addition, the following penalty terms can be added to the objective function, if desired:
 
 \begin{align*}
-  Penalty &= \frac{\gamma_2}{T} \int_0^T P\left(\{\rho_i(t)\}\right) \, \mathrm{d} t   \hspace{3cm} \rightarrow \text{Leakage prevention}\\
-         &+  \frac{\gamma_3}{T} \int_0^T \, \| \partial_{tt} \mbox{Pop}(\rho_i(t)) \|^2 \mathrm{d}t \hspace{2cm} \rightarrow \text{State variation penalty} \\
-        &+\frac{\gamma_4}{T} \int_0^T \, \sum_k |d^k(\alpha^k,t)|^2\, dt  \hspace{2cm}\rightarrow  \text{Control energy penalty}\\
-        &+ \frac{\gamma_5}{2} Var(\vec{\alpha}) \hspace{4cm}\rightarrow  \text{Control variation penalty}
+  Penalty &= \frac{\gamma_2}{T} \int_0^T \mbox{Leakage}\left(\rho(t)\right) \, \mathrm{d} t   \hspace{3.5cm} \rightarrow \text{Leakage prevention}\\
+         &+  \frac{\gamma_3}{T} \int_0^T \, \| \partial_{tt} \mbox{Pop}(\rho(t)) \|^2 \mathrm{d}t \hspace{3.2cm} \rightarrow \text{State variation penalty} \\
+        &+\frac{\gamma_4}{T} \int_0^T \, \sum_k |p^k(\alpha^k,t)|^2 + |q^k(\alpha^k,t)|^2\, dt  \hspace{0.7cm}\rightarrow  \text{Control energy penalty}\\
+        &+ \frac{\gamma_5}{2} Var(\vec{\alpha}) \hspace{6.2cm}\rightarrow  \text{Control variation penalty}\\
+        &+\frac{\gamma_6}{T} \int_0^T \, w(t)J(t)\, dt  \hspace{4.5cm}\rightarrow  \text{Weighted running cost penalty}\\
 \end{align*}
 
-* **Leakage prevention:** Choose a small $\gamma_2 > 0$ to penalize (suppress) leakage into non-essential energy levels (if $n_k^e < n_k$ for at least $k$, compare Sec. [Essential and non-essential energy levels](#sec:essential)). This term penalizes the occupation of all *guard levels* with $P(\rho(t)) = \sum_{r} \| \rho(t)_{rr} \|^2_2$, where $r$ iterates over all indices that correspond to a guard level (i.e., the final (highest) non-essential energy level) of at least one of the subsystems, and $\rho(t)_{rr}$ denotes their corresponding population.
+* **Leakage prevention:** Choose a small $\gamma_2 > 0$ to penalize (suppress) leakage into non-essential energy levels (if $n_k^e < n_k$ for at least $k$, compare Sec. [Essential and non-essential energy levels](#sec:essential)). This term penalizes the occupation of all *guard levels* with $\mbox{Leakage}(\rho(t)) = \sum_{r} \| \rho(t)_{rr} \|^2_2$, where $r$ iterates over all indices that correspond to a guard level (i.e., the final (highest) non-essential energy level) of at least one of the subsystems.
 
 * **State variation penalty**: Choose a small $\gamma_3 > 0$ to encourage state evolutions whose populations vary slowly in time by penalizing the second derivative of the populations of the state.
 
@@ -242,17 +243,10 @@ In addition, the following penalty terms can be added to the objective function,
 * **Control variation penalty**: Choose a small $\gamma_5>0$ to penalize variations in control strength between consecutive B-spline coefficients. It is currently only implemented for piecewise zeroth order spline functions, see Section [Zeroth order B-spline basis functions](#sec:bspline-0), where it is useful to prevent noisy control pulses. Referring to the control function representation in $\eqref{eq:spline-ctrl}$, this penalty function takes the form:
 $Var(\vec{\alpha}) = \sum_{k=1}^Q Var_k(\vec{\alpha})$ with $Var_k(\vec{\alpha}) = \sum_{f,s}|\alpha_{s,f}^k - \alpha_{s-1,f}^k|^2$.
 
+* **Weighted running cost penalty**: Choose a small $\gamma_6>0$ to penalize a weighted objective function throughout the time domain. The weight is a gaussian centered at final time $T$: $w(t) =
+  \frac{1}{a} e^{ -\left(\frac{t-T}{a} \right)^2}$ for a width parameter $0 \leq a \leq 1$. Note, that as $a\to 0$, the weighting function $w(t)$ converges to the Dirac delta distribution with peak at final time $T$, hence reducing $a$ leads to more emphasis on the final time $T$ while larger $a$ penalize the objective function at earlier times $t\leq T$.
 
 Note: All regularization and penalty coefficients $\gamma_i$ should be chosen small enough so that they do not dominate the final-time objective function $J$. This might require some fine-tuning. It is recommended to always add $\gamma_1>0$, e.g. $\gamma_1 = 10^{-4}$, and add other penalties only if needed.
-
-<!--
-Achieving a target at EARLIER time-steps:
-\begin{align}\label{eq:penaltyterm}
-  P(\rho(t))  =  w(t) J\left(\rho(t)\right) \quad \text{where} \quad w(t) =
-  \frac{1}{a} e^{ -\left(\frac{t-T}{a} \right)^2},
-\end{align}
-for a penalty parameter $0 \leq a \leq 1$. Note, that as $a\to 0$, the weighting function $w(t)$ converges to the Dirac delta distribution with peak at final time $T$, hence reducing $a$ leads to more emphasis on the final time $T$ while larger $a$ penalize non-zero energy states at earlier times $t\leq T$.
--->
 
 ## Optimization algorithm
 Quandary utilized Petsc's Toolkit for Advanced Optimization (TAO) package to solve the optimal control problem. In the current setup, Quasi-Newton updates are applied to the control parameters using L-BFGS Hessian approximations. A projected line-search is used to incorporate box constraints for control pulse amplitude bounds $|p^k(t)| \leq c^k_{max}$, $|q^k(t)| \leq c^k_{max}$ via

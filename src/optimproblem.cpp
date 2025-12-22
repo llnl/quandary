@@ -608,7 +608,7 @@ PetscErrorCode TaoMonitor(Tao tao,void*ptr){
 
   /* First iteration: Header for screen output of optimization history */
   if (iter == 0 && ctx->getMPIrank_world() == 0) {
-    std::cout<<  "    Objective             Tikhonov                Penalty-Leakage        Penalty-StateVar       Penalty-TotalEnergy    Penalty-CtrlVar" << std::endl;
+    std::cout<<  "    Objective             Tikhonov               Penalty-Leakage        Penalty-StateVar       Penalty-TotalEnergy    Penalty-CtrlVar        Penalty-WeightedCost" << std::endl;
   }
 
   /* Every <optim_monitor_freq> iterations: Output of optimization history */
