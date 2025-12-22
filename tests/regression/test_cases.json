@@ -108,6 +108,15 @@
         ]
     },
     {
+        "simulation_name": "xgate_withguard",
+        "files_to_compare": [
+            "optim_history.dat"
+        ],
+        "number_of_processes": [
+            1,2
+        ]
+    },
+    {
         "simulation_name": "xgate_sparsemat",
         "files_to_compare": [
             "grad.dat",
