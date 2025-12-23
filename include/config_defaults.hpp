@@ -28,9 +28,9 @@ const double DEPHASE_TIME = 0.0; ///< Default dephase time
 const bool CONTROL_ENFORCE_BC = true; ///< Default boundary conditions enforcement
 const size_t CONTROL_SEG_SPLINE_COUNT = 10; ///< Default number of B-spline basis functions
 const double CONTROL_SEG_TSTART = 0.0; ///< Default control segment start time
+const ControlInitializationType CONTROL_INIT_TYPE = ControlInitializationType::CONSTANT; ///< Default control initialization amplitude
 const double CONTROL_INIT_AMPLITUDE = 0.0; ///< Default control initialization amplitude
 const double CONTROL_INIT_PHASE = 0.0; ///< Default control initialization phase
-const double CONTROL_INIT_RANDOM_AMPLITUDE = 0.1; ///< Default amplitude for random control initialization
 
 const double CONTROL_BOUND = 10000.0; ///< Default amplitude bound for control pulses
 const double CARRIER_FREQ = 0.0; ///< Default carrier frequency

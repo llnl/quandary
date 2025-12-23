@@ -111,8 +111,10 @@ int main(int argc,char **argv)
 
   /* --- Initialize the Oscillators --- */
   Oscillator** oscil_vec = new Oscillator*[num_osc];
+  int param_offset = 0;
   for (size_t i = 0; i < num_osc; i++){
-    oscil_vec[i] = new Oscillator(config, i, rand_engine);
+    oscil_vec[i] = new Oscillator(config, i, rand_engine, param_offset, quietmode);
+    param_offset += oscil_vec[i]->getNParams();
   }
 
 

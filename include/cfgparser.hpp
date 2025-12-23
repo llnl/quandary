@@ -29,7 +29,7 @@ struct ControlSegmentData {
 };
 
 struct ControlInitializationData {
-  ControlSegmentInitType init_seg_type; ///< Type of initialization per segment
+  ControlInitializationType init_seg_type; ///< Type of initialization per segment
   std::optional<double> amplitude; ///< Initial amplitude
   std::optional<double> phase; ///< Initial phase (optional)
   std::optional<std::string> filename; ///< Filename (for file init - mutually exclusive with above)

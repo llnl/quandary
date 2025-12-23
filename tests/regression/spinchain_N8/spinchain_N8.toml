@@ -110,45 +110,6 @@ values = [1000000000000.0]
 oscID = 7
 values = [1000000000000.0]
 
-[[control_initialization]]
-oscID = 0
-type = "random"
-amplitude = 0.0
-
-[[control_initialization]]
-oscID = 1
-type = "random"
-amplitude = 0.0
-
-[[control_initialization]]
-oscID = 2
-type = "random"
-amplitude = 0.0
-
-[[control_initialization]]
-oscID = 3
-type = "random"
-amplitude = 0.0
-
-[[control_initialization]]
-oscID = 4
-type = "random"
-amplitude = 0.0
-
-[[control_initialization]]
-oscID = 5
-type = "random"
-amplitude = 0.0
-
-[[control_initialization]]
-oscID = 6
-type = "random"
-amplitude = 0.0
-
-[[control_initialization]]
-oscID = 7
-type = "random"
-amplitude = 0.0
 
 [[carrier_frequency]]
 oscID = 0

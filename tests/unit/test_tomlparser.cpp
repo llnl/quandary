@@ -579,33 +579,29 @@ TEST_F(TomlParserTest, ControlInitialization_Defaults) {
         rotfreq = [0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        [[control_initialization]]
-        oscID = 1
-        type = "random"
-        amplitude = 2.0
+        control_initialization = { 
+          "1" = { type = "random", amplitude = 2.0 }
+        }
       )",
       logger);
 
   // Check first oscillator has default settings
   const auto& control_init0 = config.getControlInitializations(0);
   EXPECT_EQ(control_init0.size(), 1);
-  EXPECT_EQ(control_init0[0].type, ControlSegmentInitType::CONSTANT);
-  EXPECT_DOUBLE_EQ(control_init0[0].amplitude, 0.0);
-  EXPECT_DOUBLE_EQ(control_init0[0].phase, 0.0);
+  EXPECT_EQ(control_init0[0].type, ControlInitializationType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init0[0].amplitude.value(), 0.0);
 
   // Check second oscillator has given settings
   const auto& control_init1 = config.getControlInitializations(1);
   EXPECT_EQ(control_init1.size(), 1);
-  EXPECT_EQ(control_init1[0].type, ControlSegmentInitType::RANDOM);
-  EXPECT_DOUBLE_EQ(control_init1[0].amplitude, 2.0);
-  EXPECT_DOUBLE_EQ(control_init1[0].phase, 0.0);
+  EXPECT_EQ(control_init1[0].type, ControlInitializationType::RANDOM);
+  EXPECT_DOUBLE_EQ(control_init1[0].amplitude.value(), 2.0);
 
   // Check third oscillator has default settings
   const auto& control_init2 = config.getControlInitializations(2);
   EXPECT_EQ(control_init2.size(), 1);
-  EXPECT_EQ(control_init2[0].type, ControlSegmentInitType::CONSTANT);
-  EXPECT_DOUBLE_EQ(control_init2[0].amplitude, 0.0);
-  EXPECT_DOUBLE_EQ(control_init2[0].phase, 0.0);
+  EXPECT_EQ(control_init2[0].type, ControlInitializationType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init2[0].amplitude.value(), 0.0);
 }
 
 TEST_F(TomlParserTest, ControlInitialization) {
@@ -616,74 +612,64 @@ TEST_F(TomlParserTest, ControlInitialization) {
         rotfreq = [0.0, 0.0, 0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        [[control_initialization]]
+        control_initialization = {
+          "0" = { type = "constant", amplitude = 1.0, phase = 1.1 },
+          "1" = { type = "constant", amplitude = 2.0 },
+          "2" = { type = "random", amplitude = 3.0, phase = 3.1 },
+          "3" = { type = "random", amplitude = 4.0 },
+          "4" = { type = "random", amplitude = 5.0, phase = 5.1 }
+        }
+
+        [[control_segments]]
         oscID = 0
-        type = "constant"
-        amplitude = 1.0
-        phase = 1.1
-        [[control_initialization]]
-        oscID = 1
-        type = "constant"
-        amplitude = 2.0
-        [[control_initialization]]
+        type = "spline_amplitude"
+        num = 10
+        scaling = 1.0
+        [[control_segments]]
         oscID = 2
-        type = "random"
-        amplitude = 3.0
-        phase = 3.1
-        [[control_initialization]]
-        oscID = 3
-        type = "random"
-        amplitude = 4.0
-        [[control_initialization]]
+        type = "spline_amplitude"
+        num = 10
+        scaling = 1.0
+        [[control_segments]]
         oscID = 4
-        type = "random"
-        amplitude = 5.0
-        phase = 5.1
-        [[control_initialization]]
-        oscID = 4
-        type = "constant"
-        amplitude = 6.0
-        phase = 6.1
+        type = "spline_amplitude"
+        num = 10
+        scaling = 1.0
       )",
       logger);
 
   // Check first oscillator
   const auto& control_init0 = config.getControlInitializations(0);
   EXPECT_EQ(control_init0.size(), 1);
-  EXPECT_EQ(control_init0[0].type, ControlSegmentInitType::CONSTANT);
-  EXPECT_DOUBLE_EQ(control_init0[0].amplitude, 1.0);
-  EXPECT_DOUBLE_EQ(control_init0[0].phase, 1.1);
+  EXPECT_EQ(control_init0[0].type, ControlInitializationType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init0[0].amplitude.value(), 1.0);
+  EXPECT_DOUBLE_EQ(control_init0[0].phase.value(), 1.1);
 
   // Check second oscillator
   const auto& control_init1 = config.getControlInitializations(1);
   EXPECT_EQ(control_init1.size(), 1);
-  EXPECT_EQ(control_init1[0].type, ControlSegmentInitType::CONSTANT);
-  EXPECT_DOUBLE_EQ(control_init1[0].amplitude, 2.0);
-  EXPECT_DOUBLE_EQ(control_init1[0].phase, 0.0);
+  EXPECT_EQ(control_init1[0].type, ControlInitializationType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init1[0].amplitude.value(), 2.0);
 
   // Check third oscillator
   const auto& control_init2 = config.getControlInitializations(2);
   EXPECT_EQ(control_init2.size(), 1);
-  EXPECT_EQ(control_init2[0].type, ControlSegmentInitType::RANDOM);
-  EXPECT_DOUBLE_EQ(control_init2[0].amplitude, 3.0);
-  EXPECT_DOUBLE_EQ(control_init2[0].phase, 3.1);
+  EXPECT_EQ(control_init2[0].type, ControlInitializationType::RANDOM);
+  EXPECT_DOUBLE_EQ(control_init2[0].amplitude.value(), 3.0);
+  EXPECT_DOUBLE_EQ(control_init2[0].phase.value(), 3.1);
 
   // Check fourth oscillator
   const auto& control_init3 = config.getControlInitializations(3);
   EXPECT_EQ(control_init3.size(), 1);
-  EXPECT_EQ(control_init3[0].type, ControlSegmentInitType::RANDOM);
-  EXPECT_DOUBLE_EQ(control_init3[0].amplitude, 4.0);
-  EXPECT_DOUBLE_EQ(control_init3[0].phase, 0.0);
+  EXPECT_EQ(control_init3[0].type, ControlInitializationType::RANDOM);
+  EXPECT_DOUBLE_EQ(control_init3[0].amplitude.value(), 4.0);
 
-  // Check fifth oscillator with two segments
+  // Check fifth oscillator with two segments (init is copied to match segment count)
   const auto& control_init4 = config.getControlInitializations(4);
-  EXPECT_EQ(control_init4.size(), 2);
-  EXPECT_EQ(control_init4[0].type, ControlSegmentInitType::RANDOM);
-  EXPECT_DOUBLE_EQ(control_init4[0].amplitude, 5.0);
-  EXPECT_DOUBLE_EQ(control_init4[0].phase, 5.1);
-  EXPECT_EQ(control_init4[1].type, ControlSegmentInitType::CONSTANT);
-  EXPECT_DOUBLE_EQ(control_init4[1].amplitude, 6.0);
-  EXPECT_DOUBLE_EQ(control_init4[1].phase, 6.1);
+  EXPECT_EQ(control_init4.size(), 1);
+  EXPECT_EQ(control_init4[0].type, ControlInitializationType::RANDOM);
+  EXPECT_DOUBLE_EQ(control_init4[0].amplitude.value(), 5.0);
+  EXPECT_DOUBLE_EQ(control_init4[0].phase.value(), 5.1);
 }
 
 TEST_F(TomlParserTest, ControlInitialization_File) {
@@ -694,14 +680,14 @@ TEST_F(TomlParserTest, ControlInitialization_File) {
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
 
-        [[control_initialization]]
-        type = "file"
-        filename = "params.dat"
+        control_initialization = { type = "file", filename = "myparams.dat" }
       )",
       logger);
 
-  EXPECT_TRUE(config.getControlInitializationFile().has_value());
-  EXPECT_EQ(config.getControlInitializationFile().value(), "params.dat");
+  const auto& control_init0 = config.getControlInitializations(0);
+  EXPECT_EQ(control_init0.size(), 1);
+  EXPECT_EQ(control_init0[0].type, ControlInitializationType::FILE);
+  EXPECT_EQ(control_init0[0].filename.value(), "myparams.dat");
 }
 
 TEST_F(TomlParserTest, ControlInitialization_AllOscillators) {
@@ -712,26 +698,56 @@ TEST_F(TomlParserTest, ControlInitialization_AllOscillators) {
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        [[control_initialization]]
-        type = "constant"
-        amplitude = 1.0
-        phase = 1.1
+        control_initialization = { type = "constant", amplitude = 1.0 }
       )",
       logger);
 
   // Check first oscillator
   const auto& control_init0 = config.getControlInitializations(0);
   EXPECT_EQ(control_init0.size(), 1);
-  EXPECT_EQ(control_init0[0].type, ControlSegmentInitType::CONSTANT);
-  EXPECT_DOUBLE_EQ(control_init0[0].amplitude, 1.0);
-  EXPECT_DOUBLE_EQ(control_init0[0].phase, 1.1);
+  EXPECT_EQ(control_init0[0].type, ControlInitializationType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init0[0].amplitude.value(), 1.0);
 
   // Check second oscillator
   const auto& control_init1 = config.getControlInitializations(1);
   EXPECT_EQ(control_init1.size(), 1);
-  EXPECT_EQ(control_init1[0].type, ControlSegmentInitType::CONSTANT);
-  EXPECT_DOUBLE_EQ(control_init1[0].amplitude, 1.0);
-  EXPECT_DOUBLE_EQ(control_init1[0].phase, 1.1);
+  EXPECT_EQ(control_init1[0].type, ControlInitializationType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init1[0].amplitude.value(), 1.0);
+}
+
+TEST_F(TomlParserTest, ControlInitialization_DefaultWithOverrides) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [3, 3, 3]
+        transfreq = [4.1, 4.1, 4.1]
+        rotfreq = [0.0, 0.0, 0.0]
+        initial_condition = {type = "basis"}
+
+        control_initialization = { 
+          type = "constant", 
+          amplitude = 0.005, 
+          "1" = { type = "random", amplitude = 0.05 }
+        }
+      )",
+      logger);
+
+  // Check first oscillator has default settings
+  const auto& control_init0 = config.getControlInitializations(0);
+  EXPECT_EQ(control_init0.size(), 1);
+  EXPECT_EQ(control_init0[0].type, ControlInitializationType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init0[0].amplitude.value(), 0.005);
+
+  // Check second oscillator has override settings
+  const auto& control_init1 = config.getControlInitializations(1);
+  EXPECT_EQ(control_init1.size(), 1);
+  EXPECT_EQ(control_init1[0].type, ControlInitializationType::RANDOM);
+  EXPECT_DOUBLE_EQ(control_init1[0].amplitude.value(), 0.05);
+
+  // Check third oscillator has default settings
+  const auto& control_init2 = config.getControlInitializations(2);
+  EXPECT_EQ(control_init2.size(), 1);
+  EXPECT_EQ(control_init2[0].type, ControlInitializationType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init2[0].amplitude.value(), 0.005);
 }
 
 TEST_F(TomlParserTest, ControlBounds) {
@@ -1105,13 +1121,10 @@ TEST_F(TomlParserTest, ControlInitialization_UnknownKey) {
           rotfreq = [0.0]
           initial_condition = {type = "basis"}
 
-          [[control_initialization]]
-          type = "file"
-          filename = "params.dat"
-          foo = 42
+          control_initialization = { type = "file", filename = "params.dat", foo = 42 }
         )",
         logger);
-  }, "ERROR: Unknown key 'foo' in control_initialization\\.");
+  }, "ERROR: control_initialization: unexpected key 'foo'\\.");
 }
 
 TEST_F(TomlParserTest, ControlBounds_UnknownKey) {

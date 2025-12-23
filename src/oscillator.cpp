@@ -11,7 +11,7 @@ Oscillator::Oscillator(){
   control_enforceBC = true;
 }
 
-Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine){
+Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine, int param_offset, bool quietmode){
 
   myid = id;
 
@@ -43,10 +43,6 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   decay_time = decay_time_config[id];
   dephase_time = dephase_time_config[id];
 
-  // Get control segments and initializations from config
-  const auto& controlsegments = config.getControlSegments(id);
-  const auto& controlinitializations = config.getControlInitializations(id);
-
   MPI_Comm_rank(PETSC_COMM_WORLD, &mpirank_petsc);
   MPI_Comm_size(PETSC_COMM_WORLD, &mpisize_petsc);
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
@@ -71,6 +67,7 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   // Parse for control segments
   int nparams_per_seg = 0;
 
+  const auto& controlsegments = config.getControlSegments(id);
   for (auto controlsegment : controlsegments) {
 
     switch (controlsegment.type) {
@@ -112,57 +109,54 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
     } // end switch
   }
 
-  //Initialization of the control parameters for each segment
-  for (size_t seg = 0; seg < basisfunctions.size(); seg++) {
-    const auto& controlinitialization = controlinitializations[seg];
+  /* Initialization of the control parameters.  */
+  int seg = 0; // For now, only support for one control segment per oscallator. 
 
-    // Check config option for 'constant' or 'random' initialization
+  const auto& controlinitialization = config.getControlInitializations(id)[seg];
+  if (controlinitialization.type == ControlInitializationType::FILE) { // read from file 
+
+    size_t nparams = basisfunctions[seg]->getNparams() * carrier_freq.size();
+    params.resize(nparams);
+    if (mpirank_world == 0) {
+      read_vector(controlinitialization.filename.value().c_str(), params.data(), nparams, quietmode, param_offset);
+    }
+    MPI_Bcast(params.data(), nparams, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+  } else { // constant or random initialization
+
     // Note, the config amplitude is multiplied by 2pi here!!
-    if (controlinitialization.type == ControlSegmentInitType::CONSTANT) {
-      double initval = controlinitialization.amplitude*2.0*M_PI;
-      // If STEP: scale to [0,1]
-      if (basisfunctions[seg]->getType() == ControlType::STEP){
-        initval = std::max(0.0, initval);  
-        initval = std::min(1.0, initval); 
-      }
-      for (size_t f = 0; f<carrier_freq.size(); f++) {
-        for (int i=0; i<basisfunctions[seg]->getNparams(); i++){
-          params.push_back(initval);
-        }
-        // if BSPLINEAMP: Two values can be provided: First one for the amplitude (set above), second one for the phase which otherwise is set to 0.0 (overwrite here)
-        if (basisfunctions[seg]->getType() == ControlType::BSPLINEAMP) {
-          params[params.size()-1] = controlinitialization.phase;
-        }
-      }
-    } else if (controlinitialization.type == ControlSegmentInitType::RANDOM) {
-      double initval = controlinitialization.amplitude*2.0*M_PI;
+    double initval = controlinitialization.amplitude.value()*2.0*M_PI;
 
-      // Uniform distribution [0,1)
-      std::uniform_real_distribution<double> unit_dist(0.0, 1.0);
+    for (size_t f = 0; f<carrier_freq.size(); f++) {
+      for (int i=0; i<basisfunctions[seg]->getNparams(); i++){
 
-      for (size_t f = 0; f<carrier_freq.size(); f++) {
-        for (int i=0; i<basisfunctions[seg]->getNparams(); i++){
-          double randval = unit_dist(rand_engine);  // random in [0,1]
-          // scale to chosen amplitude 
-          double val = initval*randval;
+        double val; 
+        if (controlinitialization.type == ControlInitializationType::CONSTANT) {
+          val = initval;
+        } else if (controlinitialization.type == ControlInitializationType::RANDOM) {
+          // Uniform distribution [-a,a)
+          std::uniform_real_distribution<double> uniform_dist(0.0, 1.0);
+          double randval = uniform_dist(rand_engine);  // random in [0,1)
+          // scale to chosen amplitude [-a,a]
+          val = initval*randval;
+          val = 2*val - initval;
+        } else {
+          logger.exitWithError("Unknown control initialization type.");
+        }
 
-          // If STEP: scale to [0,1] else scale to [-a,a]
-          if (basisfunctions[seg]->getType() == ControlType::STEP){
-            val = std::max(0.0, val);  
-            val = std::min(1.0, val); 
-          } else {
-            val = 2*val - initval;
-          }
-          params.push_back(val);
+        // If STEP parameterization, scale back to [0,1]
+        if (basisfunctions[seg]->getType() == ControlType::STEP){
+          val = std::max(0.0, val);  
+          val = std::min(1.0, val); 
         }
-        // if BSPLINEAMP: Two values can be provided: First one for the amplitude (set above), second one for the phase which otherwise is set to 0.0 (overwrite here)
-        if (basisfunctions[seg]->getType() == ControlType::BSPLINEAMP) {
-          params[params.size()-1] = controlinitialization.phase;
-        }
+
+        // Push the value to the parameter storage
+        params.push_back(val);
       }
-    } else {
-      for (size_t i=0; i<basisfunctions[seg]->getNparams() * carrier_freq.size(); i++){
-        params.push_back(0.0);
+
+      // if BSPLINEAMP: Two values can be provided: First one for the amplitude (set above), second one for the phase which otherwise is set to 0.0 (overwrite here)
+      if (basisfunctions[seg]->getType() == ControlType::BSPLINEAMP) {
+        params[params.size()-1] = controlinitialization.phase.value();
       }
     }
   }

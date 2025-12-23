@@ -28,6 +28,7 @@ usematfree = true
 linearsolver_type = "gmres"
 linearsolver_maxiter = 20
 timestepper = "IMR"
+control_initialization = { type = "constant", amplitude = 0.0 }
 
 [[apply_pipulse]]
 oscID = 0
@@ -43,11 +44,6 @@ num = 30
 [[control_bounds]]
 oscID = 0
 values = [15.0]
-
-[[control_initialization]]
-oscID = 0
-type = "constant"
-amplitude = 0.0
 
 [[carrier_frequency]]
 oscID = 0

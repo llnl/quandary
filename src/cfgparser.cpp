@@ -93,8 +93,8 @@ bool isValidControlType(const std::string& str) {
   return CONTROL_TYPE_MAP.find(toLower(str)) != CONTROL_TYPE_MAP.end();
 }
 
-bool isValidControlSegmentInitType(const std::string& str) {
-  return CONTROL_SEGMENT_INIT_TYPE_MAP.find(toLower(str)) != CONTROL_SEGMENT_INIT_TYPE_MAP.end();
+bool isValidControlInitializationType(const std::string& str) {
+  return CONTROL_INITIALIZATION_TYPE_MAP.find(toLower(str)) != CONTROL_INITIALIZATION_TYPE_MAP.end();
 }
 
 } // namespace
@@ -271,9 +271,9 @@ ControlType CfgParser::convertFromString<ControlType>(const std::string& str) {
 }
 
 template <>
-ControlSegmentInitType CfgParser::convertFromString<ControlSegmentInitType>(const std::string& str) {
-  auto it = CONTROL_SEGMENT_INIT_TYPE_MAP.find(toLower(str));
-  if (it == CONTROL_SEGMENT_INIT_TYPE_MAP.end()) {
+ControlInitializationType CfgParser::convertFromString<ControlInitializationType>(const std::string& str) {
+  auto it = CONTROL_INITIALIZATION_TYPE_MAP.find(toLower(str));
+  if (it == CONTROL_INITIALIZATION_TYPE_MAP.end()) {
     logger.exitWithError("\n\n ERROR: Unknown control segment initialization type: " + str + ".\n");
   }
   return it->second;
@@ -445,22 +445,22 @@ std::vector<ControlInitializationData> CfgParser::convertFromString<std::vector<
 
     ControlInitializationData initialization;
 
-    auto type_enum = parseEnum(type_str, CONTROL_SEGMENT_INIT_TYPE_MAP);
+    auto type_enum = parseEnum(type_str, CONTROL_INITIALIZATION_TYPE_MAP);
     if (!type_enum.has_value()) {
       logger.exitWithError("Expected control initialization type (file, constant, random), got: " + type_str);
     }
 
     switch (type_enum.value()) {
-      case ControlSegmentInitType::FILE: {
+      case ControlInitializationType::FILE: {
         initialization.filename = parts[i];
         initializations.push_back(initialization);
         return initializations;
       }
-      case ControlSegmentInitType::CONSTANT:
-      case ControlSegmentInitType::RANDOM: {
+      case ControlInitializationType::CONSTANT:
+      case ControlInitializationType::RANDOM: {
         initialization.init_seg_type = type_enum.value();
         initialization.amplitude = convertFromString<double>(parts[i++]);
-        if (i < parts.size() && !isValidControlSegmentInitType(parts[i])) {
+        if (i < parts.size() && !isValidControlInitializationType(parts[i])) {
           initialization.phase = convertFromString<double>(parts[i++]);
         }
         initializations.push_back(initialization);

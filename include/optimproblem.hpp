@@ -89,7 +89,6 @@ class OptimProblem {
   double tol_infidelity; ///< Stopping criterion based on infidelity
   int maxiter; ///< Stopping criterion based on maximum number of iterations
   Tao tao; ///< PETSc's TAO optimization solver
-  std::vector<double> initguess_fromfile; ///< Initial guess read from file
   double* mygrad; ///< Auxiliary gradient storage
     
   Vec xtmp; ///< Temporary vector storage

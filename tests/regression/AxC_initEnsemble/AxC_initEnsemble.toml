@@ -28,6 +28,10 @@ usematfree = true
 linearsolver_type = "gmres"
 linearsolver_maxiter = 20
 rand_seed = 1234
+control_initialization = {
+  "0" = { type = "constant", amplitude = 5.0 },
+  "1" = { type = "constant", amplitude = 1.0 }
+}
 
 [[control_segments]]
 oscID = 0
@@ -46,16 +50,6 @@ values = [25.0]
 [[control_bounds]]
 oscID = 1
 values = [100.0]
-
-[[control_initialization]]
-oscID = 0
-type = "constant"
-amplitude = 5.0
-
-[[control_initialization]]
-oscID = 1
-type = "constant"
-amplitude = 1.0
 
 [[carrier_frequency]]
 oscID = 0

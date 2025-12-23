@@ -73,8 +73,10 @@ class Oscillator {
      * @param config Configuration parameters containing all oscillator settings
      * @param id Oscillator identifier
      * @param rand_engine Random number generator engine
+     * @param param_offset Offset for global control parameter indexing
+     * @param quietmode Flag for quiet mode operation
      */
-    Oscillator(const Config& config, size_t id, std::mt19937 rand_engine);
+    Oscillator(const Config& config, size_t id, std::mt19937 rand_engine, int param_offset, bool quietmode);
 
     virtual ~Oscillator();
 

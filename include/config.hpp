@@ -46,10 +46,8 @@ class Config {
 
   // Optimization options
   bool control_enforceBC; ///< Decide whether control pulses should start and end at zero
-  std::optional<std::string> control_initialization_file; ///< Global control initialization file for all oscillators
   std::vector<std::vector<ControlSegment>> control_segments; ///< Control segments for each oscillator
-  std::vector<std::vector<ControlSegmentInitialization>>
-      control_initializations; ///< Control initializations for each oscillator
+  std::vector<std::vector<ControlInitialization>> control_initializations; ///< Control initializations for each oscillator
   std::vector<std::vector<double>> control_bounds; ///< Control bounds for each oscillator
   std::vector<std::vector<double>> carrier_frequencies; ///< Carrier frequencies for each oscillator
   OptimTargetSettings optim_target; ///< Grouped optimization target configuration
@@ -127,10 +125,9 @@ class Config {
 
   const std::vector<ControlSegment>& getControlSegments(size_t i_osc) const { return control_segments[i_osc]; }
   bool getControlEnforceBC() const { return control_enforceBC; }
-  const std::vector<ControlSegmentInitialization>& getControlInitializations(size_t i_osc) const {
-    return control_initializations[i_osc];
+  const std::vector<ControlInitialization>& getControlInitializations(size_t i_osc) const {
+    return control_initializations[i_osc]; 
   }
-  const std::optional<std::string> getControlInitializationFile() const { return control_initialization_file; }
   const std::vector<double>& getControlBounds(size_t i_osc) const { return control_bounds[i_osc]; }
   double getControlBound(size_t i_osc, size_t i_seg) const { return control_bounds[i_osc][i_seg]; }
   const std::vector<double>& getCarrierFrequencies(size_t i_osc) const { return carrier_frequencies[i_osc]; }
@@ -194,8 +191,8 @@ class Config {
   std::vector<std::vector<ControlSegment>> parseControlSegments(const toml::array& array_of_tables,
                                                                 size_t num_entries) const;
 
-  std::vector<std::vector<ControlSegmentInitialization>> parseControlInitializations(
-      const toml::array& array_of_tables, size_t num_entries, std::optional<std::string>& control_init_file) const;
+  std::vector<std::vector<ControlInitialization>> parseControlInitializations(
+      const toml::table& table, size_t num_entries) const;
 
   OptimTargetSettings parseOptimTarget(TargetType type, const std::optional<GateType>& gate_type,
                                        const std::optional<std::string>& gate_file,
@@ -240,6 +237,6 @@ class Config {
   std::vector<std::vector<ControlSegment>> parseControlSegmentsCfg(
       const std::optional<std::map<int, std::vector<ControlSegmentData>>>& segments_opt) const;
   ControlSegment parseControlSegmentCfg(const ControlSegmentData& seg_config) const;
-  std::vector<std::vector<ControlSegmentInitialization>> parseControlInitializationsCfg(
+  std::vector<std::vector<ControlInitialization>> parseControlInitializationsCfg(
       const std::optional<std::map<int, std::vector<ControlInitializationData>>>& init_configs) const;
 };

@@ -135,14 +135,6 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
   VecAssemblyBegin(xlower); VecAssemblyEnd(xlower);
   VecAssemblyBegin(xupper); VecAssemblyEnd(xupper);
 
-  /* Store the initial guess if read from file */
-  auto control_initialization_file = config.getControlInitializationFile();
-  if (control_initialization_file.has_value()) {
-    for (int i=0; i<ndesign; i++) initguess_fromfile.push_back(0.0);
-    if (mpirank_world == 0) read_vector(control_initialization_file.value().c_str(), initguess_fromfile.data(), ndesign, quietmode);
-    MPI_Bcast(initguess_fromfile.data(), ndesign, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-  }
- 
   /* Create Petsc's optimization solver */
   TaoCreate(PETSC_COMM_WORLD, &tao);
   /* Set optimization type and parameters */
@@ -526,23 +518,16 @@ void OptimProblem::solve(Vec xinit) {
 void OptimProblem::getStartingPoint(Vec xinit){
   MasterEq* mastereq = timestepper->mastereq;
 
-  if (initguess_fromfile.size() > 0) {
-    /* Set the initial guess from file */
-    for (size_t i=0; i<initguess_fromfile.size(); i++) {
-      VecSetValue(xinit, i, initguess_fromfile[i], INSERT_VALUES);
-    }
-
-  } else { // copy from initialization in oscillators contructor
-    PetscScalar* xptr;
-    VecGetArray(xinit, &xptr);
-    int shift = 0;
-    for (size_t ioscil = 0; ioscil<mastereq->getNOscillators(); ioscil++){
-      mastereq->getOscillator(ioscil)->getParams(xptr + shift);
-      shift += mastereq->getOscillator(ioscil)->getNParams();
-    }
-    VecRestoreArray(xinit, &xptr);
+  // Grab parameters from oscillators
+  PetscScalar* xptr;
+  VecGetArray(xinit, &xptr);
+  int shift = 0;
+  for (size_t ioscil = 0; ioscil<mastereq->getNOscillators(); ioscil++){
+    mastereq->getOscillator(ioscil)->getParams(xptr + shift);
+    shift += mastereq->getOscillator(ioscil)->getNParams();
   }
-
+  VecRestoreArray(xinit, &xptr);
+  
   /* Assemble initial guess */
   VecAssemblyBegin(xinit);
   VecAssemblyEnd(xinit);

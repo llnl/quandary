@@ -33,6 +33,7 @@ linearsolver_type = "gmres"
 linearsolver_maxiter = 20
 timestepper = "imr"
 rand_seed = 1234
+control_initialization = { type = "constant", amplitude = 0.010000 }
 
 [[control_segments]]
 oscID = 0
@@ -40,12 +41,6 @@ type = "spline"
 num = 150
 tstart = 0
 tstop = 70
-
-[[control_initialization]]
-oscID = 0
-type = "constant"
-amplitude = 0.010000
-phase = 0.000000
 
 [[control_bounds]]
 oscID = 0

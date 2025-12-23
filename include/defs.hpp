@@ -165,16 +165,16 @@ const std::map<std::string, ControlType> CONTROL_TYPE_MAP = {
 /**
  * @brief Types of control initializations per segment
  */
-enum class ControlSegmentInitType {
+enum class ControlInitializationType {
   CONSTANT, ///< Constant
   RANDOM,   ///< Random
   FILE,     ///< From file
 };
 
-const std::map<std::string, ControlSegmentInitType> CONTROL_SEGMENT_INIT_TYPE_MAP = {
-    {"constant", ControlSegmentInitType::CONSTANT},
-    {"random", ControlSegmentInitType::RANDOM},
-    {"file", ControlSegmentInitType::FILE},
+const std::map<std::string, ControlInitializationType> CONTROL_INITIALIZATION_TYPE_MAP = {
+    {"constant", ControlInitializationType::CONSTANT},
+    {"random", ControlInitializationType::RANDOM},
+    {"file", ControlInitializationType::FILE},
 };
 
 /**
@@ -285,15 +285,6 @@ struct PiPulseSegment {
 };
 
 /**
- * @brief Control segment initialization settings.
- */
-struct ControlSegmentInitialization {
-  ControlSegmentInitType type; ///< Initialization type
-  double amplitude; ///< Initial control pulse amplitude
-  double phase; ///< Initial control pulse phase
-};
-
-/**
  * @brief Structure for defining control segments.
  *
  * Defines a controllable segment for an oscillator and the type of parameterization,
@@ -315,3 +306,14 @@ struct ControlSegment {
   std::optional<double> step_amp2; ///< Imaginary part of amplitude of the step pulse
   std::optional<double> tramp; ///< Ramp time
 };
+
+/**
+ * @brief Control segment initialization settings.
+ */
+struct ControlInitialization {
+  ControlInitializationType type; ///< Initialization type
+  std::optional<double> amplitude; ///< Initial control pulse amplitude
+  std::optional<double> phase; ///< Initial control pulse phase
+  std::optional<std::string> filename; ///< Filename for FILE type
+};
+

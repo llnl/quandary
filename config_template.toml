@@ -132,6 +132,27 @@ timestepper = "IMR"
 # For reproducability, one can choose to set a fixed seed for the random number generator. Comment out, or set negative if seed should be random (non-reproducable)
 rand_seed = 1234
 
+# Control initialization options: Table with optional default + per-subsystem overrides
+
+# Option 1: Default initialization that applies to all subsystems 
+control_initialization = { type = "constant", amplitude = 0.005 }
+
+# Option 2: File initialization (applies to all oscillators)
+# control_initialization = { type = "file", filename = "params.dat" }
+
+# Option 3: Default + per-subsystem overrides (overrides replace the default for that subsystem)
+# control_initialization = { 
+#   type = "constant",        # Default for all subsystems
+#   amplitude = 0.005, 
+#   "1" = { type = "random", amplitude = 0.05 }  # Override for subsystem 1
+# }
+
+# Option 4: Per-subsystem only (no default, must specify all subsystems you want to customize)
+# control_initialization = {
+#   "0" = { type = "constant", amplitude = 0.003 },
+#   "1" = { type = "random", amplitude = 0.05 }
+# }
+
 
 # ---------------------------------------------------------------
 # ------------------- Per oscillator settings -------------------
@@ -156,78 +177,20 @@ rand_seed = 1234
 # "spline_amplitude" - amplitude-only parameterization
 # "step" - step function control
 [[control_segments]]
-oscID = 0
+# oscID = 0
 type = "spline"
 num = 150
 # tstart = 0.0  # optional, defaults to 0.0
 # tstop = 100.0  # optional, defaults to ntime * dt
 
-[[control_segments]]
-oscID = 1
-type = "spline"
-num = 150
-
-# [[control_segments]]
-# oscID = 0
-# type = "spline0"
-# num = 300
-
-# [[control_segments]]
-# oscID = 0
-# type = "spline_amplitude"
-# num = 150
-# scaling = 1.0
-
-# [[control_segments]]
-# oscID = 0
-# type = "step"
-# step_amp1 = 0.1
-# step_amp2 = 0.2
-# tramp = 0.3
-# tstart = 0.0  # optional
-# tstop = 100.0  # optional
-
 # Apply to all oscillators
 # [[control_segments]]
 # type = "spline0"
 # num = 300
-
-# Control initialization options:
-# Option 1: File initialization (applies to all oscillators)
-# [[control_initialization]]
-# type = "file"
-# filename = "params.dat"
-
-# Option 2: Per-oscillator initialization
-# Options: "constant" with amplitude and optional phase, "random" with amplitude and optional phase
-[[control_initialization]]
-oscID = 0
-type = "constant"
-amplitude = 0.005
-# phase = 0.0  # optional, defaults to 0.0
-
-[[control_initialization]]
-oscID = 1
-type = "constant"
-amplitude = 0.005
-
-# [[control_initialization]]
-# oscID = 0
-# type = "random"
-# amplitude = 0.005
-
-# Apply to all oscillators
-# [[control_initialization]]
-# type = "random"
-# amplitude = 0.005
 
 # Maximum amplitude bound for the control pulses for each oscillator (GHz). One entry for each segment.
 [[control_bounds]]
 oscID = 0
-values = [0.008]
-
-[[control_bounds]]
-oscID = 1
 values = [0.008]
 
 # Apply to all oscillators

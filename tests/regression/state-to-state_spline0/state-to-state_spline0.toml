@@ -29,10 +29,7 @@ linearsolver_type = "gmres"
 linearsolver_maxiter = 20
 timestepper = "IMR"
 rand_seed = 1234
-
-[[control_initialization]]
-type = "file"
-filename = "./params.dat"
+control_initialization = { type = "file", filename = "./params.dat" }
 
 [[control_segments]]
 oscID = 0
