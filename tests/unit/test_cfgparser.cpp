@@ -62,13 +62,10 @@ TEST_F(CfgParserTest, ParseOutputSettings) {
       logger);
 
   // Verify output settings
-  auto output = config.getOutput();
-  EXPECT_EQ(output.size(), 2); // 2 oscillators
-  EXPECT_EQ(output[0].size(), 1); // 1 output
-  EXPECT_EQ(output[0][0], OutputType::POPULATION);
-  EXPECT_EQ(output[1].size(), 2); // 2 outputs
-  EXPECT_EQ(output[1][0], OutputType::POPULATION);
-  EXPECT_EQ(output[1][1], OutputType::EXPECTED_ENERGY);
+  auto output = config.getOutputType();
+  EXPECT_EQ(output.size(), 2); // 2: population, expectedEnergy 
+  EXPECT_EQ(output[0], OutputType::EXPECTED_ENERGY);
+  EXPECT_EQ(output[1], OutputType::POPULATION);
 }
 
 TEST_F(CfgParserTest, ParseStructSettings) {
