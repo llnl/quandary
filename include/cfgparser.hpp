@@ -28,13 +28,6 @@ struct ControlSegmentData {
   std::vector<double> parameters; ///< Parameters for control segment
 };
 
-struct ControlInitializationData {
-  ControlInitializationType init_seg_type; ///< Type of initialization per segment
-  std::optional<double> amplitude; ///< Initial amplitude
-  std::optional<double> phase; ///< Initial phase (optional)
-  std::optional<std::string> filename; ///< Filename (for file init - mutually exclusive with above)
-};
-
 /**
  * @brief Configuration settings passed to Config constructor.
  *
@@ -63,7 +56,7 @@ struct ParsedConfigData {
   // Control and optimization parameters
   std::optional<std::map<int, std::vector<ControlSegmentData>>> indexed_control_segments;
   std::optional<bool> control_enforceBC;
-  std::optional<std::map<int, std::vector<ControlInitializationData>>> indexed_control_init;
+  std::optional<std::map<int, std::vector<ControlInitialization>>> indexed_control_init;
   std::optional<std::map<int, std::vector<double>>> indexed_control_bounds;
   std::optional<std::map<int, std::vector<double>>> indexed_carrier_frequencies;
   std::optional<OptimTargetSettings> optim_target;

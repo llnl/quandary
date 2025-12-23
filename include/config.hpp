@@ -238,5 +238,5 @@ class Config {
       const std::optional<std::map<int, std::vector<ControlSegmentData>>>& segments_opt) const;
   ControlSegment parseControlSegmentCfg(const ControlSegmentData& seg_config) const;
   std::vector<std::vector<ControlInitialization>> parseControlInitializationsCfg(
-      const std::optional<std::map<int, std::vector<ControlInitializationData>>>& init_configs) const;
+      const std::optional<std::map<int, std::vector<ControlInitialization>>>& init_configs) const;
 };

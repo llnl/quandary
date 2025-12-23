@@ -1456,7 +1456,7 @@ ControlSegment Config::parseControlSegmentCfg(const ControlSegmentData& seg_conf
   return segment;
 }
 
-std::vector<std::vector<ControlInitialization>> Config::parseControlInitializationsCfg(const std::optional<std::map<int, std::vector<ControlInitializationData>>>& init_configs) const {
+std::vector<std::vector<ControlInitialization>> Config::parseControlInitializationsCfg(const std::optional<std::map<int, std::vector<ControlInitialization>>>& init_configs) const {
 
   ControlInitialization default_init = ControlInitialization{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt};
 
@@ -1468,7 +1468,7 @@ std::vector<std::vector<ControlInitialization>> Config::parseControlInitializati
     }
     for (const auto& init_config : init_configs->at(static_cast<int>(i))) {
       ControlInitialization init =
-          ControlInitialization{init_config.init_seg_type, init_config.amplitude, init_config.phase, init_config.filename};
+          ControlInitialization{init_config.type, init_config.amplitude, init_config.phase, init_config.filename};
 
       control_initializations[i].push_back(init);
     }

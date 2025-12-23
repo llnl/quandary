@@ -428,11 +428,11 @@ std::vector<ControlSegmentData> CfgParser::convertFromString<std::vector<Control
 }
 
 template <>
-std::vector<ControlInitializationData> CfgParser::convertFromString<std::vector<ControlInitializationData>>(
+std::vector<ControlInitialization> CfgParser::convertFromString<std::vector<ControlInitialization>>(
     const std::string& str) {
   const auto parts = split(str);
 
-  std::vector<ControlInitializationData> initializations;
+  std::vector<ControlInitialization> initializations;
   size_t i = 0;
 
   while (i < parts.size()) {
@@ -443,7 +443,7 @@ std::vector<ControlInitializationData> CfgParser::convertFromString<std::vector<
       logger.exitWithError("Expected control_initialization to have a type and at least one parameter.");
     }
 
-    ControlInitializationData initialization;
+    ControlInitialization initialization;
 
     auto type_enum = parseEnum(type_str, CONTROL_INITIALIZATION_TYPE_MAP);
     if (!type_enum.has_value()) {
@@ -458,7 +458,7 @@ std::vector<ControlInitializationData> CfgParser::convertFromString<std::vector<
       }
       case ControlInitializationType::CONSTANT:
       case ControlInitializationType::RANDOM: {
-        initialization.init_seg_type = type_enum.value();
+        initialization.type = type_enum.value();
         initialization.amplitude = convertFromString<double>(parts[i++]);
         if (i < parts.size() && !isValidControlInitializationType(parts[i])) {
           initialization.phase = convertFromString<double>(parts[i++]);
