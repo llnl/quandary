@@ -91,6 +91,9 @@ optim_penalty = { leakage = 0.0,                # Penalize leakage into guard le
                   weightedcost_width = 0.0      # Width paramter for weighted cost function integral
                 }
 
+# Frequency of writing information during optimization iterations: write every <num> iterations
+optim_monitor_frequency = 1
+
 # ---------------------------------------------------------------
 # ------------------- Output and runtypes -----------------------
 # ---------------------------------------------------------------
@@ -99,8 +102,14 @@ datadir = "./data_out"
 
 # Output frequency in the time domain: write output every <num> time-step
 output_frequency = 1
-# Frequency of writing output during optimization: write output every <num> optimization iterations
-optim_monitor_frequency = 1
+# Specify the desired output during time evolution. Format: list of any of the following options:
+# "expectedEnergy" - expected level occupation for each oscillator 
+# "expectedEnergyComposite" - expected level of the full-dimensional composite system
+# "population" - level occupation (probabilities) for each oscillator 
+# "populationComposite" - level occupation (probabilities) for the full-dimensional composite system
+# "fullstate" - full state of the composite system (full density matrix, or state vector). WARNING: This might result in very large output files - use with care.
+output_type = ["population", "expectedEnergy"]
+
 # Runtype options:
 # "simulation" - a forward simulation only
 # "gradient" - forward simulation and backward simulation
@@ -122,6 +131,7 @@ linearsolver_maxiter = 20
 timestepper = "IMR"
 # For reproducability, one can choose to set a fixed seed for the random number generator. Comment out, or set negative if seed should be random (non-reproducable)
 rand_seed = 1234
+
 
 # ---------------------------------------------------------------
 # ------------------- Per oscillator settings -------------------
@@ -237,18 +247,3 @@ values = [0.0, -0.2252, -0.1]
 # [[carrier_frequency]]
 # values = [0.0, -0.2252, -0.1]
 
-# Specify the desired output for each oscillator. Format: list of either of the following options:
-# "expectedEnergy" - time evolution of the expected energy level for this oscillator (expected energy of the reduced density matrix)
-# "expectedEnergyComposite" - time evolution of expected energy level of the full-dimensional composite system
-# "population" - time evolution of the energy level populations (probabilities) for this oscillator (diagonals of the reduced density matrix)
-# "populationComposite" - time evolution of the energy level population (probabilities) for the full-dimensional composite system
-# "fullstate" - time-evolution of the full state of the composite system (full density matrix, or state vector)
-# (note: 'fullstate' can appear in *any* of the lines). WARNING: This might result in *huge* output files! Use with care.
-# Apply to all oscillators
-[[write]]
-type = ["population", "expectedEnergy"]
-
-# Apply to oscillator with ID = 1
-# [[write]]
-# oscID = 1
-# type = ["population", "expectedEnergy"]

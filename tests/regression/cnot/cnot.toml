@@ -22,6 +22,7 @@ runtype = "optimization"
 usematfree = true
 datadir = "./data_out"
 output_frequency = 1
+output_type = ["population", "expectedEnergy"]
 optim_monitor_frequency = 1
 linearsolver_type = "gmres"
 linearsolver_maxiter = 20
@@ -63,11 +64,3 @@ values = [0.0, -0.2198, -0.1]
 [[carrier_frequency]]
 oscID = 1
 values = [0.0, -0.2252, -0.1]
-
-[[write]]
-oscID = 0
-type = ["population", "expectedEnergy"]
-
-[[write]]
-oscID = 1
-type = ["population", "expectedEnergy"]

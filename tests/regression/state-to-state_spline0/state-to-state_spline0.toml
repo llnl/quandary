@@ -21,6 +21,7 @@ optim_penalty = { leakage = 0.1, weightedcost = 0.1, weightedcost_width = 0.01, 
 
 datadir = "./data_out"
 output_frequency = 1
+output_type = ["fullstate"]
 optim_monitor_frequency = 1
 runtype = "optimization"
 usematfree = true
@@ -45,7 +46,3 @@ values = [100.0]
 [[carrier_frequency]]
 oscID = 0
 values = [0.0]
-
-[[write]]
-oscID = 0
-type = ["fullstate"]

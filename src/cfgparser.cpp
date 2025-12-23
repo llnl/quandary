@@ -80,17 +80,6 @@ std::vector<std::vector<double>> CfgParser::convertIndexedToVectorVector(
   return result;
 }
 
-std::vector<std::vector<OutputType>> CfgParser::convertIndexedToOutputVector(
-    const std::map<int, std::vector<OutputType>>& indexed_map, size_t num_oscillators) {
-  std::vector<std::vector<OutputType>> result(num_oscillators);
-  for (const auto& [osc_idx, values] : indexed_map) {
-    if (static_cast<size_t>(osc_idx) < result.size()) {
-      result[osc_idx] = values;
-    }
-  }
-  return result;
-}
-
 namespace {
 
 std::string trimWhitespace(std::string s) {

@@ -148,10 +148,7 @@ class CfgParser {
     }
   }
 
-  std::vector<std::vector<double>> convertIndexedToVectorVector(const std::map<int, std::vector<double>>& indexed_map,
-                                                                size_t num_oscillators);
-  std::vector<std::vector<OutputType>> convertIndexedToOutputVector(
-      const std::map<int, std::vector<OutputType>>& indexed_map, size_t num_oscillators);
+  std::vector<std::vector<double>> convertIndexedToVectorVector(const std::map<int, std::vector<double>>& indexed_map, size_t num_oscillators);
 
   template <typename T>
   void registerConfig(const std::string& key, std::optional<T>& member) {

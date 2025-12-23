@@ -241,22 +241,19 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     datadir = toml["datadir"].value_or(ConfigDefaults::DATADIR);
 
-    output_to_write.resize(num_osc); // Empty vectors by default
-    auto write_array = validators::getArrayOfTables(toml, "write");
-
-    // Allowed keys for write table
-    const std::string write_type_key = "type";
-    const std::set<std::string> write_allowed_keys = {OSC_ID_KEY, write_type_key};
-
-    auto write_str =
-        parseOscillatorSettings<std::string>(write_array, num_osc, {}, write_type_key, write_allowed_keys, "write");
-    for (size_t i = 0; i < write_str.size(); i++) {
-      for (const auto& str : write_str[i]) {
-        auto enum_val = parseEnum(str, OUTPUT_TYPE_MAP);
-        if (!enum_val.has_value()) {
-          logger.exitWithError("Unknown output type: " + str);
+    // Parse output_type as an array of strings
+    output_type.clear();
+    if (auto output_type_array = toml["output_type"].as_array()) {
+      for (auto&& elem : *output_type_array) {
+        if (auto str = elem.value<std::string>()) {
+          auto enum_val = parseEnum(*str, OUTPUT_TYPE_MAP);
+          if (!enum_val.has_value()) {
+            logger.exitWithError("Unknown output type: " + *str);
+          }
+          output_type.push_back(enum_val.value());
+        } else {
+          logger.exitWithError("output_type array must contain strings");
         }
-        output_to_write[i].push_back(enum_val.value());
       }
     }
 
@@ -437,7 +434,20 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
 
   // Output parameters
   datadir = settings.datadir.value_or(ConfigDefaults::DATADIR);
-  output_to_write = parseOscillatorSettingsCfg<OutputType>(settings.indexed_output, num_osc);
+  
+  // Convert old per-oscillator output to global output_type (apply to all oscillators)
+  auto indexed_output_vec = parseOscillatorSettingsCfg<OutputType>(settings.indexed_output, num_osc);
+  output_type.clear();
+  // Collect unique output types from all oscillators
+  std::set<OutputType> unique_types;
+  for (const auto& osc_output : indexed_output_vec) {
+    for (const auto& type : osc_output) {
+      unique_types.insert(type);
+    }
+  }
+  // Convert set to vector
+  output_type.assign(unique_types.begin(), unique_types.end());
+  
   output_frequency = settings.output_frequency.value_or(ConfigDefaults::OUTPUT_FREQUENCY);
   optim_monitor_frequency = settings.optim_monitor_frequency.value_or(ConfigDefaults::OPTIM_MONITOR_FREQUENCY);
   runtype = settings.runtype.value_or(ConfigDefaults::RUNTYPE);
@@ -728,6 +738,12 @@ void Config::printConfig(std::stringstream& log) const {
   // Output parameters
   log << "datadir = \"" << datadir << "\"\n";
   log << "output_frequency = " << output_frequency << "\n";
+  log << "output_type = [";
+  for (size_t j = 0; j < output_type.size(); ++j) {
+    log << "\"" << enumToString(output_type[j], OUTPUT_TYPE_MAP) << "\"";
+    if (j < output_type.size() - 1) log << ", ";
+  }
+  log << "]\n\n";
   log << "optim_monitor_frequency = " << optim_monitor_frequency << "\n";
   log << "runtype = \"" << enumToString(runtype, RUN_TYPE_MAP) << "\"\n";
   log << "usematfree = " << (usematfree ? "true" : "false") << "\n";
@@ -807,20 +823,6 @@ void Config::printConfig(std::stringstream& log) const {
       log << "[[carrier_frequency]]\n";
       log << "oscID = " << i << "\n";
       log << "values = " << printVector(carrier_frequencies[i]) << "\n\n";
-    }
-  }
-
-  // Output write specifications as array of tables
-  for (size_t i = 0; i < output_to_write.size(); ++i) {
-    if (!output_to_write[i].empty()) {
-      log << "[[write]]\n";
-      log << "oscID = " << i << "\n";
-      log << "type = [";
-      for (size_t j = 0; j < output_to_write[i].size(); ++j) {
-        log << "\"" << enumToString(output_to_write[i][j], OUTPUT_TYPE_MAP) << "\"";
-        if (j < output_to_write[i].size() - 1) log << ", ";
-      }
-      log << "]\n\n";
     }
   }
 }

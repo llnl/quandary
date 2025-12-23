@@ -25,6 +25,7 @@ optim_tikhonov = { coeff = 1e-05, use_x0 = false }
 optim_penalty = { leakage = 0.01, weightedcost = 0.0, weightedcost_width = 0.5, dpdm = 0.01, energy = 0.01, variation = 0.01 }
 datadir = "./data_out"
 output_frequency = 1
+output_type = ["expectedenergy", "fullstate", "population"]
 optim_monitor_frequency = 1
 runtype = "optimization"
 usematfree = true
@@ -53,8 +54,4 @@ values = [0.050000000000000003]
 [[carrier_frequency]]
 oscID = 0
 values = [0.10000000000000001]
-
-[[write]]
-oscID = 0
-type = ["population", "expectedenergy", "fullstate"]
 

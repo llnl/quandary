@@ -30,6 +30,7 @@ optim_penalty = { leakage = 0.1, weightedcost = 0.0, weightedcost_width = 0.0, d
 
 datadir = "./data_out"
 output_frequency = 1
+output_type = ["population"]
 optim_monitor_frequency = 1
 runtype = "simulation"
 usematfree = false
@@ -180,35 +181,3 @@ values = [0.0]
 [[carrier_frequency]]
 oscID = 7
 values = [0.0]
-
-[[write]]
-oscID = 0
-type = ["population"]
-
-[[write]]
-oscID = 1
-type = ["population"]
-
-[[write]]
-oscID = 2
-type = ["population"]
-
-[[write]]
-oscID = 3
-type = ["population"]
-
-[[write]]
-oscID = 4
-type = ["population"]
-
-[[write]]
-oscID = 5
-type = ["population"]
-
-[[write]]
-oscID = 6
-type = ["population"]
-
-[[write]]
-oscID = 7
-type = ["population"]

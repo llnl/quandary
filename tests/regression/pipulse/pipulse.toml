@@ -21,6 +21,7 @@ optim_penalty = { leakage = 1.0, weightedcost = 1.0, weightedcost_width = 0.5, d
 
 datadir = "data_out"
 output_frequency = 1
+output_type = ["expectedEnergy", "fullstate", "population"]
 optim_monitor_frequency = 100
 runtype = "simulation"
 usematfree = true
@@ -51,7 +52,3 @@ amplitude = 0.0
 [[carrier_frequency]]
 oscID = 0
 values = [0.0]
-
-[[write]]
-oscID = 0
-type = ["expectedEnergy", "population", "fullstate"]

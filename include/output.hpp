@@ -24,12 +24,13 @@ class Output{
   
   FILE* optimfile; ///< Output file for logging optimization progress
   int output_frequency; ///< Time domain output frequency (write every N time steps)
-  std::vector<std::vector<OutputType>> output; ///< List of output specifications for each oscillator
+  std::vector<OutputType> output_type; ///< List of output types applied to all oscillators
 
+  size_t noscillators; ///< Number of oscillators in the system
   bool writeFullState; ///< Flag to determine if evolution of full state vector should be written to file
-  std::vector<bool> writeExpectedEnergy; ///< Flag to determine if evolution of expected energy per oscillator should be written to files
+  bool writeExpectedEnergy; ///< Flag to determine if evolution of expected energy per oscillator should be written to files
   bool writeExpectedEnergy_comp; ///< Flag to determine if evolution of expected energy of the full composite system should be written to file
-  std::vector<bool> writePopulation; ///< Flag to determine if the evolution of the energy level occupations per oscillator should be written to files
+  bool writePopulation; ///< Flag to determine if the evolution of the energy level occupations per oscillator should be written to files
   bool writePopulation_comp; ///< Flag to determine if the evolution of the energy level occupations of the full composite system should be written to file
   FILE *ufile; ///< File for writing real part of fullstate evolution
   FILE *vfile; ///< File for writing imaginary part of fullstate evolution
@@ -105,9 +106,9 @@ class Output{
     void writeGradient(Vec grad);
 
     /**
-     * @brief Opens data files for time evolution output.
+     * @brief Opens data files for time evolution output for one oscillator.
      *
-     * Prepares files for writing full state, expected energy, and population evolution data. Called before timestepping starts.
+     * Prepares files for writing full state, expected energy, and population evolution data. Called before timestepping starts. 
      *
      * @param prefix Filename prefix for output files
      * @param initid Initial condition identifier

@@ -72,7 +72,7 @@ class Config {
 
   // Output and runtypes
   std::string datadir; ///< Directory for output files
-  std::vector<std::vector<OutputType>> output_to_write; ///< Specify the desired output for each oscillator
+  std::vector<OutputType> output_type; ///< Specify the desired output types. 
   size_t output_frequency; ///< Output frequency in the time domain: write output every <num> time-step
   size_t optim_monitor_frequency; ///< Frequency of writing output during optimization iterations
   RunType runtype; ///< Runtype options: simulation, gradient, or optimization
@@ -154,8 +154,7 @@ class Config {
   double getOptimPenaltyVariation() const { return optim_penalty_variation; }
 
   const std::string& getDataDir() const { return datadir; }
-  const std::vector<std::vector<OutputType>>& getOutput() const { return output_to_write; }
-  const std::vector<OutputType>& getOutput(size_t i) const { return output_to_write[i]; }
+  const std::vector<OutputType>& getOutputType() const { return output_type; }
   size_t getOutputFrequency() const { return output_frequency; }
   size_t getOptimMonitorFrequency() const { return optim_monitor_frequency; }
   RunType getRuntype() const { return runtype; }
