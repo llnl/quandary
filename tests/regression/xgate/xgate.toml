@@ -31,7 +31,7 @@ timestepper = "IMR"
 rand_seed = 1234
 control_initialization = { "0" = { type = "constant", amplitude = 0.01 } }
 
-[[control_segments]]
+[[control_parameterizations]]
 oscID = 0
 type = "spline"
 num = 150

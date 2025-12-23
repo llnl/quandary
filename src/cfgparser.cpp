@@ -37,7 +37,7 @@ CfgParser::CfgParser(const MPILogger& logger) : logger(logger) {
   registerConfig("optim_weights", settings.optim_weights);
 
   // Indexed settings (per-oscillator)
-  registerIndexedConfig("control_segments", settings.indexed_control_segments);
+  registerIndexedConfig("control_segments", settings.indexed_control_parameterizations);
   registerIndexedConfig("control_initialization", settings.indexed_control_init);
   registerIndexedConfig("control_bounds", settings.indexed_control_bounds);
   registerIndexedConfig("carrier_frequency", settings.indexed_carrier_frequencies);
@@ -91,10 +91,6 @@ bool isComment(const std::string& line) { return line.size() > 0 && (line[0] == 
 
 bool isValidControlType(const std::string& str) {
   return CONTROL_TYPE_MAP.find(toLower(str)) != CONTROL_TYPE_MAP.end();
-}
-
-bool isValidControlInitializationType(const std::string& str) {
-  return CONTROL_INITIALIZATION_TYPE_MAP.find(toLower(str)) != CONTROL_INITIALIZATION_TYPE_MAP.end();
 }
 
 } // namespace
@@ -274,7 +270,7 @@ template <>
 ControlInitializationType CfgParser::convertFromString<ControlInitializationType>(const std::string& str) {
   auto it = CONTROL_INITIALIZATION_TYPE_MAP.find(toLower(str));
   if (it == CONTROL_INITIALIZATION_TYPE_MAP.end()) {
-    logger.exitWithError("\n\n ERROR: Unknown control segment initialization type: " + str + ".\n");
+    logger.exitWithError("\n\n ERROR: Unknown control parameterization initialization type: " + str + ".\n");
   }
   return it->second;
 }
@@ -379,95 +375,85 @@ std::vector<PiPulseData> CfgParser::convertFromString<std::vector<PiPulseData>>(
 }
 
 template <>
-std::vector<ControlSegmentData> CfgParser::convertFromString<std::vector<ControlSegmentData>>(const std::string& str) {
+ControlParameterizationData CfgParser::convertFromString<ControlParameterizationData>(const std::string& str) {
+  // Parse a single control parameterization (not a vector)
   const auto parts = split(str);
 
-  std::vector<ControlSegmentData> segments;
-  size_t i = 0;
-
-  while (i < parts.size()) {
-    if (!isValidControlType(parts[i])) {
-      logger.exitWithError("Expected control type, got: " + parts[i]);
-    }
-
-    ControlSegmentData segment;
-    segment.control_type = convertFromString<ControlType>(parts[i++]);
-
-    // Parse parameters until next ControlType or end
-    while (i < parts.size() && !isValidControlType(parts[i])) {
-      segment.parameters.push_back(convertFromString<double>(parts[i++]));
-    }
-
-    // Validate minimum parameter count
-    size_t min_params = 1;
-    switch (segment.control_type) {
-      case ControlType::STEP:
-        min_params = 3; // step_amp1, step_amp2, tramp
-        break;
-      case ControlType::BSPLINE:
-      case ControlType::BSPLINE0:
-        min_params = 1; // num_basis_functions
-        break;
-      case ControlType::BSPLINEAMP:
-        min_params = 2; // nspline, scaling
-        break;
-      case ControlType::NONE:
-        logger.exitWithError("Control segment type NONE is not valid for configuration.");
-        break;
-    }
-
-    if (segment.parameters.size() < min_params) {
-      logger.exitWithError("Control type requires at least " + std::to_string(min_params) + " parameters, got " +
-                           std::to_string(segment.parameters.size()));
-    }
-
-    segments.push_back(segment);
+  if (parts.empty() || !isValidControlType(parts[0])) {
+    logger.exitWithError("Expected control type, got: " + (parts.empty() ? "empty string" : parts[0]));
   }
 
-  return segments;
+  ControlParameterizationData parameterization;
+  parameterization.control_type = convertFromString<ControlType>(parts[0]);
+
+  // Parse parameters until next ControlType or end (only parse first segment)
+  size_t i = 1;
+  while (i < parts.size() && !isValidControlType(parts[i])) {
+    parameterization.parameters.push_back(convertFromString<double>(parts[i]));
+    i++;
+  }
+
+  // Check if there are additional segments and warn
+  if (i < parts.size()) {
+    logger.log("# Warning: Multiple control parameterization segments detected. Only the first segment will be used. Additional segments are ignored.\n");
+  }
+
+  // Validate minimum parameter count
+  size_t min_params = 1;
+  switch (parameterization.control_type) {
+    case ControlType::STEP:
+      min_params = 3; // step_amp1, step_amp2, tramp
+      break;
+    case ControlType::BSPLINE:
+    case ControlType::BSPLINE0:
+      min_params = 1; // num_basis_functions
+      break;
+    case ControlType::BSPLINEAMP:
+      min_params = 2; // nspline, scaling
+      break;
+    case ControlType::NONE:
+      logger.exitWithError("Control parameterization type NONE is not valid for configuration.");
+      break;
+  }
+
+  if (parameterization.parameters.size() < min_params) {
+    logger.exitWithError("Control type requires at least " + std::to_string(min_params) + " parameters, got " +
+                         std::to_string(parameterization.parameters.size()));
+  }
+
+  return parameterization;
 }
 
 template <>
-std::vector<ControlInitialization> CfgParser::convertFromString<std::vector<ControlInitialization>>(
-    const std::string& str) {
+ControlInitialization CfgParser::convertFromString<ControlInitialization>(const std::string& str) {
+  // Parse a single control initialization (not a vector)
   const auto parts = split(str);
 
-  std::vector<ControlInitialization> initializations;
-  size_t i = 0;
-
-  while (i < parts.size()) {
-    std::string type_str = parts[i++];
-
-    // Validate minimum parameter count
-    if (parts.size() <= 1) {
-      logger.exitWithError("Expected control_initialization to have a type and at least one parameter.");
-    }
-
-    ControlInitialization initialization;
-
-    auto type_enum = parseEnum(type_str, CONTROL_INITIALIZATION_TYPE_MAP);
-    if (!type_enum.has_value()) {
-      logger.exitWithError("Expected control initialization type (file, constant, random), got: " + type_str);
-    }
-
-    switch (type_enum.value()) {
-      case ControlInitializationType::FILE: {
-        initialization.filename = parts[i];
-        initializations.push_back(initialization);
-        return initializations;
-      }
-      case ControlInitializationType::CONSTANT:
-      case ControlInitializationType::RANDOM: {
-        initialization.type = type_enum.value();
-        initialization.amplitude = convertFromString<double>(parts[i++]);
-        if (i < parts.size() && !isValidControlInitializationType(parts[i])) {
-          initialization.phase = convertFromString<double>(parts[i++]);
-        }
-        initializations.push_back(initialization);
-        break;
-      }
-    }
+  if (parts.size() < 2) {
+    logger.exitWithError("Expected control_initialization to have a type and at least one parameter.");
   }
 
-  return initializations;
+  std::string type_str = parts[0];
+  ControlInitialization initialization;
+
+  auto type_enum = parseEnum(type_str, CONTROL_INITIALIZATION_TYPE_MAP);
+  if (!type_enum.has_value()) {
+    logger.exitWithError("Expected control initialization type (file, constant, random), got: " + type_str);
+  }
+  initialization.type = type_enum.value();
+
+  switch (initialization.type) {
+    case ControlInitializationType::FILE:
+      initialization.filename = parts[1];
+      break;
+    case ControlInitializationType::CONSTANT:
+    case ControlInitializationType::RANDOM:
+      initialization.amplitude = convertFromString<double>(parts[1]);
+      if (parts.size() > 2) {
+        initialization.phase = convertFromString<double>(parts[2]);
+      }
+      break;
+  }
+
+  return initialization;
 }

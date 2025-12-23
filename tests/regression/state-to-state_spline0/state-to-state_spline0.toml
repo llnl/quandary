@@ -31,7 +31,7 @@ timestepper = "IMR"
 rand_seed = 1234
 control_initialization = { type = "file", filename = "./params.dat" }
 
-[[control_segments]]
+[[control_parameterizations]]
 oscID = 0
 type = "spline0"
 num = 101

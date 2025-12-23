@@ -48,7 +48,7 @@ class Oscillator {
 
     std::vector<double> params; ///< Control parameters for this oscillator
     double Tfinal; ///< Final evolution time
-    std::vector<ControlBasis *> basisfunctions; ///< Control parameterization basis functions for each time segment
+    std::vector<ControlBasis *> basisfunctions; ///< Basis functions for control parameterization foreach time parameterization. Note: Currently only one parameterization is supported!
     std::vector<double> carrier_freq; ///< Frequencies of the carrier waves
 
     int mpirank_world; ///< Rank of MPI_COMM_WORLD
@@ -61,7 +61,7 @@ class Oscillator {
     bool control_enforceBC; ///< Flag to enforce boundary conditions on controls
 
   public:
-    std::vector<PiPulseSegment> pipulse; ///< Pi-pulse segments for this oscillator
+    std::vector<PiPulseSegment> pipulse; ///< Pi-pulse parameterizations for this oscillator
     PetscInt dim_preOsc; ///< Dimension of coupled subsystems preceding this oscillator
     PetscInt dim_postOsc; ///< Dimension of coupled subsystems following this oscillator
 
@@ -123,11 +123,11 @@ class Oscillator {
     double getDephaseTime() {return dephase_time; };
 
     /**
-     * @brief Retrieves the number of control segments (currently always 1).
+     * @brief Retrieves the number of control parameterizations in this oscillator (currently always 1).
      *
-     * @return size_t Number of time segments
+     * @return size_t Number of time parameterizations (currently always returns 1)
      */
-    size_t getNSegments() {return basisfunctions.size(); };
+    size_t getNParameterizations() {return basisfunctions.size(); };
 
     /**
      * @brief Retrieves the number of carrier frequencies.
@@ -158,12 +158,12 @@ class Oscillator {
     double getRotFreq() {return (ground_freq - detuning_freq) / (2.0*M_PI); };
 
     /**
-     * @brief Retrieves the number of parameters for a specific segment.
+     * @brief Retrieves the number of parameters for a specific parameterization.
      *
-     * @param segmentID Segment identifier
-     * @return int Number of parameters for the segment
+     * @param parameterizationID Segment identifier // Currently always 0!
+     * @return int Number of parameters for this parameterization
      */
-    int getNSegParams(int segmentID);
+    int getNSegParams(int parameterizationID);
 
     /**
      * @brief Sets control parameters from a global storage.

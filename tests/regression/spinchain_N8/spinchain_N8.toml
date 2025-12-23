@@ -38,42 +38,42 @@ linearsolver_type = "gmres"
 linearsolver_maxiter = 20
 timestepper = "IMR"
 
-[[control_segments]]
+[[control_parameterizations]]
 oscID = 0
 type = "spline"
 num = 6
 
-[[control_segments]]
+[[control_parameterizations]]
 oscID = 1
 type = "spline"
 num = 6
 
-[[control_segments]]
+[[control_parameterizations]]
 oscID = 2
 type = "spline"
 num = 6
 
-[[control_segments]]
+[[control_parameterizations]]
 oscID = 3
 type = "spline"
 num = 6
 
-[[control_segments]]
+[[control_parameterizations]]
 oscID = 4
 type = "spline"
 num = 6
 
-[[control_segments]]
+[[control_parameterizations]]
 oscID = 5
 type = "spline"
 num = 6
 
-[[control_segments]]
+[[control_parameterizations]]
 oscID = 6
 type = "spline"
 num = 6
 
-[[control_segments]]
+[[control_parameterizations]]
 oscID = 7
 type = "spline"
 num = 6

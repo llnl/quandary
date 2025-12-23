@@ -99,9 +99,9 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     // Optimization options
     control_enforceBC = toml["control_enforceBC"].value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
 
-    // Parse control segments
-    auto control_seg_array = validators::getArrayOfTables(toml, "control_segments");
-    control_segments = parseControlSegments(control_seg_array, num_osc);
+    // Parse control parameterizations
+    auto control_array = validators::getArrayOfTables(toml, "control_parameterizations");
+    control_parameterizations = parseControlParameterizations(control_array, num_osc);
 
     // Parse control initialization: table with optional default and per-subsystem overrides
     if (toml.contains("control_initialization")) {
@@ -113,13 +113,8 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       }
     } else {
       // No control_initialization specified, use defaults
-      ControlInitialization default_init = ControlInitialization{
-          ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt}; 
-      control_initializations.resize(num_osc);
-      for (size_t i = 0; i < num_osc; i++) {
-        control_initializations[i] = {default_init};
-        copyLast(control_initializations[i], control_segments[i].size());
-      }
+      ControlInitialization default_init = ControlInitialization{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt}; 
+      control_initializations.resize(num_osc, default_init);
     }
 
     // Parse control bounds
@@ -131,10 +126,6 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     control_bounds = parseOscillatorSettings<double>(control_bounds_array, num_osc, {ConfigDefaults::CONTROL_BOUND},
                                                      values_key, control_bounds_allowed_keys, "control_bounds");
-    // Extend bounds to match number of control segments
-    for (size_t i = 0; i < control_bounds.size(); i++) {
-      copyLast(control_bounds[i], control_segments[i].size());
-    }
 
     // Parse carrier frequencies
     auto carrier_freq_array = validators::getArrayOfTables(toml, "carrier_frequency");
@@ -365,19 +356,17 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   // Control and optimization parameters
   control_enforceBC = settings.control_enforceBC.value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
 
-  control_segments = parseControlSegmentsCfg(settings.indexed_control_segments);
+  control_parameterizations = parseControlParameterizationsCfg(settings.indexed_control_parameterizations);
 
   // Control initialization
   if (settings.indexed_control_init.has_value()) {
     auto init_map = settings.indexed_control_init.value();
-    // First check for global file initialization
-    if (init_map.find(0) != init_map.end() && !init_map[0].empty() && init_map[0][0].filename.has_value()) {
-      std::string control_initialization_file = init_map[0][0].filename.value();
+    // First check for global file initialization and populate to all oscillators if present
+    if (init_map.find(0) != init_map.end() && init_map[0].filename.has_value()) {
       control_initializations.resize(num_osc);
-      // Populate with default initialization for each oscillator, extended to match segments
-      ControlInitialization file_init = ControlInitialization{ControlInitializationType::FILE, std::nullopt, std::nullopt, control_initialization_file};
+      std::string control_initialization_file = init_map[0].filename.value();
       for (size_t i = 0; i < num_osc; i++) {
-        control_initializations[i] = {file_init};
+        control_initializations[i] = ControlInitialization{ControlInitializationType::FILE, std::nullopt, std::nullopt, control_initialization_file};
       }
     } else {
       control_initializations = parseControlInitializationsCfg(settings.indexed_control_init);
@@ -385,29 +374,17 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   } else {
     // Initialize with defaults when no control initialization is provided
     control_initializations.resize(num_osc);
-    ControlInitialization default_init = ControlInitialization{
+    for (size_t i = 0; i < num_osc; i++) {
+      control_initializations[i] = ControlInitialization{
         ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt};
-    std::vector<ControlInitialization> default_initialization = {default_init};
-    for (size_t i = 0; i < num_osc; i++) {
-      control_initializations[i] = default_initialization;
-    }
-
-    // Extend to match number of control segments
-    for (size_t i = 0; i < num_osc; i++) {
-      copyLast(control_initializations[i], control_segments[i].size());
     }
   }
 
-  control_bounds = parseOscillatorSettingsCfg<double>(settings.indexed_control_bounds, control_segments.size(),
+  control_bounds = parseOscillatorSettingsCfg<double>(settings.indexed_control_bounds, control_parameterizations.size(),
                                                       {ConfigDefaults::CONTROL_BOUND});
-  // Extend bounds to match number of control segments
-  for (size_t i = 0; i < control_bounds.size(); i++) {
-    copyLast(control_bounds[i], control_segments[i].size());
-  }
 
   carrier_frequencies.resize(num_osc);
-  carrier_frequencies =
-      parseOscillatorSettingsCfg<double>(settings.indexed_carrier_frequencies, num_osc, {ConfigDefaults::CARRIER_FREQ});
+  carrier_frequencies = parseOscillatorSettingsCfg<double>(settings.indexed_carrier_frequencies, num_osc, {ConfigDefaults::CARRIER_FREQ});
   if (settings.optim_target.has_value()) {
     const OptimTargetSettings& target_config = settings.optim_target.value();
     optim_target = parseOptimTarget(target_config.type, target_config.gate_type, target_config.gate_file,
@@ -763,12 +740,11 @@ void Config::printConfig(std::stringstream& log) const {
 
   // Check if all subsystems have the same initialization, in which case a simple table is written instead of per-subsystem overrides
   bool all_same = true;
-  const auto& first_init = control_initializations[0][0];
+  const auto& first_init = control_initializations[0];
   for (size_t i = 1; i < control_initializations.size(); ++i) {
-    if (control_initializations[i].empty() || 
-        control_initializations[i][0].type != first_init.type ||
-        control_initializations[i][0].amplitude != first_init.amplitude ||
-        control_initializations[i][0].phase != first_init.phase) {
+    if (control_initializations[i].type != first_init.type ||
+        control_initializations[i].amplitude != first_init.amplitude ||
+        control_initializations[i].phase != first_init.phase) {
       all_same = false;
       break;
     }
@@ -785,7 +761,7 @@ void Config::printConfig(std::stringstream& log) const {
   } else {
     // Subsystems have different initializations - output with per-subsystem overrides
     for (size_t i = 0; i < control_initializations.size(); ++i) {
-      const auto& init = control_initializations[i][0];
+      const auto& init = control_initializations[i];
       log << "  \"" << i << "\" = { ";
       log << "type = \"" << enumToString(init.type, CONTROL_INITIALIZATION_TYPE_MAP) << "\"";
       if (init.filename.has_value()) log << ", filename = \"" << init.filename.value() << "\"";
@@ -805,25 +781,24 @@ void Config::printConfig(std::stringstream& log) const {
 
   // Apply pi-pulse array of tables
   for (size_t i = 0; i < apply_pipulse.size(); ++i) {
-    for (const auto& segment : apply_pipulse[i]) {
+    for (const auto& parameterization : apply_pipulse[i]) {
       log << "[[apply_pipulse]]\n";
       log << "oscID = " << i << "\n";
-      log << "tstart = " << segment.tstart << "\n";
-      log << "tstop = " << segment.tstop << "\n";
-      log << "amp = " << segment.amp << "\n";
+      log << "tstart = " << parameterization.tstart << "\n";
+      log << "tstop = " << parameterization.tstop << "\n";
+      log << "amp = " << parameterization.amp << "\n";
       log << "\n";
     }
   }
 
-  // Control segments as array of tables
-  for (size_t i = 0; i < control_segments.size(); ++i) {
-    if (!control_segments[i].empty()) {
-      const auto& seg = control_segments[i][0];
-      log << "[[control_segments]]\n";
+  // Control parameterizations as array of tables
+  for (size_t i = 0; i < control_parameterizations.size(); ++i) {
+      const auto& seg = control_parameterizations[i];
+      log << "[[control_parameterizations]]\n";
       log << "oscID = " << i << "\n";
       log << "type = \"" << enumToString(seg.type, CONTROL_TYPE_MAP) << "\"\n";
 
-      // Add segment-specific parameters
+      // Add parameterization-specific parameters
       if (seg.type == ControlType::BSPLINE || seg.type == ControlType::BSPLINE0) {
         log << "num = " << seg.nspline.value() << "\n";
         log << "tstart = " << seg.tstart.value() << "\n";
@@ -841,7 +816,6 @@ void Config::printConfig(std::stringstream& log) const {
         log << "tstop = " << seg.tstop.value() << "\n";
       }
       log << "\n";
-    }
   }
 
   // Control bounds as array of tables
@@ -903,19 +877,17 @@ void Config::finalize() {
   }
   
   // Set control variation penalty to zero if not using 2nd order Bspline parameterization 
-  for (size_t i = 0; i < control_segments.size(); i++) {
-    if (control_segments[i].empty() || control_segments[i][0].type != ControlType::BSPLINE0) {
+  for (size_t i = 0; i < control_parameterizations.size(); i++) {
+    if (control_parameterizations[i].type != ControlType::BSPLINE0) {
       optim_penalty_variation = 0.0;
       break;
     }
   }
 
-  // Unset control initialization phase, unless BSPLINEAMP parameterization is used
+  // Unset control initialization phase paremeter, unless BSPLINEAMP parameterization is used
   for (size_t i = 0; i < control_initializations.size(); i++) {
-    for (size_t j = 0; j < control_initializations[i].size(); j++) {
-      if (control_segments[i].empty() || control_segments[i][j].type != ControlType::BSPLINEAMP) {
-        control_initializations[i][j].phase = std::nullopt;
-      }
+    if (control_parameterizations[i].type != ControlType::BSPLINEAMP) {
+      control_initializations[i].phase = std::nullopt;
     }
   }
 }
@@ -1129,8 +1101,8 @@ InitialCondition Config::parseInitialCondition(std::optional<InitialConditionTyp
 void Config::addPiPulseSegment(std::vector<std::vector<PiPulseSegment>>& apply_pipulse, size_t oscilID, double tstart,
                                double tstop, double amp) const {
   if (oscilID < getNumOsc()) {
-    PiPulseSegment segment = {tstart, tstop, amp};
-    apply_pipulse[oscilID].push_back(segment);
+    PiPulseSegment parameterization = {tstart, tstop, amp};
+    apply_pipulse[oscilID].push_back(parameterization);
 
     logger.log("Applying PiPulse to oscillator " + std::to_string(oscilID) + " in [" + std::to_string(tstart) + ", " +
                std::to_string(tstop) + "]: |p+iq|=" + std::to_string(amp) + "\n");
@@ -1138,22 +1110,22 @@ void Config::addPiPulseSegment(std::vector<std::vector<PiPulseSegment>>& apply_p
     // Set zero control for all other oscillators during this pipulse
     for (size_t i = 0; i < getNumOsc(); i++) {
       if (i != oscilID) {
-        PiPulseSegment zero_segment = {tstart, tstop, 0.0};
-        apply_pipulse[i].push_back(zero_segment);
+        PiPulseSegment zero_parameterization = {tstart, tstop, 0.0};
+        apply_pipulse[i].push_back(zero_parameterization);
       }
     }
   }
 }
 
-ControlSegment Config::parseControlSegment(const toml::table& table) const {
-  ControlSegment segment;
+ControlParameterization Config::parseControlParameterization(const toml::table& table) const {
+  ControlParameterization parameterization;
 
   std::string type_str = validators::field<std::string>(table, "type").value();
   std::optional<ControlType> type = parseEnum(type_str, CONTROL_TYPE_MAP);
   if (!type.has_value()) {
-    logger.exitWithError("Unrecognized type '" + type_str + "' in control segment.");
+    logger.exitWithError("Unrecognized type '" + type_str + "' in control parameterization.");
   }
-  segment.type = *type;
+  parameterization.type = *type;
 
   const std::string type_key = "type";
   const std::string num_key = "num";
@@ -1166,73 +1138,68 @@ ControlSegment Config::parseControlSegment(const toml::table& table) const {
 
   std::set<std::string> allowed_keys = {OSC_ID_KEY, type_key,      num_key,       scaling_key, tstart_key,
                                         tstop_key,  step_amp1_key, step_amp2_key, tramp_key};
-  validateTableKeys(table, allowed_keys, "control_segments");
+  validateTableKeys(table, allowed_keys, "control_parameterizations");
 
   switch (*type) {
     case ControlType::BSPLINE:
     case ControlType::BSPLINE0: {
-      segment.nspline = validators::field<size_t>(table, num_key).value();
-      segment.tstart = validators::field<double>(table, tstart_key).valueOr(ConfigDefaults::CONTROL_SEG_TSTART);
-      segment.tstop = validators::field<double>(table, tstop_key).valueOr(getTotalTime());
+      parameterization.nspline = validators::field<size_t>(table, num_key).value();
+      parameterization.tstart = validators::field<double>(table, tstart_key).valueOr(ConfigDefaults::CONTROL_TSTART);
+      parameterization.tstop = validators::field<double>(table, tstop_key).valueOr(getTotalTime());
       break;
     }
     case ControlType::BSPLINEAMP: {
-      segment.nspline = validators::field<size_t>(table, num_key).value();
-      segment.scaling = validators::field<double>(table, scaling_key).value();
-      segment.tstart = validators::field<double>(table, tstart_key).valueOr(ConfigDefaults::CONTROL_SEG_TSTART);
-      segment.tstop = validators::field<double>(table, tstop_key).valueOr(getTotalTime());
+      parameterization.nspline = validators::field<size_t>(table, num_key).value();
+      parameterization.scaling = validators::field<double>(table, scaling_key).value();
+      parameterization.tstart = validators::field<double>(table, tstart_key).valueOr(ConfigDefaults::CONTROL_TSTART);
+      parameterization.tstop = validators::field<double>(table, tstop_key).valueOr(getTotalTime());
       break;
     }
     case ControlType::STEP:
-      segment.step_amp1 = validators::field<double>(table, step_amp1_key).value();
-      segment.step_amp2 = validators::field<double>(table, step_amp2_key).value();
-      segment.tramp = validators::field<double>(table, tramp_key).value();
-      segment.tstart = validators::field<double>(table, tstart_key).valueOr(ConfigDefaults::CONTROL_SEG_TSTART);
-      segment.tstop = validators::field<double>(table, tstop_key).valueOr(getTotalTime());
+      parameterization.step_amp1 = validators::field<double>(table, step_amp1_key).value();
+      parameterization.step_amp2 = validators::field<double>(table, step_amp2_key).value();
+      parameterization.tramp = validators::field<double>(table, tramp_key).value();
+      parameterization.tstart = validators::field<double>(table, tstart_key).valueOr(ConfigDefaults::CONTROL_TSTART);
+      parameterization.tstop = validators::field<double>(table, tstop_key).valueOr(getTotalTime());
       break;
     case ControlType::NONE:
-      logger.exitWithError("Unexpected control type " + type_str);
+      // logger.exitWithError("Unexpected control type " + type_str);
+      // Do nothing, no parameters needed
+      break;
   }
 
-  return segment;
+  return parameterization;
 }
 
-std::vector<std::vector<ControlSegment>> Config::parseControlSegments(const toml::array& array_of_tables,
-                                                                      size_t num_entries) const {
-  ControlSegment default_segment;
-  default_segment.type = ControlType::BSPLINE;
-  default_segment.nspline = ConfigDefaults::CONTROL_SEG_SPLINE_COUNT;
-  default_segment.tstart = ConfigDefaults::CONTROL_SEG_TSTART;
-  default_segment.tstop = getTotalTime();
+std::vector<ControlParameterization> Config::parseControlParameterizations(const toml::array& array_of_tables,size_t num_entries) const {
+  ControlParameterization default_parameterization;
+  default_parameterization.type = ConfigDefaults::CONTROL_TYPE;
+  default_parameterization.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
+  default_parameterization.tstart = ConfigDefaults::CONTROL_TSTART;
+  default_parameterization.tstop = getTotalTime();
 
-  std::vector<std::vector<ControlSegment>> result(num_entries);
+  std::vector<ControlParameterization> result(num_entries, default_parameterization);
 
   for (auto& elem : array_of_tables) {
     auto table = *elem.as_table();
-    ControlSegment segment = parseControlSegment(table);
+    ControlParameterization parameterization = parseControlParameterization(table);
 
     if (auto osc_id_node = table[OSC_ID_KEY]) {
       // Apply to specific oscillator
       size_t osc_id = validators::field<size_t>(table, OSC_ID_KEY).lessThan(num_entries).value();
-      result[osc_id].push_back(segment);
+      result[osc_id] = parameterization;
     } else {
       // Apply to ALL oscillators
       for (size_t i = 0; i < num_entries; i++) {
-        result[i].push_back(segment);
+        result[i] = parameterization;
       }
-    }
-  }
-
-  for (auto& elem : result) {
-    if (elem.empty()) {
-      elem.push_back(default_segment);
     }
   }
 
   return result;
 }
 
-std::vector<std::vector<ControlInitialization>> Config::parseControlInitializations(const toml::table& table, size_t num_entries) const {
+std::vector<ControlInitialization> Config::parseControlInitializations(const toml::table& table, size_t num_entries) const {
 
   const std::string type_key = "type";
   const std::string filename_key = "filename";
@@ -1270,14 +1237,15 @@ std::vector<std::vector<ControlInitialization>> Config::parseControlInitializati
     return init;
   };
 
-  std::vector<std::vector<ControlInitialization>> result(num_entries);
+  ControlInitialization default_init = ControlInitialization{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt}; 
+  std::vector<ControlInitialization> result(num_entries, default_init);
 
   // First pass: Check if there is a default initialization (table with "type" key directly)
   if (table.contains(type_key)) {
     // This is a single default initialization that applies to all subsystems. Don't validate the main table since it may contain subsystem ID keys
     ControlInitialization global_default = parseInitSpec(table, false);
     for (size_t i = 0; i < num_entries; i++) {
-      result[i].push_back(global_default);
+      result[i] = global_default;
     }
   }
 
@@ -1300,8 +1268,7 @@ std::vector<std::vector<ControlInitialization>> Config::parseControlInitializati
       // Clear any default for this subsystem and add the override setting
       if (value.is_table()) {
         auto* subsys_table = value.as_table();
-        result[subsys_id].clear();
-        result[subsys_id].push_back(parseInitSpec(*subsys_table, true));
+        result[subsys_id] = parseInitSpec(*subsys_table, true);
       } else {
         logger.exitWithError("control_initialization: value for subsystem '" + key_str + "' must be a table");
       }
@@ -1309,20 +1276,6 @@ std::vector<std::vector<ControlInitialization>> Config::parseControlInitializati
       // Not a numeric key - might be a typo or invalid configuration
       logger.exitWithError("control_initialization: unexpected key '" + key_str + "'.");
     }
-  }
-
-  // Fill in any subsystems that weren't specified with the above 
-  for (auto& elem : result) {
-    if (elem.empty()) {
-      ControlInitialization default_init = ControlInitialization{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt,std::nullopt};
-      elem.push_back(default_init);
-    }
-  }
-
-  // Extend initializations to match number of control segments
-  for (size_t i = 0; i < control_initializations.size(); i++) {
-    size_t num_segments = control_segments[i].size();
-    copyLast(result[i], num_segments);
   }
 
   return result;
@@ -1398,80 +1351,71 @@ std::vector<std::vector<T>> Config::parseOscillatorSettingsCfg(
   return result;
 }
 
-std::vector<std::vector<ControlSegment>> Config::parseControlSegmentsCfg(
-    const std::optional<std::map<int, std::vector<ControlSegmentData>>>& segments_opt) const {
-  ControlSegment default_segment;
-  default_segment.type = ControlType::BSPLINE;
-  default_segment.nspline = ConfigDefaults::CONTROL_SEG_SPLINE_COUNT;
-  default_segment.tstart = ConfigDefaults::CONTROL_SEG_TSTART;
-  default_segment.tstop = getTotalTime();
-  std::vector<ControlSegment> default_segments = {{default_segment}};
+std::vector<ControlParameterization> Config::parseControlParameterizationsCfg(const std::optional<std::map<int, ControlParameterizationData>>& parameterizations_map) const {
+  // Set up a default parameterization for one oscillator
+  ControlParameterization default_parameterization;
+  default_parameterization.type = ConfigDefaults::CONTROL_TYPE;
+  default_parameterization.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
+  default_parameterization.tstart = ConfigDefaults::CONTROL_TSTART;
+  default_parameterization.tstop = getTotalTime();
 
-  if (!segments_opt.has_value()) {
-    return std::vector<std::vector<ControlSegment>>(nlevels.size(), default_segments);
+  // Populate default if paramterization is not specified
+  if (!parameterizations_map.has_value()) {
+    return std::vector<ControlParameterization>(nlevels.size(), default_parameterization);
   }
-  const auto segments = segments_opt.value();
-  auto parsed_segments = std::vector<std::vector<ControlSegment>>(nlevels.size());
-  for (size_t i = 0; i < parsed_segments.size(); i++) {
-    if (segments.find(static_cast<int>(i)) != segments.end()) {
-      std::vector<ControlSegment> parsed;
-      for (const auto& seg_config : segments.at(i)) {
-        parsed.push_back(parseControlSegmentCfg(seg_config));
+
+  // Otherwise, parse specified parameterizations for each oscillator
+  auto parsed_parameterizations = std::vector<ControlParameterization>(nlevels.size(), default_parameterization);
+  for (size_t i = 0; i < parsed_parameterizations.size(); i++) {
+    if (parameterizations_map.value().find(static_cast<int>(i)) != parameterizations_map.value().end()) {
+
+      // auto parameterization = parseControlParameterizationCfg(parameterizations_map.value().at(i));
+      auto oscil_config = parameterizations_map.value().at(static_cast<int>(i));
+      const auto& params = oscil_config.parameters;
+
+      // Create and store the parameterization
+      ControlParameterization parameterization;
+      parameterization.type = oscil_config.control_type;
+      if (oscil_config.control_type == ControlType::BSPLINE || oscil_config.control_type == ControlType::BSPLINE0) {
+        assert(params.size() >= 1); // nspline is required, should be validated in CfgParser
+        parameterization.nspline = static_cast<size_t>(params[0]);
+        parameterization.tstart = params.size() > 1 ? params[1] : ConfigDefaults::CONTROL_TSTART;
+        parameterization.tstop = params.size() > 2 ? params[2] : getTotalTime();
+      } else if (oscil_config.control_type == ControlType::BSPLINEAMP) {
+        assert(params.size() >= 2); // nspline and scaling are required, should be validated in CfgParser
+        parameterization.nspline = static_cast<size_t>(params[0]);
+        parameterization.scaling = static_cast<double>(params[1]);
+        parameterization.tstart = params.size() > 2 ? params[2] : ConfigDefaults::CONTROL_TSTART;
+        parameterization.tstop = params.size() > 3 ? params[3] : getTotalTime();
+      } else if (oscil_config.control_type == ControlType::STEP) {
+        assert(params.size() >= 3); // step_amp1, step_amp2, tramp are required, should be validated in CfgParser
+        parameterization.step_amp1 = static_cast<double>(params[0]);
+        parameterization.step_amp2 = static_cast<double>(params[1]);
+        parameterization.tramp = static_cast<double>(params[2]);
+        parameterization.tstart = params.size() > 3 ? params[3] : ConfigDefaults::CONTROL_TSTART;
+        parameterization.tstop = params.size() > 4 ? params[4] : getTotalTime();
       }
-      parsed_segments[i] = parsed;
-      default_segments = parsed;
-    } else {
-      parsed_segments[i] = default_segments;
+
+      parsed_parameterizations[i] = parameterization;
     }
   }
-  return parsed_segments;
+  return parsed_parameterizations;
 }
 
-ControlSegment Config::parseControlSegmentCfg(const ControlSegmentData& seg_config) const {
-  const auto& params = seg_config.parameters;
 
-  ControlSegment segment;
-  segment.type = seg_config.control_type;
-
-  if (seg_config.control_type == ControlType::BSPLINE || seg_config.control_type == ControlType::BSPLINE0) {
-    assert(params.size() >= 1); // nspline is required, should be validated in CfgParser
-    segment.nspline = static_cast<size_t>(params[0]);
-    segment.tstart = params.size() > 1 ? params[1] : ConfigDefaults::CONTROL_SEG_TSTART;
-    segment.tstop = params.size() > 2 ? params[2] : getTotalTime();
-  } else if (seg_config.control_type == ControlType::BSPLINEAMP) {
-    assert(params.size() >= 2); // nspline and scaling are required, should be validated in CfgParser
-    segment.nspline = static_cast<size_t>(params[0]);
-    segment.scaling = static_cast<double>(params[1]);
-    segment.tstart = params.size() > 2 ? params[2] : ConfigDefaults::CONTROL_SEG_TSTART;
-    segment.tstop = params.size() > 3 ? params[3] : getTotalTime();
-  } else if (seg_config.control_type == ControlType::STEP) {
-    assert(params.size() >= 3); // step_amp1, step_amp2, tramp are required, should be validated in CfgParser
-    segment.step_amp1 = static_cast<double>(params[0]);
-    segment.step_amp2 = static_cast<double>(params[1]);
-    segment.tramp = static_cast<double>(params[2]);
-    segment.tstart = params.size() > 3 ? params[3] : ConfigDefaults::CONTROL_SEG_TSTART;
-    segment.tstop = params.size() > 4 ? params[4] : getTotalTime();
-  }
-
-  return segment;
-}
-
-std::vector<std::vector<ControlInitialization>> Config::parseControlInitializationsCfg(const std::optional<std::map<int, std::vector<ControlInitialization>>>& init_configs) const {
+std::vector<ControlInitialization> Config::parseControlInitializationsCfg(const std::optional<std::map<int, ControlInitialization>>& init_configs) const {
 
   ControlInitialization default_init = ControlInitialization{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt};
 
-  std::vector<std::vector<ControlInitialization>> control_initializations(nlevels.size());
-  for (size_t i = 0; i < nlevels.size(); i++) {
-    if (!init_configs.has_value() || init_configs->find(static_cast<int>(i)) == init_configs->end()) {
-      control_initializations[i] = {default_init};
-      continue;
-    }
-    for (const auto& init_config : init_configs->at(static_cast<int>(i))) {
-      ControlInitialization init =
-          ControlInitialization{init_config.type, init_config.amplitude, init_config.phase, init_config.filename};
+  std::vector<ControlInitialization> control_initializations(nlevels.size(), default_init);
 
-      control_initializations[i].push_back(init);
+  if (init_configs.has_value()) {
+    for (size_t i = 0; i < nlevels.size(); i++) {
+      if (init_configs->find(static_cast<int>(i)) != init_configs->end()) {
+        control_initializations[i] = init_configs->at(static_cast<int>(i));
+      }
     }
   }
+  
   return control_initializations;
 }

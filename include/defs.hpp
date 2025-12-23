@@ -142,7 +142,7 @@ const std::map<std::string, RunType> RUN_TYPE_MAP = {
 };
 
 /**
- * @brief Types of control parameterizations for quantum control pulses.
+ * @brief Types of control parameterizations.
  *
  * Defines how control pulses are parameterized for optimization and simulation.
  */
@@ -163,7 +163,7 @@ const std::map<std::string, ControlType> CONTROL_TYPE_MAP = {
 };
 
 /**
- * @brief Types of control initializations per segment
+ * @brief Types of control initializations 
  */
 enum class ControlInitializationType {
   CONSTANT, ///< Constant
@@ -285,18 +285,18 @@ struct PiPulseSegment {
 };
 
 /**
- * @brief Structure for defining control segments.
+ * @brief Structure for defining control parameterizations.
  *
- * Defines a controllable segment for an oscillator and the type of parameterization,
- * with corresponding starting and finish times. Which fields are used depends on the control type.
+ * Defines a controllable parameterization for an oscillator with corresponding starting and finish times. 
+ * Which fields are used depends on the control type.
  */
-struct ControlSegment {
-  ControlType type; ///< Type of control segment
+struct ControlParameterization {
+  ControlType type; ///< Type of control parameterization
 
   // Common fields for B-spline types (BSPLINE, BSPLINEAMP, BSPLINE0)
-  std::optional<size_t> nspline; ///< Number of basis functions in this segment
-  std::optional<double> tstart; ///< Start time of the control segment
-  std::optional<double> tstop; ///< Stop time of the control segment
+  std::optional<size_t> nspline; ///< Number of basis functions in this parameterization
+  std::optional<double> tstart; ///< Start time of the control parameterization
+  std::optional<double> tstop; ///< Stop time of the control parameterization
 
   // Additional field for amplitude-scaled B-spline (BSPLINEAMP)
   std::optional<double> scaling; ///< Amplitude scaling factor
@@ -308,7 +308,7 @@ struct ControlSegment {
 };
 
 /**
- * @brief Control segment initialization settings.
+ * @brief Control parameterization initialization settings.
  */
 struct ControlInitialization {
   ControlInitializationType type; ///< Initialization type

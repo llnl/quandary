@@ -36,7 +36,7 @@ tstart = 0.01
 tstop = 0.8
 amp = 15.10381
 
-[[control_segments]]
+[[control_parameterizations]]
 oscID = 0
 type = "spline"
 num = 30

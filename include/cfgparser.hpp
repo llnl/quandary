@@ -23,9 +23,9 @@ struct PiPulseData {
   double amp; ///< Amplitude
 };
 
-struct ControlSegmentData {
-  ControlType control_type; ///< Type of control segment
-  std::vector<double> parameters; ///< Parameters for control segment
+struct ControlParameterizationData {
+  ControlType control_type; ///< Type of control parameterization
+  std::vector<double> parameters; ///< Parameters for control parameterization
 };
 
 /**
@@ -54,9 +54,9 @@ struct ParsedConfigData {
   std::optional<std::string> hamiltonian_file_Hc;
 
   // Control and optimization parameters
-  std::optional<std::map<int, std::vector<ControlSegmentData>>> indexed_control_segments;
+  std::optional<std::map<int, ControlParameterizationData>> indexed_control_parameterizations;
   std::optional<bool> control_enforceBC;
-  std::optional<std::map<int, std::vector<ControlInitialization>>> indexed_control_init;
+  std::optional<std::map<int, ControlInitialization>> indexed_control_init;
   std::optional<std::map<int, std::vector<double>>> indexed_control_bounds;
   std::optional<std::map<int, std::vector<double>>> indexed_carrier_frequencies;
   std::optional<OptimTargetSettings> optim_target;

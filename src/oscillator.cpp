@@ -64,99 +64,101 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   /* Check if boundary conditions for controls should be enfored (default: yes). */
   control_enforceBC = config.getControlEnforceBC();
 
-  // Parse for control segments
+  // Initialize the control parameterization basis functions. Note: Currently only one control parameterization is supported. nsegments <= 1!
   int nparams_per_seg = 0;
-
-  const auto& controlsegments = config.getControlSegments(id);
-  for (auto controlsegment : controlsegments) {
-
-    switch (controlsegment.type) {
+  // for (auto controlparameterization : config.getControlParameterizations(id)) { 
+  const auto& controlparameterization = config.getControlParameterizations(id);
+ 
+  switch (controlparameterization.type) {
     case ControlType::STEP: {
-      // if (mpirank_world == 0) printf("%d: Creating step basis with amplitude (%f, %f) (tramp %f) in control segment [%f, %f]\n", myid, step_amp1, step_amp2, tramp, tstart, tstop);
-      ControlBasis* mystep = new Step(*controlsegment.step_amp1, *controlsegment.step_amp2, *controlsegment.tstart, *controlsegment.tstop, *controlsegment.tramp, control_enforceBC);
+      // if (mpirank_world == 0) printf("%d: Creating step basis with amplitude (%f, %f) (tramp %f) in control parameterization [%f, %f]\n", myid, step_amp1, step_amp2, tramp, tstart, tstop);
+      ControlBasis* mystep = new Step(*controlparameterization.step_amp1, *controlparameterization.step_amp2, *controlparameterization.tstart, *controlparameterization.tstop, *controlparameterization.tramp, control_enforceBC);
       mystep->setSkip(nparams_per_seg);
       nparams_per_seg += mystep->getNparams() * carrier_freq.size();
       basisfunctions.push_back(mystep);
       break;
     }
     case ControlType::BSPLINE: {
-      // if (mpirank_world==0) printf("%d: Creating %d-spline basis in control segment [%f, %f]\n", myid, nspline,tstart, tstop);
-      ControlBasis* mysplinebasis = new BSpline2nd(*controlsegment.nspline, *controlsegment.tstart, *controlsegment.tstop, control_enforceBC);
+      // if (mpirank_world==0) printf("%d: Creating %d-spline basis in control parameterization [%f, %f]\n", myid, nspline,tstart, tstop);
+      ControlBasis* mysplinebasis = new BSpline2nd(*controlparameterization.nspline, *controlparameterization.tstart, *controlparameterization.tstop, control_enforceBC);
       mysplinebasis->setSkip(nparams_per_seg);
       nparams_per_seg += mysplinebasis->getNparams() * carrier_freq.size();
       basisfunctions.push_back(mysplinebasis);
       break;
     }
     case ControlType::BSPLINE0: {
-      // if (mpirank_world==0) printf("%d: Creating %d-spline basis in control segment [%f, %f]\n", myid, nspline,tstart, tstop);
-      ControlBasis* mysplinebasis = new BSpline0(*controlsegment.nspline, *controlsegment.tstart, *controlsegment.tstop, control_enforceBC);
+      // if (mpirank_world==0) printf("%d: Creating %d-spline basis in control parameterization [%f, %f]\n", myid, nspline,tstart, tstop);
+      ControlBasis* mysplinebasis = new BSpline0(*controlparameterization.nspline, *controlparameterization.tstart, *controlparameterization.tstop, control_enforceBC);
       mysplinebasis->setSkip(nparams_per_seg);
       nparams_per_seg += mysplinebasis->getNparams() * carrier_freq.size();
       basisfunctions.push_back(mysplinebasis);
       break;
     }
     case ControlType::BSPLINEAMP: {
-      // if (mpirank_world==0) printf("%d: Creating %d-spline basis in control segment [%f, %f]\n", myid, nspline,tstart, tstop);
-      ControlBasis* mysplinebasis = new BSpline2ndAmplitude(*controlsegment.nspline, *controlsegment.scaling, *controlsegment.tstart, *controlsegment.tstop, control_enforceBC);
+      // if (mpirank_world==0) printf("%d: Creating %d-spline basis in control parameterization [%f, %f]\n", myid, nspline,tstart, tstop);
+      ControlBasis* mysplinebasis = new BSpline2ndAmplitude(*controlparameterization.nspline, *controlparameterization.scaling, *controlparameterization.tstart, *controlparameterization.tstop, control_enforceBC);
       mysplinebasis->setSkip(nparams_per_seg);
       nparams_per_seg += mysplinebasis->getNparams() * carrier_freq.size();
       basisfunctions.push_back(mysplinebasis);
       break;
     }
     case ControlType::NONE: {
-      logger.exitWithError("Control type 'none' not supported.");
+      // logger.exitWithError("Control type 'none' not supported.");
+      // Do nothing.
     }
-    } // end switch
-  }
+    // } 
+  } // end switch
 
   /* Initialization of the control parameters.  */
-  int seg = 0; // For now, only support for one control segment per oscallator. 
+  for (size_t iseg = 0; iseg < basisfunctions.size(); iseg++) { // NOTE: Currently only one control parameterization supported: iseg = 0!
 
-  const auto& controlinitialization = config.getControlInitializations(id)[seg];
-  if (controlinitialization.type == ControlInitializationType::FILE) { // read from file 
+    // const auto& controlinitialization = config.getControlInitializations(id)[seg];
+    const auto& controlinitialization = config.getControlInitializations(id);
+    if (controlinitialization.type == ControlInitializationType::FILE) { // read from file 
 
-    size_t nparams = basisfunctions[seg]->getNparams() * carrier_freq.size();
-    params.resize(nparams);
-    if (mpirank_world == 0) {
-      read_vector(controlinitialization.filename.value().c_str(), params.data(), nparams, quietmode, param_offset);
-    }
-    MPI_Bcast(params.data(), nparams, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-  } else { // constant or random initialization
-
-    // Note, the config amplitude is multiplied by 2pi here!!
-    double initval = controlinitialization.amplitude.value()*2.0*M_PI;
-
-    for (size_t f = 0; f<carrier_freq.size(); f++) {
-      for (int i=0; i<basisfunctions[seg]->getNparams(); i++){
-
-        double val; 
-        if (controlinitialization.type == ControlInitializationType::CONSTANT) {
-          val = initval;
-        } else if (controlinitialization.type == ControlInitializationType::RANDOM) {
-          // Uniform distribution [-a,a)
-          std::uniform_real_distribution<double> uniform_dist(0.0, 1.0);
-          double randval = uniform_dist(rand_engine);  // random in [0,1)
-          // scale to chosen amplitude [-a,a]
-          val = initval*randval;
-          val = 2*val - initval;
-        } else {
-          logger.exitWithError("Unknown control initialization type.");
-        }
-
-        // If STEP parameterization, scale back to [0,1]
-        if (basisfunctions[seg]->getType() == ControlType::STEP){
-          val = std::max(0.0, val);  
-          val = std::min(1.0, val); 
-        }
-
-        // Push the value to the parameter storage
-        params.push_back(val);
+      size_t nparams = basisfunctions[iseg]->getNparams() * carrier_freq.size();
+      params.resize(nparams);
+      if (mpirank_world == 0) {
+        read_vector(controlinitialization.filename.value().c_str(), params.data(), nparams, quietmode, param_offset);
       }
+      MPI_Bcast(params.data(), nparams, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-      // if BSPLINEAMP: Two values can be provided: First one for the amplitude (set above), second one for the phase which otherwise is set to 0.0 (overwrite here)
-      if (basisfunctions[seg]->getType() == ControlType::BSPLINEAMP) {
-        params[params.size()-1] = controlinitialization.phase.value();
+    } else if (controlinitialization.type == ControlInitializationType::CONSTANT || controlinitialization.type == ControlInitializationType::RANDOM) { 
+
+      // Note, the config amplitude is multiplied by 2pi here!!
+      double initval = controlinitialization.amplitude.value()*2.0*M_PI;
+      
+      for (size_t f = 0; f<carrier_freq.size(); f++) {
+        for (int i=0; i<basisfunctions[iseg]->getNparams(); i++){
+
+          double val; 
+          if (controlinitialization.type == ControlInitializationType::CONSTANT) {
+            val = initval;
+          } else if (controlinitialization.type == ControlInitializationType::RANDOM) {
+            // Uniform distribution [-a,a)
+            std::uniform_real_distribution<double> uniform_dist(0.0, 1.0);
+            double randval = uniform_dist(rand_engine);  // random in [0,1)
+            // scale to chosen amplitude [-a,a]
+            val = initval*randval;
+            val = 2*val - initval;
+          } else {
+            logger.exitWithError("Unknown control initialization type.");
+          }
+
+          // If STEP parameterization, scale back to [0,1]
+          if (basisfunctions[iseg]->getType() == ControlType::STEP){
+            val = std::max(0.0, val);  
+            val = std::min(1.0, val); 
+          }
+
+          // Push the value to the parameter storage
+          params.push_back(val);
+        }
+
+        // if BSPLINEAMP: Two values can be provided: First one for the amplitude (set above), second one for the phase which otherwise is set to 0.0 (overwrite here)
+        if (basisfunctions[iseg]->getType() == ControlType::BSPLINEAMP) {
+          params[params.size()-1] = controlinitialization.phase.value();
+        }
       }
     }
   }
@@ -201,11 +203,11 @@ void Oscillator::getParams(double* x){
   }
 }
 
-int Oscillator::getNSegParams(int segmentID){
+int Oscillator::getNSegParams(int parameterizationID){
   int n = 0;
   if (params.size()>0) {
-    assert(basisfunctions.size() > static_cast<size_t>(segmentID));
-    n = basisfunctions[segmentID]->getNparams()*carrier_freq.size();
+    assert(basisfunctions.size() > static_cast<size_t>(parameterizationID));
+    n = basisfunctions[parameterizationID]->getNparams()*carrier_freq.size();
   }
   return n; 
 }
@@ -214,7 +216,7 @@ double Oscillator::evalControlVariation(){
   // NOTE: params holds the relevant copy of the optimizers 'x' vector 
   double var_reg = 0.0;
   if (params.size()>0) {
-    // Iterate over control segments
+    // Iterate over control parameterizations. NOTE: Currently only one parameterization segment is supported. iseg = 0!
     for (size_t iseg= 0; iseg< basisfunctions.size(); iseg++){
       /* Iterate over carrier frequencies */
       for (size_t f=0; f < carrier_freq.size(); f++) {
@@ -258,7 +260,7 @@ int Oscillator::evalControl(const double t, double* Re_ptr, double* Im_ptr){
 
   /* Evaluate p(t) and q(t) using the parameters */
   if (params.size()>0) {
-    // Iterate over control segments. Only one will be used, see the break-statement. 
+    // Iterate over control parameterizations. Only one will be used, see the break-statement. 
     for (size_t bs = 0; bs < basisfunctions.size(); bs++){
       if (basisfunctions[bs]->getTstart() <= t && 
           basisfunctions[bs]->getTstop() >= t ) {
@@ -291,9 +293,9 @@ int Oscillator::evalControl(const double t, double* Re_ptr, double* Im_ptr){
   } 
 
   /* If pipulse: Overwrite controls by constant amplitude */
-  for (const auto& pipulse_segment : pipulse){
-    if (pipulse_segment.tstart <= t && t <= pipulse_segment.tstop) {
-      double amp_pq =  pipulse_segment.amp / sqrt(2.0);
+  for (const auto& pipulse_parameterization : pipulse){
+    if (pipulse_parameterization.tstart <= t && t <= pipulse_parameterization.tstop) {
+      double amp_pq =  pipulse_parameterization.amp / sqrt(2.0);
       *Re_ptr = amp_pq;
       *Im_ptr = amp_pq;
     }
@@ -306,7 +308,7 @@ int Oscillator::evalControl_diff(const double t, double* grad, const double pbar
 
   if (params.size()>0) {
 
-    // Iterate over control segments. Only one is active, see break statement.
+    // Iterate over control parameterizations. Only one is active, see break statement.
     for (size_t bs = 0; bs < basisfunctions.size(); bs++){
       if (basisfunctions[bs]->getTstart() <= t && 
           basisfunctions[bs]->getTstop() >= t ) {
@@ -336,8 +338,8 @@ int Oscillator::evalControl_diff(const double t, double* grad, const double pbar
   } 
 
   /* TODO: Derivative of pipulse? */
-  for (const auto& pipulse_segment : pipulse){
-    if (pipulse_segment.tstart <= t && t <= pipulse_segment.tstop) {
+  for (const auto& pipulse_parameterization : pipulse){
+    if (pipulse_parameterization.tstart <= t && t <= pipulse_parameterization.tstop) {
       printf("ERROR: Derivative of pipulse not implemented. Sorry! But also, this should never happen!\n");
       exit(1);
     }
@@ -382,10 +384,10 @@ int Oscillator::evalControl_Labframe(const double t, double* f){
 
 
   /* If inside a pipulse, overwrite lab control */
-  for (const auto& pipulse_segment : pipulse){
-    if (pipulse_segment.tstart <= t && t <= pipulse_segment.tstop) {
-      double p = pipulse_segment.amp / sqrt(2.0);
-      double q = pipulse_segment.amp / sqrt(2.0);
+  for (const auto& pipulse_parameterization : pipulse){
+    if (pipulse_parameterization.tstart <= t && t <= pipulse_parameterization.tstop) {
+      double p = pipulse_parameterization.amp / sqrt(2.0);
+      double q = pipulse_parameterization.amp / sqrt(2.0);
       *f = 2.0 * p * cos(ground_freq*t) - 2.0 * q * sin(ground_freq*t);
     }
   }

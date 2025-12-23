@@ -32,12 +32,12 @@ control_initialization = {
   "1" = { type = "constant", amplitude = 1.0 }
 }
 
-[[control_segments]]
+[[control_parameterizations]]
 oscID = 0
 type = "spline"
 num = 75
 
-[[control_segments]]
+[[control_parameterizations]]
 oscID = 1
 type = "spline"
 num = 75

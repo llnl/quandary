@@ -176,12 +176,21 @@ control_initialization = { type = "constant", amplitude = 0.005 }
 # "spline0" - piecewise constant control parameterization (0th order B-splines)
 # "spline_amplitude" - amplitude-only parameterization
 # "step" - step function control
-[[control_segments]]
+[[control_parameterizations]]
 # oscID = 0
 type = "spline"
 num = 150
-# tstart = 0.0  # optional, defaults to 0.0
-# tstop = 100.0  # optional, defaults to ntime * dt
+tstart = 0.0  # optional, defaults to 0.0
+tstop = 10.0  # optional, defaults to ntime * dt
+
+[[control_parameterizations]]
+# oscID = 0
+type = "spline"
+num = 5
+tstart = 10.0  # optional, defaults to 0.0
+tstop = 100.0  # optional, defaults to ntime * dt
+
+
 
 # Apply to all oscillators
 # [[control_segments]]
