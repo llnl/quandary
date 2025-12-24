@@ -389,6 +389,11 @@ ControlParameterizationData CfgParser::convertFromString<ControlParameterization
   // Parse parameters until next ControlType or end (only parse first segment)
   size_t i = 1;
   while (i < parts.size() && !isValidControlType(parts[i])) {
+    // Backwards support: STEP control has been removed, but if encountered, stop parsing further
+    if (toLower(parts[i]) == "step") {
+      logger.log("# Warning: Control type STEP has been removed and will be ignored.\n");
+      break;
+    }
     parameterization.parameters.push_back(convertFromString<double>(parts[i]));
     i++;
   }
@@ -401,9 +406,6 @@ ControlParameterizationData CfgParser::convertFromString<ControlParameterization
   // Validate minimum parameter count
   size_t min_params = 1;
   switch (parameterization.control_type) {
-    case ControlType::STEP:
-      min_params = 3; // step_amp1, step_amp2, tramp
-      break;
     case ControlType::BSPLINE:
     case ControlType::BSPLINE0:
       min_params = 1; // num_basis_functions

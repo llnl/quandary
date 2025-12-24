@@ -429,50 +429,6 @@ TEST_F(TomlParserTest, ControlParameterizations_Spline) {
   EXPECT_DOUBLE_EQ(control_seg1.tstop.value(), 1.0);
 }
 
-TEST_F(TomlParserTest, ControlParameterizations_Step) {
-  Config config = Config::fromTomlString(
-      R"(
-        nlevels = [2,2]
-        transfreq = [4.1,4.1]
-        rotfreq = [0.0,0.0]
-        initial_condition = {type = "basis"}
-
-        [[control_parameterizations]]
-        oscID = 0
-        type = "step"
-        step_amp1 = 0.1
-        step_amp2 = 0.2
-        tramp = 0.3
-        tstart = 0.4
-        tstop = 0.5
-        [[control_parameterizations]]
-        oscID = 1
-        type = "step"
-        step_amp1 = 0.1
-        step_amp2 = 0.2
-        tramp = 0.3
-      )",
-      logger);
-
-  // Check first oscillator
-  const auto& control_seg0 = config.getControlParameterizations(0);
-  EXPECT_EQ(control_seg0.type, ControlType::STEP);
-  EXPECT_EQ(control_seg0.step_amp1.value(), 0.1);
-  EXPECT_DOUBLE_EQ(control_seg0.step_amp2.value(), 0.2);
-  EXPECT_DOUBLE_EQ(control_seg0.tramp.value(), 0.3);
-  EXPECT_DOUBLE_EQ(control_seg0.tstart.value(), 0.4);
-  EXPECT_DOUBLE_EQ(control_seg0.tstop.value(), 0.5);
-
-  // Check second oscillator
-  const auto& control_seg1 = config.getControlParameterizations(1);
-  EXPECT_EQ(control_seg1.type, ControlType::STEP);
-  EXPECT_EQ(control_seg1.step_amp1.value(), 0.1);
-  EXPECT_DOUBLE_EQ(control_seg1.step_amp2.value(), 0.2);
-  EXPECT_DOUBLE_EQ(control_seg1.tramp.value(), 0.3);
-  EXPECT_DOUBLE_EQ(control_seg1.tstart.value(), 0.0); // default start time
-  EXPECT_DOUBLE_EQ(control_seg1.tstop.value(), config.getTotalTime()); // default stop time
-}
-
 TEST_F(TomlParserTest, ControlParameterizations_Defaults) {
   Config config = Config::fromTomlString(
       R"(

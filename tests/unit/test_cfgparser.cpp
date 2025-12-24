@@ -368,37 +368,6 @@ TEST_F(CfgParserTest, ControlParameterizations_Spline) {
   EXPECT_DOUBLE_EQ(control_seg1.tstop.value(), 1.0);
 }
 
-TEST_F(CfgParserTest, ControlParameterizations_Step) {
-  Config config = Config::fromCfgString(
-      R"(
-        nlevels = 2,2
-        transfreq = 4.1,4.1
-        rotfreq = 0.0,0.0
-        initialcondition = basis
-        control_segments0 = step, 0.1, 0.2, 0.3, 0.4, 0.5
-        control_segments1 = step, 0.1, 0.2, 0.3
-      )",
-      logger);
-
-  // Check first oscillator
-  const auto& control_seg0 = config.getControlParameterizations(0);
-  EXPECT_EQ(control_seg0.type, ControlType::STEP);
-  EXPECT_EQ(control_seg0.step_amp1.value(), 0.1);
-  EXPECT_DOUBLE_EQ(control_seg0.step_amp2.value(), 0.2);
-  EXPECT_DOUBLE_EQ(control_seg0.tramp.value(), 0.3);
-  EXPECT_DOUBLE_EQ(control_seg0.tstart.value(), 0.4);
-  EXPECT_DOUBLE_EQ(control_seg0.tstop.value(), 0.5);
-
-  // Check second oscillator
-  const auto& control_seg1 = config.getControlParameterizations(1);
-  EXPECT_EQ(control_seg1.type, ControlType::STEP);
-  EXPECT_EQ(control_seg1.step_amp1.value(), 0.1);
-  EXPECT_DOUBLE_EQ(control_seg1.step_amp2.value(), 0.2);
-  EXPECT_DOUBLE_EQ(control_seg1.tramp.value(), 0.3);
-  EXPECT_DOUBLE_EQ(control_seg1.tstart.value(), 0.0); // default start time
-  EXPECT_DOUBLE_EQ(control_seg1.tstop.value(), config.getNTime() * config.getDt()); // default stop time
-}
-
 TEST_F(CfgParserTest, ControlParameterizations_Defaults) {
   Config config = Config::fromCfgString(
       R"(

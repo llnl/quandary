@@ -150,7 +150,6 @@ enum class ControlType {
   NONE,       ///< Non-controllable
   BSPLINE,    ///< Control pulses are parameterized with 2nd order BSpline basis functions with carrier waves
   BSPLINEAMP, ///< Paramerizes only the amplitudes of the control pulse with 2nd order BSpline basis functions 
-  STEP,       ///< Control parameter is the width of a step function for a given amplitude
   BSPLINE0    ///< Control pulses are parameterized with Zeroth order Bspline (piece-wise constant)
 };
 
@@ -158,7 +157,6 @@ const std::map<std::string, ControlType> CONTROL_TYPE_MAP = {
     {"none", ControlType::NONE},
     {"spline", ControlType::BSPLINE},
     {"spline_amplitude", ControlType::BSPLINEAMP},
-    {"step", ControlType::STEP},
     {"spline0", ControlType::BSPLINE0}
 };
 
@@ -301,10 +299,6 @@ struct ControlParameterization {
   // Additional field for amplitude-scaled B-spline (BSPLINEAMP)
   std::optional<double> scaling; ///< Amplitude scaling factor
 
-  // Fields for step function control (STEP)
-  std::optional<double> step_amp1; ///< Real part of amplitude of the step pulse
-  std::optional<double> step_amp2; ///< Imaginary part of amplitude of the step pulse
-  std::optional<double> tramp; ///< Ramp time
 };
 
 /**

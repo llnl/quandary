@@ -70,14 +70,6 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   const auto& controlparameterization = config.getControlParameterizations(id);
  
   switch (controlparameterization.type) {
-    case ControlType::STEP: {
-      // if (mpirank_world == 0) printf("%d: Creating step basis with amplitude (%f, %f) (tramp %f) in control parameterization [%f, %f]\n", myid, step_amp1, step_amp2, tramp, tstart, tstop);
-      ControlBasis* mystep = new Step(*controlparameterization.step_amp1, *controlparameterization.step_amp2, *controlparameterization.tstart, *controlparameterization.tstop, *controlparameterization.tramp, control_enforceBC);
-      mystep->setSkip(nparams_per_seg);
-      nparams_per_seg += mystep->getNparams() * carrier_freq.size();
-      basisfunctions.push_back(mystep);
-      break;
-    }
     case ControlType::BSPLINE: {
       // if (mpirank_world==0) printf("%d: Creating %d-spline basis in control parameterization [%f, %f]\n", myid, nspline,tstart, tstop);
       ControlBasis* mysplinebasis = new BSpline2nd(*controlparameterization.nspline, *controlparameterization.tstart, *controlparameterization.tstop, control_enforceBC);
@@ -143,12 +135,6 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
             val = 2*val - initval;
           } else {
             logger.exitWithError("Unknown control initialization type.");
-          }
-
-          // If STEP parameterization, scale back to [0,1]
-          if (basisfunctions[iseg]->getType() == ControlType::STEP){
-            val = std::max(0.0, val);  
-            val = std::min(1.0, val); 
           }
 
           // Push the value to the parameter storage

@@ -808,12 +808,6 @@ void Config::printConfig(std::stringstream& log) const {
         log << "scaling = " << seg.scaling.value() << "\n";
         log << "tstart = " << seg.tstart.value() << "\n";
         log << "tstop = " << seg.tstop.value() << "\n";
-      } else if (seg.type == ControlType::STEP) {
-        log << "step_amp1 = " << seg.step_amp1.value() << "\n";
-        log << "step_amp2 = " << seg.step_amp2.value() << "\n";
-        log << "tramp = " << seg.tramp.value() << "\n";
-        log << "tstart = " << seg.tstart.value() << "\n";
-        log << "tstop = " << seg.tstop.value() << "\n";
       }
       log << "\n";
   }
@@ -1132,12 +1126,8 @@ ControlParameterization Config::parseControlParameterization(const toml::table& 
   const std::string scaling_key = "scaling";
   const std::string tstart_key = "tstart";
   const std::string tstop_key = "tstop";
-  const std::string step_amp1_key = "step_amp1";
-  const std::string step_amp2_key = "step_amp2";
-  const std::string tramp_key = "tramp";
 
-  std::set<std::string> allowed_keys = {OSC_ID_KEY, type_key,      num_key,       scaling_key, tstart_key,
-                                        tstop_key,  step_amp1_key, step_amp2_key, tramp_key};
+  std::set<std::string> allowed_keys = {OSC_ID_KEY, type_key, num_key, scaling_key, tstart_key,tstop_key};
   validateTableKeys(table, allowed_keys, "control_parameterizations");
 
   switch (*type) {
@@ -1155,13 +1145,6 @@ ControlParameterization Config::parseControlParameterization(const toml::table& 
       parameterization.tstop = validators::field<double>(table, tstop_key).valueOr(getTotalTime());
       break;
     }
-    case ControlType::STEP:
-      parameterization.step_amp1 = validators::field<double>(table, step_amp1_key).value();
-      parameterization.step_amp2 = validators::field<double>(table, step_amp2_key).value();
-      parameterization.tramp = validators::field<double>(table, tramp_key).value();
-      parameterization.tstart = validators::field<double>(table, tstart_key).valueOr(ConfigDefaults::CONTROL_TSTART);
-      parameterization.tstop = validators::field<double>(table, tstop_key).valueOr(getTotalTime());
-      break;
     case ControlType::NONE:
       // logger.exitWithError("Unexpected control type " + type_str);
       // Do nothing, no parameters needed
@@ -1387,15 +1370,7 @@ std::vector<ControlParameterization> Config::parseControlParameterizationsCfg(co
         parameterization.scaling = static_cast<double>(params[1]);
         parameterization.tstart = params.size() > 2 ? params[2] : ConfigDefaults::CONTROL_TSTART;
         parameterization.tstop = params.size() > 3 ? params[3] : getTotalTime();
-      } else if (oscil_config.control_type == ControlType::STEP) {
-        assert(params.size() >= 3); // step_amp1, step_amp2, tramp are required, should be validated in CfgParser
-        parameterization.step_amp1 = static_cast<double>(params[0]);
-        parameterization.step_amp2 = static_cast<double>(params[1]);
-        parameterization.tramp = static_cast<double>(params[2]);
-        parameterization.tstart = params.size() > 3 ? params[3] : ConfigDefaults::CONTROL_TSTART;
-        parameterization.tstop = params.size() > 4 ? params[4] : getTotalTime();
-      }
-
+      } 
       parsed_parameterizations[i] = parameterization;
     }
   }

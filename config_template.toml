@@ -175,7 +175,6 @@ control_initialization = { type = "constant", amplitude = 0.005 }
 # "spline" - 2nd order B-spline basis functions (recommended)
 # "spline0" - piecewise constant control parameterization (0th order B-splines)
 # "spline_amplitude" - amplitude-only parameterization
-# "step" - step function control
 [[control_parameterizations]]
 # oscID = 0
 type = "spline"
