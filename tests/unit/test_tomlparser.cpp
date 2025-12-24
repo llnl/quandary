@@ -647,8 +647,6 @@ TEST_F(TomlParserTest, ControlInitialization_DefaultWithOverrides) {
         initial_condition = {type = "basis"}
 
         control_initialization = { 
-          type = "constant", 
-          amplitude = 0.005, 
           "1" = { type = "random", amplitude = 0.05 }
         }
       )",
@@ -657,7 +655,7 @@ TEST_F(TomlParserTest, ControlInitialization_DefaultWithOverrides) {
   // Check first oscillator has default settings
   const auto& control_init0 = config.getControlInitializations(0);
   EXPECT_EQ(control_init0.type, ControlInitializationType::CONSTANT);
-  EXPECT_DOUBLE_EQ(control_init0.amplitude.value(), 0.005);
+  EXPECT_DOUBLE_EQ(control_init0.amplitude.value(), 0.0);
 
   // Check second oscillator has override settings
   const auto& control_init1 = config.getControlInitializations(1);
@@ -667,7 +665,7 @@ TEST_F(TomlParserTest, ControlInitialization_DefaultWithOverrides) {
   // Check third oscillator has default settings
   const auto& control_init2 = config.getControlInitializations(2);
   EXPECT_EQ(control_init2.type, ControlInitializationType::CONSTANT);
-  EXPECT_DOUBLE_EQ(control_init2.amplitude.value(), 0.005);
+  EXPECT_DOUBLE_EQ(control_init2.amplitude.value(), 0.0);
 }
 
 TEST_F(TomlParserTest, ControlBounds) {
@@ -986,7 +984,7 @@ TEST_F(TomlParserTest, ControlInitialization_UnknownKey) {
           control_initialization = { type = "file", filename = "params.dat", foo = 42 }
         )",
         logger);
-  }, "ERROR: control_initialization: unexpected key 'foo'\\.");
+  }, "ERROR: Unknown key 'foo' in control_initialization\\.");
 }
 
 TEST_F(TomlParserTest, ControlBounds_UnknownKey) {

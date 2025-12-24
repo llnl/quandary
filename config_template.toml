@@ -135,19 +135,10 @@ rand_seed = 1234
 # Control initialization options: Table with optional default + per-subsystem overrides
 
 # Option 1: Default initialization that applies to all subsystems 
-control_initialization = { type = "constant", amplitude = 0.005 }
-
-# Option 2: File initialization (applies to all oscillators)
+control_initialization = { type = "random", amplitude = 0.005 }
 # control_initialization = { type = "file", filename = "params.dat" }
 
-# Option 3: Default + per-subsystem overrides (overrides replace the default for that subsystem)
-# control_initialization = { 
-#   type = "constant",        # Default for all subsystems
-#   amplitude = 0.005, 
-#   "1" = { type = "random", amplitude = 0.05 }  # Override for subsystem 1
-# }
-
-# Option 4: Per-subsystem only (no default, must specify all subsystems you want to customize)
+# Option 2: Per-subsystem initialization (must specify all subsystems you want to customize)
 # control_initialization = {
 #   "0" = { type = "constant", amplitude = 0.003 },
 #   "1" = { type = "random", amplitude = 0.05 }
@@ -181,15 +172,6 @@ type = "spline"
 num = 150
 tstart = 0.0  # optional, defaults to 0.0
 tstop = 10.0  # optional, defaults to ntime * dt
-
-[[control_parameterizations]]
-# oscID = 0
-type = "spline"
-num = 5
-tstart = 10.0  # optional, defaults to 0.0
-tstop = 100.0  # optional, defaults to ntime * dt
-
-
 
 # Apply to all oscillators
 # [[control_segments]]

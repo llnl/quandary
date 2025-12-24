@@ -1191,22 +1191,19 @@ std::vector<ControlInitialization> Config::parseControlInitializations(const tom
   const std::set<std::string> allowed_keys = {type_key, filename_key, amplitude_key, phase_key};
 
   // Helper function to parse a single initialization spec from a table
-  auto parseInitSpec = [&](const toml::table& init_table, bool validate) -> ControlInitialization {
-    if (validate) {
-      validateTableKeys(init_table, allowed_keys, "control_initialization");
-    }
+  auto parseInitSpec = [&](const toml::table& init_table) -> ControlInitialization {
+    validateTableKeys(init_table, allowed_keys, "control_initialization");
     
-    ControlInitialization init;
-
     // Parse type of initialization
     std::string type = validators::field<std::string>(init_table, type_key).value();
     auto type_enum = parseEnum(type, CONTROL_INITIALIZATION_TYPE_MAP);
     if (!type_enum.has_value()) {
       logger.exitWithError("Unknown control initialization type: " + type);
     }
-    init.type = type_enum.value();
 
     // Parse other parameters based on type
+    ControlInitialization init;
+    init.type = type_enum.value();
     if (init.type == ControlInitializationType::FILE) {
       init.filename = validators::field<std::string>(init_table, filename_key).value();
       if (!init.filename.has_value()){
@@ -1216,48 +1213,41 @@ std::vector<ControlInitialization> Config::parseControlInitializations(const tom
       init.amplitude = validators::field<double>(init_table, amplitude_key).valueOr(ConfigDefaults::CONTROL_INIT_AMPLITUDE);
       init.phase = validators::field<double>(init_table, phase_key).greaterThanEqual(0.0).valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
     }
-
     return init;
   };
 
   ControlInitialization default_init = ControlInitialization{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt}; 
   std::vector<ControlInitialization> result(num_entries, default_init);
 
-  // First pass: Check if there is a default initialization (table with "type" key directly)
+  // Check if this is a global initialization (table with "type" key directly), or per-oscillator specification (table with numeric keys)
   if (table.contains(type_key)) {
-    // This is a single default initialization that applies to all subsystems. Don't validate the main table since it may contain subsystem ID keys
-    ControlInitialization global_default = parseInitSpec(table, false);
+    // Global initialization: applies to ALL oscillators
+    ControlInitialization global_init = parseInitSpec(table);
     for (size_t i = 0; i < num_entries; i++) {
-      result[i] = global_default;
+      result[i] = global_init;
     }
-  }
+  } else {
+    // Per-oscillator specification: parse each oscillator's initialization
+    for (auto& [key, value] : table) {
+      std::string key_str(key.str());
+      
+      // Try to parse the key as an oscillator ID
+      try {
+        size_t osc_id = std::stoul(key_str);
+        if (osc_id >= num_entries) {
+          logger.exitWithError("control_initialization: oscillator ID " + key_str + " out of range (must be < " + std::to_string(num_entries) + ")");
+        }
 
-  // Second pass: Parse subsystem-specific overrides (with keys "0", "1", etc.)
-  for (auto& [key, value] : table) {
-    std::string key_str(key.str());
-
-    // Skip keys that are part of the default specs
-    if (allowed_keys.find(key_str) != allowed_keys.end()) {
-      continue;
-    }
-    
-    // Try to parse the key as a subsystem ID
-    try {
-      size_t subsys_id = std::stoul(key_str);
-      if (subsys_id >= num_entries) {
-        logger.exitWithError("control_initialization: subsystem ID " + key_str + " out of range (must be < " + std::to_string(num_entries) + ")");
+        if (value.is_table()) {
+          auto* osc_table = value.as_table();
+          result[osc_id] = parseInitSpec(*osc_table);
+        } else {
+          logger.exitWithError("control_initialization: value for oscillator '" + key_str + "' must be a table");
+        }
+      } catch (const std::invalid_argument& e) {
+        // Not a numeric key - invalid configuration
+        logger.exitWithError("control_initialization: unexpected key '" + key_str + "'. Expected either a 'type' field for global initialization, or numeric oscillator IDs (e.g., \"0\", \"1\", etc.) for per-oscillator specification.");
       }
-
-      // Clear any default for this subsystem and add the override setting
-      if (value.is_table()) {
-        auto* subsys_table = value.as_table();
-        result[subsys_id] = parseInitSpec(*subsys_table, true);
-      } else {
-        logger.exitWithError("control_initialization: value for subsystem '" + key_str + "' must be a table");
-      }
-    } catch (const std::invalid_argument& e) {
-      // Not a numeric key - might be a typo or invalid configuration
-      logger.exitWithError("control_initialization: unexpected key '" + key_str + "'.");
     }
   }
 
