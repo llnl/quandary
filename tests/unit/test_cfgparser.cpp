@@ -296,14 +296,15 @@ TEST_F(CfgParserTest, ControlParameterizations_Spline) {
       )",
       logger);
 
-  // Check first oscillator with one parameterization
+  // Check first oscillator 
   const auto& control_seg0 = config.getControlParameterizations(0);
   EXPECT_EQ(control_seg0.type, ControlType::BSPLINE);
   EXPECT_EQ(control_seg0.nspline.value(), 10);
+  EXPECT_FALSE(control_seg0.tstart.has_value());
+  EXPECT_FALSE(control_seg0.tstop.has_value());
 
-  // Check second oscillator with two parameterizations
+  // Check second oscillator 
   const auto& control_seg1 = config.getControlParameterizations(1);
-
   EXPECT_EQ(control_seg1.type, ControlType::BSPLINE);
   EXPECT_EQ(control_seg1.nspline.value(), 20);
   EXPECT_DOUBLE_EQ(control_seg1.tstart.value(), 0.0);
@@ -326,6 +327,8 @@ TEST_F(CfgParserTest, ControlParameterizations_Defaults) {
   const auto& control_seg0 = config.getControlParameterizations(0);
   EXPECT_EQ(control_seg0.type, ControlType::BSPLINE);
   EXPECT_EQ(control_seg0.nspline.value(), 10);
+  EXPECT_FALSE(control_seg0.tstart.has_value());
+  EXPECT_FALSE(control_seg0.tstop.has_value());
 
   // Check second oscillator has given settings
   const auto& control_seg1 = config.getControlParameterizations(1);
@@ -340,6 +343,8 @@ TEST_F(CfgParserTest, ControlParameterizations_Defaults) {
   const auto& control_seg2 = config.getControlParameterizations(2);
   EXPECT_EQ(control_seg2.type, ControlType::BSPLINE);
   EXPECT_EQ(control_seg2.nspline.value(), 10);
+  EXPECT_FALSE(control_seg2.tstart.has_value());
+  EXPECT_FALSE(control_seg2.tstop.has_value());
 }
 
 TEST_F(CfgParserTest, ControlInitialization_Defaults) {
@@ -555,10 +560,7 @@ TEST_F(CfgParserTest, OptimTarget_DefaultProductState) {
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_EQ(target.type, TargetType::PRODUCT_STATE);
-  // For default product state, levels should be set to ground state
-  EXPECT_TRUE(target.levels.has_value());
-  EXPECT_FALSE(target.levels.value().empty());
+  EXPECT_EQ(target.type, TargetType::NONE);
 }
 
 TEST_F(CfgParserTest, OptimWeights) {

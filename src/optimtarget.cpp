@@ -8,7 +8,7 @@ OptimTarget::OptimTarget(){
   dim_rho = 0;
   dim_ess = 0;
   noscillators = 0;
-  target_type = TargetType::GATE;
+  target_type = TargetType::NONE;
   objective_type = ObjectiveType::JTRACE;
   lindbladtype = LindbladType::NONE;
   targetgate = NULL;
@@ -177,15 +177,14 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
 
   objective_type = config.getOptimObjective();
 
-  /* Allocate target state, if it is read from file, or if target is a gate transformation VrhoV. If product state target, only store the ID. */
-  if (target_type == TargetType::GATE || target_type == TargetType::FROMFILE) {
-    VecCreate(PETSC_COMM_WORLD, &targetstate); 
-    PetscInt globalsize = 2 * mastereq->getDim();  // Global state vector: 2 for real and imaginary part
-    PetscInt localsize = globalsize / mpisize_petsc;  // Local vector per processor
-    VecSetSizes(targetstate,localsize,globalsize);
-    VecSetFromOptions(targetstate);
-  }
-
+  /* Allocate storage for the target state */
+  VecCreate(PETSC_COMM_WORLD, &targetstate); 
+  PetscInt globalsize = 2 * mastereq->getDim();  // Global state vector: 2 for real and imaginary part
+  PetscInt localsize = globalsize / mpisize_petsc;  // Local vector per processor
+  VecSetSizes(targetstate,localsize,globalsize);
+  VecSetFromOptions(targetstate);
+  VecZeroEntries(targetstate);
+  
   /* Read the target state from file into vec */
   if (target_type == TargetType::FROMFILE) {
     PetscInt nelems = 0;
@@ -239,8 +238,7 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
 
 OptimTarget::~OptimTarget(){
   if (objective_type == ObjectiveType::JFROBENIUS) VecDestroy(&aux);
-  if (target_type == TargetType::GATE || target_type == TargetType::FROMFILE)  VecDestroy(&targetstate);
-
+  VecDestroy(&targetstate);
   delete targetgate;
 }
 
@@ -605,6 +603,10 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
 
 
 void OptimTarget::prepareTargetState(const Vec rho_t0){
+
+  // If no target specified, set target state to zero.
+  if (target_type == TargetType::NONE) VecZeroEntries(targetstate);
+
   // If gate optimization, apply the gate and store targetstate for later use. Else, do nothing.
   if (target_type == TargetType::GATE) targetgate->applyGate(rho_t0, targetstate);
 
@@ -616,6 +618,13 @@ void OptimTarget::prepareTargetState(const Vec rho_t0){
 
 
 void OptimTarget::evalJ(const Vec state, double* J_re_ptr, double* J_im_ptr){
+  // Don't evaluate any objective function if the target type is NONE
+  if (target_type == TargetType::NONE) {
+    *J_re_ptr = 0.0;
+    *J_im_ptr = 0.0;
+    return;
+  }
+
   double J_re = 0.0;
   double J_im = 0.0;
   double sum, rhoii, rhoii_re, rhoii_im, lambdai, norm;
@@ -706,6 +715,11 @@ void OptimTarget::evalJ(const Vec state, double* J_re_ptr, double* J_im_ptr){
 
 
 void OptimTarget::evalJ_diff(const Vec state, Vec statebar, const double J_re_bar, const double J_im_bar){
+  // Do nothing if no target is specified.
+  if (target_type == TargetType::NONE) {
+    return;
+  }
+
   double lambdai, val, rhoii_re, rhoii_im;
 
   switch (objective_type) {
@@ -768,8 +782,11 @@ void OptimTarget::evalJ_diff(const Vec state, Vec statebar, const double J_re_ba
 }
 
 double OptimTarget::finalizeJ(const double obj_cost_re, const double obj_cost_im) {
-  double obj_cost = 0.0;
+  if (target_type == TargetType::NONE) {
+    return 0.0;
+  }
 
+  double obj_cost = 0.0;
   if (objective_type == ObjectiveType::JTRACE) {
     if (lindbladtype == LindbladType::NONE) {
       obj_cost = 1.0 - (pow(obj_cost_re,2.0) + pow(obj_cost_im, 2.0));
@@ -786,6 +803,11 @@ double OptimTarget::finalizeJ(const double obj_cost_re, const double obj_cost_im
 
 
 void OptimTarget::finalizeJ_diff(const double obj_cost_re, const double obj_cost_im, double* obj_cost_re_bar, double* obj_cost_im_bar){
+  if (target_type == TargetType::NONE) {
+    *obj_cost_re_bar = 0.0;
+    *obj_cost_im_bar = 0.0;
+    return;
+  }
 
   if (objective_type == ObjectiveType::JTRACE) {
     if (lindbladtype == LindbladType::NONE) {

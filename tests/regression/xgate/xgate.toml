@@ -11,7 +11,7 @@ decoherence = {type = "both",  decay_time = [56000.0], dephase_time = [28000.0]}
 initial_condition = {type = "3states"}
 
 control_enforceBC = true
-optim_target = {target_type = "gate", gate_type = "xgate"}
+optim_target = {type = "gate", gate_type = "xgate"}
 optim_objective = "Jfrobenius"
 optim_weights = 1.0
 optim_tolerance = { grad_abs = 0.0001, grad_rel = 1e-05, final_cost = 1e-05, infidelity = 1e-05 }

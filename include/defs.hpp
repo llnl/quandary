@@ -76,12 +76,14 @@ const std::map<std::string, InitialConditionType> INITCOND_TYPE_MAP = {
  * Defines the target quantum state or operation for optimization.
  */
 enum class TargetType {
+  NONE,          ///< No target specified (no optimization)
   GATE,          ///< Gate optimization: \f$\rho_{\text{target}} = V\rho(0) V^\dagger\f$
   PRODUCT_STATE, ///< Product state preparation: \f$\rho_{\text{target}} = e_m e_m^\dagger\f$ for some integer \f$m\f$
   FROMFILE       ///< Target state read from file, vectorized density matrix format
 };
 
 const std::map<std::string, TargetType> TARGET_TYPE_MAP = {
+    {"none", TargetType::NONE},
     {"gate", TargetType::GATE},
     {"product_state", TargetType::PRODUCT_STATE},
     {"file", TargetType::FROMFILE}

@@ -363,6 +363,9 @@ OptimTargetSettings CfgParser::convertFromString<OptimTargetSettings>(const std:
       }
       target_settings.file = parts[1];
       break;
+    case TargetType::NONE:
+      // No additional settings needed for NONE target type
+      break;
   }
 
   return target_settings;

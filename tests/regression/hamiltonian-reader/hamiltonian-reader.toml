@@ -10,7 +10,7 @@ hamiltonian_file_Hsys = "hamiltonian_Hsys.dat"
 hamiltonian_file_Hc = "hamiltonian_Hc.dat"
 
 control_enforceBC = false
-optim_target = {target_type = "gate", gate_type = "none"}
+optim_target = {type = "gate", gate_type = "none"}
 optim_objective = "Jtrace"
 gate_rot_freq = [0.0, 0.0]
 optim_weights = 1.0

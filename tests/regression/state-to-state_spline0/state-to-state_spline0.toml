@@ -10,7 +10,7 @@ Jkl = {}
 initial_condition = {type = "product_state", levels = [1]}
 
 control_enforceBC = true
-optim_target = {target_type = "file", filename = "./targetstate.dat"}
+optim_target = {type = "file", filename = "./targetstate.dat"}
 optim_objective = "Jtrace"
 gate_rot_freq = [0.0]
 optim_weights = [1.0]

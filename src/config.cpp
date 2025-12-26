@@ -120,7 +120,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     // optim_target
     if (toml.contains("optim_target")) {
       auto target_table = *toml["optim_target"].as_table();
-      std::string type_str = validators::field<std::string>(target_table, "target_type").value();
+      std::string type_str = validators::field<std::string>(target_table, "type").value();
       auto target_type_opt = parseEnum(type_str, TARGET_TYPE_MAP);
 
       if (!target_type_opt.has_value()) {
@@ -610,7 +610,7 @@ std::string toString(const InitialCondition& initial_condition) {
 }
 
 std::string toString(const OptimTargetSettings& optim_target) {
-  auto type_str = "target_type = \"" + enumToString(optim_target.type, TARGET_TYPE_MAP) + "\"";
+  auto type_str = "type = \"" + enumToString(optim_target.type, TARGET_TYPE_MAP) + "\"";
   switch (optim_target.type) {
     case TargetType::GATE: {
       std::string out = "{" + type_str;
@@ -639,6 +639,8 @@ std::string toString(const OptimTargetSettings& optim_target) {
       out += "}";
       return out;
     }
+    case TargetType::NONE:
+      return "{" + type_str + "}";
   }
   return "unknown";
 }
@@ -1419,6 +1421,9 @@ OptimTargetSettings Config::parseOptimTarget(TargetType type, const std::optiona
       target_settings.file = file.value();
       break;
     }
+    case TargetType::NONE:
+      // No additional settings needed for NONE target type
+      break;
   }
 
   return target_settings;

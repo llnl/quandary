@@ -62,13 +62,6 @@ class OptimTarget{
     ~OptimTarget();
 
     /**
-     * @brief Retrieves the target type.
-     *
-     * @return TargetType Type of optimization target
-     */
-    TargetType getTargetType(){ return target_type; };
-
-    /**
      * @brief Retrieves the objective function type.
      *
      * @return ObjectiveType Type of objective function

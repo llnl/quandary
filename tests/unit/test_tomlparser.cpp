@@ -106,7 +106,7 @@ TEST_F(TomlParserTest, ParseStructSettings) {
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "diagonal", oscIDs = [0]}
-        optim_target = {target_type = "gate", gate_type = "cnot"}
+        optim_target = {type = "gate", gate_type = "cnot"}
       )",
       logger);
 
@@ -665,7 +665,7 @@ TEST_F(TomlParserTest, OptimTarget_GateType) {
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
-        optim_target = {target_type = "gate", gate_type = "cnot"}
+        optim_target = {type = "gate", gate_type = "cnot"}
       )",
       logger);
 
@@ -681,7 +681,7 @@ TEST_F(TomlParserTest, OptimTarget_GateFromFile) {
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
-        optim_target = {target_type = "gate", gate_type = "file", gate_file = "/path/to/gate.dat"}
+        optim_target = {type = "gate", gate_type = "file", gate_file = "/path/to/gate.dat"}
       )",
       logger);
 
@@ -698,7 +698,7 @@ TEST_F(TomlParserTest, OptimTarget_ProductState) {
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
-        optim_target = {target_type = "product_state", levels = [0,1,2]}
+        optim_target = {type = "product_state", levels = [0,1,2]}
       )",
       logger);
 
@@ -718,7 +718,7 @@ TEST_F(TomlParserTest, OptimTarget_FromFile) {
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
-        optim_target = {target_type = "file", filename = "/path/to/target.dat"}
+        optim_target = {type = "file", filename = "/path/to/target.dat"}
       )",
       logger);
 
@@ -738,10 +738,7 @@ TEST_F(TomlParserTest, OptimTarget_DefaultProductState) {
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_EQ(target.type, TargetType::PRODUCT_STATE);
-  // For default product state, levels should be set to ground state
-  EXPECT_TRUE(target.levels.has_value());
-  EXPECT_FALSE(target.levels.value().empty());
+  EXPECT_EQ(target.type, TargetType::NONE);
 }
 
 TEST_F(TomlParserTest, OptimWeights) {
@@ -782,7 +779,7 @@ TEST_F(TomlParserTest, OptimWeights) {
 // dephase_time = [45.000000]
 // initial_condition = {type = "product_state", levels = [1]}
 // control_enforceBC = false
-// optim_target = {target_type = "gate", gate_type = "hadamard"}
+// optim_target = {type = "gate", gate_type = "hadamard"}
 // gate_rot_freq = [1.500000]
 // optim_objective = "jtrace"
 // optim_weights = [1.000000]
