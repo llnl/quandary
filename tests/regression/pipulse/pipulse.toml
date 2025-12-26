@@ -30,16 +30,14 @@ linearsolver_maxiter = 20
 timestepper = "IMR"
 control_initialization = { type = "constant", amplitude = 0.0 }
 
+control_parameterization = { type = "spline", num = 30 }
+
 [[apply_pipulse]]
 oscID = 0
 tstart = 0.01
 tstop = 0.8
 amp = 15.10381
 
-[[control_parameterizations]]
-oscID = 0
-type = "spline"
-num = 30
 
 [[control_bounds]]
 oscID = 0

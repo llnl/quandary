@@ -99,9 +99,23 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     // Optimization options
     control_enforceBC = toml["control_enforceBC"].value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
 
-    // Parse control parameterizations
-    auto control_array = validators::getArrayOfTables(toml, "control_parameterizations");
-    control_parameterizations = parseControlParameterizations(control_array, num_osc);
+    // Parse control parameterization: table with optional default and per-subsystem overrides
+    if (toml.contains("control_parameterization")) {
+      if (toml["control_parameterization"].is_table()) {
+        auto* control_param_table = toml["control_parameterization"].as_table();
+        control_parameterizations = parseControlParameterizations(*control_param_table, num_osc);
+      } else {
+        logger.exitWithError("control_parameterization must be a table");
+      }
+    } else {
+      // No control_parameterization specified, use defaults
+      ControlParameterization default_param;
+      default_param.type = ConfigDefaults::CONTROL_TYPE;
+      default_param.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
+      default_param.tstart = ConfigDefaults::CONTROL_TSTART;
+      default_param.tstop = getTotalTime();
+      control_parameterizations.resize(num_osc, default_param);
+    }
 
     // Parse control initialization: table with optional default and per-subsystem overrides
     if (toml.contains("control_initialization")) {
@@ -750,7 +764,7 @@ void Config::printConfig(std::stringstream& log) const {
     }
   }
   
-  log << "control_initialization = {\n";
+  log << "control_initialization = {";
   if (all_same) {
     // All subsystems have the same initialization - output as simple table 
     log << "type = \"" << enumToString(first_init.type, CONTROL_INITIALIZATION_TYPE_MAP) << "\"";
@@ -759,6 +773,7 @@ void Config::printConfig(std::stringstream& log) const {
     if (first_init.phase.has_value())  log << ", phase = " << first_init.phase.value();
     log << " }\n\n";
   } else {
+    log << "\n";
     // Subsystems have different initializations - output with per-subsystem overrides
     for (size_t i = 0; i < control_initializations.size(); ++i) {
       const auto& init = control_initializations[i];
@@ -769,6 +784,51 @@ void Config::printConfig(std::stringstream& log) const {
       if (init.phase.has_value()) log << ", phase = " << init.phase.value();
       log << " }";
       if (i < control_initializations.size() - 1) {
+        log << ",";
+      }
+      log << "\n";
+    }
+    log << "}\n\n";
+  }
+
+  // Control parameterization
+
+  // Check if all subsystems have the same parameterization, in which case a simple table is written instead of per-subsystem overrides
+  bool all_same_param = true;
+  const auto& first_param = control_parameterizations[0];
+  for (size_t i = 1; i < control_parameterizations.size(); ++i) {
+    if (control_parameterizations[i].type != first_param.type ||
+        control_parameterizations[i].nspline != first_param.nspline ||
+        control_parameterizations[i].tstart != first_param.tstart ||
+        control_parameterizations[i].tstop != first_param.tstop ||
+        control_parameterizations[i].scaling != first_param.scaling) {
+      all_same_param = false;
+      break;
+    }
+  }
+
+  log << "control_parameterization = {";
+  if (all_same_param) {
+    // All subsystems have the same parameterization - output as simple table
+    log << "type = \"" << enumToString(first_param.type, CONTROL_TYPE_MAP) << "\"";
+    if (first_param.nspline.has_value()) log << ", num = " << first_param.nspline.value();
+    if (first_param.scaling.has_value()) log << ", scaling = " << first_param.scaling.value();
+    if (first_param.tstart.has_value()) log << ", tstart = " << first_param.tstart.value();
+    if (first_param.tstop.has_value()) log << ", tstop = " << first_param.tstop.value();
+    log << " }\n\n";
+  } else {
+    log << "\n";
+    // Subsystems have different parameterizations - output with per-subsystem overrides
+    for (size_t i = 0; i < control_parameterizations.size(); ++i) {
+      const auto& param = control_parameterizations[i];
+      log << "  \"" << i << "\" = { ";
+      log << "type = \"" << enumToString(param.type, CONTROL_TYPE_MAP) << "\"";
+      if (param.nspline.has_value()) log << ", num = " << param.nspline.value();
+      if (param.scaling.has_value()) log << ", scaling = " << param.scaling.value();
+      if (param.tstart.has_value()) log << ", tstart = " << param.tstart.value();
+      if (param.tstop.has_value()) log << ", tstop = " << param.tstop.value();
+      log << " }";
+      if (i < control_parameterizations.size() - 1) {
         log << ",";
       }
       log << "\n";
@@ -789,27 +849,6 @@ void Config::printConfig(std::stringstream& log) const {
       log << "amp = " << parameterization.amp << "\n";
       log << "\n";
     }
-  }
-
-  // Control parameterizations as array of tables
-  for (size_t i = 0; i < control_parameterizations.size(); ++i) {
-      const auto& seg = control_parameterizations[i];
-      log << "[[control_parameterizations]]\n";
-      log << "oscID = " << i << "\n";
-      log << "type = \"" << enumToString(seg.type, CONTROL_TYPE_MAP) << "\"\n";
-
-      // Add parameterization-specific parameters
-      if (seg.type == ControlType::BSPLINE || seg.type == ControlType::BSPLINE0) {
-        log << "num = " << seg.nspline.value() << "\n";
-        log << "tstart = " << seg.tstart.value() << "\n";
-        log << "tstop = " << seg.tstop.value() << "\n";
-      } else if (seg.type == ControlType::BSPLINEAMP) {
-        log << "num = " << seg.nspline.value() << "\n";
-        log << "scaling = " << seg.scaling.value() << "\n";
-        log << "tstart = " << seg.tstart.value() << "\n";
-        log << "tstop = " << seg.tstop.value() << "\n";
-      }
-      log << "\n";
   }
 
   // Control bounds as array of tables
@@ -1111,70 +1150,87 @@ void Config::addPiPulseSegment(std::vector<std::vector<PiPulseSegment>>& apply_p
   }
 }
 
-ControlParameterization Config::parseControlParameterization(const toml::table& table) const {
-  ControlParameterization parameterization;
-
-  std::string type_str = validators::field<std::string>(table, "type").value();
-  std::optional<ControlType> type = parseEnum(type_str, CONTROL_TYPE_MAP);
-  if (!type.has_value()) {
-    logger.exitWithError("Unrecognized type '" + type_str + "' in control parameterization.");
-  }
-  parameterization.type = *type;
+std::vector<ControlParameterization> Config::parseControlParameterizations(const toml::table& table, size_t num_entries) const {
 
   const std::string type_key = "type";
   const std::string num_key = "num";
   const std::string scaling_key = "scaling";
   const std::string tstart_key = "tstart";
   const std::string tstop_key = "tstop";
+  const std::set<std::string> allowed_keys = {type_key, num_key, scaling_key, tstart_key, tstop_key};
 
-  std::set<std::string> allowed_keys = {OSC_ID_KEY, type_key, num_key, scaling_key, tstart_key,tstop_key};
-  validateTableKeys(table, allowed_keys, "control_parameterizations");
-
-  switch (*type) {
-    case ControlType::BSPLINE:
-    case ControlType::BSPLINE0: {
-      parameterization.nspline = validators::field<size_t>(table, num_key).value();
-      parameterization.tstart = validators::field<double>(table, tstart_key).valueOr(ConfigDefaults::CONTROL_TSTART);
-      parameterization.tstop = validators::field<double>(table, tstop_key).valueOr(getTotalTime());
-      break;
+  // Helper function to parse a single parameterization spec from a table
+  auto parseParamSpec = [&](const toml::table& param_table) -> ControlParameterization {
+    validateTableKeys(param_table, allowed_keys, "control_parameterization");
+    
+    // Parse type of parameterization
+    std::string type_str = validators::field<std::string>(param_table, type_key).value();
+    auto type_enum = parseEnum(type_str, CONTROL_TYPE_MAP);
+    if (!type_enum.has_value()) {
+      logger.exitWithError("Unknown control parameterization type: " + type_str);
     }
-    case ControlType::BSPLINEAMP: {
-      parameterization.nspline = validators::field<size_t>(table, num_key).value();
-      parameterization.scaling = validators::field<double>(table, scaling_key).value();
-      parameterization.tstart = validators::field<double>(table, tstart_key).valueOr(ConfigDefaults::CONTROL_TSTART);
-      parameterization.tstop = validators::field<double>(table, tstop_key).valueOr(getTotalTime());
-      break;
+
+    // Parse other parameters based on type
+    ControlParameterization param;
+    param.type = type_enum.value();
+    
+    switch (param.type) {
+      case ControlType::BSPLINE:
+      case ControlType::BSPLINE0: {
+        param.nspline = validators::field<size_t>(param_table, num_key).value();
+        param.tstart = validators::field<double>(param_table, tstart_key).valueOr(ConfigDefaults::CONTROL_TSTART);
+        param.tstop = validators::field<double>(param_table, tstop_key).valueOr(getTotalTime());
+        break;
+      }
+      case ControlType::BSPLINEAMP: {
+        param.nspline = validators::field<size_t>(param_table, num_key).value();
+        param.scaling = validators::field<double>(param_table, scaling_key).value();
+        param.tstart = validators::field<double>(param_table, tstart_key).valueOr(ConfigDefaults::CONTROL_TSTART);
+        param.tstop = validators::field<double>(param_table, tstop_key).valueOr(getTotalTime());
+        break;
+      }
+      case ControlType::NONE:
+        // Do nothing, no parameters needed
+        break;
     }
-    case ControlType::NONE:
-      // logger.exitWithError("Unexpected control type " + type_str);
-      // Do nothing, no parameters needed
-      break;
-  }
+    return param;
+  };
 
-  return parameterization;
-}
+  ControlParameterization default_param;
+  default_param.type = ConfigDefaults::CONTROL_TYPE;
+  default_param.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
+  default_param.tstart = ConfigDefaults::CONTROL_TSTART;
+  default_param.tstop = getTotalTime();
+  std::vector<ControlParameterization> result(num_entries, default_param);
 
-std::vector<ControlParameterization> Config::parseControlParameterizations(const toml::array& array_of_tables,size_t num_entries) const {
-  ControlParameterization default_parameterization;
-  default_parameterization.type = ConfigDefaults::CONTROL_TYPE;
-  default_parameterization.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
-  default_parameterization.tstart = ConfigDefaults::CONTROL_TSTART;
-  default_parameterization.tstop = getTotalTime();
+  // Check if this is a global parameterization (table with "type" key directly), or per-oscillator specification (table with numeric keys)
+  if (table.contains(type_key)) {
+    // Global parameterization: applies to ALL oscillators
+    ControlParameterization global_param = parseParamSpec(table);
+    for (size_t i = 0; i < num_entries; i++) {
+      result[i] = global_param;
+    }
+  } else {
+    // Per-oscillator specification: parse each oscillator's parameterization
+    for (auto& [key, value] : table) {
+      std::string key_str(key.str());
+      
+      // Try to parse the key as an oscillator ID
+      try {
+        size_t osc_id = std::stoul(key_str);
+        if (osc_id >= num_entries) {
+          logger.exitWithError("control_parameterization: oscillator ID " + key_str + " out of range (must be < " + std::to_string(num_entries) + ")");
+        }
 
-  std::vector<ControlParameterization> result(num_entries, default_parameterization);
-
-  for (auto& elem : array_of_tables) {
-    auto table = *elem.as_table();
-    ControlParameterization parameterization = parseControlParameterization(table);
-
-    if (auto osc_id_node = table[OSC_ID_KEY]) {
-      // Apply to specific oscillator
-      size_t osc_id = validators::field<size_t>(table, OSC_ID_KEY).lessThan(num_entries).value();
-      result[osc_id] = parameterization;
-    } else {
-      // Apply to ALL oscillators
-      for (size_t i = 0; i < num_entries; i++) {
-        result[i] = parameterization;
+        if (value.is_table()) {
+          auto* osc_table = value.as_table();
+          result[osc_id] = parseParamSpec(*osc_table);
+        } else {
+          logger.exitWithError("control_parameterization: value for oscillator '" + key_str + "' must be a table");
+        }
+      } catch (const std::invalid_argument& e) {
+        // Not a numeric key - invalid configuration
+        logger.exitWithError("control_parameterization: unexpected key '" + key_str + "'. Expected either a 'type' field for global parameterization, or numeric oscillator IDs (e.g., \"0\", \"1\", etc.) for per-oscillator specification.");
       }
     }
   }

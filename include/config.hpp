@@ -187,8 +187,7 @@ class Config {
   void addPiPulseSegment(std::vector<std::vector<PiPulseSegment>>& apply_pipulse, size_t oscilID, double tstart,
                          double tstop, double amp) const;
 
-  ControlParameterization parseControlParameterization(const toml::table& table) const;
-  std::vector<ControlParameterization> parseControlParameterizations(const toml::array& array_of_tables, size_t num_entries) const;
+  std::vector<ControlParameterization> parseControlParameterizations(const toml::table& table, size_t num_entries) const;
 
   std::vector<ControlInitialization> parseControlInitializations(const toml::table& table, size_t num_entries) const;
   OptimTargetSettings parseOptimTarget(TargetType type, const std::optional<GateType>& gate_type,

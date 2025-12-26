@@ -377,12 +377,7 @@ TEST_F(TomlParserTest, ControlParameterizations_Spline0) {
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
 
-        [[control_parameterizations]]
-        oscID = 0
-        type = "spline0"
-        num = 150
-        tstart = 0.0
-        tstop = 1.0
+        control_parameterization = { type = "spline0", num = 150, tstart = 0.0, tstop = 1.0 }
       )",
       logger);
 
@@ -401,16 +396,10 @@ TEST_F(TomlParserTest, ControlParameterizations_Spline) {
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        [[control_parameterizations]]
-        oscID = 0
-        type = "spline"
-        num = 10
-        [[control_parameterizations]]
-        oscID = 1
-        type = "spline"
-        num = 20
-        tstart = 0.0
-        tstop = 1.0
+        control_parameterization = {
+          "0" = { type = "spline", num = 10 },
+          "1" = { type = "spline", num = 20, tstart = 0.0, tstop = 1.0 }
+        }
       )",
       logger);
 
@@ -437,12 +426,9 @@ TEST_F(TomlParserTest, ControlParameterizations_Defaults) {
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        [[control_parameterizations]]
-        oscID = 1
-        type = "spline0"
-        num = 150
-        tstart = 0.0
-        tstop = 1.0
+        control_parameterization = {
+          "1" = { type = "spline0", num = 150, tstart = 0.0, tstop = 1.0 }
+        }
         [[control_bounds]]
         oscID = 1
         values = [2.0]
@@ -482,11 +468,7 @@ TEST_F(TomlParserTest, ControlParameterizations_AllOscillators) {
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        [[control_parameterizations]]
-        type = "spline0"
-        num = 150
-        tstart = 0.0
-        tstop = 1.0
+        control_parameterization = { type = "spline0", num = 150, tstart = 0.0, tstop = 1.0 }
       )",
       logger);
 
@@ -551,21 +533,11 @@ TEST_F(TomlParserTest, ControlInitialization) {
           "4" = { type = "random", amplitude = 5.0, phase = 5.1 }
         }
 
-        [[control_parameterizations]]
-        oscID = 0
-        type = "spline_amplitude"
-        num = 10
-        scaling = 1.0
-        [[control_parameterizations]]
-        oscID = 2
-        type = "spline_amplitude"
-        num = 10
-        scaling = 1.0
-        [[control_parameterizations]]
-        oscID = 4
-        type = "spline_amplitude"
-        num = 10
-        scaling = 1.0
+        control_parameterization = {
+          "0" = { type = "spline_amplitude", num = 10, scaling = 1.0 },
+          "2" = { type = "spline_amplitude", num = 10, scaling = 1.0 },
+          "4" = { type = "spline_amplitude", num = 10, scaling = 1.0 }
+        }
       )",
       logger);
 
@@ -676,12 +648,7 @@ TEST_F(TomlParserTest, ControlBounds) {
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
 
-        [[control_parameterizations]]
-        oscID = 0
-        type = "spline"
-        num = 10
-        tstart = 0.0
-        tstop = 1.0
+        control_parameterization = { type = "spline", num = 10, tstart = 0.0, tstop = 1.0 }
         
         [[control_bounds]]
         oscID = 0
@@ -897,18 +864,9 @@ TEST_F(TomlParserTest, OptimWeights) {
 // tstop = 2
 // amp = 0.75
 
-// [[control_parameterizations]]
-// oscID = 0
-// type = "spline"
-// num = 25
-// tstart = 0.5
-// tstop = 1.5
+// control_parameterization = { type = "spline", num = 25, tstart = 0.5, tstop = 1.5 }
 
-// [[control_initialization]]
-// oscID = 0
-// type = "random"
-// amplitude = 1.500000
-// phase = 0.500000
+// control_initialization = { type = "random", amplitude = 1.500000, phase = 0.500000 }
 
 // [[control_bounds]]
 // oscID = 0
@@ -963,13 +921,10 @@ TEST_F(TomlParserTest, ControlParameterizations_UnknownKey) {
           rotfreq = [0.0]
           initial_condition = {type = "basis"}
 
-          [[control_parameterizations]]
-          type = "spline"
-          num = 5
-          wrong_field = 99
+          control_parameterization = { type = "spline", num = 5, wrong_field = 99 }
         )",
         logger);
-  }, "ERROR: Unknown key 'wrong_field' in control_parameterizations\\.");
+  }, "ERROR: Unknown key 'wrong_field' in control_parameterization\\.");
 }
 
 TEST_F(TomlParserTest, ControlInitialization_UnknownKey) {

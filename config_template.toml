@@ -144,6 +144,22 @@ control_initialization = { type = "random", amplitude = 0.005 }
 #   "1" = { type = "random", amplitude = 0.05 }
 # }
 
+# Control parameterization options: Table with optional default + per-subsystem overrides
+# Available control types:
+# "spline" - 2nd order B-spline basis functions (recommended)
+# "spline0" - piecewise constant control parameterization (0th order B-splines)
+# "spline_amplitude" - amplitude-only parameterization
+
+# Option 1: Default parameterization that applies to all subsystems
+control_parameterization = { type = "spline", num = 150, tstart = 0.0, tstop = 10.0 }
+# control_parameterization = { type = "spline0", num = 300 }
+
+# Option 2: Per-subsystem parameterization (must specify all subsystems you want to customize)
+# control_parameterization = {
+#   "0" = { type = "spline", num = 150, tstart = 0.0, tstop = 10.0 },
+#   "1" = { type = "spline0", num = 300 }
+# }
+
 
 # ---------------------------------------------------------------
 # ------------------- Per oscillator settings -------------------
@@ -159,24 +175,6 @@ control_initialization = { type = "random", amplitude = 0.005 }
 # tstart = 0.5
 # tstop = 0.604
 # amp = 15.10381
-
-# Define the controllable segments for each oscillator and the type of parameterization.
-# Multiple of these blocks can be defined.
-# Available control types:
-# "spline" - 2nd order B-spline basis functions (recommended)
-# "spline0" - piecewise constant control parameterization (0th order B-splines)
-# "spline_amplitude" - amplitude-only parameterization
-[[control_parameterizations]]
-# oscID = 0
-type = "spline"
-num = 150
-tstart = 0.0  # optional, defaults to 0.0
-tstop = 10.0  # optional, defaults to ntime * dt
-
-# Apply to all oscillators
-# [[control_segments]]
-# type = "spline0"
-# num = 300
 
 # Maximum amplitude bound for the control pulses for each oscillator (GHz). One entry for each segment.
 [[control_bounds]]

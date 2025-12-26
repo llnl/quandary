@@ -31,10 +31,7 @@ timestepper = "IMR"
 rand_seed = 1234
 control_initialization = { "0" = { type = "constant", amplitude = 0.01 } }
 
-[[control_parameterizations]]
-oscID = 0
-type = "spline"
-num = 150
+control_parameterization = { type = "spline", num = 150 }
 
 [[control_bounds]]
 oscID = 0

@@ -31,25 +31,7 @@ control_initialization = {
   type = "constant", amplitude = 0.005
 }
 
-[[control_parameterizations]]
-oscID = 0
-type = "spline"
-num = 15
-
-[[control_parameterizations]]
-oscID = 1
-type = "spline"
-num = 15
-
-[[control_parameterizations]]
-oscID = 2
-type = "spline"
-num = 15
-
-[[control_parameterizations]]
-oscID = 3
-type = "spline"
-num = 15
+control_parameterization = { type = "spline", num = 15 }
 
 [[control_bounds]]
 oscID = 0
