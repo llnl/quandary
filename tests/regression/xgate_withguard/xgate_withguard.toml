@@ -16,7 +16,6 @@ decoherence = {
 initial_condition = {type = "basis"}
 control_enforceBC = true
 optim_target = {type = "gate", gate_type = "xgate"}
-gate_rot_freq = [0]
 optim_objective = "jfrobenius"
 optim_weights = [0.5, 0.5]
 optim_tolerance = { grad_abs = 0.0001, grad_rel = 1e-05, final_cost = 1e-05, infidelity = 1e-05 }

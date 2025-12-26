@@ -217,15 +217,6 @@ TimeStepperType CfgParser::convertFromString<TimeStepperType>(const std::string&
 }
 
 template <>
-TargetType CfgParser::convertFromString<TargetType>(const std::string& str) {
-  auto it = TARGET_TYPE_MAP.find(toLower(str));
-  if (it == TARGET_TYPE_MAP.end()) {
-    logger.exitWithError("\n\n ERROR: Unknown target type: " + str + ".\n");
-  }
-  return it->second;
-}
-
-template <>
 InitialConditionType CfgParser::convertFromString<InitialConditionType>(const std::string& str) {
   auto it = INITCOND_TYPE_MAP.find(toLower(str));
   if (it == INITCOND_TYPE_MAP.end()) {
@@ -327,45 +318,48 @@ OptimTargetSettings CfgParser::convertFromString<OptimTargetSettings>(const std:
   }
 
   OptimTargetSettings target_settings;
-  // Backward compatibility: map "pure" to PRODUCT_STATE for CFG files
+
+  // Find type. Backward compatibilityfor CFG files: Type could be "pure", or "gate", or "file" (for state preparation from file)
   std::string type_str = parts[0];
-  if (type_str == "pure") {
-    type_str = "product_state";
-  }
-  auto target_type = convertFromString<TargetType>(type_str);
-  target_settings.type = target_type;
+  if (type_str == "gate") {
 
-  switch (target_type) {
-    case TargetType::GATE: {
-      if (parts.size() < 2) {
+    target_settings.type = TargetType::GATE;
+    if (parts.size() < 2) {
         logger.exitWithError("Target type 'gate' requires a gate name.");
-      }
-      auto gate_type = convertFromString<GateType>(parts[1]);
-      target_settings.gate_type = gate_type;
-
-      if (gate_type == GateType::FILE) {
-        if (parts.size() < 3) {
-          logger.exitWithError("Gate type 'file' requires a filename.");
-        }
-        target_settings.gate_file = parts[2];
-      }
-      break;
     }
-    case TargetType::PRODUCT_STATE:
-      target_settings.levels = std::vector<size_t>{};
-      for (size_t i = 1; i < parts.size(); ++i) {
-        target_settings.levels->push_back(convertFromString<int>(parts[i]));
+    auto gate_type = convertFromString<GateType>(parts[1]);
+    target_settings.gate_type = gate_type;
+    if (gate_type == GateType::FILE) {
+      if (parts.size() < 3) {
+        logger.exitWithError("Gate type 'file' requires a filename.");
       }
-      break;
-    case TargetType::FROMFILE:
-      if (parts.size() < 2) {
-        logger.exitWithError("Target type 'file' requires a filename.");
-      }
-      target_settings.file = parts[1];
-      break;
-    case TargetType::NONE:
-      // No additional settings needed for NONE target type
-      break;
+      target_settings.filename = parts[2];
+    }
+
+  } else if (type_str == "pure") {
+    target_settings.type = TargetType::STATE;
+    if (parts.size() < 2) {
+      logger.exitWithError("Target type 'pure' requires oscillator IDs.");
+    }
+    target_settings.levels = std::vector<size_t>{};
+    for (size_t i = 1; i < parts.size(); ++i) {
+      target_settings.levels->push_back(convertFromString<int>(parts[i]));
+    } 
+    int noscillators = static_cast<int>(target_settings.levels->size());
+    copyLast(target_settings.levels.value(), noscillators);
+
+  } else if (type_str == "file") {
+    target_settings.type = TargetType::STATE;
+    if (parts.size() < 2) {
+      logger.exitWithError("Target type 'file' requires a filename.");
+    }
+    target_settings.filename = parts[1];
+
+  } else if (type_str == "none") {
+    target_settings.type = TargetType::NONE;
+ 
+  } else {
+    logger.exitWithError("Unknown optim_target type: " + type_str);
   }
 
   return target_settings;

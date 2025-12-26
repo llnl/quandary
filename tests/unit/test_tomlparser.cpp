@@ -661,9 +661,9 @@ TEST_F(TomlParserTest, CarrierFrequencies_AllOscillators) {
 TEST_F(TomlParserTest, OptimTarget_GateType) {
   Config config = Config::fromTomlString(
       R"(
-        nlevels = [2]
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        nlevels = [2,2,2]
+        transfreq = [4.1, 3.4, 5.6]
+        rotfreq = [0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
         optim_target = {type = "gate", gate_type = "cnot"}
       )",
@@ -672,6 +672,35 @@ TEST_F(TomlParserTest, OptimTarget_GateType) {
   const auto& target = config.getOptimTarget();
   EXPECT_EQ(target.type, TargetType::GATE);
   EXPECT_EQ(target.gate_type.value(), GateType::CNOT);
+  EXPECT_FALSE(target.filename.has_value());
+  EXPECT_FALSE(target.levels.has_value());
+  EXPECT_TRUE(target.gate_rot_freq.has_value());
+  const auto& gate_rot_freq = target.gate_rot_freq.value();
+  EXPECT_EQ(gate_rot_freq.size(), 3);
+  EXPECT_DOUBLE_EQ(gate_rot_freq[0], 0.0);
+  EXPECT_DOUBLE_EQ(gate_rot_freq[1], 0.0);
+  EXPECT_DOUBLE_EQ(gate_rot_freq[2], 0.0);
+}
+
+TEST_F(TomlParserTest, OptimTarget_GateRotFreq) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2,2]
+        transfreq = [4.1, 3.4]
+        rotfreq = [0.0, 0.0]
+        initial_condition = {type = "basis"}
+        optim_target = {type = "gate", gate_type = "cnot", gate_rot_freq = [1.0, 2.0]}
+      )",
+      logger);
+
+  const auto& target = config.getOptimTarget();
+  EXPECT_EQ(target.type, TargetType::GATE);
+  EXPECT_FALSE(target.filename.has_value());
+  EXPECT_TRUE(target.gate_rot_freq.has_value());
+  const auto& gate_rot_freq = target.gate_rot_freq.value();
+  EXPECT_EQ(gate_rot_freq.size(), 2);
+  EXPECT_DOUBLE_EQ(gate_rot_freq[0], 1.0);
+  EXPECT_DOUBLE_EQ(gate_rot_freq[1], 2.0);
 }
 
 TEST_F(TomlParserTest, OptimTarget_GateFromFile) {
@@ -681,14 +710,14 @@ TEST_F(TomlParserTest, OptimTarget_GateFromFile) {
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
-        optim_target = {type = "gate", gate_type = "file", gate_file = "/path/to/gate.dat"}
+        optim_target = {type = "gate", filename = "/path/to/gate.dat"}
       )",
       logger);
 
   const auto& target = config.getOptimTarget();
   EXPECT_EQ(target.type, TargetType::GATE);
   EXPECT_EQ(target.gate_type.value(), GateType::FILE);
-  EXPECT_EQ(target.gate_file.value(), "/path/to/gate.dat");
+  EXPECT_EQ(target.filename.value(), "/path/to/gate.dat");
 }
 
 TEST_F(TomlParserTest, OptimTarget_ProductState) {
@@ -698,12 +727,14 @@ TEST_F(TomlParserTest, OptimTarget_ProductState) {
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
-        optim_target = {type = "product_state", levels = [0,1,2]}
+        optim_target = {type = "state", levels = [0,1,2]}
       )",
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_EQ(target.type, TargetType::PRODUCT_STATE);
+  EXPECT_EQ(target.type, TargetType::STATE);
+  EXPECT_TRUE(target.levels.has_value());
+  EXPECT_FALSE(target.filename.has_value());
   const auto& levels = target.levels.value();
   EXPECT_EQ(levels.size(), 3);
   EXPECT_EQ(levels[0], 0);
@@ -718,16 +749,17 @@ TEST_F(TomlParserTest, OptimTarget_FromFile) {
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
-        optim_target = {type = "file", filename = "/path/to/target.dat"}
+        optim_target = {type = "state", filename = "/path/to/target.dat"}
       )",
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_EQ(target.type, TargetType::FROMFILE);
-  EXPECT_EQ(target.file.value(), "/path/to/target.dat");
+  EXPECT_EQ(target.type, TargetType::STATE);
+  EXPECT_TRUE(target.filename.has_value());
+  EXPECT_EQ(target.filename.value(), "/path/to/target.dat");
 }
 
-TEST_F(TomlParserTest, OptimTarget_DefaultProductState) {
+TEST_F(TomlParserTest, OptimTarget_DefaultNone) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2]
@@ -739,6 +771,9 @@ TEST_F(TomlParserTest, OptimTarget_DefaultProductState) {
 
   const auto& target = config.getOptimTarget();
   EXPECT_EQ(target.type, TargetType::NONE);
+  EXPECT_FALSE(target.gate_type.has_value());
+  EXPECT_FALSE(target.levels.has_value());
+  EXPECT_FALSE(target.filename.has_value());
 }
 
 TEST_F(TomlParserTest, OptimWeights) {

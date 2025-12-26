@@ -50,7 +50,6 @@ class Config {
   std::vector<double> control_bounds; ///< Control bounds for each oscillator
   std::vector<std::vector<double>> carrier_frequencies; ///< Carrier frequencies for each oscillator
   OptimTargetSettings optim_target; ///< Grouped optimization target configuration
-  std::vector<double> gate_rot_freq; ///< Frequency of rotation of the target gate, for each oscillator (GHz)
   ObjectiveType optim_objective; ///< Objective function measure
   std::vector<double> optim_weights; ///< Weights for summing up the objective function
   double optim_tol_grad_abs; ///< Absolute gradient tolerance
@@ -128,7 +127,6 @@ class Config {
   double getControlBound(size_t i_osc) const { return control_bounds[i_osc]; }
   const std::vector<double>& getCarrierFrequencies(size_t i_osc) const { return carrier_frequencies[i_osc]; }
   const OptimTargetSettings& getOptimTarget() const { return optim_target; }
-  const std::vector<double>& getGateRotFreq() const { return gate_rot_freq; }
   ObjectiveType getOptimObjective() const { return optim_objective; }
   const std::vector<double>& getOptimWeights() const { return optim_weights; }
   double getOptimTolGradAbs() const { return optim_tol_grad_abs; }
@@ -209,8 +207,6 @@ class Config {
    */
   std::vector<double> parseControlBounds(const toml::table& toml, size_t num_osc) const;
   
-  OptimTargetSettings parseOptimTarget(TargetType type, const std::optional<GateType>& gate_type, const std::optional<std::string>& gate_file, const std::optional<std::vector<size_t>>& levels, const std::optional<std::string>& file) const;
-
 
   /**
    * @brief Parses coupling parameters from TOML table format

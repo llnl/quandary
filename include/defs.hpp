@@ -77,16 +77,14 @@ const std::map<std::string, InitialConditionType> INITCOND_TYPE_MAP = {
  */
 enum class TargetType {
   NONE,          ///< No target specified (no optimization)
-  GATE,          ///< Gate optimization: \f$\rho_{\text{target}} = V\rho(0) V^\dagger\f$
-  PRODUCT_STATE, ///< Product state preparation: \f$\rho_{\text{target}} = e_m e_m^\dagger\f$ for some integer \f$m\f$
-  FROMFILE       ///< Target state read from file, vectorized density matrix format
+  GATE,          ///< Gate optimization: \f$\rho_{\text{target}} = V\rho(0) V^\dagger\f$ for V either read from file or chosen from default set of gates
+  STATE,         ///< State preparation: Either read from file, or \f$\rho_{\text{target}} = e_m e_m^\dagger\f$ for some integer \f$m\f$
 };
 
 const std::map<std::string, TargetType> TARGET_TYPE_MAP = {
     {"none", TargetType::NONE},
     {"gate", TargetType::GATE},
-    {"product_state", TargetType::PRODUCT_STATE},
-    {"file", TargetType::FROMFILE}
+    {"state", TargetType::STATE},
 };
 
 /**
@@ -264,13 +262,13 @@ struct InitialCondition {
  * @brief Optimization target configuration.
  */
 struct OptimTargetSettings {
-  TargetType type; ///< Type of optimization target
+  TargetType type; ///< Type of optimization target (NONE, GATE, STATE)
 
   // Optional fields - populate based on type
-  std::optional<GateType> gate_type; ///< For GATE: Gate type
-  std::optional<std::string> gate_file; ///< For GATE with FILE type: Gate file path
-  std::optional<std::vector<size_t>> levels; ///< For PRODUCT_STATE: Product state levels
-  std::optional<std::string> file; ///< For FROMFILE: Target file path
+  std::optional<GateType> gate_type; ///< For GATE: Type of the gate
+  std::optional<std::vector<double>> gate_rot_freq; ///< For GATE: Gate rotation frequencies for each oscillator 
+  std::optional<std::vector<size_t>> levels; ///< For STATE: Level occupations for each oscillator
+  std::optional<std::string> filename; ///< For GATE or STATE: File path to target gate or state
 };
 
 /**

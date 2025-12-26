@@ -509,7 +509,7 @@ TEST_F(CfgParserTest, OptimTarget_GateFromFile) {
   const auto& target = config.getOptimTarget();
   EXPECT_EQ(target.type, TargetType::GATE);
   EXPECT_EQ(target.gate_type.value(), GateType::FILE);
-  EXPECT_EQ(target.gate_file.value(), "/path/to/gate.dat");
+  EXPECT_EQ(target.filename.value(), "/path/to/gate.dat");
 }
 
 TEST_F(CfgParserTest, OptimTarget_PureState) {
@@ -524,8 +524,9 @@ TEST_F(CfgParserTest, OptimTarget_PureState) {
       logger);
 
   const auto& target = config.getOptimTarget();
-  // Test backward compatibility: "pure" in CFG should map to PRODUCT_STATE
-  EXPECT_EQ(target.type, TargetType::PRODUCT_STATE);
+  // Test backward compatibility: "pure" in CFG should map to STATE
+  EXPECT_EQ(target.type, TargetType::STATE);
+  EXPECT_TRUE(target.levels.has_value());
   const auto& levels = target.levels.value();
   EXPECT_EQ(levels.size(), 3);
   EXPECT_EQ(levels[0], 0);
@@ -540,16 +541,17 @@ TEST_F(CfgParserTest, OptimTarget_FromFile) {
         transfreq = 4.1
         rotfreq = 0.0
         initialcondition = basis
-        optim_target = file, /path/to/target.dat
+        optim_target = file, /path/to/targetstate.dat
       )",
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_EQ(target.type, TargetType::FROMFILE);
-  EXPECT_EQ(target.file.value(), "/path/to/target.dat");
+  EXPECT_EQ(target.type, TargetType::STATE);
+  EXPECT_TRUE(target.filename.has_value());
+  EXPECT_EQ(target.filename.value(), "/path/to/targetstate.dat");
 }
 
-TEST_F(CfgParserTest, OptimTarget_DefaultProductState) {
+TEST_F(CfgParserTest, OptimTarget_DefaultNone) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2

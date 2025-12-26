@@ -50,13 +50,14 @@ initial_condition = {type = "basis"}
 # Decide whether control pulses should start and end at zero. Default: true.
 control_enforceBC = false
 
-# Optimization target_type options: "gate", "product_state", or "file".
-# Gate types: "cnot", "cqnot", "swap", "swap0q", "qft", "xgate", "ygate", "zgate", "hadamard"
+# Optimization options: "gate" (either read from file, or choose from defaults), or "state" (either read from file, or choose a levels of a product state), or "none" (no optimization)
+# Default gate types: "cnot", "cqnot", "swap", "swap0q", "qft", "xgate", "ygate", "zgate", "hadamard"
 optim_target = {type = "gate", gate_type = "cnot"}
+# optim_target = {type = "gate", filename = "/path/to/target_gate.dat"}
+# optim_target = {type = "gate", filename = "/path/to/target_gate.dat", gate_rot_freq = [0.0, 0.0]}
+# optim_target = {type = "state", levels = [0, 0]}
+# optim_target = {type = "state", filename = "/path/to/target_state.dat"}
 #optim_target = {type = "none"}
-# optim_target = {type = "gate", gate_type = "file", gate_file = "/path/to/target_gate.dat"}
-# optim_target = {type = "product_state", levels = [0, 0]}
-# optim_target = {type = "file", filename = "/path/to/target_state.dat"}
 
 # Frequency of rotation of the target gate, for each oscillator (GHz). Default: 0.0
 # gate_rot_freq = [0.0, 0.0]
