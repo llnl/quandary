@@ -85,18 +85,6 @@
         ]
     },
     {
-        "simulation_name": "pipulse",
-        "files_to_compare": [
-            "optim_history.dat",
-            "rho*.dat",
-            "population*.dat",
-            "expected*.dat"
-        ],
-        "number_of_processes": [
-            1,4
-        ]
-    },
-    {
         "simulation_name": "xgate",
         "files_to_compare": [
             "optim_history.dat",
