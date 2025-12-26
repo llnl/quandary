@@ -142,15 +142,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
                                                      values_key, control_bounds_allowed_keys, "control_bounds");
 
     // Parse carrier frequencies
-    auto carrier_freq_array = validators::getArrayOfTables(toml, "carrier_frequency");
-
-    // Allowed keys for carrier_frequency table
-    const std::string carrier_values_key = "values";
-    const std::set<std::string> carrier_freq_allowed_keys = {OSC_ID_KEY, carrier_values_key};
-
-    carrier_frequencies =
-        parseOscillatorSettings<double>(carrier_freq_array, num_osc, {ConfigDefaults::CARRIER_FREQ}, carrier_values_key,
-                                        carrier_freq_allowed_keys, "carrier_frequency");
+    carrier_frequencies = parseCarrierFrequencies(toml, num_osc);
 
     // optim_target
     if (toml.contains("optim_target")) {
@@ -394,11 +386,11 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
     }
   }
 
-  control_bounds = parseOscillatorSettingsCfg<double>(settings.indexed_control_bounds, control_parameterizations.size(),
-                                                      {ConfigDefaults::CONTROL_BOUND});
+  control_bounds = parseOscillatorSettingsCfg<double>(settings.indexed_control_bounds, control_parameterizations.size(), {ConfigDefaults::CONTROL_BOUND});
 
   carrier_frequencies.resize(num_osc);
   carrier_frequencies = parseOscillatorSettingsCfg<double>(settings.indexed_carrier_frequencies, num_osc, {ConfigDefaults::CARRIER_FREQ});
+
   if (settings.optim_target.has_value()) {
     const OptimTargetSettings& target_config = settings.optim_target.value();
     optim_target = parseOptimTarget(target_config.type, target_config.gate_type, target_config.gate_file,
@@ -851,21 +843,42 @@ void Config::printConfig(std::stringstream& log) const {
     }
   }
 
+  // Carrier frequencies 
+  // First check if all oscillators have the same carrier frequencies
+  bool all_same_cw = true;
+  if (!carrier_frequencies.empty() && !carrier_frequencies[0].empty()) {
+    for (size_t i = 1; i < carrier_frequencies.size(); ++i) {
+      if (carrier_frequencies[i] != carrier_frequencies[0]) {
+        all_same_cw = false;
+        break;
+      }
+    }
+  }
+
+  // Use single array format if all oscillators have the same frequencies
+  if (all_same_cw && !carrier_frequencies.empty() && !carrier_frequencies[0].empty()) {
+    log << "carrier_frequency = " << printVector(carrier_frequencies[0]) << "\n\n";
+  } else {
+    // Use per-oscillator table format
+    log << "carrier_frequency = {\n";
+    for (size_t i = 0; i < carrier_frequencies.size(); ++i) {
+      if (!carrier_frequencies[i].empty()) {
+        log << "  \"" << i << "\" = " << printVector(carrier_frequencies[i]);
+        if (i < carrier_frequencies.size() - 1) {
+          log << ",";
+        }
+        log << "\n";
+      }
+    }
+    log << "}\n\n";
+  }
+
   // Control bounds as array of tables
   for (size_t i = 0; i < control_bounds.size(); ++i) {
     if (!control_bounds[i].empty()) {
       log << "[[control_bounds]]\n";
       log << "oscID = " << i << "\n";
       log << "values = " << printVector(control_bounds[i]) << "\n\n";
-    }
-  }
-
-  // Carrier frequencies as array of tables
-  for (size_t i = 0; i < carrier_frequencies.size(); ++i) {
-    if (!carrier_frequencies[i].empty()) {
-      log << "[[carrier_frequency]]\n";
-      log << "oscID = " << i << "\n";
-      log << "values = " << printVector(carrier_frequencies[i]) << "\n\n";
     }
   }
 }
@@ -1054,6 +1067,65 @@ std::vector<std::vector<T>> Config::parseOscillatorSettings(const toml::array& a
   }
 
   return result;
+}
+
+std::vector<std::vector<double>> Config::parseCarrierFrequencies(const toml::table& toml, size_t num_osc) const {
+  std::vector<std::vector<double>> carrier_frequencies(num_osc);
+  
+  if (toml.contains("carrier_frequency")) {
+    auto* carrier_freq_table = toml["carrier_frequency"].as_table();
+
+    // Format 1: table with per-oscillator arrays: carrier_frequency = {"0" = [...], "1" = [...]}
+    if (carrier_freq_table) {
+      // Initialize all oscillators with default
+      for (size_t i = 0; i < num_osc; ++i) {
+        carrier_frequencies[i] = {ConfigDefaults::CARRIER_FREQ};
+      }
+      // Parse per-oscillator settings
+      for (const auto& [key, value] : *carrier_freq_table) {
+        std::string key_str = std::string(key.str());
+        size_t osc_id;
+        try {
+          osc_id = std::stoull(key_str);
+        } catch (...) {
+          logger.exitWithError("carrier_frequency keys must be oscillator IDs (e.g., \"0\", \"1\")");
+        }
+        if (osc_id >= num_osc) {
+          logger.exitWithError("carrier_frequency oscillator ID " + key_str + " exceeds number of oscillators");
+        }
+        auto freq_array = value.as_array();
+        if (!freq_array) {
+          logger.exitWithError("carrier_frequency values must be arrays");
+        }
+        std::vector<double> freqs;
+        for (const auto& elem : *freq_array) {
+          auto freq_val = elem.value<double>();
+          if (!freq_val.has_value()) {
+            logger.exitWithError("carrier_frequency array elements must be numbers");
+          }
+          freqs.push_back(freq_val.value());
+        }
+        carrier_frequencies[osc_id] = freqs;
+      }
+    } else {
+      // Format 2: single array applied to all oscillators: carrier_frequency = [...]
+      auto carrier_freq_opt = validators::getOptionalVector<double>(toml["carrier_frequency"]);
+      if (!carrier_freq_opt.has_value()) {
+        logger.exitWithError("carrier_frequency must be either a table or an array");
+      }
+      std::vector<double> carrier_freq = carrier_freq_opt.value();
+      for (size_t i = 0; i < num_osc; ++i) {
+        carrier_frequencies[i] = carrier_freq;
+      }
+    }
+  } else {
+    // No carrier frequencies specified, use defaults
+    for (size_t i = 0; i < num_osc; ++i) {
+      carrier_frequencies[i] = {ConfigDefaults::CARRIER_FREQ};
+    }
+  }
+  
+  return carrier_frequencies;
 }
 
 InitialCondition Config::parseInitialCondition(std::optional<InitialConditionType> opt_type,

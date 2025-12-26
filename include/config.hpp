@@ -131,7 +131,6 @@ class Config {
   const std::vector<double>& getControlBounds(size_t i_osc) const { return control_bounds[i_osc]; }
   double getControlBound(size_t i_osc, size_t i_seg) const { return control_bounds[i_osc][i_seg]; }
   const std::vector<double>& getCarrierFrequencies(size_t i_osc) const { return carrier_frequencies[i_osc]; }
-  double getCarrierFrequency(size_t i_osc, size_t i_seg) const { return carrier_frequencies[i_osc][i_seg]; }
   const OptimTargetSettings& getOptimTarget() const { return optim_target; }
   const std::vector<double>& getGateRotFreq() const { return gate_rot_freq; }
   ObjectiveType getOptimObjective() const { return optim_objective; }
@@ -190,6 +189,20 @@ class Config {
   std::vector<ControlParameterization> parseControlParameterizations(const toml::table& table, size_t num_entries) const;
 
   std::vector<ControlInitialization> parseControlInitializations(const toml::table& table, size_t num_entries) const;
+  
+  /**
+   * @brief Parses carrier frequencies from TOML configuration
+   *
+   * Supports two formats:
+   * 1. carrier_frequency = {"0" = [...], "1" = [...]} (per-oscillator)
+   * 2. carrier_frequency = [...] (same for all oscillators)
+   *
+   * @param toml TOML table containing the configuration
+   * @param num_osc Number of oscillators
+   * @return Vector of carrier frequency vectors, one per oscillator
+   */
+  std::vector<std::vector<double>> parseCarrierFrequencies(const toml::table& toml, size_t num_osc) const;
+  
   OptimTargetSettings parseOptimTarget(TargetType type, const std::optional<GateType>& gate_type,
                                        const std::optional<std::string>& gate_file,
                                        const std::optional<std::vector<size_t>>& levels,

@@ -671,9 +671,7 @@ TEST_F(TomlParserTest, CarrierFrequencies) {
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
 
-        [[carrier_frequency]]
-        oscID = 0
-        values = [1.0, 2.0]
+        carrier_frequency = {"0" = [1.0, 2.0]}
       )",
       logger);
 
@@ -691,8 +689,7 @@ TEST_F(TomlParserTest, CarrierFrequencies_AllOscillators) {
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        [[carrier_frequency]]
-        values = [1.0, 2.0]
+        carrier_frequency = [1.0, 2.0]
       )",
       logger);
 
@@ -960,7 +957,7 @@ TEST_F(TomlParserTest, ControlBounds_UnknownKey) {
   }, "ERROR: Unknown key 'extra_key' in control_bounds\\.");
 }
 
-TEST_F(TomlParserTest, CarrierFrequency_UnknownKey) {
+TEST_F(TomlParserTest, CarrierFrequency_InvalidOscillatorID) {
   ASSERT_DEATH({
     Config config = Config::fromTomlString(
         R"(
@@ -969,12 +966,9 @@ TEST_F(TomlParserTest, CarrierFrequency_UnknownKey) {
           rotfreq = [0.0]
           initial_condition = {type = "basis"}
 
-          [[carrier_frequency]]
-          oscID = 0
-          values = [4.0]
-          forbidden_key = 42
+          carrier_frequency = {"5" = [4.0]}
         )",
         logger);
-  }, "ERROR: Unknown key 'forbidden_key' in carrier_frequency\\.");
+  }, "ERROR: carrier_frequency oscillator ID 5 exceeds number of oscillators");
 }
 

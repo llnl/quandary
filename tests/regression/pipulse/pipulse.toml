@@ -32,6 +32,8 @@ control_initialization = { type = "constant", amplitude = 0.0 }
 
 control_parameterization = { type = "spline", num = 30 }
 
+carrier_frequency = [0.0]
+
 [[apply_pipulse]]
 oscID = 0
 tstart = 0.01
@@ -42,7 +44,3 @@ amp = 15.10381
 [[control_bounds]]
 oscID = 0
 values = [15.0]
-
-[[carrier_frequency]]
-oscID = 0
-values = [0.0]

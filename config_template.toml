@@ -160,6 +160,16 @@ control_parameterization = { type = "spline", num = 150, tstart = 0.0, tstop = 1
 #   "1" = { type = "spline0", num = 300 }
 # }
 
+# Carrier wave frequencies for all oscillators (GHz).
+# Option 1: Specify different frequencies for each oscillator (per-subsystem)
+carrier_frequency = {
+  "0" = [0.0, -0.2198, -0.1],
+  "1" = [0.0, -0.2252, -0.1]
+}
+
+# Option 2: Same frequencies for all oscillators (uncomment to use)
+# carrier_frequency = [0.0, -0.2252, -0.1]
+
 
 # ---------------------------------------------------------------
 # ------------------- Per oscillator settings -------------------
@@ -185,16 +195,4 @@ values = [0.008]
 # [[control_bounds]]
 # values = [0.008]
 
-# Carrier wave frequencies for each oscillator 0..Q-1. (GHz)
-[[carrier_frequency]]
-oscID = 0
-values = [0.0, -0.2198, -0.1]
-
-[[carrier_frequency]]
-oscID = 1
-values = [0.0, -0.2252, -0.1]
-
-# Apply to all oscillators
-# [[carrier_frequency]]
-# values = [0.0, -0.2252, -0.1]
 
