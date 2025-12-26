@@ -38,8 +38,5 @@ control_initialization = { type = "constant", amplitude = 0.010000 }
 control_parameterization = { type = "spline", num = 150, tstart = 0, tstop = 70 }
 
 carrier_frequency = [0.10000000000000001]
-
-[[control_bounds]]
-oscID = 0
-values = [0.050000000000000003]
+control_bounds = 0.050000000000000003
 

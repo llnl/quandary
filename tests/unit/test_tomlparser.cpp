@@ -429,9 +429,6 @@ TEST_F(TomlParserTest, ControlParameterizations_Defaults) {
         control_parameterization = {
           "1" = { type = "spline0", num = 150, tstart = 0.0, tstop = 1.0 }
         }
-        [[control_bounds]]
-        oscID = 1
-        values = [2.0]
       )",
       logger);
 
@@ -444,10 +441,7 @@ TEST_F(TomlParserTest, ControlParameterizations_Defaults) {
 
   // Check second oscillator has given settings
   const auto& control_seg1 = config.getControlParameterizations(1);
-  const auto& control_bounds1 = config.getControlBounds(1);
   EXPECT_EQ(control_seg1.type, ControlType::BSPLINE0);
-  EXPECT_EQ(control_bounds1.size(), 1);
-  EXPECT_DOUBLE_EQ(control_bounds1[0], 2.0);
   EXPECT_EQ(control_seg1.nspline.value(), 150);
   EXPECT_DOUBLE_EQ(control_seg1.tstart.value(), 0.0);
   EXPECT_DOUBLE_EQ(control_seg1.tstop.value(), 1.0);
@@ -458,6 +452,8 @@ TEST_F(TomlParserTest, ControlParameterizations_Defaults) {
   EXPECT_EQ(control_seg2.nspline.value(), 10);
   EXPECT_DOUBLE_EQ(control_seg2.tstart.value(), 0.0);
   EXPECT_DOUBLE_EQ(control_seg2.tstop.value(), config.getTotalTime());
+
+  // Check
 }
 
 TEST_F(TomlParserTest, ControlParameterizations_AllOscillators) {
@@ -643,24 +639,61 @@ TEST_F(TomlParserTest, ControlInitialization_DefaultWithOverrides) {
 TEST_F(TomlParserTest, ControlBounds) {
   Config config = Config::fromTomlString(
       R"(
-        nlevels = [2]
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        nlevels = [2, 2]
+        transfreq = [4.1, 3.3]
+        rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
         control_parameterization = { type = "spline", num = 10, tstart = 0.0, tstop = 1.0 }
         
-        [[control_bounds]]
-        oscID = 0
-        values = [1.0, 2.0]
+        control_bounds = 1.5 
       )",
       logger);
 
-  // Check control bounds for the three parameterizations
-  const auto& control_bounds0 = config.getControlBounds(0);
-  EXPECT_EQ(control_bounds0.size(), 2);
-  EXPECT_EQ(control_bounds0[0], 1.0);
-  EXPECT_EQ(control_bounds0[1], 2.0);
+  // Check control bound
+  const double control_bound0 = config.getControlBound(0);
+  const double control_bound1 = config.getControlBound(1);
+  EXPECT_DOUBLE_EQ(control_bound0, 1.5);
+  EXPECT_DOUBLE_EQ(control_bound1, 1.5);
+}
+
+TEST_F(TomlParserTest, ControlBounds_Defaults) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2]
+        transfreq = [4.1, 3.0]
+        rotfreq = [0.0, 0.0]
+        initial_condition = {type = "basis"}
+      )",
+      logger);
+
+  // Check control bound
+  const double control_bound0 = config.getControlBound(0);
+  const double control_bound1 = config.getControlBound(1);
+  EXPECT_DOUBLE_EQ(control_bound0, 1e12);
+  EXPECT_DOUBLE_EQ(control_bound1, 1e12);
+}
+
+TEST_F(TomlParserTest, ControlBounds_AllOscillators) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2]
+        transfreq = [4.1, 3.3]
+        rotfreq = [0.0, 0.0]
+        initial_condition = {type = "basis"}
+
+        control_bounds = {
+         "0" = 1.0,
+         "1" = 2.0 
+      }
+      )",
+      logger);
+
+  // Check control bound
+  const double control_bound0 = config.getControlBound(0);
+  const double control_bound1 = config.getControlBound(1);
+  EXPECT_DOUBLE_EQ(control_bound0, 1.0);
+  EXPECT_DOUBLE_EQ(control_bound1, 2.0);
 }
 
 TEST_F(TomlParserTest, CarrierFrequencies) {
@@ -939,7 +972,7 @@ TEST_F(TomlParserTest, ControlInitialization_UnknownKey) {
   }, "ERROR: Unknown key 'foo' in control_initialization\\.");
 }
 
-TEST_F(TomlParserTest, ControlBounds_UnknownKey) {
+TEST_F(TomlParserTest, ControlBounds_InvalidOscillatorID) {
   ASSERT_DEATH({
     Config config = Config::fromTomlString(
         R"(
@@ -948,13 +981,10 @@ TEST_F(TomlParserTest, ControlBounds_UnknownKey) {
           rotfreq = [0.0]
           initial_condition = {type = "basis"}
 
-          [[control_bounds]]
-          oscID = 0
-          values = [1.0, 2.0]
-          extra_key = "not_allowed"
+          control_bounds = { "5" = 1.0 }
         )",
         logger);
-  }, "ERROR: Unknown key 'extra_key' in control_bounds\\.");
+  }, "control_bounds oscillator ID 5 exceeds number of oscillators");
 }
 
 TEST_F(TomlParserTest, CarrierFrequency_InvalidOscillatorID) {

@@ -33,7 +33,7 @@ const ControlInitializationType CONTROL_INIT_TYPE = ControlInitializationType::C
 const double CONTROL_INIT_AMPLITUDE = 0.0; ///< Default control initialization amplitude
 const double CONTROL_INIT_PHASE = 0.0; ///< Default control initialization phase
 
-const double CONTROL_BOUND = 10000.0; ///< Default amplitude bound for control pulses
+const double CONTROL_BOUND = 1e12; ///< Default amplitude bound for control pulses
 const double CARRIER_FREQ = 0.0; ///< Default carrier frequency
 
 const TargetType OPTIM_TARGET = TargetType::PURE; ///< Default optimization target: pure state transfer

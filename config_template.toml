@@ -166,10 +166,17 @@ carrier_frequency = {
   "0" = [0.0, -0.2198, -0.1],
   "1" = [0.0, -0.2252, -0.1]
 }
-
 # Option 2: Same frequencies for all oscillators (uncomment to use)
 # carrier_frequency = [0.0, -0.2252, -0.1]
 
+# Maximum amplitude bound for the control pulses (GHz).
+# Option 1: Single value applies to all oscillators
+control_bounds = 0.008
+# Option 2: Per-oscillator values using table format (uncomment to use)
+# control_bounds = {
+#   "0" = 0.008,
+#   "1" = 0.010
+# }
 
 # ---------------------------------------------------------------
 # ------------------- Per oscillator settings -------------------
@@ -185,14 +192,3 @@ carrier_frequency = {
 # tstart = 0.5
 # tstop = 0.604
 # amp = 15.10381
-
-# Maximum amplitude bound for the control pulses for each oscillator (GHz). One entry for each segment.
-[[control_bounds]]
-oscID = 0
-values = [0.008]
-
-# Apply to all oscillators
-# [[control_bounds]]
-# values = [0.008]
-
-

@@ -48,7 +48,7 @@ class Config {
   bool control_enforceBC; ///< Decide whether control pulses should start and end at zero
   std::vector<ControlParameterization> control_parameterizations; ///< Control parameterizations for each oscillator
   std::vector<ControlInitialization> control_initializations; ///< Control initializations for each oscillator
-  std::vector<std::vector<double>> control_bounds; ///< Control bounds for each oscillator
+  std::vector<double> control_bounds; ///< Control bounds for each oscillator
   std::vector<std::vector<double>> carrier_frequencies; ///< Carrier frequencies for each oscillator
   OptimTargetSettings optim_target; ///< Grouped optimization target configuration
   std::vector<double> gate_rot_freq; ///< Frequency of rotation of the target gate, for each oscillator (GHz)
@@ -128,8 +128,7 @@ class Config {
   const ControlInitialization& getControlInitializations(size_t i_osc) const {
     return control_initializations[i_osc]; 
   }
-  const std::vector<double>& getControlBounds(size_t i_osc) const { return control_bounds[i_osc]; }
-  double getControlBound(size_t i_osc, size_t i_seg) const { return control_bounds[i_osc][i_seg]; }
+  double getControlBound(size_t i_osc) const { return control_bounds[i_osc]; }
   const std::vector<double>& getCarrierFrequencies(size_t i_osc) const { return carrier_frequencies[i_osc]; }
   const OptimTargetSettings& getOptimTarget() const { return optim_target; }
   const std::vector<double>& getGateRotFreq() const { return gate_rot_freq; }
@@ -203,10 +202,20 @@ class Config {
    */
   std::vector<std::vector<double>> parseCarrierFrequencies(const toml::table& toml, size_t num_osc) const;
   
-  OptimTargetSettings parseOptimTarget(TargetType type, const std::optional<GateType>& gate_type,
-                                       const std::optional<std::string>& gate_file,
-                                       const std::optional<std::vector<size_t>>& levels,
-                                       const std::optional<std::string>& file) const;
+  /**
+   * @brief Parses control bounds from TOML configuration
+   *
+   * Supports two formats:
+   * 1. control_bounds = <value> (single value applies for all oscillators)
+   * 2. control_bounds = {"0" = <value0>, "1" = <val1>} (per-oscillator bounds)
+   *
+   * @param toml TOML table containing the configuration
+   * @param num_osc Number of oscillators
+   * @return Vector of control bounds per oscillator
+   */
+  std::vector<double> parseControlBounds(const toml::table& toml, size_t num_osc) const;
+  
+  OptimTargetSettings parseOptimTarget(TargetType type, const std::optional<GateType>& gate_type, const std::optional<std::string>& gate_file, const std::optional<std::vector<size_t>>& levels, const std::optional<std::string>& file) const;
 
 
   /**
@@ -239,10 +248,7 @@ class Config {
 
   // TODO cfg: delete these when .cfg format is removed.
   template <typename T>
-  std::vector<std::vector<T>> parseOscillatorSettingsCfg(const std::optional<std::map<int, std::vector<T>>>& indexed,
-                                                         size_t num_entries,
-                                                         const std::vector<T>& default_values = {}) const;
-
+  std::vector<std::vector<T>> parseOscillatorSettingsCfg(const std::optional<std::map<int, std::vector<T>>>& indexed, size_t num_entries, const std::vector<T>& default_values = {}) const;
 
   std::vector<ControlParameterization> parseControlParameterizationsCfg(const std::optional<std::map<int, ControlParameterizationData>>& parameterizations_map) const;
 

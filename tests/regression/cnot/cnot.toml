@@ -38,11 +38,4 @@ carrier_frequency = {
   "0" = [0.0, -0.2198, -0.1],
   "1" = [0.0, -0.2252, -0.1]
 }
-
-[[control_bounds]]
-oscID = 0
-values = [0.008]
-
-[[control_bounds]]
-oscID = 1
-values = [0.008]
+control_bounds = 0.008

@@ -34,19 +34,4 @@ control_initialization = {
 control_parameterization = { type = "spline", num = 15 }
 
 carrier_frequency = [0.0, -0.2, -0.001]
-
-[[control_bounds]]
-oscID = 0
-values = [0.008]
-
-[[control_bounds]]
-oscID = 1
-values = [0.008]
-
-[[control_bounds]]
-oscID = 2
-values = [0.008]
-
-[[control_bounds]]
-oscID = 3
-values = [0.008]
+control_bounds = 0.008

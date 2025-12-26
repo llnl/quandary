@@ -132,14 +132,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     }
 
     // Parse control bounds
-    auto control_bounds_array = validators::getArrayOfTables(toml, "control_bounds");
-
-    // Allowed keys for control_bounds table
-    const std::string values_key = "values";
-    const std::set<std::string> control_bounds_allowed_keys = {OSC_ID_KEY, values_key};
-
-    control_bounds = parseOscillatorSettings<double>(control_bounds_array, num_osc, {ConfigDefaults::CONTROL_BOUND},
-                                                     values_key, control_bounds_allowed_keys, "control_bounds");
+    control_bounds = parseControlBounds(toml, num_osc);
 
     // Parse carrier frequencies
     carrier_frequencies = parseCarrierFrequencies(toml, num_osc);
@@ -386,7 +379,12 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
     }
   }
 
-  control_bounds = parseOscillatorSettingsCfg<double>(settings.indexed_control_bounds, control_parameterizations.size(), {ConfigDefaults::CONTROL_BOUND});
+  // Parse control_bounds from CFG format (returns vector of vectors, but we need vector)
+  auto control_bounds_cfg = parseOscillatorSettingsCfg<double>(settings.indexed_control_bounds, control_parameterizations.size(), {ConfigDefaults::CONTROL_BOUND});
+  control_bounds.resize(control_bounds_cfg.size());
+  for (size_t i = 0; i < control_bounds_cfg.size(); ++i) {
+    control_bounds[i] = control_bounds_cfg[i].empty() ? ConfigDefaults::CONTROL_BOUND : control_bounds_cfg[i][0];
+  }
 
   carrier_frequencies.resize(num_osc);
   carrier_frequencies = parseOscillatorSettingsCfg<double>(settings.indexed_carrier_frequencies, num_osc, {ConfigDefaults::CARRIER_FREQ});
@@ -873,13 +871,32 @@ void Config::printConfig(std::stringstream& log) const {
     log << "}\n\n";
   }
 
-  // Control bounds as array of tables
-  for (size_t i = 0; i < control_bounds.size(); ++i) {
-    if (!control_bounds[i].empty()) {
-      log << "[[control_bounds]]\n";
-      log << "oscID = " << i << "\n";
-      log << "values = " << printVector(control_bounds[i]) << "\n\n";
+  // Control bounds
+  // Check if all oscillators have the same bound
+  bool all_same_bounds = true;
+  if (!control_bounds.empty()) {
+    for (size_t i = 1; i < control_bounds.size(); ++i) {
+      if (control_bounds[i] != control_bounds[0]) {
+        all_same_bounds = false;
+        break;
+      }
     }
+  }
+
+  if (all_same_bounds && !control_bounds.empty()) {
+    // All oscillators have the same bound - output as single value
+    log << "control_bounds = " << control_bounds[0] << "\n\n";
+  } else {
+    // Different bounds per oscillator - output as table
+    log << "control_bounds = {\n";
+    for (size_t i = 0; i < control_bounds.size(); ++i) {
+      log << "  \"" << i << "\" = " << control_bounds[i];
+      if (i < control_bounds.size() - 1) {
+        log << ",";
+      }
+      log << "\n";
+    }
+    log << "}\n\n";
   }
 }
 
@@ -1126,6 +1143,47 @@ std::vector<std::vector<double>> Config::parseCarrierFrequencies(const toml::tab
   }
   
   return carrier_frequencies;
+}
+
+std::vector<double> Config::parseControlBounds(const toml::table& toml, size_t num_osc) const {
+  std::vector<double> control_bounds(num_osc, ConfigDefaults::CONTROL_BOUND);
+  
+  if (toml.contains("control_bounds")) {
+    auto control_bounds_node = toml["control_bounds"];
+    auto* control_bounds_table = control_bounds_node.as_table();
+    auto bound_value = control_bounds_node.value<double>();
+    
+    // Check if a table with per-oscillator bounds is provided: control_bounds = {"0" = <val>, "1" = <val>}
+    if (control_bounds_table) {
+      // Parse per-oscillator settings
+      for (const auto& [key, value] : *control_bounds_table) {
+        std::string key_str = std::string(key.str());
+        size_t osc_id;
+        try {
+          osc_id = std::stoull(key_str);
+        } catch (...) {
+          logger.exitWithError("control_bounds keys must be oscillator IDs (e.g., \\\"0\\\", \\\"1\\\")");
+        }
+        if (osc_id >= num_osc) {
+          logger.exitWithError("control_bounds oscillator ID " + key_str + " exceeds number of oscillators");
+        }
+        auto bound_val = value.value<double>();
+        if (!bound_val.has_value()) {
+          logger.exitWithError("control_bounds values must be numbers");
+        }
+        control_bounds[osc_id] = bound_val.value();
+      }
+    } else if (bound_value.has_value()) {
+      // Check if a single value is provided, in which case it applies to all oscillators
+      for (size_t i = 0; i < num_osc; ++i) {
+        control_bounds[i] = bound_value.value();
+      }
+    } else {
+      logger.exitWithError("control_bounds must be either a table or a number");
+    }
+  } 
+  
+  return control_bounds;
 }
 
 InitialCondition Config::parseInitialCondition(std::optional<InitialConditionType> opt_type,

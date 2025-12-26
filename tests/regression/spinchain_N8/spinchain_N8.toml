@@ -41,35 +41,3 @@ timestepper = "IMR"
 control_parameterization = { type = "spline", num = 6 }
 
 carrier_frequency = [0.0]
-
-[[control_bounds]]
-oscID = 0
-values = [1000000000000.0]
-
-[[control_bounds]]
-oscID = 1
-values = [1000000000000.0]
-
-[[control_bounds]]
-oscID = 2
-values = [1000000000000.0]
-
-[[control_bounds]]
-oscID = 3
-values = [1000000000000.0]
-
-[[control_bounds]]
-oscID = 4
-values = [1000000000000.0]
-
-[[control_bounds]]
-oscID = 5
-values = [1000000000000.0]
-
-[[control_bounds]]
-oscID = 6
-values = [1000000000000.0]
-
-[[control_bounds]]
-oscID = 7
-values = [1000000000000.0]

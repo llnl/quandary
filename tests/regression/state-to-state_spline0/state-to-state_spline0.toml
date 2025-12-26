@@ -34,7 +34,4 @@ control_initialization = { type = "file", filename = "./params.dat" }
 control_parameterization = { type = "spline0", num = 101 }
 
 carrier_frequency = [0.0]
-
-[[control_bounds]]
-oscID = 0
-values = [100.0]
+control_bounds = 100.0

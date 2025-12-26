@@ -389,10 +389,9 @@ TEST_F(CfgParserTest, ControlParameterizations_Defaults) {
 
   // Check second oscillator has given settings
   const auto& control_seg1 = config.getControlParameterizations(1);
-  const auto& control_bounds1 = config.getControlBounds(1);
+  const double control_bound1 = config.getControlBound(1);
   EXPECT_EQ(control_seg1.type, ControlType::BSPLINE0);
-  EXPECT_EQ(control_bounds1.size(), 1);
-  EXPECT_DOUBLE_EQ(control_bounds1[0], 2.0);
+  EXPECT_DOUBLE_EQ(control_bound1, 2.0);
   EXPECT_EQ(control_seg1.nspline.value(), 150);
   EXPECT_DOUBLE_EQ(control_seg1.tstart.value(), 0.0);
   EXPECT_DOUBLE_EQ(control_seg1.tstop.value(), 1.0);
@@ -505,15 +504,13 @@ TEST_F(CfgParserTest, ControlBounds) {
         rotfreq = 0.0
         initialcondition = basis
         control_segments0 = spline, 10, 0.0, 1.0, step, 0.1, 0.2, 0.3, 0.4, 0.5, spline0, 20, 1.0, 2.0
-        control_bounds0 = 1.0, 2.0
+        control_bounds0 = 1.5
       )",
       logger);
 
-  // Check control bounds for the three parameterizations
-  const auto& control_bounds0 = config.getControlBounds(0);
-  EXPECT_EQ(control_bounds0.size(), 2);
-  EXPECT_EQ(control_bounds0[0], 1.0);
-  EXPECT_EQ(control_bounds0[1], 2.0);
+  // Check control bound
+  const double control_bound0 = config.getControlBound(0);
+  EXPECT_DOUBLE_EQ(control_bound0, 1.5);
   // Check that only the first parameterization is active
   const auto& control_seg0 = config.getControlParameterizations(0);
   EXPECT_EQ(control_seg0.type, ControlType::BSPLINE);
