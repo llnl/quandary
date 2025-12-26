@@ -460,6 +460,23 @@ VectorValidator<T> vectorField(const toml::table& config_, const std::string& ke
 }
 
 /**
+ * @brief Extracts an optional scalar value from a TOML node.
+ *
+ * Helper for extracting optional scalar values when the validator API doesn't fit well
+ * (e.g., nested structures or conditional parsing). If the node doesn't exist or
+ * contains a type mismatch, returns nullopt.
+ *
+ * @tparam T Type of the scalar value
+ * @tparam NodeType Type of the TOML node
+ * @param node TOML node that may contain a value
+ * @return Value if node exists and has matching type, nullopt otherwise
+ */
+template <typename T, typename NodeType>
+std::optional<T> getOptional(const toml::node_view<NodeType>& node) {
+  return node.template value<T>();
+}
+
+/**
  * @brief Extracts an optional vector from a TOML node.
  *
  * Helper for extracting vectors when the validator API doesn't fit well

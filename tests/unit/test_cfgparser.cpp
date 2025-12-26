@@ -299,8 +299,6 @@ TEST_F(CfgParserTest, ControlParameterizations_Spline) {
   const auto& control_seg0 = config.getControlParameterizations(0);
   EXPECT_EQ(control_seg0.type, ControlType::BSPLINE);
   EXPECT_EQ(control_seg0.nspline.value(), 10);
-  EXPECT_DOUBLE_EQ(control_seg0.tstart.value(), 0.0);
-  EXPECT_DOUBLE_EQ(control_seg0.tstop.value(), config.getNTime() * config.getDt());
 
   // Check second oscillator with two parameterizations
   const auto& control_seg1 = config.getControlParameterizations(1);
@@ -327,8 +325,6 @@ TEST_F(CfgParserTest, ControlParameterizations_Defaults) {
   const auto& control_seg0 = config.getControlParameterizations(0);
   EXPECT_EQ(control_seg0.type, ControlType::BSPLINE);
   EXPECT_EQ(control_seg0.nspline.value(), 10);
-  EXPECT_DOUBLE_EQ(control_seg0.tstart.value(), 0.0);
-  EXPECT_DOUBLE_EQ(control_seg0.tstop.value(), config.getNTime() * config.getDt());
 
   // Check second oscillator has given settings
   const auto& control_seg1 = config.getControlParameterizations(1);
@@ -343,8 +339,6 @@ TEST_F(CfgParserTest, ControlParameterizations_Defaults) {
   const auto& control_seg2 = config.getControlParameterizations(2);
   EXPECT_EQ(control_seg2.type, ControlType::BSPLINE);
   EXPECT_EQ(control_seg2.nspline.value(), 10);
-  EXPECT_DOUBLE_EQ(control_seg2.tstart.value(), 0.0);
-  EXPECT_DOUBLE_EQ(control_seg2.tstop.value(), config.getNTime() * config.getDt());
 }
 
 TEST_F(CfgParserTest, ControlInitialization_Defaults) {

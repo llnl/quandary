@@ -151,8 +151,8 @@ control_initialization = { type = "random", amplitude = 0.005 }
 # "spline_amplitude" - amplitude-only parameterization
 
 # Option 1: Default parameterization that applies to all subsystems
-control_parameterization = { type = "spline", num = 150, tstart = 0.0, tstop = 10.0 }
-# control_parameterization = { type = "spline0", num = 300 }
+control_parameterization = { type = "spline", num = 150}
+# control_parameterization = { type = "spline0", num = 300 , tstart = 0.0, tstop = 10.0 }
 
 # Option 2: Per-subsystem parameterization (must specify all subsystems you want to customize)
 # control_parameterization = {

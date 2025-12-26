@@ -92,8 +92,8 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       ControlParameterization default_param;
       default_param.type = ConfigDefaults::CONTROL_TYPE;
       default_param.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
-      default_param.tstart = ConfigDefaults::CONTROL_TSTART;
-      default_param.tstop = getTotalTime();
+      default_param.tstart = std::nullopt;
+      default_param.tstop = std::nullopt;
       control_parameterizations.resize(num_osc, default_param);
     }
 
@@ -1246,15 +1246,15 @@ std::vector<ControlParameterization> Config::parseControlParameterizations(const
       case ControlType::BSPLINE:
       case ControlType::BSPLINE0: {
         param.nspline = validators::field<size_t>(param_table, num_key).value();
-        param.tstart = validators::field<double>(param_table, tstart_key).valueOr(ConfigDefaults::CONTROL_TSTART);
-        param.tstop = validators::field<double>(param_table, tstop_key).valueOr(getTotalTime());
+        param.tstart = validators::getOptional<double>(param_table[tstart_key]);
+        param.tstop = validators::getOptional<double>(param_table[tstop_key]);
         break;
       }
       case ControlType::BSPLINEAMP: {
         param.nspline = validators::field<size_t>(param_table, num_key).value();
         param.scaling = validators::field<double>(param_table, scaling_key).value();
-        param.tstart = validators::field<double>(param_table, tstart_key).valueOr(ConfigDefaults::CONTROL_TSTART);
-        param.tstop = validators::field<double>(param_table, tstop_key).valueOr(getTotalTime());
+        param.tstart = validators::getOptional<double>(param_table[tstart_key]);
+        param.tstop = validators::getOptional<double>(param_table[tstop_key]);
         break;
       }
       case ControlType::NONE:
@@ -1267,8 +1267,6 @@ std::vector<ControlParameterization> Config::parseControlParameterizations(const
   ControlParameterization default_param;
   default_param.type = ConfigDefaults::CONTROL_TYPE;
   default_param.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
-  default_param.tstart = ConfigDefaults::CONTROL_TSTART;
-  default_param.tstop = getTotalTime();
   std::vector<ControlParameterization> result(num_entries, default_param);
 
   // Check if this is a global parameterization (table with "type" key directly), or per-oscillator specification (table with numeric keys)
@@ -1453,8 +1451,6 @@ std::vector<ControlParameterization> Config::parseControlParameterizationsCfg(co
   ControlParameterization default_parameterization;
   default_parameterization.type = ConfigDefaults::CONTROL_TYPE;
   default_parameterization.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
-  default_parameterization.tstart = ConfigDefaults::CONTROL_TSTART;
-  default_parameterization.tstop = getTotalTime();
 
   // Populate default if paramterization is not specified
   if (!parameterizations_map.has_value()) {
@@ -1476,14 +1472,14 @@ std::vector<ControlParameterization> Config::parseControlParameterizationsCfg(co
       if (oscil_config.control_type == ControlType::BSPLINE || oscil_config.control_type == ControlType::BSPLINE0) {
         assert(params.size() >= 1); // nspline is required, should be validated in CfgParser
         parameterization.nspline = static_cast<size_t>(params[0]);
-        parameterization.tstart = params.size() > 1 ? params[1] : ConfigDefaults::CONTROL_TSTART;
-        parameterization.tstop = params.size() > 2 ? params[2] : getTotalTime();
+        parameterization.tstart = params.size() > 1 ? std::optional<double>(params[1]) : std::nullopt;
+        parameterization.tstop = params.size() > 2 ? std::optional<double>(params[2]) : std::nullopt;
       } else if (oscil_config.control_type == ControlType::BSPLINEAMP) {
         assert(params.size() >= 2); // nspline and scaling are required, should be validated in CfgParser
         parameterization.nspline = static_cast<size_t>(params[0]);
         parameterization.scaling = static_cast<double>(params[1]);
-        parameterization.tstart = params.size() > 2 ? params[2] : ConfigDefaults::CONTROL_TSTART;
-        parameterization.tstop = params.size() > 3 ? params[3] : getTotalTime();
+        parameterization.tstart = params.size() > 2 ? std::optional<double>(params[2]) : std::nullopt;
+        parameterization.tstop = params.size() > 3 ? std::optional<double>(params[3]) : std::nullopt;
       } 
       parsed_parameterizations[i] = parameterization;
     }

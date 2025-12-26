@@ -28,7 +28,6 @@ const double DEPHASE_TIME = 0.0; ///< Default dephase time
 const bool CONTROL_ENFORCE_BC = true; ///< Default control pulse boundary conditions enforcement
 const ControlType CONTROL_TYPE = ControlType::BSPLINE; ///< Default control parameterization type
 const size_t CONTROL_SPLINE_COUNT = 10; ///< Default number of B-spline basis functions
-const double CONTROL_TSTART = 0.0; ///< Default control parameterization start time
 const ControlInitializationType CONTROL_INIT_TYPE = ControlInitializationType::CONSTANT; ///< Default control initialization amplitude
 const double CONTROL_INIT_AMPLITUDE = 0.0; ///< Default control initialization amplitude
 const double CONTROL_INIT_PHASE = 0.0; ///< Default control initialization phase

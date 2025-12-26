@@ -68,27 +68,26 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   int nparams_per_seg = 0;
   // for (auto controlparameterization : config.getControlParameterizations(id)) { 
   const auto& controlparameterization = config.getControlParameterizations(id);
+  auto tstart = controlparameterization.tstart.value_or(0.0);
+  auto tstop  = controlparameterization.tstop.value_or(Tfinal);
  
   switch (controlparameterization.type) {
     case ControlType::BSPLINE: {
-      // if (mpirank_world==0) printf("%d: Creating %d-spline basis in control parameterization [%f, %f]\n", myid, nspline,tstart, tstop);
-      ControlBasis* mysplinebasis = new BSpline2nd(*controlparameterization.nspline, *controlparameterization.tstart, *controlparameterization.tstop, control_enforceBC);
+      ControlBasis* mysplinebasis = new BSpline2nd(*controlparameterization.nspline, tstart, tstop, control_enforceBC);
       mysplinebasis->setSkip(nparams_per_seg);
       nparams_per_seg += mysplinebasis->getNparams() * carrier_freq.size();
       basisfunctions.push_back(mysplinebasis);
       break;
     }
     case ControlType::BSPLINE0: {
-      // if (mpirank_world==0) printf("%d: Creating %d-spline basis in control parameterization [%f, %f]\n", myid, nspline,tstart, tstop);
-      ControlBasis* mysplinebasis = new BSpline0(*controlparameterization.nspline, *controlparameterization.tstart, *controlparameterization.tstop, control_enforceBC);
+      ControlBasis* mysplinebasis = new BSpline0(*controlparameterization.nspline, tstart, tstop, control_enforceBC);
       mysplinebasis->setSkip(nparams_per_seg);
       nparams_per_seg += mysplinebasis->getNparams() * carrier_freq.size();
       basisfunctions.push_back(mysplinebasis);
       break;
     }
     case ControlType::BSPLINEAMP: {
-      // if (mpirank_world==0) printf("%d: Creating %d-spline basis in control parameterization [%f, %f]\n", myid, nspline,tstart, tstop);
-      ControlBasis* mysplinebasis = new BSpline2ndAmplitude(*controlparameterization.nspline, *controlparameterization.scaling, *controlparameterization.tstart, *controlparameterization.tstop, control_enforceBC);
+      ControlBasis* mysplinebasis = new BSpline2ndAmplitude(*controlparameterization.nspline, *controlparameterization.scaling, tstart, tstop, control_enforceBC);
       mysplinebasis->setSkip(nparams_per_seg);
       nparams_per_seg += mysplinebasis->getNparams() * carrier_freq.size();
       basisfunctions.push_back(mysplinebasis);
