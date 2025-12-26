@@ -288,7 +288,12 @@ InitialCondition CfgParser::convertFromString<InitialCondition>(const std::strin
   }
 
   InitialCondition init_cond;
-  auto type = convertFromString<InitialConditionType>(parts[0]);
+  // Backward compatibility: map "pure" to PRODUCT_STATE for CFG files
+  std::string type_str = parts[0];
+  if (type_str == "pure") {
+    type_str = "product_state";
+  }
+  auto type = convertFromString<InitialConditionType>(type_str);
   init_cond.type = type;
 
   if (type == InitialConditionType::FROMFILE) {
@@ -296,7 +301,7 @@ InitialCondition CfgParser::convertFromString<InitialCondition>(const std::strin
       logger.exitWithError("initialcondition of type FROMFILE must have a filename");
     }
     init_cond.filename = parts[1];
-  } else if (type == InitialConditionType::PURE) {
+  } else if (type == InitialConditionType::PRODUCT_STATE) {
     init_cond.levels = std::vector<size_t>();
     for (size_t i = 1; i < parts.size(); ++i) {
       init_cond.levels.value().push_back(convertFromString<int>(parts[i]));
@@ -322,7 +327,12 @@ OptimTargetSettings CfgParser::convertFromString<OptimTargetSettings>(const std:
   }
 
   OptimTargetSettings target_settings;
-  auto target_type = convertFromString<TargetType>(parts[0]);
+  // Backward compatibility: map "pure" to PRODUCT_STATE for CFG files
+  std::string type_str = parts[0];
+  if (type_str == "pure") {
+    type_str = "product_state";
+  }
+  auto target_type = convertFromString<TargetType>(type_str);
   target_settings.type = target_type;
 
   switch (target_type) {
@@ -341,7 +351,7 @@ OptimTargetSettings CfgParser::convertFromString<OptimTargetSettings>(const std:
       }
       break;
     }
-    case TargetType::PURE:
+    case TargetType::PRODUCT_STATE:
       target_settings.levels = std::vector<size_t>{};
       for (size_t i = 1; i < parts.size(); ++i) {
         target_settings.levels->push_back(convertFromString<int>(parts[i]));

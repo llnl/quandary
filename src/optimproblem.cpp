@@ -58,7 +58,7 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
   VecZeroEntries(rho_t0_bar);
   VecAssemblyBegin(rho_t0_bar); VecAssemblyEnd(rho_t0_bar);
 
-  /* Initialize the optimization target, including setting of initial state rho_t0 if read from file or pure state or ensemble */
+  /* Initialize the optimization target, including setting of initial state rho_t0 if read from file or product state or ensemble */
   optim_target = new OptimTarget(config, timestepper->mastereq, timestepper->total_time, rho_t0, quietmode);
 
   /* Get weights for the objective function (weighting the different initial conditions */

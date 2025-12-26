@@ -129,7 +129,8 @@ TEST_F(CfgParserTest, InitialCondition_Pure) {
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
-  EXPECT_EQ(initcond.type, InitialConditionType::PURE);
+  // Test backward compatibility: "pure" in CFG should map to PRODUCT_STATE
+  EXPECT_EQ(initcond.type, InitialConditionType::PRODUCT_STATE);
   EXPECT_EQ(initcond.levels.value(), std::vector<size_t>({1, 0}));
   EXPECT_EQ(config.getNInitialConditions(), 1);
 }
@@ -518,7 +519,8 @@ TEST_F(CfgParserTest, OptimTarget_PureState) {
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_EQ(target.type, TargetType::PURE);
+  // Test backward compatibility: "pure" in CFG should map to PRODUCT_STATE
+  EXPECT_EQ(target.type, TargetType::PRODUCT_STATE);
   const auto& levels = target.levels.value();
   EXPECT_EQ(levels.size(), 3);
   EXPECT_EQ(levels[0], 0);
@@ -542,7 +544,7 @@ TEST_F(CfgParserTest, OptimTarget_FromFile) {
   EXPECT_EQ(target.file.value(), "/path/to/target.dat");
 }
 
-TEST_F(CfgParserTest, OptimTarget_DefaultPure) {
+TEST_F(CfgParserTest, OptimTarget_DefaultProductState) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2
@@ -553,8 +555,8 @@ TEST_F(CfgParserTest, OptimTarget_DefaultPure) {
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_EQ(target.type, TargetType::PURE);
-  // For default pure state, levels should be set to ground state
+  EXPECT_EQ(target.type, TargetType::PRODUCT_STATE);
+  // For default product state, levels should be set to ground state
   EXPECT_TRUE(target.levels.has_value());
   EXPECT_FALSE(target.levels.value().empty());
 }

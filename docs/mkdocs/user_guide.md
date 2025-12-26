@@ -178,9 +178,6 @@ If guard levels are used ($n_k > n_k^e$, compare Section [Essential and guard le
 ### State preparation {#sec:stateprep}
 Quandary can be used to optimize for pulses that drive (one or multiple) initial states to a fixed target state $\rho^{target}$. Depending on the choice of the [Initial conditions](#sec:initcond), this enables pulses for either direct **state-to-state transfer** (by choosing one specific initial condition, $n_{init}=1$), and one specific target state), or **unconditional state preparation** such as qubit reset (by spanning a basis of initial conditions, $n_{init}=N$ or $N^2, and one specific target state). Driving a basis of initial state to a common target will require to couple to a dissipative bath, which should be accounted for in the model setup. For unconditional *pure*-state preparation, it is shown in [@guenther2021quantum] that if one chooses the objective function $J_{measure}$ with corresponding measurement operator $N_m$ (see eq. $\eqref{eq:Jmeasure}$), one can reduce the number of initial conditions to only *one* being an ensemble of all basis states, and hence $n_{init}=1$ independent of $N$. Compare [@guenther2021quantum] for details.
 
-If the target state is *pure*, internal computations are simplified and it is recommended to pass the specific identifier ``pure, i0, i1, i2, ...`` to the Quandary configuration for the optimization target, denoting a pure target state of the form $\psi = |i_0i_1i_2...\rangle$, or $\rho = \psi\psi^\dagger$
-
-
 ## Initial conditions {#sec:initcond}
 The initial states $\rho_i(0)$ which are accounted for in the objective function eq. $\eqref{eq:minproblem}$ can be specified with the configuration option `initialcondition`. 
 
@@ -208,9 +205,9 @@ The three initial states from above do not suffice to estimate the fidelity of t
 <br>
 Note: The $N+1$ initial states are spanned in the *full* dimension of the system, including non-essential levels, see above for 3-state initialization.
 
-* **Pure initial state for state-to-state transfer**: $n_{init} = 1$. The user can choose a pure initial state of the form $\psi(0) = |i_0, i_1, i_2, ...\rangle$, or $\rho(0) = \psi(0)\psi(0)^\dagger$, through the configuration option ``pure, i0, i1, i2, ...``
+* **Pure initial product state for state-to-state transfer**: $n_{init} = 1$. The user can choose a pure initial product state of the form $\psi(0) = |i_0, i_1, i_2, ...\rangle$, or $\rho(0) = \psi(0)\psi(0)^\dagger$.
 
-* **Arbitrary initial state for state-to-state transformation**: $n_{init}=1$. An arbitrary (non-pure) initial state can be passed to Quandary directly through the Python interface, or can be read from a file in the C++ code. File format: column-wise vectorized density matrix or the state vector, first all real parts, then all imaginary parts. 
+* **Arbitrary initial state for state-to-state transformation**: $n_{init}=1$. An arbitrary initial state can be passed to Quandary directly through the Python interface, or can be read from a file in the C++ code. File format: column-wise vectorized density matrix or the state vector, first all real parts, then all imaginary parts. 
 
 * **Ensemble state for unconditional pure-state preparation**: $n_{init}=1$. *Only valid for Lindblad's solver.* When choosing the objective function $J_{measure}$ $\eqref{eq:Jmeasure}$, one can use the ensemble state $\rho_s(0) = \frac{1}{N^2}\sum_{i,j=0}^{N-1} B^{kj}$ as the only initial condition for optimizing for pulses that realize unconditional pure-state preparation, compare [@guenther2021quantum]). To specify the ensemble state in Quandary (C++), one can provide a list of consecutive integer ID's that determine in which of the subsystems the ensemble state should be spanned. Other subsystems will be initialized in the ground state.
 <br>

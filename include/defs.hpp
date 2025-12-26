@@ -49,19 +49,19 @@ const std::map<std::string, LindbladType> LINDBLAD_TYPE_MAP = {
  * for simulation or optimization.
  */
 enum class InitialConditionType {
-  FROMFILE,    ///< Read initial condition from file
-  PURE,        ///< Pure state initial condition
-  ENSEMBLE,    ///< Ensemble of states
-  DIAGONAL,    ///< Diagonal density matrix
-  BASIS,       ///< Basis state
-  THREESTATES, ///< Three-state system
-  NPLUSONE,    ///< N+1 state system
-  PERFORMANCE  ///< Performance test configuration
+  FROMFILE,      ///< Read initial condition from file
+  PRODUCT_STATE, ///< Product state initial condition
+  ENSEMBLE,      ///< Ensemble of states
+  DIAGONAL,      ///< Diagonal density matrix
+  BASIS,         ///< Basis state
+  THREESTATES,   ///< Three-state system
+  NPLUSONE,      ///< N+1 state system
+  PERFORMANCE    ///< Performance test configuration
 };
 
 const std::map<std::string, InitialConditionType> INITCOND_TYPE_MAP = {
     {"file", InitialConditionType::FROMFILE},
-    {"pure", InitialConditionType::PURE},
+    {"product_state", InitialConditionType::PRODUCT_STATE},
     {"ensemble", InitialConditionType::ENSEMBLE},
     {"diagonal", InitialConditionType::DIAGONAL},
     {"basis", InitialConditionType::BASIS},
@@ -76,14 +76,14 @@ const std::map<std::string, InitialConditionType> INITCOND_TYPE_MAP = {
  * Defines the target quantum state or operation for optimization.
  */
 enum class TargetType {
-  GATE,      ///< Gate optimization: \f$\rho_{\text{target}} = V\rho(0) V^\dagger\f$
-  PURE,      ///< Pure state preparation: \f$\rho_{\text{target}} = e_m e_m^\dagger\f$ for some integer \f$m\f$
-  FROMFILE   ///< Target state read from file, vectorized density matrix format
+  GATE,          ///< Gate optimization: \f$\rho_{\text{target}} = V\rho(0) V^\dagger\f$
+  PRODUCT_STATE, ///< Product state preparation: \f$\rho_{\text{target}} = e_m e_m^\dagger\f$ for some integer \f$m\f$
+  FROMFILE       ///< Target state read from file, vectorized density matrix format
 };
 
 const std::map<std::string, TargetType> TARGET_TYPE_MAP = {
     {"gate", TargetType::GATE},
-    {"pure", TargetType::PURE},
+    {"product_state", TargetType::PRODUCT_STATE},
     {"file", TargetType::FROMFILE}
 };
 
@@ -254,7 +254,7 @@ struct InitialCondition {
 
   // Optional fields - populate based on type
   std::optional<std::string> filename; ///< For FROMFILE: File to read initial condition from
-  std::optional<std::vector<size_t>> levels; ///< For PURE: Quantum level for each oscillator
+  std::optional<std::vector<size_t>> levels; ///< For PRODUCT_STATE: Quantum level for each oscillator
   std::optional<std::vector<size_t>> osc_IDs; ///< For ENSEMBLE, DIAGONAL, BASIS: Oscillator IDs
 };
 
@@ -267,7 +267,7 @@ struct OptimTargetSettings {
   // Optional fields - populate based on type
   std::optional<GateType> gate_type; ///< For GATE: Gate type
   std::optional<std::string> gate_file; ///< For GATE with FILE type: Gate file path
-  std::optional<std::vector<size_t>> levels; ///< For PURE: Pure state levels
+  std::optional<std::vector<size_t>> levels; ///< For PRODUCT_STATE: Product state levels
   std::optional<std::string> file; ///< For FROMFILE: Target file path
 };
 

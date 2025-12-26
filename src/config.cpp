@@ -577,7 +577,7 @@ std::string toString(const InitialCondition& initial_condition) {
   switch (initial_condition.type) {
     case InitialConditionType::FROMFILE:
       return "{" + type_str + ", filename = \"" + initial_condition.filename.value() + "\"}";
-    case InitialConditionType::PURE: {
+    case InitialConditionType::PRODUCT_STATE: {
       std::string out = "{" + type_str + ", levels = ";
       out += printVector(initial_condition.levels.value());
       out += "}";
@@ -623,7 +623,7 @@ std::string toString(const OptimTargetSettings& optim_target) {
       out += "}";
       return out;
     }
-    case TargetType::PURE: {
+    case TargetType::PRODUCT_STATE: {
       std::string out = "{" + type_str;
       if (optim_target.levels.has_value()) {
         out += ", levels = " + printVector(optim_target.levels.value());
@@ -939,8 +939,8 @@ void Config::validate() const {
         initial_condition.type == InitialConditionType::THREESTATES ||
         initial_condition.type == InitialConditionType::NPLUSONE) {
       logger.exitWithError(
-          "\n\n ERROR for initial condition setting: \n When running Schroedingers solver"
-          " (collapse_type == NONE), the initial condition needs to be either 'pure' or 'from file' or 'diagonal' or "
+          "\n\n ERROR for initial condition setting: \n When running Schroedingers solver,"
+          " the initial condition needs to be either 'product_state' or 'from file' or 'diagonal' or "
           "'basis'."
           " Note that 'diagonal' and 'basis' in the Schroedinger case are the same (all unit vectors).\n\n");
     }
@@ -951,7 +951,7 @@ size_t Config::computeNumInitialConditions() const {
   size_t n_initial_conditions = 0;
   switch (initial_condition.type) {
     case InitialConditionType::FROMFILE:
-    case InitialConditionType::PURE:
+    case InitialConditionType::PRODUCT_STATE:
     case InitialConditionType::PERFORMANCE:
     case InitialConditionType::ENSEMBLE:
       n_initial_conditions = 1;
@@ -1172,18 +1172,18 @@ InitialCondition Config::parseInitialCondition(std::optional<InitialConditionTyp
       }
       result.filename = filename.value();
       break;
-    case InitialConditionType::PURE:
+    case InitialConditionType::PRODUCT_STATE:
       if (!levels.has_value()) {
-        logger.exitWithError("initialcondition of type PURE must have 'levels'");
+        logger.exitWithError("initialcondition of type PRODUCT_STATE must have 'levels'");
       }
       if (levels.value().size() != nlevels.size()) {
-        logger.exitWithError("initialcondition of type PURE must have exactly " + std::to_string(nlevels.size()) +
+        logger.exitWithError("initialcondition of type PRODUCT_STATE must have exactly " + std::to_string(nlevels.size()) +
                              " parameters, got " + std::to_string(levels.value().size()));
       }
       for (size_t k = 0; k < levels.value().size(); k++) {
         if (levels.value()[k] >= nlevels[k]) {
           logger.exitWithError(
-              "ERROR in config setting. The requested pure state initialization " + std::to_string(levels.value()[k]) +
+              "ERROR in config setting. The requested product state initialization " + std::to_string(levels.value()[k]) +
               " exceeds the number of allowed levels for that oscillator (" + std::to_string(nlevels[k]) + ").\n");
         }
       }
@@ -1390,22 +1390,22 @@ OptimTargetSettings Config::parseOptimTarget(TargetType type, const std::optiona
       break;
     }
 
-    case TargetType::PURE: {
+    case TargetType::PRODUCT_STATE: {
       if (levels.has_value() && !levels->empty()) {
-        std::vector<size_t> pure_levels = levels.value();
-        pure_levels.resize(nlevels.size(), nlevels.back());
+        std::vector<size_t> product_state_levels = levels.value();
+        product_state_levels.resize(nlevels.size(), nlevels.back());
 
         for (size_t i = 0; i < nlevels.size(); i++) {
-          if (pure_levels[i] >= nlevels[i]) {
+          if (product_state_levels[i] >= nlevels[i]) {
             logger.exitWithError(
-                "ERROR in config setting. The requested pure state target |" + std::to_string(pure_levels[i]) +
+                "ERROR in config setting. The requested product state target |" + std::to_string(product_state_levels[i]) +
                 "> exceeds the number of modeled levels for that oscillator (" + std::to_string(nlevels[i]) + ").\n");
           }
         }
-        target_settings.levels = pure_levels;
+        target_settings.levels = product_state_levels;
       } else {
         logger.log(
-            "# Warning: You want to prepare a pure state, but didn't specify which one."
+            "# Warning: You want to prepare a product state, but didn't specify which one."
             " Taking default: ground-state |0...0> \n");
         target_settings.levels = std::vector<size_t>(nlevels.size(), 0);
       }

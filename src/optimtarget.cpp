@@ -43,8 +43,8 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
   /* Get initial condition type and IDs */
   initcond = config.getInitialCondition();
 
-  /* Prepare initial state rho_t0 if PURE or FROMFILE or ENSEMBLE initialization. Otherwise they are set within prepareInitialState during evalF. */
-  if (initcond.type == InitialConditionType::PURE) {
+  /* Prepare initial state rho_t0 if PRODUCT_STATE or FROMFILE or ENSEMBLE initialization. Otherwise they are set within prepareInitialState during evalF. */
+  if (initcond.type == InitialConditionType::PRODUCT_STATE) {
     const auto& level_indices = initcond.levels.value();
     // Find the id within the global composite system 
     PetscInt diag_id = 0;
@@ -165,7 +165,7 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
 
     /* Initialize the targetgate */
     targetgate = initTargetGate(target.gate_type.value(), target.gate_file.value_or(""), mastereq->nlevels, mastereq->nessential, total_time, lindbladtype, gate_rot_freq, quietmode);
-  } else if (target_type == TargetType::PURE) {
+  } else if (target_type == TargetType::PRODUCT_STATE) {
     purestateID = 0;
     const std::vector<size_t>& purestate_levels = target.levels.value();
     for (size_t i=0; i < mastereq->getNOscillators(); i++) {
@@ -177,7 +177,7 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
 
   objective_type = config.getOptimObjective();
 
-  /* Allocate target state, if it is read from file, or if target is a gate transformation VrhoV. If pure target, only store the ID. */
+  /* Allocate target state, if it is read from file, or if target is a gate transformation VrhoV. If product state target, only store the ID. */
   if (target_type == TargetType::GATE || target_type == TargetType::FROMFILE) {
     VecCreate(PETSC_COMM_WORLD, &targetstate); 
     PetscInt globalsize = 2 * mastereq->getDim();  // Global state vector: 2 for real and imaginary part
@@ -270,9 +270,9 @@ void OptimTarget::HilbertSchmidtOverlap(const Vec state, const bool scalebypurit
   double HS_re = 0.0;
   double HS_im = 0.0;
 
-  /* Simplify computation if the target is PURE, i.e. target = e_m or e_m * e_m^\dag */
+  /* Simplify computation if the target is PRODUCT_STATE, i.e. target = e_m or e_m * e_m^\dag */
   /* Tr(...) = phi_m if Schroedinger, or \rho_mm if Lindblad */
-  if (target_type == TargetType::PURE){
+  if (target_type == TargetType::PRODUCT_STATE){
 
     // Vectorize pure state ID if Lindblad
     PetscInt idm = purestateID;
@@ -336,8 +336,8 @@ void OptimTarget::HilbertSchmidtOverlap_diff(Vec statebar, bool scalebypurity, c
     scale = 1./purity_rho0;
   }
 
-  // Simplified computation if target is pure 
-  if (target_type == TargetType::PURE){
+  // Simplified computation if target is product state
+  if (target_type == TargetType::PRODUCT_STATE){
     PetscInt idm = purestateID;
     if (lindbladtype != LindbladType::NONE) idm = getVecID(purestateID, purestateID, (PetscInt)sqrt(dim));
 
@@ -400,7 +400,7 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
     }
   } else if(initcond.type == InitialConditionType::FROMFILE) {
     /* Do nothing. Init cond is already stored */
-  } else if(initcond.type == InitialConditionType::PURE) {
+  } else if(initcond.type == InitialConditionType::PRODUCT_STATE) {
     /* Do nothing. Init cond is already stored */
   } else if(initcond.type == InitialConditionType::ENSEMBLE) {
     /* Do nothing. Init cond is already stored */
@@ -631,7 +631,7 @@ void OptimTarget::evalJ(const Vec state, double* J_re_ptr, double* J_im_ptr){
         J_re = FrobeniusDistance(state) / 2.0;
       } 
       else {  // target = e_me_m^\dagger ( or target = e_m for Schroedinger)
-        assert(target_type == TargetType::PURE);
+        assert(target_type == TargetType::PRODUCT_STATE);
 
         // substract 1.0 from m-th diagonal element then take the vector norm 
         PetscInt diagID = purestateID;
@@ -661,8 +661,8 @@ void OptimTarget::evalJ(const Vec state, double* J_re_ptr, double* J_im_ptr){
     /* J_Measure = Tr(O_m rho(T)) = \sum_i |i-m| rho_ii(T) if Lindblad and \sum_i |i-m| |phi_i(T)|^2  if Schroedinger */
     case ObjectiveType::JMEASURE:
       // Sanity check
-      if (target_type != TargetType::PURE) {
-        printf("Error: Wrong setting for objective function. Jmeasure can only be used for 'pure' targets.\n");
+      if (target_type != TargetType::PRODUCT_STATE) {
+        printf("Error: Wrong setting for objective function. Jmeasure can only be used for 'product_state' targets.\n");
         exit(1);
       }
 
@@ -715,7 +715,7 @@ void OptimTarget::evalJ_diff(const Vec state, Vec statebar, const double J_re_ba
       if (target_type == TargetType::GATE || target_type == TargetType::FROMFILE ) {
         FrobeniusDistance_diff(state, statebar, J_re_bar/ 2.0);
       } else {
-        assert(target_type == TargetType::PURE);         
+        assert(target_type == TargetType::PRODUCT_STATE);         
         // Derivative of J = 1/2||x||^2 is xbar += x * Jbar, where x = rho(t) - E_mm
         VecAXPY(statebar, J_re_bar, state);
         // now substract 1.0*Jbar from m-th diagonal element
@@ -733,7 +733,7 @@ void OptimTarget::evalJ_diff(const Vec state, Vec statebar, const double J_re_ba
     break;
 
     case ObjectiveType::JMEASURE:
-      assert(target_type == TargetType::PURE);         
+      assert(target_type == TargetType::PRODUCT_STATE);         
 
       PetscInt dimsq = dim;   // Schroedinger solver: dim = N
       if (lindbladtype != LindbladType::NONE) dimsq = (PetscInt)sqrt(dim); // Lindblad solver: dim = N^2

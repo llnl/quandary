@@ -150,17 +150,17 @@ TEST_F(TomlParserTest, InitialCondition_FromFile) {
   EXPECT_EQ(config.getNInitialConditions(), 1);
 }
 
-TEST_F(TomlParserTest, InitialCondition_Pure) {
+TEST_F(TomlParserTest, InitialCondition_ProductState) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [3, 2]
         transfreq = [4.1, 4.8]
         rotfreq = [0.0, 0.0]
-        initial_condition = {type = "pure", levels = [1, 0]}
+        initial_condition = {type = "product_state", levels = [1, 0]}
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
-  EXPECT_EQ(initcond.type, InitialConditionType::PURE);
+  EXPECT_EQ(initcond.type, InitialConditionType::PRODUCT_STATE);
   EXPECT_EQ(initcond.levels.value(), std::vector<size_t>({1, 0}));
   EXPECT_EQ(config.getNInitialConditions(), 1);
 }
@@ -691,19 +691,19 @@ TEST_F(TomlParserTest, OptimTarget_GateFromFile) {
   EXPECT_EQ(target.gate_file.value(), "/path/to/gate.dat");
 }
 
-TEST_F(TomlParserTest, OptimTarget_PureState) {
+TEST_F(TomlParserTest, OptimTarget_ProductState) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [3, 3, 3]
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
-        optim_target = {target_type = "pure", levels = [0,1,2]}
+        optim_target = {target_type = "product_state", levels = [0,1,2]}
       )",
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_EQ(target.type, TargetType::PURE);
+  EXPECT_EQ(target.type, TargetType::PRODUCT_STATE);
   const auto& levels = target.levels.value();
   EXPECT_EQ(levels.size(), 3);
   EXPECT_EQ(levels[0], 0);
@@ -727,7 +727,7 @@ TEST_F(TomlParserTest, OptimTarget_FromFile) {
   EXPECT_EQ(target.file.value(), "/path/to/target.dat");
 }
 
-TEST_F(TomlParserTest, OptimTarget_DefaultPure) {
+TEST_F(TomlParserTest, OptimTarget_DefaultProductState) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2]
@@ -738,8 +738,8 @@ TEST_F(TomlParserTest, OptimTarget_DefaultPure) {
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_EQ(target.type, TargetType::PURE);
-  // For default pure state, levels should be set to ground state
+  EXPECT_EQ(target.type, TargetType::PRODUCT_STATE);
+  // For default product state, levels should be set to ground state
   EXPECT_TRUE(target.levels.has_value());
   EXPECT_FALSE(target.levels.value().empty());
 }
@@ -780,7 +780,7 @@ TEST_F(TomlParserTest, OptimWeights) {
 // decoherence = {type = "decay"}
 // decay_time = [25.000000]
 // dephase_time = [45.000000]
-// initial_condition = {type = "pure", levels = [1]}
+// initial_condition = {type = "product_state", levels = [1]}
 // control_enforceBC = false
 // optim_target = {target_type = "gate", gate_type = "hadamard"}
 // gate_rot_freq = [1.500000]

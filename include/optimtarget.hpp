@@ -7,7 +7,7 @@
  * @brief Optimization target specification for quantum control.
  *
  * This class manages the target specification for quantum optimal control problems,
- * including gate optimization and pure state preparation. It handles target and initial state
+ * including gate optimization and product state preparation. It handles target and initial state
  * preparation and the evaluation of the final-time objective function measure.
  * 
  * Main functionality: 
@@ -27,13 +27,13 @@ class OptimTarget{
     PetscInt dim_ess; ///< Dimension of essential level system = N_e
     int noscillators; ///< Number of oscillators in the system
  
-    TargetType target_type; ///< Type of optimization target (pure state preparation or gate optimization)
-    ObjectiveType objective_type; ///< Type of objective function measure (Frobenius, trace, pure-state measure)
+    TargetType target_type; ///< Type of optimization target (product state preparation or gate optimization)
+    ObjectiveType objective_type; ///< Type of objective function measure (Frobenius, trace, product-state measure)
     Gate *targetgate; ///< Pointer to target gate (if gate optimization)
     double purity_rho0; ///< Purity of initial state Tr(rho(0)^2)
-    PetscInt purestateID; ///< For pure state preparation: integer m for preparing the target state \f$ e_m e_m^{\dagger}\f$
+    PetscInt purestateID; ///< For product state preparation: integer m for preparing the target state \f$ e_m e_m^{\dagger}\f$
     std::string target_filename; ///< Filename if target state is read from file
-    Vec targetstate; ///< Storage for the target state vector (NULL for pure states, \f$V\rho V^\dagger\f$ for gates, density matrix from file)
+    Vec targetstate; ///< Storage for the target state vector (NULL for product states, \f$V\rho V^\dagger\f$ for gates, density matrix from file)
     InitialCondition initcond; ///< Initial conditions
     LindbladType lindbladtype; ///< Type of Lindblad decoherence operators, or NONE for Schroedinger solver
     int mpisize_petsc; ///< Size of PETSc communicator

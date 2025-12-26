@@ -32,7 +32,7 @@ decoherence = { type = "none",              # "none", "decay", "dephase", or "bo
 initial_condition = {type = "basis"}
 # initial_condition = {type = "basis", oscIDs = [0, 1]}
 # initial_condition = {type = "file", filename = "path/to/initial_condition.dat"}
-# initial_condition = {type = "pure", levels = [1, 0]}
+# initial_condition = {type = "product_state", levels = [1, 0]}
 # initial_condition = {type = "diagonal", oscIDs = [0]}
 # initial_condition = {type = "ensemble", oscIDs = [0, 1]}
 # initial_condition = {type = "3states"}
@@ -50,11 +50,11 @@ initial_condition = {type = "basis"}
 # Decide whether control pulses should start and end at zero. Default: true.
 control_enforceBC = false
 
-# Optimization target_type options: "gate", "pure", or "file".
+# Optimization target_type options: "gate", "product_state", or "file".
 # Gate types: "cnot", "cqnot", "swap", "swap0q", "qft", "xgate", "ygate", "zgate", "hadamard"
 optim_target = {target_type = "gate", gate_type = "cnot"}
 # optim_target = {target_type = "gate", gate_type = "file", gate_file = "/path/to/target_gate.dat"}
-# optim_target = {target_type = "pure", levels = [0, 0]}
+# optim_target = {target_type = "product_state", levels = [0, 0]}
 # optim_target = {target_type = "file", filename = "/path/to/target_state.dat"}
 
 # Frequency of rotation of the target gate, for each oscillator (GHz). Default: 0.0
