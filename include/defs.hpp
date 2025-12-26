@@ -272,17 +272,6 @@ struct OptimTargetSettings {
 };
 
 /**
- * @brief Structure for storing pi-pulse parameters for one segment.
- *
- * Stores timing and amplitude information for pi-pulse sequences.
- */
-struct PiPulseSegment {
-  double tstart; ///< Start time for pulse segment
-  double tstop; ///< Stop time for pulse segment
-  double amp; ///< Amplitude for pulse segment
-};
-
-/**
  * @brief Structure for defining control parameterizations.
  *
  * Defines a controllable parameterization for an oscillator with corresponding starting and finish times. 

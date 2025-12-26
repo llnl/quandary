@@ -16,13 +16,6 @@
 #include "mpi_logger.hpp"
 #include "util.hpp"
 
-struct PiPulseData {
-  size_t oscil_id; ///< Oscillator ID
-  double tstart; ///< Start time
-  double tstop; ///< Stop time
-  double amp; ///< Amplitude
-};
-
 struct ControlParameterizationData {
   ControlType control_type; ///< Type of control parameterization
   std::vector<double> parameters; ///< Parameters for control parameterization
@@ -49,7 +42,6 @@ struct ParsedConfigData {
   std::optional<std::vector<double>> decay_time;
   std::optional<std::vector<double>> dephase_time;
   std::optional<InitialCondition> initialcondition;
-  std::optional<std::vector<PiPulseData>> apply_pipulse;
   std::optional<std::string> hamiltonian_file_Hsys;
   std::optional<std::string> hamiltonian_file_Hc;
 

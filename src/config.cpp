@@ -73,26 +73,6 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     initial_condition = parseInitialCondition(type_opt, filename, levels, osc_IDs);
     n_initial_conditions = computeNumInitialConditions();
 
-    apply_pipulse = std::vector<std::vector<PiPulseSegment>>(nlevels.size());
-    auto apply_pipulse_array_of_tables = validators::getArrayOfTables(toml, "apply_pipulse");
-    for (auto& elem : apply_pipulse_array_of_tables) {
-      auto pipulse_table = *elem.as_table();
-
-      // Validate allowed keys in apply_pipulse table
-      const std::string tstart_key = "tstart";
-      const std::string tstop_key = "tstop";
-      const std::string amp_key = "amp";
-      const std::set<std::string> allowed_keys = {OSC_ID_KEY, tstart_key, tstop_key, amp_key};
-      validateTableKeys(pipulse_table, allowed_keys, "apply_pipulse");
-
-      size_t oscilID = validators::field<size_t>(pipulse_table, OSC_ID_KEY).value();
-      double tstart = validators::field<double>(pipulse_table, tstart_key).value();
-      double tstop = validators::field<double>(pipulse_table, tstop_key).value();
-      double amp = validators::field<double>(pipulse_table, amp_key).value();
-
-      addPiPulseSegment(apply_pipulse, oscilID, tstart, tstop, amp);
-    }
-
     hamiltonian_file_Hsys = toml["hamiltonian_file_Hsys"].value<std::string>();
     hamiltonian_file_Hc = toml["hamiltonian_file_Hc"].value<std::string>();
 
@@ -340,14 +320,6 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
       parseInitialCondition(settings.initialcondition.value().type, settings.initialcondition.value().filename,
                             settings.initialcondition.value().levels, settings.initialcondition.value().osc_IDs);
   n_initial_conditions = computeNumInitialConditions();
-
-  apply_pipulse = std::vector<std::vector<PiPulseSegment>>(nlevels.size());
-  if (settings.apply_pipulse.has_value()) {
-    for (const auto& pulse_config : settings.apply_pipulse.value()) {
-      addPiPulseSegment(apply_pipulse, pulse_config.oscil_id, pulse_config.tstart, pulse_config.tstop,
-                        pulse_config.amp);
-    }
-  }
 
   hamiltonian_file_Hsys = settings.hamiltonian_file_Hsys;
   hamiltonian_file_Hc = settings.hamiltonian_file_Hc;
@@ -826,21 +798,6 @@ void Config::printConfig(std::stringstream& log) const {
     log << "}\n\n";
   }
 
-  // Section 2: All array-of-tables at the end
-  log << "\n";
-
-  // Apply pi-pulse array of tables
-  for (size_t i = 0; i < apply_pipulse.size(); ++i) {
-    for (const auto& parameterization : apply_pipulse[i]) {
-      log << "[[apply_pipulse]]\n";
-      log << "oscID = " << i << "\n";
-      log << "tstart = " << parameterization.tstart << "\n";
-      log << "tstop = " << parameterization.tstop << "\n";
-      log << "amp = " << parameterization.amp << "\n";
-      log << "\n";
-    }
-  }
-
   // Carrier frequencies 
   // First check if all oscillators have the same carrier frequencies
   bool all_same_cw = true;
@@ -1259,25 +1216,6 @@ InitialCondition Config::parseInitialCondition(std::optional<InitialConditionTyp
   }
 
   return result;
-}
-
-void Config::addPiPulseSegment(std::vector<std::vector<PiPulseSegment>>& apply_pipulse, size_t oscilID, double tstart,
-                               double tstop, double amp) const {
-  if (oscilID < getNumOsc()) {
-    PiPulseSegment parameterization = {tstart, tstop, amp};
-    apply_pipulse[oscilID].push_back(parameterization);
-
-    logger.log("Applying PiPulse to oscillator " + std::to_string(oscilID) + " in [" + std::to_string(tstart) + ", " +
-               std::to_string(tstop) + "]: |p+iq|=" + std::to_string(amp) + "\n");
-
-    // Set zero control for all other oscillators during this pipulse
-    for (size_t i = 0; i < getNumOsc(); i++) {
-      if (i != oscilID) {
-        PiPulseSegment zero_parameterization = {tstart, tstop, 0.0};
-        apply_pipulse[i].push_back(zero_parameterization);
-      }
-    }
-  }
 }
 
 std::vector<ControlParameterization> Config::parseControlParameterizations(const toml::table& table, size_t num_entries) const {

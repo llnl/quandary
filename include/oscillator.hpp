@@ -61,7 +61,6 @@ class Oscillator {
     bool control_enforceBC; ///< Flag to enforce boundary conditions on controls
 
   public:
-    std::vector<PiPulseSegment> pipulse; ///< Pi-pulse parameterizations for this oscillator
     PetscInt dim_preOsc; ///< Dimension of coupled subsystems preceding this oscillator
     PetscInt dim_postOsc; ///< Dimension of coupled subsystems following this oscillator
 

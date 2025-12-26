@@ -118,11 +118,6 @@ int main(int argc,char **argv)
   }
 
 
-  // Get pi-pulses, if any
-  for (size_t i=0; i<num_osc; i++){
-    oscil_vec[i]->pipulse = config.getApplyPiPulse(i);
-  }
-
   /* --- Initialize the Master Equation  --- */
   // Sanity check for matrix free solver
   if (config.getUseMatFree() && mpisize_petsc > 1) {

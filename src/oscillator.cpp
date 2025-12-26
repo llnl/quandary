@@ -278,15 +278,6 @@ int Oscillator::evalControl(const double t, double* Re_ptr, double* Im_ptr){
     }
   } 
 
-  /* If pipulse: Overwrite controls by constant amplitude */
-  for (const auto& pipulse_parameterization : pipulse){
-    if (pipulse_parameterization.tstart <= t && t <= pipulse_parameterization.tstop) {
-      double amp_pq =  pipulse_parameterization.amp / sqrt(2.0);
-      *Re_ptr = amp_pq;
-      *Im_ptr = amp_pq;
-    }
-  }
-
   return 0;
 }
 
@@ -323,14 +314,6 @@ int Oscillator::evalControl_diff(const double t, double* grad, const double pbar
     }
   } 
 
-  /* TODO: Derivative of pipulse? */
-  for (const auto& pipulse_parameterization : pipulse){
-    if (pipulse_parameterization.tstart <= t && t <= pipulse_parameterization.tstop) {
-      printf("ERROR: Derivative of pipulse not implemented. Sorry! But also, this should never happen!\n");
-      exit(1);
-    }
-  }
-
   return 0;
 }
 
@@ -366,17 +349,6 @@ int Oscillator::evalControl_Labframe(const double t, double* f){
       }
     }
   } 
-
-
-
-  /* If inside a pipulse, overwrite lab control */
-  for (const auto& pipulse_parameterization : pipulse){
-    if (pipulse_parameterization.tstart <= t && t <= pipulse_parameterization.tstop) {
-      double p = pipulse_parameterization.amp / sqrt(2.0);
-      double q = pipulse_parameterization.amp / sqrt(2.0);
-      *f = 2.0 * p * cos(ground_freq*t) - 2.0 * q * sin(ground_freq*t);
-    }
-  }
 
   return 0;
 }

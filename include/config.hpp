@@ -40,7 +40,6 @@ class Config {
   std::vector<double> dephase_time; ///< Time of dephase collapse operation (T2) per oscillator (for Lindblad solver)
   size_t n_initial_conditions; ///< Number of initial conditions
   InitialCondition initial_condition; ///< Initial condition configuration
-  std::vector<std::vector<PiPulseSegment>> apply_pipulse; ///< Apply a pi-pulse to oscillator with specified parameters
   std::optional<std::string> hamiltonian_file_Hsys; ///< File to read the system Hamiltonian from
   std::optional<std::string> hamiltonian_file_Hc; ///< File to read the control Hamiltonian from
 
@@ -118,8 +117,6 @@ class Config {
   const std::vector<double>& getDephaseTime() const { return dephase_time; }
   size_t getNInitialConditions() const { return n_initial_conditions; }
   const InitialCondition& getInitialCondition() const { return initial_condition; }
-  const std::vector<std::vector<PiPulseSegment>>& getApplyPiPulses() const { return apply_pipulse; }
-  const std::vector<PiPulseSegment>& getApplyPiPulse(size_t i_osc) const { return apply_pipulse[i_osc]; }
   const std::optional<std::string>& getHamiltonianFileHsys() const { return hamiltonian_file_Hsys; }
   const std::optional<std::string>& getHamiltonianFileHc() const { return hamiltonian_file_Hc; }
 
@@ -181,9 +178,6 @@ class Config {
                                          const std::optional<std::string>& filename,
                                          const std::optional<std::vector<size_t>>& levels,
                                          const std::optional<std::vector<size_t>>& osc_IDs) const;
-
-  void addPiPulseSegment(std::vector<std::vector<PiPulseSegment>>& apply_pipulse, size_t oscilID, double tstart,
-                         double tstop, double amp) const;
 
   std::vector<ControlParameterization> parseControlParameterizations(const toml::table& table, size_t num_entries) const;
 

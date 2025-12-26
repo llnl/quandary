@@ -25,7 +25,6 @@ CfgParser::CfgParser(const MPILogger& logger) : logger(logger) {
   registerConfig("decay_time", settings.decay_time);
   registerConfig("dephase_time", settings.dephase_time);
   registerConfig("initialcondition", settings.initialcondition);
-  registerConfig("apply_pipulse", settings.apply_pipulse);
   registerConfig("hamiltonian_file_Hsys", settings.hamiltonian_file_Hsys);
   registerConfig("hamiltonian_file_Hc", settings.hamiltonian_file_Hc);
 
@@ -125,7 +124,12 @@ void CfgParser::applyConfigLine(const std::string& line) {
       // Try to handle indexed settings (e.g., control_segments0, output1)
       bool handled = handleIndexedSetting(key, value);
       if (!handled) {
-        logger.exitWithError("Unknown option '" + key + "'");
+        // Check for deprecated pipulse parameters
+        if (key == "apply_pipulse" || key.find("pipulse") != std::string::npos) {
+          logger.log("# Warning: '" + key + "' is no longer supported. The pipulse feature has been removed.\n");
+        } else {
+          logger.exitWithError("Unknown option '" + key + "'");
+        }
       }
     }
   }
@@ -354,25 +358,6 @@ OptimTargetSettings CfgParser::convertFromString<OptimTargetSettings>(const std:
   return target_settings;
 }
 
-template <>
-std::vector<PiPulseData> CfgParser::convertFromString<std::vector<PiPulseData>>(const std::string& str) {
-  auto parts = split(str);
-  if (parts.size() % 4 != 0) {
-    logger.exitWithError("PiPulse vector requires multiples of 4 parameters: oscil_id, tstart, tstop, amp");
-  }
-
-  std::vector<PiPulseData> configs;
-  for (size_t i = 0; i < parts.size(); i += 4) {
-    PiPulseData config;
-    config.oscil_id = convertFromString<size_t>(parts[i]);
-    config.tstart = convertFromString<double>(parts[i + 1]);
-    config.tstop = convertFromString<double>(parts[i + 2]);
-    config.amp = convertFromString<double>(parts[i + 3]);
-    configs.push_back(config);
-  }
-
-  return configs;
-}
 
 template <>
 ControlParameterizationData CfgParser::convertFromString<ControlParameterizationData>(const std::string& str) {

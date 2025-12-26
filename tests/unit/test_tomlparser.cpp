@@ -296,79 +296,6 @@ TEST_F(TomlParserTest, InitialCondition_Basis_Lindblad) {
   EXPECT_EQ(config.getNInitialConditions(), 4);
 }
 
-TEST_F(TomlParserTest, ParsePiPulseSettings_Structure) {
-  Config config = Config::fromTomlString(
-      R"(
-        nlevels = [2, 2]
-        transfreq = [4.1]
-        rotfreq = [0.0]
-        initial_condition = {type = "basis"}
-
-        [[apply_pipulse]]
-        oscID = 0
-        tstart = 0.5
-        tstop = 1.0
-        amp = 0.8
-      )",
-      logger);
-
-  const auto& pulses = config.getApplyPiPulses();
-  EXPECT_EQ(pulses.size(), 2);
-
-  EXPECT_EQ(pulses[0].size(), 1);
-  EXPECT_DOUBLE_EQ(pulses[0][0].tstart, 0.5);
-  EXPECT_DOUBLE_EQ(pulses[0][0].tstop, 1.0);
-  EXPECT_DOUBLE_EQ(pulses[0][0].amp, 0.8);
-
-  // zero pulse for other oscillator
-  EXPECT_EQ(pulses[1].size(), 1);
-  EXPECT_DOUBLE_EQ(pulses[1][0].tstart, 0.5);
-  EXPECT_DOUBLE_EQ(pulses[1][0].tstop, 1.0);
-  EXPECT_DOUBLE_EQ(pulses[1][0].amp, 0.0);
-}
-
-TEST_F(TomlParserTest, ParsePiPulseSettings_Multiple) {
-  Config config = Config::fromTomlString(
-      R"(
-        nlevels = [2, 2]
-        transfreq = [4.1]
-        rotfreq = [0.0]
-        initial_condition = {type = "basis"}
-
-        [[apply_pipulse]]
-        oscID = 0
-        tstart = 0.5
-        tstop = 1.0
-        amp = 0.8
-
-        [[apply_pipulse]]
-        oscID = 1
-        tstart = 0
-        tstop = 0.5
-        amp = 0.2
-      )",
-      logger);
-
-  const auto& pulses = config.getApplyPiPulses();
-  EXPECT_EQ(pulses.size(), 2);
-
-  EXPECT_EQ(pulses[0].size(), 2);
-  EXPECT_DOUBLE_EQ(pulses[0][0].tstart, 0.5);
-  EXPECT_DOUBLE_EQ(pulses[0][0].tstop, 1.0);
-  EXPECT_DOUBLE_EQ(pulses[0][0].amp, 0.8);
-  EXPECT_DOUBLE_EQ(pulses[0][1].tstart, 0.);
-  EXPECT_DOUBLE_EQ(pulses[0][1].tstop, 0.5);
-  EXPECT_DOUBLE_EQ(pulses[0][1].amp, 0.0);
-
-  EXPECT_EQ(pulses[1].size(), 2);
-  EXPECT_DOUBLE_EQ(pulses[1][0].tstart, 0.5);
-  EXPECT_DOUBLE_EQ(pulses[1][0].tstop, 1.0);
-  EXPECT_DOUBLE_EQ(pulses[1][0].amp, 0.0);
-  EXPECT_DOUBLE_EQ(pulses[1][1].tstart, 0.);
-  EXPECT_DOUBLE_EQ(pulses[1][1].tstop, 0.5);
-  EXPECT_DOUBLE_EQ(pulses[1][1].amp, 0.2);
-}
-
 TEST_F(TomlParserTest, ControlParameterizations_Spline0) {
   Config config = Config::fromTomlString(
       R"(
@@ -888,11 +815,6 @@ TEST_F(TomlParserTest, OptimWeights) {
 // rand_seed = 12345
 // output_type = ["population", "expectedenergy"]
 
-// [[apply_pipulse]]
-// oscID = 0
-// tstart = 1
-// tstop = 2
-// amp = 0.75
 
 // control_parameterization = { type = "spline", num = 25, tstart = 0.5, tstop = 1.5 }
 
@@ -921,26 +843,6 @@ TEST_F(TomlParserTest, OptimWeights) {
 //     Config::fromTomlString(output, logger);
 //   });
 // }
-
-TEST_F(TomlParserTest, ApplyPipulse_UnknownKey) {
-  ASSERT_DEATH({
-    Config config = Config::fromTomlString(
-        R"(
-          nlevels = [2]
-          transfreq = [4.1]
-          rotfreq = [0.0]
-          initial_condition = {type = "basis"}
-
-          [[apply_pipulse]]
-          oscID = 0
-          tstart = 0.0
-          tstop = 1.0
-          amp = 0.5
-          invalid_param = 123
-        )",
-        logger);
-  }, "ERROR: Unknown key 'invalid_param' in apply_pipulse\\.");
-}
 
 TEST_F(TomlParserTest, ControlParameterizations_UnknownKey) {
   ASSERT_DEATH({
