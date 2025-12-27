@@ -272,13 +272,13 @@ ControlInitializationType CfgParser::convertFromString<ControlInitializationType
 
 // Struct converter implementations
 template <>
-InitialCondition CfgParser::convertFromString<InitialCondition>(const std::string& str) {
+InitialConditionSettings CfgParser::convertFromString<InitialConditionSettings>(const std::string& str) {
   auto parts = split(str);
   if (parts.empty()) {
     logger.exitWithError("Empty initialcondition specification");
   }
 
-  InitialCondition init_cond;
+  InitialConditionSettings init_cond;
   // Backward compatibility: map "pure" to PRODUCT_STATE for CFG files
   std::string type_str = parts[0];
   if (type_str == "pure") {
@@ -419,7 +419,7 @@ ControlParameterizationData CfgParser::convertFromString<ControlParameterization
 }
 
 template <>
-ControlInitialization CfgParser::convertFromString<ControlInitialization>(const std::string& str) {
+ControlInitializationSettings CfgParser::convertFromString<ControlInitializationSettings>(const std::string& str) {
   // Parse a single control initialization (not a vector)
   const auto parts = split(str);
 
@@ -428,7 +428,7 @@ ControlInitialization CfgParser::convertFromString<ControlInitialization>(const 
   }
 
   std::string type_str = parts[0];
-  ControlInitialization initialization;
+  ControlInitializationSettings initialization;
 
   auto type_enum = parseEnum(type_str, CONTROL_INITIALIZATION_TYPE_MAP);
   if (!type_enum.has_value()) {

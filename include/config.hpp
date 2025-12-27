@@ -39,14 +39,14 @@ class Config {
   std::vector<double> decay_time; ///< Time of decay collapse operation (T1) per oscillator (for Lindblad solver)
   std::vector<double> dephase_time; ///< Time of dephase collapse operation (T2) per oscillator (for Lindblad solver)
   size_t n_initial_conditions; ///< Number of initial conditions
-  InitialCondition initial_condition; ///< Initial condition configuration
+  InitialConditionSettings initial_condition; ///< Initial condition configuration
   std::optional<std::string> hamiltonian_file_Hsys; ///< File to read the system Hamiltonian from
   std::optional<std::string> hamiltonian_file_Hc; ///< File to read the control Hamiltonian from
 
   // Optimization options
   bool control_enforceBC; ///< Decide whether control pulses should start and end at zero
-  std::vector<ControlParameterization> control_parameterizations; ///< Control parameterizations for each oscillator
-  std::vector<ControlInitialization> control_initializations; ///< Control initializations for each oscillator
+  std::vector<ControlParameterizationSettings> control_parameterizations; ///< Control parameterizations for each oscillator
+  std::vector<ControlInitializationSettings> control_initializations; ///< Control initializations for each oscillator
   std::vector<double> control_bounds; ///< Control bounds for each oscillator
   std::vector<std::vector<double>> carrier_frequencies; ///< Carrier frequencies for each oscillator
   OptimTargetSettings optim_target; ///< Grouped optimization target configuration
@@ -115,13 +115,13 @@ class Config {
   const std::vector<double>& getDecayTime() const { return decay_time; }
   const std::vector<double>& getDephaseTime() const { return dephase_time; }
   size_t getNInitialConditions() const { return n_initial_conditions; }
-  const InitialCondition& getInitialCondition() const { return initial_condition; }
+  const InitialConditionSettings& getInitialCondition() const { return initial_condition; }
   const std::optional<std::string>& getHamiltonianFileHsys() const { return hamiltonian_file_Hsys; }
   const std::optional<std::string>& getHamiltonianFileHc() const { return hamiltonian_file_Hc; }
 
-  const ControlParameterization& getControlParameterizations(size_t i_osc) const { return control_parameterizations[i_osc]; }
+  const ControlParameterizationSettings& getControlParameterizations(size_t i_osc) const { return control_parameterizations[i_osc]; }
   bool getControlEnforceBC() const { return control_enforceBC; }
-  const ControlInitialization& getControlInitializations(size_t i_osc) const {
+  const ControlInitializationSettings& getControlInitializations(size_t i_osc) const {
     return control_initializations[i_osc]; 
   }
   double getControlBound(size_t i_osc) const { return control_bounds[i_osc]; }
@@ -172,14 +172,14 @@ class Config {
                                                       const std::set<std::string>& allowed_keys,
                                                       const std::string& table_name) const;
 
-  InitialCondition parseInitialCondition(std::optional<InitialConditionType> opt_type,
+  InitialConditionSettings parseInitialCondition(std::optional<InitialConditionType> opt_type,
                                          const std::optional<std::string>& filename,
                                          const std::optional<std::vector<size_t>>& levels,
                                          const std::optional<std::vector<size_t>>& osc_IDs) const;
 
-  std::vector<ControlParameterization> parseControlParameterizations(const toml::table& table, size_t num_entries) const;
+  std::vector<ControlParameterizationSettings> parseControlParameterizations(const toml::table& table, size_t num_entries) const;
 
-  std::vector<ControlInitialization> parseControlInitializations(const toml::table& table, size_t num_entries) const;
+  std::vector<ControlInitializationSettings> parseControlInitializations(const toml::table& table, size_t num_entries) const;
   
   /**
    * @brief Parses carrier frequencies from TOML configuration
@@ -240,8 +240,8 @@ class Config {
   template <typename T>
   std::vector<std::vector<T>> parseOscillatorSettingsCfg(const std::optional<std::map<int, std::vector<T>>>& indexed, size_t num_entries, const std::vector<T>& default_values = {}) const;
 
-  std::vector<ControlParameterization> parseControlParameterizationsCfg(const std::optional<std::map<int, ControlParameterizationData>>& parameterizations_map) const;
+  std::vector<ControlParameterizationSettings> parseControlParameterizationsCfg(const std::optional<std::map<int, ControlParameterizationData>>& parameterizations_map) const;
 
-  std::vector<ControlInitialization> parseControlInitializationsCfg(
-      const std::optional<std::map<int, ControlInitialization>>& init_configs) const;
+  std::vector<ControlInitializationSettings> parseControlInitializationsCfg(
+      const std::optional<std::map<int, ControlInitializationSettings>>& init_configs) const;
 };

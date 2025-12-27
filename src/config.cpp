@@ -88,7 +88,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       }
     } else {
       // No control_parameterization specified, use defaults
-      ControlParameterization default_param;
+      ControlParameterizationSettings default_param;
       default_param.type = ConfigDefaults::CONTROL_TYPE;
       default_param.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
       default_param.tstart = std::nullopt;
@@ -106,7 +106,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       }
     } else {
       // No control_initialization specified, use defaults
-      ControlInitialization default_init = ControlInitialization{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt}; 
+      ControlInitializationSettings default_init = ControlInitializationSettings{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt}; 
       control_initializations.resize(num_osc, default_init);
     }
 
@@ -372,7 +372,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
       control_initializations.resize(num_osc);
       std::string control_initialization_file = init_map[0].filename.value();
       for (size_t i = 0; i < num_osc; i++) {
-        control_initializations[i] = ControlInitialization{ControlInitializationType::FILE, std::nullopt, std::nullopt, control_initialization_file};
+        control_initializations[i] = ControlInitializationSettings{ControlInitializationType::FILE, std::nullopt, std::nullopt, control_initialization_file};
       }
     } else {
       control_initializations = parseControlInitializationsCfg(settings.indexed_control_init);
@@ -381,7 +381,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
     // Initialize with defaults when no control initialization is provided
     control_initializations.resize(num_osc);
     for (size_t i = 0; i < num_osc; i++) {
-      control_initializations[i] = ControlInitialization{
+      control_initializations[i] = ControlInitializationSettings{
         ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt};
     }
   }
@@ -609,7 +609,7 @@ std::string printVector(const std::vector<T>& vec) {
 }
 
 
-std::string toString(const InitialCondition& initial_condition) {
+std::string toString(const InitialConditionSettings& initial_condition) {
   auto type_str = "type = \"" + enumToString(initial_condition.type, INITCOND_TYPE_MAP) + "\"";
   switch (initial_condition.type) {
     case InitialConditionType::FROMFILE:
@@ -1178,7 +1178,7 @@ std::vector<double> Config::parseControlBounds(const toml::table& toml, size_t n
   return control_bounds;
 }
 
-InitialCondition Config::parseInitialCondition(std::optional<InitialConditionType> opt_type,
+InitialConditionSettings Config::parseInitialCondition(std::optional<InitialConditionType> opt_type,
                                                const std::optional<std::string>& filename,
                                                const std::optional<std::vector<size_t>>& levels,
                                                const std::optional<std::vector<size_t>>& osc_IDs) const {
@@ -1197,7 +1197,7 @@ InitialCondition Config::parseInitialCondition(std::optional<InitialConditionTyp
     }
   }
 
-  InitialCondition result;
+  InitialConditionSettings result;
   result.type = type;
 
   switch (type) {
@@ -1253,7 +1253,7 @@ InitialCondition Config::parseInitialCondition(std::optional<InitialConditionTyp
   return result;
 }
 
-std::vector<ControlParameterization> Config::parseControlParameterizations(const toml::table& table, size_t num_entries) const {
+std::vector<ControlParameterizationSettings> Config::parseControlParameterizations(const toml::table& table, size_t num_entries) const {
 
   const std::string type_key = "type";
   const std::string num_key = "num";
@@ -1263,7 +1263,7 @@ std::vector<ControlParameterization> Config::parseControlParameterizations(const
   const std::set<std::string> allowed_keys = {type_key, num_key, scaling_key, tstart_key, tstop_key};
 
   // Helper function to parse a single parameterization spec from a table
-  auto parseParamSpec = [&](const toml::table& param_table) -> ControlParameterization {
+  auto parseParamSpec = [&](const toml::table& param_table) -> ControlParameterizationSettings {
     validateTableKeys(param_table, allowed_keys, "control_parameterization");
     
     // Parse type of parameterization
@@ -1274,7 +1274,7 @@ std::vector<ControlParameterization> Config::parseControlParameterizations(const
     }
 
     // Parse other parameters based on type
-    ControlParameterization param;
+    ControlParameterizationSettings param;
     param.type = type_enum.value();
     
     switch (param.type) {
@@ -1299,15 +1299,15 @@ std::vector<ControlParameterization> Config::parseControlParameterizations(const
     return param;
   };
 
-  ControlParameterization default_param;
+  ControlParameterizationSettings default_param;
   default_param.type = ConfigDefaults::CONTROL_TYPE;
   default_param.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
-  std::vector<ControlParameterization> result(num_entries, default_param);
+  std::vector<ControlParameterizationSettings> result(num_entries, default_param);
 
   // Check if this is a global parameterization (table with "type" key directly), or per-oscillator specification (table with numeric keys)
   if (table.contains(type_key)) {
     // Global parameterization: applies to ALL oscillators
-    ControlParameterization global_param = parseParamSpec(table);
+    ControlParameterizationSettings global_param = parseParamSpec(table);
     for (size_t i = 0; i < num_entries; i++) {
       result[i] = global_param;
     }
@@ -1339,7 +1339,7 @@ std::vector<ControlParameterization> Config::parseControlParameterizations(const
   return result;
 }
 
-std::vector<ControlInitialization> Config::parseControlInitializations(const toml::table& table, size_t num_entries) const {
+std::vector<ControlInitializationSettings> Config::parseControlInitializations(const toml::table& table, size_t num_entries) const {
 
   const std::string type_key = "type";
   const std::string filename_key = "filename";
@@ -1348,7 +1348,7 @@ std::vector<ControlInitialization> Config::parseControlInitializations(const tom
   const std::set<std::string> allowed_keys = {type_key, filename_key, amplitude_key, phase_key};
 
   // Helper function to parse a single initialization spec from a table
-  auto parseInitSpec = [&](const toml::table& init_table) -> ControlInitialization {
+  auto parseInitSpec = [&](const toml::table& init_table) -> ControlInitializationSettings {
     validateTableKeys(init_table, allowed_keys, "control_initialization");
     
     // Parse type of initialization
@@ -1359,7 +1359,7 @@ std::vector<ControlInitialization> Config::parseControlInitializations(const tom
     }
 
     // Parse other parameters based on type
-    ControlInitialization init;
+    ControlInitializationSettings init;
     init.type = type_enum.value();
     if (init.type == ControlInitializationType::FILE) {
       init.filename = validators::field<std::string>(init_table, filename_key).value();
@@ -1373,13 +1373,13 @@ std::vector<ControlInitialization> Config::parseControlInitializations(const tom
     return init;
   };
 
-  ControlInitialization default_init = ControlInitialization{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt}; 
-  std::vector<ControlInitialization> result(num_entries, default_init);
+  ControlInitializationSettings default_init = ControlInitializationSettings{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt}; 
+  std::vector<ControlInitializationSettings> result(num_entries, default_init);
 
   // Check if this is a global initialization (table with "type" key directly), or per-oscillator specification (table with numeric keys)
   if (table.contains(type_key)) {
     // Global initialization: applies to ALL oscillators
-    ControlInitialization global_init = parseInitSpec(table);
+    ControlInitializationSettings global_init = parseInitSpec(table);
     for (size_t i = 0; i < num_entries; i++) {
       result[i] = global_init;
     }
@@ -1433,19 +1433,19 @@ std::vector<std::vector<T>> Config::parseOscillatorSettingsCfg(
   return result;
 }
 
-std::vector<ControlParameterization> Config::parseControlParameterizationsCfg(const std::optional<std::map<int, ControlParameterizationData>>& parameterizations_map) const {
+std::vector<ControlParameterizationSettings> Config::parseControlParameterizationsCfg(const std::optional<std::map<int, ControlParameterizationData>>& parameterizations_map) const {
   // Set up a default parameterization for one oscillator
-  ControlParameterization default_parameterization;
+  ControlParameterizationSettings default_parameterization;
   default_parameterization.type = ConfigDefaults::CONTROL_TYPE;
   default_parameterization.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
 
   // Populate default if paramterization is not specified
   if (!parameterizations_map.has_value()) {
-    return std::vector<ControlParameterization>(nlevels.size(), default_parameterization);
+    return std::vector<ControlParameterizationSettings>(nlevels.size(), default_parameterization);
   }
 
   // Otherwise, parse specified parameterizations for each oscillator
-  auto parsed_parameterizations = std::vector<ControlParameterization>(nlevels.size(), default_parameterization);
+  auto parsed_parameterizations = std::vector<ControlParameterizationSettings>(nlevels.size(), default_parameterization);
   for (size_t i = 0; i < parsed_parameterizations.size(); i++) {
     if (parameterizations_map.value().find(static_cast<int>(i)) != parameterizations_map.value().end()) {
 
@@ -1454,7 +1454,7 @@ std::vector<ControlParameterization> Config::parseControlParameterizationsCfg(co
       const auto& params = oscil_config.parameters;
 
       // Create and store the parameterization
-      ControlParameterization parameterization;
+      ControlParameterizationSettings parameterization;
       parameterization.type = oscil_config.control_type;
       if (oscil_config.control_type == ControlType::BSPLINE || oscil_config.control_type == ControlType::BSPLINE0) {
         assert(params.size() >= 1); // nspline is required, should be validated in CfgParser
@@ -1475,11 +1475,11 @@ std::vector<ControlParameterization> Config::parseControlParameterizationsCfg(co
 }
 
 
-std::vector<ControlInitialization> Config::parseControlInitializationsCfg(const std::optional<std::map<int, ControlInitialization>>& init_configs) const {
+std::vector<ControlInitializationSettings> Config::parseControlInitializationsCfg(const std::optional<std::map<int, ControlInitializationSettings>>& init_configs) const {
 
-  ControlInitialization default_init = ControlInitialization{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt};
+  ControlInitializationSettings default_init = ControlInitializationSettings{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt};
 
-  std::vector<ControlInitialization> control_initializations(nlevels.size(), default_init);
+  std::vector<ControlInitializationSettings> control_initializations(nlevels.size(), default_init);
 
   if (init_configs.has_value()) {
     for (size_t i = 0; i < nlevels.size(); i++) {

@@ -434,7 +434,7 @@ TEST_F(TomlParserTest, ControlInitialization_Defaults) {
   EXPECT_DOUBLE_EQ(control_init2.amplitude.value(), 0.0);
 }
 
-TEST_F(TomlParserTest, ControlInitialization) {
+TEST_F(TomlParserTest, ControlInitializationSettings) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2, 2, 2, 2]

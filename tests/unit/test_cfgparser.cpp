@@ -374,7 +374,7 @@ TEST_F(CfgParserTest, ControlInitialization_Defaults) {
   EXPECT_DOUBLE_EQ(control_init2.amplitude.value(), 0.0);
 }
 
-TEST_F(CfgParserTest, ControlInitialization) {
+TEST_F(CfgParserTest, ControlInitializationSettings) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2, 2, 2, 2, 2

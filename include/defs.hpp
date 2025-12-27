@@ -244,27 +244,28 @@ const std::map<std::string, OutputType> OUTPUT_TYPE_MAP = {
   {"fullstate", OutputType::FULLSTATE},
 };
 
-// Structs
+
+/* Structs to group certain configuration settings */
 
 /**
- * @brief Initial condition configuration.
+ * @brief Settings for initial conditions
  */
-struct InitialCondition {
+struct InitialConditionSettings {
   InitialConditionType type; ///< Type of initial condition
 
-  // Optional fields - populate based on type
+  // Optional settings - populate based on type
   std::optional<std::string> filename; ///< For FROMFILE: File to read initial condition from
   std::optional<std::vector<size_t>> levels; ///< For PRODUCT_STATE: Quantum level for each oscillator
   std::optional<std::vector<size_t>> osc_IDs; ///< For ENSEMBLE, DIAGONAL, BASIS: Oscillator IDs
 };
 
 /**
- * @brief Optimization target configuration.
+ * @brief Settings for optimization targets
  */
 struct OptimTargetSettings {
   TargetType type; ///< Type of optimization target (NONE, GATE, STATE)
 
-  // Optional fields - populate based on type
+  // Optional settings - populate based on type
   std::optional<GateType> gate_type; ///< For GATE: Type of the gate
   std::optional<std::vector<double>> gate_rot_freq; ///< For GATE: Gate rotation frequencies for each oscillator 
   std::optional<std::vector<size_t>> levels; ///< For STATE: Level occupations for each oscillator
@@ -272,28 +273,26 @@ struct OptimTargetSettings {
 };
 
 /**
- * @brief Structure for defining control parameterizations.
+ * @brief Settings for control parameterizations.
  *
  * Defines a controllable parameterization for an oscillator with corresponding starting and finish times. 
  * Which fields are used depends on the control type.
  */
-struct ControlParameterization {
+struct ControlParameterizationSettings {
   ControlType type; ///< Type of control parameterization
 
   // Common fields for B-spline types (BSPLINE, BSPLINEAMP, BSPLINE0)
   std::optional<size_t> nspline; ///< Number of basis functions in this parameterization
   std::optional<double> tstart; ///< Start time of the control parameterization
   std::optional<double> tstop; ///< Stop time of the control parameterization
-
-  // Additional field for amplitude-scaled B-spline (BSPLINEAMP)
-  std::optional<double> scaling; ///< Amplitude scaling factor
+  std::optional<double> scaling; ///< Amplitude scaling factor, only for BSPLINEAMP
 
 };
 
 /**
- * @brief Control parameterization initialization settings.
+ * @brief Settings for control initialization.
  */
-struct ControlInitialization {
+struct ControlInitializationSettings {
   ControlInitializationType type; ///< Initialization type
   std::optional<double> amplitude; ///< Initial control pulse amplitude
   std::optional<double> phase; ///< Initial control pulse phase
