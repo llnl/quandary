@@ -85,6 +85,17 @@
         ]
     },
     {
+        "simulation_name": "cnot_fromfile",
+        "files_to_compare": [
+            "optim_history.dat",
+            "grad.dat",
+            "control*.dat"
+        ],
+        "number_of_processes": [
+            1,2,4
+        ]
+    },
+    {
         "simulation_name": "xgate",
         "files_to_compare": [
             "optim_history.dat",
