@@ -282,7 +282,7 @@ InitialCondition CfgParser::convertFromString<InitialCondition>(const std::strin
   // Backward compatibility: map "pure" to PRODUCT_STATE for CFG files
   std::string type_str = parts[0];
   if (type_str == "pure") {
-    type_str = "product_state";
+    type_str = "state";
   }
   auto type = convertFromString<InitialConditionType>(type_str);
   init_cond.type = type;

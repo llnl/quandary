@@ -976,7 +976,7 @@ void Config::validate() const {
         initial_condition.type == InitialConditionType::NPLUSONE) {
       logger.exitWithError(
           "\n\n ERROR for initial condition setting: \n When running Schroedingers solver,"
-          " the initial condition needs to be either 'product_state' or 'from file' or 'diagonal' or "
+          " the initial condition needs to be either 'state' or 'file' or 'diagonal' or "
           "'basis'."
           " Note that 'diagonal' and 'basis' in the Schroedinger case are the same (all unit vectors).\n\n");
     }

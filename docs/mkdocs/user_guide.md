@@ -167,16 +167,17 @@ Further note that this fidelity is averaged over the chosen initial conditions, 
 ### Gate optimization
 Quandary can be used to design control pulses that realize logical gate operations. Let $V\in \C^{N\times N}$ be the unitary matrix (gate), optimized control pulses drive any initial state $\rho(0)$ to the unitary transformation $\rho^{target} = V\rho(0)V^{\dagger}$ (Lindblad), or, in the Schroedinger case, drive any $\psi(0)$ to $\psi(T) =  V\psi(0)$.
 Some default target gates that are readily available, or can be specified from file or through the Python interface. (File format: column-wise vectorization, first all real parts then all imaginary parts.)
+Optionally, the user can specify frequencies to rotate the target gate, using the configuration option `gate_rot_freq`.
 
 Since *any* initial quantum state should be transformed by the control pulses, the corresponding initial conditions must span a basis with $n_{init} = N$ for Schroedinger solver, and $n_{init}=N^2$ for Lindblad solver, see Section [Initial conditions](#sec:initcond). 
-
-Target gates will by default be rotated into the computational frame (Section [Model equation](#sec:model)). Alternatively, the user can specify the rotation of the target gate through the configuration option `gate_rot_freq`.
 
 
 If guard levels are used ($n_k > n_k^e$, compare Section [Essential and guard levels](#sec:essential)), the gate should be defined in the essential-level dimensions only. Internally, the gate is projected upwards to the full dimensions by inserting identity blocks for rows/columns that correspond to a non-essential levels of the subsystems. Hence, a realization of the gate $\tilde{V}$ will not alter the occupation of higher (non-essential) energy level compared to their initial occupation at $t=0$.
 
 ### State preparation {#sec:stateprep}
 Quandary can be used to optimize for pulses that drive (one or multiple) initial states to a fixed target state $\rho^{target}$. Depending on the choice of the [Initial conditions](#sec:initcond), this enables pulses for either direct **state-to-state transfer** (by choosing one specific initial condition, $n_{init}=1$), and one specific target state), or **unconditional state preparation** such as qubit reset (by spanning a basis of initial conditions, $n_{init}=N$ or $N^2, and one specific target state). Driving a basis of initial state to a common target will require to couple to a dissipative bath, which should be accounted for in the model setup. For unconditional *pure*-state preparation, it is shown in [@guenther2021quantum] that if one chooses the objective function $J_{measure}$ with corresponding measurement operator $N_m$ (see eq. $\eqref{eq:Jmeasure}$), one can reduce the number of initial conditions to only *one* being an ensemble of all basis states, and hence $n_{init}=1$ independent of $N$. Compare [@guenther2021quantum] for details.
+
+A desired target state can either be read from file (format vectorized target state in the essential dimensions, first all real parts, then all imaginary parts), or it can be set to a pure product state of the form $\psi_{target} = |i_0, i_1, i_2, ...\rangle$, or $\rho_{target} = \psi_{target}\psi_{target}^\dagger$.
 
 ## Initial conditions {#sec:initcond}
 The initial states $\rho_i(0)$ which are accounted for in the objective function eq. $\eqref{eq:minproblem}$ can be specified with the configuration option `initialcondition`. 

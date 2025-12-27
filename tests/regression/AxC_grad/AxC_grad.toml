@@ -7,7 +7,7 @@ crosskerr = { "0-1" = 1.176000 }
 Jkl = {  }
 rotfreq = [4416.66, 6840.815]
 decoherence = { type = "both", decay_time = [80.0, 0.3892042], dephase_time = [26.0, 5.0] }
-initial_condition = {type = "product_state", levels = [2, 0]}
+initial_condition = {type = "state", levels = [2, 0]}
 
 control_enforceBC = true
 optim_target = {type = "state", levels = [0, 0]}

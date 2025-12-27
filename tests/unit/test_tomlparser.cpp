@@ -156,7 +156,7 @@ TEST_F(TomlParserTest, InitialCondition_ProductState) {
         nlevels = [3, 2]
         transfreq = [4.1, 4.8]
         rotfreq = [0.0, 0.0]
-        initial_condition = {type = "product_state", levels = [1, 0]}
+        initial_condition = {type = "state", levels = [1, 0]}
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
@@ -812,7 +812,7 @@ TEST_F(TomlParserTest, OptimWeights) {
 // decoherence = {type = "decay"}
 // decay_time = [25.000000]
 // dephase_time = [45.000000]
-// initial_condition = {type = "product_state", levels = [1]}
+// initial_condition = {type = "state", levels = [1]}
 // control_enforceBC = false
 // optim_target = {type = "gate", gate_type = "hadamard"}
 // gate_rot_freq = [1.500000]
