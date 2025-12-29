@@ -68,13 +68,17 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       dephase_time = validators::vectorField<double>(*decoherence_table, "dephase_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
     }
 
+    // Parse initial condition table
     auto init_cond_table = validators::getRequiredTable(toml, "initial_condition");
     auto type_opt = parseEnum(validators::field<std::string>(init_cond_table, "type").value(), INITCOND_TYPE_MAP);
-    std::optional<std::vector<size_t>> levels = validators::getOptionalVector<size_t>(init_cond_table["levels"]);
-    std::optional<std::vector<size_t>> osc_IDs = validators::getOptionalVector<size_t>(init_cond_table["oscIDs"]);
-    std::optional<std::string> filename = validators::getOptional<std::string>(init_cond_table["filename"]);
-    initial_condition = parseInitialCondition(type_opt, filename, levels, osc_IDs);
-    n_initial_conditions = computeNumInitialConditions(initial_condition, nlevels, nessential, collapse_type);
+    if (!type_opt.has_value()) {
+      logger.exitWithError("initial condition type not found.");
+    }
+    initial_condition.type = type_opt.value();
+    initial_condition.levels = validators::getOptionalVector<size_t>(init_cond_table["levels"]);
+    initial_condition.filename = validators::getOptional<std::string>(init_cond_table["filename"]);
+    initial_condition.osc_IDs = validators::getOptionalVector<size_t>(init_cond_table["oscIDs"]);
+    
 
     // Optimization options
     control_enforceBC = toml["control_enforceBC"].value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
@@ -124,8 +128,6 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     std::optional<std::vector<double>> optim_weights_opt = validators::getOptionalVector<double>(toml["optim_weights"]);
     optim_weights = optim_weights_opt.value_or(std::vector<double>{ConfigDefaults::OPTIM_WEIGHT});
-    copyLast(optim_weights, n_initial_conditions);
-    optim_weights.resize(n_initial_conditions);
 
     // Parse optional optimization tolerances
     if (!toml.contains("optim_tolerance")) {
@@ -288,8 +290,10 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   if (!settings.initialcondition.has_value()) {
     logger.exitWithError("initialcondition cannot be empty");
   }
-  initial_condition = parseInitialCondition(settings.initialcondition.value().type, settings.initialcondition.value().filename, settings.initialcondition.value().levels, settings.initialcondition.value().osc_IDs);
-  n_initial_conditions = computeNumInitialConditions(initial_condition, nlevels, nessential, collapse_type);
+  initial_condition.type = settings.initialcondition.value().type;
+  initial_condition.filename = settings.initialcondition.value().filename;
+  initial_condition.levels = settings.initialcondition.value().levels;
+  initial_condition.osc_IDs = settings.initialcondition.value().osc_IDs;
 
   // Control and optimization parameters
   control_enforceBC = settings.control_enforceBC.value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
@@ -345,8 +349,6 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   optim_objective = settings.optim_objective.value_or(ConfigDefaults::OPTIM_OBJECTIVE);
 
   optim_weights = settings.optim_weights.value_or(std::vector<double>{ConfigDefaults::OPTIM_WEIGHT});
-  copyLast(optim_weights, n_initial_conditions);
-  optim_weights.resize(n_initial_conditions);
 
   optim_tol_grad_abs = settings.optim_tol_grad_abs.value_or(ConfigDefaults::OPTIM_TOL_GRAD_ABS);
   optim_tol_grad_rel = settings.optim_tol_grad_rel.value_or(ConfigDefaults::OPTIM_TOL_GRAD_REL);
@@ -841,10 +843,23 @@ void Config::finalize() {
     usematfree = false;
   }
 
+  // DIAGONAL and BASIS initial conditions in the Schroedinger case are the same. Overwrite it to DIAGONAL
   if (collapse_type == LindbladType::NONE && initial_condition.type == InitialConditionType::BASIS) {
-    // DIAGONAL and BASIS initial conditions in the Schroedinger case are the same. Overwrite it to DIAGONAL
     initial_condition.type = InitialConditionType::DIAGONAL;
   }
+
+  // For BASIS, ENSEMBLE, and DIAGONAL, or default to all oscillators IDs 
+  if (initial_condition.type == InitialConditionType::BASIS || initial_condition.type == InitialConditionType::ENSEMBLE || initial_condition.type == InitialConditionType::DIAGONAL) {
+    if (!initial_condition.osc_IDs.has_value()) {
+      initial_condition.osc_IDs = std::vector<size_t>(nlevels.size());
+      for (size_t i = 0; i < nlevels.size(); i++) {
+        initial_condition.osc_IDs->at(i) = i;
+      }
+    }
+  }
+
+  // Compute number of initial conditions
+  n_initial_conditions = computeNumInitialConditions(initial_condition, nlevels, nessential, collapse_type);
 
   // overwrite decay or dephase times with zeros, if the collapse type is only one of them.
   if (collapse_type == LindbladType::DECAY) {
@@ -854,8 +869,9 @@ void Config::finalize() {
   }
 
   // Scale optimization weights such that they sum up to one
+  copyLast(optim_weights, n_initial_conditions);
+  optim_weights.resize(n_initial_conditions);
   double scaleweights = 0.0;
-  assert(n_initial_conditions == optim_weights.size());
   for (size_t i = 0; i < optim_weights.size(); i++) scaleweights += optim_weights[i];
   for (size_t i = 0; i < optim_weights.size(); i++) optim_weights[i] = optim_weights[i] / scaleweights;
 
@@ -909,6 +925,41 @@ void Config::validate() const {
   for (size_t i = 0; i < control_bounds.size(); i++) {
     if (control_bounds[i] <= 0.0) {
       logger.exitWithError("control_bounds[" + std::to_string(i) + "] must be positive");
+    }
+  }
+
+  // Validate initial condition settings
+  if (initial_condition.type == InitialConditionType::FROMFILE) { 
+    if (!initial_condition.filename.has_value()) {
+      logger.exitWithError("initialcondition of type FROMFILE must have a filename");
+    }
+  }
+  if (initial_condition.type == InitialConditionType::PRODUCT_STATE) {
+    if (!initial_condition.levels.has_value()) {
+      logger.exitWithError("initialcondition of type PRODUCT_STATE must have 'levels'");
+    }
+    if (initial_condition.levels->size() != nlevels.size()) {
+      logger.exitWithError("initialcondition of type PRODUCT_STATE must have exactly " + std::to_string(nlevels.size()) + " parameters, got " + std::to_string(initial_condition.levels->size()));
+    }
+    for (size_t k = 0; k < initial_condition.levels->size(); k++) {
+      if (initial_condition.levels->at(k) >= nlevels[k]) {
+        logger.exitWithError("ERROR in config setting. The requested product state initialization " + std::to_string(initial_condition.levels->at(k)) + " exceeds the number of allowed levels for that oscillator (" + std::to_string(nlevels[k]) + ").\n");
+      }
+    }
+  }
+  if (initial_condition.type == InitialConditionType::BASIS ||
+      initial_condition.type == InitialConditionType::DIAGONAL ||
+      initial_condition.type == InitialConditionType::ENSEMBLE) {
+    if (!initial_condition.osc_IDs.has_value()) {
+      logger.exitWithError("initialcondition of type BASIS, DIAGONAL, or ENSEMBLE must have 'osc_IDs'");
+    }
+    if (initial_condition.osc_IDs->back() >= nlevels.size()) {
+      logger.exitWithError("Last element in initialcondition params exceeds number of oscillators");
+    }
+    for (size_t i = 1; i < initial_condition.osc_IDs->size() - 1; i++) {
+      if (initial_condition.osc_IDs->at(i) + 1 != initial_condition.osc_IDs->at(i + 1)) {
+        logger.exitWithError("List of oscillators for ensemble initialization should be consecutive!\n");
+      }
     }
   }
 }
@@ -1077,78 +1128,6 @@ std::vector<double> Config::parseControlBounds(const toml::table& toml, size_t n
   } 
   
   return control_bounds;
-}
-
-InitialConditionSettings Config::parseInitialCondition(std::optional<InitialConditionType> opt_type, const std::optional<std::string>& filename, const std::optional<std::vector<size_t>>& levels, const std::optional<std::vector<size_t>>& osc_IDs) const {
-  if (!opt_type.has_value()) {
-    logger.exitWithError("initial condition type not found.");
-  }
-  InitialConditionType type = opt_type.value();
-
-  // If no params are given for BASIS, ENSEMBLE, or DIAGONAL, default to all oscillators
-  auto init_cond_IDs = osc_IDs.value_or(std::vector<size_t>{});
-  if (!osc_IDs.has_value() &&
-      (type == InitialConditionType::BASIS || type == InitialConditionType::ENSEMBLE ||
-       type == InitialConditionType::DIAGONAL)) {
-    for (size_t i = 0; i < nlevels.size(); i++) {
-      init_cond_IDs.push_back(i);
-    }
-  }
-
-  InitialConditionSettings result;
-  result.type = type;
-
-  switch (type) {
-    case InitialConditionType::FROMFILE:
-      if (!filename.has_value()) {
-        logger.exitWithError("initialcondition of type FROMFILE must have a filename");
-      }
-      result.filename = filename.value();
-      break;
-    case InitialConditionType::PRODUCT_STATE:
-      if (!levels.has_value()) {
-        logger.exitWithError("initialcondition of type PRODUCT_STATE must have 'levels'");
-      }
-      if (levels.value().size() != nlevels.size()) {
-        logger.exitWithError("initialcondition of type PRODUCT_STATE must have exactly " + std::to_string(nlevels.size()) +
-                             " parameters, got " + std::to_string(levels.value().size()));
-      }
-      for (size_t k = 0; k < levels.value().size(); k++) {
-        if (levels.value()[k] >= nlevels[k]) {
-          logger.exitWithError(
-              "ERROR in config setting. The requested product state initialization " + std::to_string(levels.value()[k]) +
-              " exceeds the number of allowed levels for that oscillator (" + std::to_string(nlevels[k]) + ").\n");
-        }
-      }
-      result.levels = levels.value();
-      break;
-
-    case InitialConditionType::BASIS:
-    case InitialConditionType::DIAGONAL:
-      result.osc_IDs = init_cond_IDs;
-      break;
-
-    case InitialConditionType::ENSEMBLE:
-      if (init_cond_IDs.back() >= nlevels.size()) {
-        logger.exitWithError("Last element in initialcondition params exceeds number of oscillators");
-      }
-
-      for (size_t i = 1; i < init_cond_IDs.size() - 1; i++) {
-        if (init_cond_IDs[i] + 1 != init_cond_IDs[i + 1]) {
-          logger.exitWithError("List of oscillators for ensemble initialization should be consecutive!\n");
-        }
-      }
-      result.osc_IDs = init_cond_IDs;
-      break;
-
-    case InitialConditionType::THREESTATES:
-    case InitialConditionType::NPLUSONE:
-    case InitialConditionType::PERFORMANCE:
-      // No additional fields needed for these types
-      break;
-  }
-
-  return result;
 }
 
 std::vector<ControlParameterizationSettings> Config::parseControlParameterizations(const toml::table& table, size_t num_entries) const {

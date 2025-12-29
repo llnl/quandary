@@ -165,11 +165,6 @@ class Config {
   // Table validation helper
   void validateTableKeys(const toml::table& table, const std::set<std::string>& allowed_keys, const std::string& table_name) const;
 
-  
-  InitialConditionSettings parseInitialCondition(std::optional<InitialConditionType> opt_type,
-                                         const std::optional<std::string>& filename,
-                                         const std::optional<std::vector<size_t>>& levels,
-                                         const std::optional<std::vector<size_t>>& osc_IDs) const;
 
   std::vector<ControlParameterizationSettings> parseControlParameterizations(const toml::table& table, size_t num_entries) const;
 
@@ -244,6 +239,5 @@ class Config {
 
   std::vector<ControlParameterizationSettings> parseControlParameterizationsCfg(const std::optional<std::map<int, ControlParameterizationData>>& parameterizations_map) const;
 
-  std::vector<ControlInitializationSettings> parseControlInitializationsCfg(
-      const std::optional<std::map<int, ControlInitializationSettings>>& init_configs) const;
+  std::vector<ControlInitializationSettings> parseControlInitializationsCfg(const std::optional<std::map<int, ControlInitializationSettings>>& init_configs) const;
 };
