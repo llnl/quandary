@@ -614,6 +614,104 @@ std::string toString(const OptimTargetSettings& optim_target) {
   return "unknown";
 }
 
+// Template helper for toString functions that output either a single value or a table with per-item overrides
+template <typename T, typename PrintFunc, typename CompareFunc>
+std::string toStringWithOptionalTable(
+    const std::vector<T>& items,
+    PrintFunc printItem,
+    CompareFunc areEqual) {
+  
+  if (items.empty()) return "[]";
+  
+  // Check if all items are the same
+  bool all_same = true;
+  const auto& first = items[0];
+  for (size_t i = 1; i < items.size(); ++i) {
+    if (!areEqual(items[i], first)) {
+      all_same = false;
+      break;
+    }
+  }
+  
+  if (all_same) {
+    return printItem(first);
+  } else {
+    // Output as table with per-item overrides
+    std::string out = "{\n";
+    for (size_t i = 0; i < items.size(); ++i) {
+      out += "  \"" + std::to_string(i) + "\" = " + printItem(items[i]);
+      if (i < items.size() - 1) {
+        out += ",";
+      }
+      out += "\n";
+    }
+    out += "}";
+    return out;
+  }
+}
+
+std::string toString(const std::vector<ControlInitializationSettings>& control_initializations) {
+  auto printItem = [](const ControlInitializationSettings& init) {
+    std::string out = "{";
+    out += "type = \"" + enumToString(init.type, CONTROL_INITIALIZATION_TYPE_MAP) + "\"";
+    out += init.filename.has_value() ? ", filename = \"" + init.filename.value() + "\"" : "";
+    out += init.amplitude.has_value() ? ", amplitude = " + std::to_string(init.amplitude.value()) : "";
+    out += init.phase.has_value() ? ", phase = " + std::to_string(init.phase.value()) : "";
+    out += "}";
+    return out;
+  };
+  
+  auto areEqual = [](const ControlInitializationSettings& a, const ControlInitializationSettings& b) {
+    return a.type == b.type && a.amplitude == b.amplitude && a.phase == b.phase;
+  };
+  
+  return toStringWithOptionalTable(control_initializations, printItem, areEqual);
+}
+
+std::string toString(const std::vector<ControlParameterizationSettings>& control_parameterizations) {
+  auto printItem = [](const ControlParameterizationSettings& param) {
+    std::string out = "{";
+    out += "type = \"" + enumToString(param.type, CONTROL_TYPE_MAP) + "\"";
+    out += param.nspline.has_value() ? ", num = " + std::to_string(param.nspline.value()) : "";
+    out += param.tstart.has_value() ? ", tstart = " + std::to_string(param.tstart.value()) : "";
+    out += param.tstop.has_value() ? ", tstop = " + std::to_string(param.tstop.value()) : "";
+    out += param.scaling.has_value() ? ", scaling = " + std::to_string(param.scaling.value()) : "";
+    out += "}";
+    return out;
+  };
+  
+  auto areEqual = [](const ControlParameterizationSettings& a, const ControlParameterizationSettings& b) {
+    return a.type == b.type && a.nspline == b.nspline && 
+           a.tstart == b.tstart && a.tstop == b.tstop && a.scaling == b.scaling;
+  };
+  
+  return toStringWithOptionalTable(control_parameterizations, printItem, areEqual);
+}
+
+std::string toString(const std::vector<std::vector<double>>& carrier_frequencies) {
+  auto printItem = [](const std::vector<double>& freqs) {
+    return printVector(freqs);
+  };
+  
+  auto areEqual = [](const std::vector<double>& a, const std::vector<double>& b) {
+    return a == b;
+  };
+  
+  return toStringWithOptionalTable(carrier_frequencies, printItem, areEqual);
+}
+
+std::string toString(const std::vector<double>& vec) {
+  auto printItem = [](const double& vecelem) {
+    return std::to_string(vecelem);
+  };
+  
+  auto areEqual = [](const double& a, const double& b) {
+    return a == b;
+  };
+  
+  return toStringWithOptionalTable(vec, printItem, areEqual);
+}
+
 } // namespace
 
 void Config::printConfig(std::stringstream& log) const {
@@ -638,7 +736,6 @@ void Config::printConfig(std::stringstream& log) const {
   log << "  dephase_time = " << printVector(dephase_time) << "\n";
   log << "}\n";
   log << "initial_condition = " << toString(initial_condition) << "\n";
-
   if (hamiltonian_file_Hsys.has_value()) {
     log << "hamiltonian_file_Hsys = \"" << hamiltonian_file_Hsys.value() << "\"\n";
   }
@@ -673,7 +770,7 @@ void Config::printConfig(std::stringstream& log) const {
     log << "\"" << enumToString(output_type[j], OUTPUT_TYPE_MAP) << "\"";
     if (j < output_type.size() - 1) log << ", ";
   }
-  log << "]\n\n";
+  log << "]\n";
   log << "optim_monitor_frequency = " << optim_monitor_frequency << "\n";
   log << "runtype = \"" << enumToString(runtype, RUN_TYPE_MAP) << "\"\n";
   log << "usematfree = " << (usematfree ? "true" : "false") << "\n";
@@ -681,150 +778,10 @@ void Config::printConfig(std::stringstream& log) const {
   log << "linearsolver_maxiter = " << linearsolver_maxiter << "\n";
   log << "timestepper = \"" << enumToString(timestepper_type, TIME_STEPPER_TYPE_MAP) << "\"\n";
   log << "rand_seed = " << rand_seed << "\n";
-
-  // Control initialization 
-
-  // Check if all subsystems have the same initialization, in which case a simple table is written instead of per-subsystem overrides
-  bool all_same = true;
-  const auto& first_init = control_initializations[0];
-  for (size_t i = 1; i < control_initializations.size(); ++i) {
-    if (control_initializations[i].type != first_init.type ||
-        control_initializations[i].amplitude != first_init.amplitude ||
-        control_initializations[i].phase != first_init.phase) {
-      all_same = false;
-      break;
-    }
-  }
-  
-  log << "control_initialization = {";
-  if (all_same) {
-    // All subsystems have the same initialization - output as simple table 
-    log << "type = \"" << enumToString(first_init.type, CONTROL_INITIALIZATION_TYPE_MAP) << "\"";
-    if (first_init.filename.has_value()) log << ", filename = \"" << first_init.filename.value() << "\"";
-    if (first_init.amplitude.has_value()) log << ", amplitude = " << first_init.amplitude.value();
-    if (first_init.phase.has_value())  log << ", phase = " << first_init.phase.value();
-    log << " }\n\n";
-  } else {
-    log << "\n";
-    // Subsystems have different initializations - output with per-subsystem overrides
-    for (size_t i = 0; i < control_initializations.size(); ++i) {
-      const auto& init = control_initializations[i];
-      log << "  \"" << i << "\" = { ";
-      log << "type = \"" << enumToString(init.type, CONTROL_INITIALIZATION_TYPE_MAP) << "\"";
-      if (init.filename.has_value()) log << ", filename = \"" << init.filename.value() << "\"";
-      if (init.amplitude.has_value()) log << ", amplitude = " << init.amplitude.value();
-      if (init.phase.has_value()) log << ", phase = " << init.phase.value();
-      log << " }";
-      if (i < control_initializations.size() - 1) {
-        log << ",";
-      }
-      log << "\n";
-    }
-    log << "}\n\n";
-  }
-
-  // Control parameterization
-
-  // Check if all subsystems have the same parameterization, in which case a simple table is written instead of per-subsystem overrides
-  bool all_same_param = true;
-  const auto& first_param = control_parameterizations[0];
-  for (size_t i = 1; i < control_parameterizations.size(); ++i) {
-    if (control_parameterizations[i].type != first_param.type ||
-        control_parameterizations[i].nspline != first_param.nspline ||
-        control_parameterizations[i].tstart != first_param.tstart ||
-        control_parameterizations[i].tstop != first_param.tstop ||
-        control_parameterizations[i].scaling != first_param.scaling) {
-      all_same_param = false;
-      break;
-    }
-  }
-
-  log << "control_parameterization = {";
-  if (all_same_param) {
-    // All subsystems have the same parameterization - output as simple table
-    log << "type = \"" << enumToString(first_param.type, CONTROL_TYPE_MAP) << "\"";
-    if (first_param.nspline.has_value()) log << ", num = " << first_param.nspline.value();
-    if (first_param.scaling.has_value()) log << ", scaling = " << first_param.scaling.value();
-    if (first_param.tstart.has_value()) log << ", tstart = " << first_param.tstart.value();
-    if (first_param.tstop.has_value()) log << ", tstop = " << first_param.tstop.value();
-    log << " }\n\n";
-  } else {
-    log << "\n";
-    // Subsystems have different parameterizations - output with per-subsystem overrides
-    for (size_t i = 0; i < control_parameterizations.size(); ++i) {
-      const auto& param = control_parameterizations[i];
-      log << "  \"" << i << "\" = { ";
-      log << "type = \"" << enumToString(param.type, CONTROL_TYPE_MAP) << "\"";
-      if (param.nspline.has_value()) log << ", num = " << param.nspline.value();
-      if (param.scaling.has_value()) log << ", scaling = " << param.scaling.value();
-      if (param.tstart.has_value()) log << ", tstart = " << param.tstart.value();
-      if (param.tstop.has_value()) log << ", tstop = " << param.tstop.value();
-      log << " }";
-      if (i < control_parameterizations.size() - 1) {
-        log << ",";
-      }
-      log << "\n";
-    }
-    log << "}\n\n";
-  }
-
-  // Carrier frequencies 
-  // First check if all oscillators have the same carrier frequencies
-  bool all_same_cw = true;
-  if (!carrier_frequencies.empty() && !carrier_frequencies[0].empty()) {
-    for (size_t i = 1; i < carrier_frequencies.size(); ++i) {
-      if (carrier_frequencies[i] != carrier_frequencies[0]) {
-        all_same_cw = false;
-        break;
-      }
-    }
-  }
-
-  // Use single array format if all oscillators have the same frequencies
-  if (all_same_cw && !carrier_frequencies.empty() && !carrier_frequencies[0].empty()) {
-    log << "carrier_frequency = " << printVector(carrier_frequencies[0]) << "\n\n";
-  } else {
-    // Use per-oscillator table format
-    log << "carrier_frequency = {\n";
-    for (size_t i = 0; i < carrier_frequencies.size(); ++i) {
-      if (!carrier_frequencies[i].empty()) {
-        log << "  \"" << i << "\" = " << printVector(carrier_frequencies[i]);
-        if (i < carrier_frequencies.size() - 1) {
-          log << ",";
-        }
-        log << "\n";
-      }
-    }
-    log << "}\n\n";
-  }
-
-  // Control bounds
-  // Check if all oscillators have the same bound
-  bool all_same_bounds = true;
-  if (!control_bounds.empty()) {
-    for (size_t i = 1; i < control_bounds.size(); ++i) {
-      if (control_bounds[i] != control_bounds[0]) {
-        all_same_bounds = false;
-        break;
-      }
-    }
-  }
-
-  if (all_same_bounds && !control_bounds.empty()) {
-    // All oscillators have the same bound - output as single value
-    log << "control_bounds = " << control_bounds[0] << "\n\n";
-  } else {
-    // Different bounds per oscillator - output as table
-    log << "control_bounds = {\n";
-    for (size_t i = 0; i < control_bounds.size(); ++i) {
-      log << "  \"" << i << "\" = " << control_bounds[i];
-      if (i < control_bounds.size() - 1) {
-        log << ",";
-      }
-      log << "\n";
-    }
-    log << "}\n\n";
-  }
+  log << "control_initialization = " << toString(control_initializations) << "\n";
+  log << "control_parameterization = " << toString(control_parameterizations) << "\n";
+  log << "carrier_frequency = " << toString(carrier_frequencies) << "\n";
+  log << "control_bounds = " << toString(control_bounds) << "\n";
 }
 
 void Config::finalize() {
