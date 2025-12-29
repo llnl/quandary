@@ -24,69 +24,63 @@ const std::string OSC_ID_KEY = "oscID";
 Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger) {
   try {
     // General options
-    nlevels = validators::vectorField<size_t>(toml, "nlevels").minLength(1).positive().value();
 
+    nlevels = validators::vectorField<size_t>(toml, "nlevels").minLength(1).positive().value();
     size_t num_osc = nlevels.size();
 
     nessential = validators::vectorField<size_t>(toml, "nessential").minLength(1).positive().valueOr(nlevels);
     copyLast(nessential, num_osc);
 
-    ntime = toml["ntime"].value_or(ConfigDefaults::NTIME);
+    ntime = validators::field<size_t>(toml, "ntime").positive().value();
 
-    dt = toml["dt"].value_or(ConfigDefaults::DT);
+    dt = validators::field<double>(toml, "dt").positive().value();
 
     transfreq = validators::vectorField<double>(toml, "transfreq").minLength(1).value();
     copyLast(transfreq, num_osc);
 
-    selfkerr = validators::vectorField<double>(toml, "selfkerr")
-                   .minLength(1)
-                   .valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
+    selfkerr = validators::vectorField<double>(toml, "selfkerr").minLength(1).valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
     copyLast(selfkerr, num_osc);
 
     crosskerr = parseCouplingParameters(toml, "crosskerr", num_osc, ConfigDefaults::CROSSKERR);
+
     Jkl = parseCouplingParameters(toml, "Jkl", num_osc, ConfigDefaults::JKL);
 
-    rotfreq = validators::vectorField<double>(toml, "rotfreq").minLength(1).value();
+    rotfreq = validators::vectorField<double>(toml, "rotfreq").minLength(1).valueOr(std::vector<double>(num_osc, ConfigDefaults::ROTFREQ));
     copyLast(rotfreq, num_osc);
 
-    collapse_type = ConfigDefaults::COLLAPSE_TYPE;
-    decay_time = std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME);
-    dephase_time = std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME);
-    if (toml.contains("decoherence")) {
+    hamiltonian_file_Hsys = validators::getOptional<std::string>(toml["hamiltonian_file_Hsys"]);
+    hamiltonian_file_Hc = validators::getOptional<std::string>(toml["hamiltonian_file_Hc"]);
+
+    if (!toml.contains("decoherence")) {
+      // No decoherence table specified, use defaults
+      collapse_type = ConfigDefaults::COLLAPSE_TYPE;
+      decay_time = std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME);
+      dephase_time = std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME);
+    } else {
+      // Parse decoherence table
       auto* decoherence_table = toml["decoherence"].as_table();
-      if (decoherence_table) {
-        auto type_str = validators::field<std::string>(*decoherence_table, "type").valueOr("none");
-        collapse_type = parseEnum(type_str, LINDBLAD_TYPE_MAP, ConfigDefaults::COLLAPSE_TYPE);
-        decay_time = validators::vectorField<double>(*decoherence_table, "decay_time")
-                         .valueOr(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
-        dephase_time = validators::vectorField<double>(*decoherence_table, "dephase_time")
-                           .valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
+      if (!decoherence_table) {
+        logger.exitWithError("decoherence must be a table");
       }
+      auto type_str = validators::field<std::string>(*decoherence_table, "type").valueOr("none");
+      collapse_type = parseEnum(type_str, LINDBLAD_TYPE_MAP, ConfigDefaults::COLLAPSE_TYPE);
+      decay_time = validators::vectorField<double>(*decoherence_table, "decay_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
+      dephase_time = validators::vectorField<double>(*decoherence_table, "dephase_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
     }
 
     auto init_cond_table = validators::getRequiredTable(toml, "initial_condition");
     auto type_opt = parseEnum(validators::field<std::string>(init_cond_table, "type").value(), INITCOND_TYPE_MAP);
     std::optional<std::vector<size_t>> levels = validators::getOptionalVector<size_t>(init_cond_table["levels"]);
     std::optional<std::vector<size_t>> osc_IDs = validators::getOptionalVector<size_t>(init_cond_table["oscIDs"]);
-    std::optional<std::string> filename = init_cond_table["filename"].value<std::string>();
+    std::optional<std::string> filename = validators::getOptional<std::string>(init_cond_table["filename"]);
     initial_condition = parseInitialCondition(type_opt, filename, levels, osc_IDs);
-    n_initial_conditions = computeNumInitialConditions();
-
-    hamiltonian_file_Hsys = toml["hamiltonian_file_Hsys"].value<std::string>();
-    hamiltonian_file_Hc = toml["hamiltonian_file_Hc"].value<std::string>();
+    n_initial_conditions = computeNumInitialConditions(initial_condition, nlevels, nessential, collapse_type);
 
     // Optimization options
     control_enforceBC = toml["control_enforceBC"].value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
 
-    // Parse control parameterization: table with optional default and per-subsystem overrides
-    if (toml.contains("control_parameterization")) {
-      if (toml["control_parameterization"].is_table()) {
-        auto* control_param_table = toml["control_parameterization"].as_table();
-        control_parameterizations = parseControlParameterizations(*control_param_table, num_osc);
-      } else {
-        logger.exitWithError("control_parameterization must be a table");
-      }
-    } else {
+    // Parse optional control parameterization
+    if (!toml.contains("control_parameterization")) {
       // No control_parameterization specified, use defaults
       ControlParameterizationSettings default_param;
       default_param.type = ConfigDefaults::CONTROL_TYPE;
@@ -94,105 +88,53 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       default_param.tstart = std::nullopt;
       default_param.tstop = std::nullopt;
       control_parameterizations.resize(num_osc, default_param);
+    } else {
+      // Parse control_parameterization table
+      if (!toml["control_parameterization"].is_table()) {
+        logger.exitWithError("control_parameterization must be a table");
+      }
+      auto* control_param_table = toml["control_parameterization"].as_table();
+      control_parameterizations = parseControlParameterizations(*control_param_table, num_osc);
     }
 
-    // Parse control initialization: table with optional default and per-subsystem overrides
-    if (toml.contains("control_initialization")) {
-      if (toml["control_initialization"].is_table()) {
-        auto* control_init_table = toml["control_initialization"].as_table();
-        control_initializations = parseControlInitializations(*control_init_table, num_osc);
-      } else {
-        logger.exitWithError("control_initialization must be a table");
-      }
-    } else {
-      // No control_initialization specified, use defaults
+    // Parse optional control initialization
+    if (!toml.contains("control_initialization")) {
+      // No control_initialization specified, use default for each oscillator
       ControlInitializationSettings default_init = ControlInitializationSettings{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt}; 
       control_initializations.resize(num_osc, default_init);
+    } else {
+      // Parse control_initialization table
+      if (!toml["control_initialization"].is_table()) {
+        logger.exitWithError("control_initialization must be a table");
+      }
+      auto* control_init_table = toml["control_initialization"].as_table();
+      control_initializations = parseControlInitializations(*control_init_table, num_osc);
     }
 
-    // Parse control bounds
+    // Parse optional control bounds
     control_bounds = parseControlBounds(toml, num_osc);
 
-    // Parse carrier frequencies
+    // Parse optional carrier frequencies
     carrier_frequencies = parseCarrierFrequencies(toml, num_osc);
 
     // Parse optimization target
-    if (toml.contains("optim_target")) {
-      auto* target_table = toml["optim_target"].as_table();
-      if (target_table) {
+    optim_target = parseOptimTarget(toml, num_osc);
 
-        // First get the target type, or default to NONE
-        auto type_str = validators::field<std::string>(*target_table, "type").valueOr("none");
-        optim_target.type = parseEnum(type_str, TARGET_TYPE_MAP, ConfigDefaults::OPTIM_TARGET); // DOES THIS CHECK FOR UNKNOW TYPE? 
-
-        // Parse other settings based on type
-        if (optim_target.type == TargetType::GATE) {
-          // For Gate target: Either gate_type or filename needs to be provided
-          auto gate_type_str = validators::field<std::string>(*target_table, "gate_type").valueOr("none");
-          optim_target.gate_type = parseEnum(gate_type_str, GATE_TYPE_MAP);
-          optim_target.filename = validators::getOptional<std::string>((*target_table)["filename"]);
-          // Make sure either gate_type or filename is provided
-          if (!optim_target.gate_type.has_value() && !optim_target.filename.has_value()) {
-            logger.exitWithError("For optim_target of type 'gate', either gate_type or filename must be specified");
-          }
-          // Prioritize gate from file.
-          if (optim_target.filename.has_value()) {
-            optim_target.gate_type = GateType::FILE;
-          }
-
-          // For gate, check for optional gate rotation frequencies
-          auto gate_rot_freq_opt = validators::getOptionalVector<double>((*target_table)["gate_rot_freq"]);
-          optim_target.gate_rot_freq = gate_rot_freq_opt.value_or(std::vector<double>(num_osc, ConfigDefaults::GATE_ROT_FREQ));
-          copyLast(optim_target.gate_rot_freq.value(), num_osc);
-
-        } else if (optim_target.type == TargetType::STATE) {
-          // State target: Either levels for product state or filename needs to be provided
-          optim_target.filename = validators::getOptional<std::string>((*target_table)["filename"]);
-          optim_target.levels = validators::getOptionalVector<size_t>((*target_table)["levels"]);
-          // Validate levels, if provided
-          if (optim_target.levels.has_value()) {
-            if (optim_target.levels->size() != nlevels.size()) {
-              logger.exitWithError("optim_target levels size does not match number of oscillators");
-            }
-            for (size_t i = 0; i < nlevels.size(); i++) {
-              if (optim_target.levels->at(i) >= nlevels[i]) {
-                logger.exitWithError("ERROR in config setting. The requested product state target |" + std::to_string(optim_target.levels->at(i)) +"> exceeds the number of modeled levels for that oscillator (" + std::to_string(nlevels[i]) + ").\n");
-              }
-            }
-          }
-          // Make sure either levels or filename is provided
-          if (!optim_target.levels.has_value() && !optim_target.filename.has_value()) {
-            logger.exitWithError("For optim_target of type 'state', either levels or filename must be specified");
-          }
-          // Prioritize state from file.
-          if (optim_target.filename.has_value()) {
-            optim_target.levels = std::nullopt;
-          }
-        }
-      } else {
-        logger.exitWithError("optim_target must be a table");
-      }
-    } else {
-      // No optim_target specified, use default (no target)
-      OptimTargetSettings default_target;
-      default_target.type = ConfigDefaults::OPTIM_TARGET;
-      default_target.gate_type = std::nullopt;
-      default_target.gate_rot_freq = std::nullopt;
-      default_target.levels = std::nullopt;
-      default_target.filename = std::nullopt;
-      optim_target = default_target;
-    }
-
-    optim_objective =
-        parseEnum(toml["optim_objective"].value<std::string>(), OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
+    optim_objective = parseEnum(toml["optim_objective"].value<std::string>(), OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
 
     std::optional<std::vector<double>> optim_weights_opt = validators::getOptionalVector<double>(toml["optim_weights"]);
     optim_weights = optim_weights_opt.value_or(std::vector<double>{ConfigDefaults::OPTIM_WEIGHT});
     copyLast(optim_weights, n_initial_conditions);
     optim_weights.resize(n_initial_conditions);
 
-    // Optimization tolerances: use nested table `optim_tolerance` only; default all if missing
-    if (toml.contains("optim_tolerance")) {
+    // Parse optional optimization tolerances
+    if (!toml.contains("optim_tolerance")) {
+      optim_tol_grad_abs = ConfigDefaults::OPTIM_TOL_GRAD_ABS;
+      optim_tol_grad_rel = ConfigDefaults::OPTIM_TOL_GRAD_REL;
+      optim_tol_finalcost = ConfigDefaults::OPTIM_TOL_FINALCOST;
+      optim_tol_infidelity = ConfigDefaults::OPTIM_TOL_INFIDELITY;
+    } else {
+      // Parse optim_tolerance table
       auto* tol_table = toml["optim_tolerance"].as_table();
       if (!tol_table) {
         logger.exitWithError("optim_tolerance must be a table");
@@ -201,67 +143,49 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       optim_tol_grad_rel = validators::field<double>(*tol_table, "grad_rel").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_REL);
       optim_tol_finalcost = validators::field<double>(*tol_table, "final_cost").positive().valueOr(ConfigDefaults::OPTIM_TOL_FINALCOST);
       optim_tol_infidelity = validators::field<double>(*tol_table, "infidelity").positive().valueOr(ConfigDefaults::OPTIM_TOL_INFIDELITY);
-    } else {
-      optim_tol_grad_abs = ConfigDefaults::OPTIM_TOL_GRAD_ABS;
-      optim_tol_grad_rel = ConfigDefaults::OPTIM_TOL_GRAD_REL;
-      optim_tol_finalcost = ConfigDefaults::OPTIM_TOL_FINALCOST;
-      optim_tol_infidelity = ConfigDefaults::OPTIM_TOL_INFIDELITY;
     }
-    optim_maxiter = validators::field<size_t>(toml, "optim_maxiter").positive().valueOr(ConfigDefaults::OPTIM_MAXITER);
+
+    optim_maxiter = validators::field<size_t>(toml, "optim_maxiter").greaterThanEqual(0).valueOr(ConfigDefaults::OPTIM_MAXITER);
 
     // Parse optim_tikhonov inline table
-    if (toml.contains("optim_tikhonov")) {
+    if (!toml.contains("optim_tikhonov")) {
+      optim_tikhonov_coeff = ConfigDefaults::OPTIM_TIKHONOV_COEFF;
+      optim_tikhonov_use_x0 = ConfigDefaults::OPTIM_TIKHONOV_USE_X0;
+    } else {
       auto regul_table = toml["optim_tikhonov"].as_table();
       if (!regul_table) {
         logger.exitWithError("optim_tikhonov must be a table");
       }
-      optim_tikhonov_coeff= validators::field<double>(*regul_table, "coeff")
-          .greaterThanEqual(0.0)
-          .valueOr(ConfigDefaults::OPTIM_TIKHONOV_COEFF);
-      optim_tikhonov_use_x0 = validators::field<bool>(*regul_table, "use_x0")
-          .valueOr(ConfigDefaults::OPTIM_TIKHONOV_USE_X0);
-    } else {
-      optim_tikhonov_coeff = ConfigDefaults::OPTIM_TIKHONOV_COEFF;
-      optim_tikhonov_use_x0 = ConfigDefaults::OPTIM_TIKHONOV_USE_X0;
+      optim_tikhonov_coeff= validators::field<double>(*regul_table, "coeff").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_TIKHONOV_COEFF);
+      optim_tikhonov_use_x0 = validators::field<bool>(*regul_table, "use_x0").valueOr(ConfigDefaults::OPTIM_TIKHONOV_USE_X0);
     }
 
-    // Parse optim_penalty inline table
-    if (toml.contains("optim_penalty")) {
-      auto penalty_table = toml["optim_penalty"].as_table();
-      if (!penalty_table) {
-        logger.exitWithError("optim_penalty must be a table");
-      }
-      optim_penalty_leakage = validators::field<double>(*penalty_table, "leakage")
-          .greaterThanEqual(0.0)
-          .valueOr(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
-      optim_penalty_weightedcost = validators::field<double>(*penalty_table, "weightedcost")
-          .greaterThanEqual(0.0)
-          .valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
-      optim_penalty_weightedcost_width = validators::field<double>(*penalty_table, "weightedcost_width")
-          .greaterThanEqual(0.0)
-          .valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH);
-      optim_penalty_dpdm = validators::field<double>(*penalty_table, "dpdm")
-                               .greaterThanEqual(0.0)
-                               .valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
-      optim_penalty_energy = validators::field<double>(*penalty_table, "energy")
-                                 .greaterThanEqual(0.0)
-                                 .valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
-      optim_penalty_variation = validators::field<double>(*penalty_table, "variation")
-                                    .greaterThanEqual(0.0)
-                                    .valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
-    } else {
-      // Set defaults of optim_penalty table is not given 
+    // Parse optim_penalty table
+    if (!toml.contains("optim_penalty")) {
+      // No optim_penalty table is specified, use defaults
       optim_penalty_leakage = ConfigDefaults::OPTIM_PENALTY_LEAKAGE;
       optim_penalty_weightedcost = ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST;
       optim_penalty_weightedcost_width = ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH;
       optim_penalty_dpdm = ConfigDefaults::OPTIM_PENALTY_DPDM;
       optim_penalty_energy = ConfigDefaults::OPTIM_PENALTY_ENERGY;
       optim_penalty_variation = ConfigDefaults::OPTIM_PENALTY_VARIATION;
+    } else {
+      // Parse optim_penalty table
+      auto penalty_table = toml["optim_penalty"].as_table();
+      if (!penalty_table) {
+        logger.exitWithError("optim_penalty must be a table");
+      }
+      optim_penalty_leakage = validators::field<double>(*penalty_table, "leakage").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
+      optim_penalty_weightedcost = validators::field<double>(*penalty_table, "weightedcost").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
+      optim_penalty_weightedcost_width = validators::field<double>(*penalty_table, "weightedcost_width").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH);
+      optim_penalty_dpdm = validators::field<double>(*penalty_table, "dpdm").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
+      optim_penalty_energy = validators::field<double>(*penalty_table, "energy").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
+      optim_penalty_variation = validators::field<double>(*penalty_table, "variation").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
     }
 
     datadir = toml["datadir"].value_or(ConfigDefaults::DATADIR);
 
-    // Parse output_type as an array of strings
+    // Parse output_type as an array of strings (defaults to empty array)
     output_type.clear();
     if (auto output_type_array = toml["output_type"].as_array()) {
       for (auto&& elem : *output_type_array) {
@@ -277,20 +201,19 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       }
     }
 
-    output_frequency = toml["output_frequency"].value_or(ConfigDefaults::OUTPUT_FREQUENCY);
-    optim_monitor_frequency = toml["optim_monitor_frequency"].value_or(ConfigDefaults::OPTIM_MONITOR_FREQUENCY);
+    output_frequency = validators::field<size_t>(toml, "output_frequency").greaterThanEqual(0).valueOr(ConfigDefaults::OUTPUT_FREQUENCY);
+
+    optim_monitor_frequency = validators::field<size_t>(toml, "optim_monitor_frequency").greaterThanEqual(0).valueOr(ConfigDefaults::OPTIM_MONITOR_FREQUENCY);
 
     runtype = parseEnum(toml["runtype"].value<std::string>(), RUN_TYPE_MAP, ConfigDefaults::RUNTYPE);
 
     usematfree = toml["usematfree"].value_or(ConfigDefaults::USEMATFREE);
 
-    linearsolver_type = parseEnum(toml["linearsolver_type"].value<std::string>(), LINEAR_SOLVER_TYPE_MAP,
-                                  ConfigDefaults::LINEARSOLVER_TYPE);
+    linearsolver_type = parseEnum(toml["linearsolver_type"].value<std::string>(), LINEAR_SOLVER_TYPE_MAP, ConfigDefaults::LINEARSOLVER_TYPE);
 
-    linearsolver_maxiter = toml["linearsolver_maxiter"].value_or(ConfigDefaults::LINEARSOLVER_MAXITER);
+    linearsolver_maxiter = validators::field<size_t>(toml, "linearsolver_maxiter").positive().valueOr(ConfigDefaults::LINEARSOLVER_MAXITER);
 
-    timestepper_type =
-        parseEnum(toml["timestepper"].value<std::string>(), TIME_STEPPER_TYPE_MAP, ConfigDefaults::TIMESTEPPER_TYPE);
+    timestepper_type = parseEnum(toml["timestepper"].value<std::string>(), TIME_STEPPER_TYPE_MAP, ConfigDefaults::TIMESTEPPER_TYPE);
 
     int rand_seed_ = toml["rand_seed"].value_or(ConfigDefaults::RAND_SEED);
     setRandSeed(rand_seed_);
@@ -305,40 +228,54 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 }
 
 Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logger(logger) {
+
   if (!settings.nlevels.has_value()) {
     logger.exitWithError("nlevels cannot be empty");
   }
   nlevels = settings.nlevels.value();
   size_t num_osc = nlevels.size();
-  size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
 
   nessential = settings.nessential.value_or(nlevels);
   copyLast(nessential, num_osc);
 
-  ntime = settings.ntime.value_or(ConfigDefaults::NTIME);
+  if (!settings.ntime.has_value()) {
+    logger.exitWithError("ntime cannot be empty");
+  }
+  ntime = settings.ntime.value();
+  if (ntime <= 0) {
+    logger.exitWithError("ntime must be positive, got " + std::to_string(ntime));
+  }
 
-  dt = settings.dt.value_or(ConfigDefaults::DT);
+  if (!settings.dt.has_value()) {
+    logger.exitWithError("dt cannot be empty");
+  }
+  dt = settings.dt.value();
+  if (dt <= 0) {
+    logger.exitWithError("dt must be positive, got " + std::to_string(dt));
+  }
 
   if (!settings.transfreq.has_value()) {
     logger.exitWithError("transfreq cannot be empty");
   }
+
   transfreq = settings.transfreq.value();
   copyLast(transfreq, num_osc);
 
   selfkerr = settings.selfkerr.value_or(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
   copyLast(selfkerr, num_osc);
 
+  size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
   crosskerr = settings.crosskerr.value_or(std::vector<double>(num_pairs_osc, ConfigDefaults::CROSSKERR));
   copyLast(crosskerr, num_pairs_osc);
 
   Jkl = settings.Jkl.value_or(std::vector<double>(num_pairs_osc, ConfigDefaults::JKL));
   copyLast(Jkl, num_pairs_osc);
 
-  if (!settings.rotfreq.has_value()) {
-    logger.exitWithError("rotfreq cannot be empty");
-  }
-  rotfreq = settings.rotfreq.value();
+  rotfreq = settings.rotfreq.value_or(std::vector<double>(num_osc, ConfigDefaults::ROTFREQ));
   copyLast(rotfreq, num_osc);
+
+  hamiltonian_file_Hsys = settings.hamiltonian_file_Hsys;
+  hamiltonian_file_Hc = settings.hamiltonian_file_Hc;
 
   collapse_type = settings.collapse_type.value_or(ConfigDefaults::COLLAPSE_TYPE);
 
@@ -351,13 +288,8 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   if (!settings.initialcondition.has_value()) {
     logger.exitWithError("initialcondition cannot be empty");
   }
-  initial_condition =
-      parseInitialCondition(settings.initialcondition.value().type, settings.initialcondition.value().filename,
-                            settings.initialcondition.value().levels, settings.initialcondition.value().osc_IDs);
-  n_initial_conditions = computeNumInitialConditions();
-
-  hamiltonian_file_Hsys = settings.hamiltonian_file_Hsys;
-  hamiltonian_file_Hc = settings.hamiltonian_file_Hc;
+  initial_condition = parseInitialCondition(settings.initialcondition.value().type, settings.initialcondition.value().filename, settings.initialcondition.value().levels, settings.initialcondition.value().osc_IDs);
+  n_initial_conditions = computeNumInitialConditions(initial_condition, nlevels, nessential, collapse_type);
 
   // Control and optimization parameters
   control_enforceBC = settings.control_enforceBC.value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
@@ -949,23 +881,14 @@ void Config::finalize() {
 }
 
 void Config::validate() const {
-  if (ntime <= 0) {
-    logger.exitWithError("ntime must be positive, got " + std::to_string(ntime));
-  }
-
-  if (dt <= 0) {
-    logger.exitWithError("dt must be positive, got " + std::to_string(dt));
-  }
 
   // Validate essential levels don't exceed total levels
   if (nessential.size() != nlevels.size()) {
     logger.exitWithError("nessential size must match nlevels size");
   }
-
   for (size_t i = 0; i < nlevels.size(); i++) {
     if (nessential[i] > nlevels[i]) {
-      logger.exitWithError("nessential[" + std::to_string(i) + "] = " + std::to_string(nessential[i]) +
-                           " cannot exceed nlevels[" + std::to_string(i) + "] = " + std::to_string(nlevels[i]));
+      logger.exitWithError("nessential[" + std::to_string(i) + "] = " + std::to_string(nessential[i]) + " cannot exceed nlevels[" + std::to_string(i) + "] = " + std::to_string(nlevels[i]));
     }
   }
 
@@ -981,11 +904,18 @@ void Config::validate() const {
           " Note that 'diagonal' and 'basis' in the Schroedinger case are the same (all unit vectors).\n\n");
     }
   }
+
+  // Validate control bounds are positive
+  for (size_t i = 0; i < control_bounds.size(); i++) {
+    if (control_bounds[i] <= 0.0) {
+      logger.exitWithError("control_bounds[" + std::to_string(i) + "] must be positive");
+    }
+  }
 }
 
-size_t Config::computeNumInitialConditions() const {
+size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, LindbladType lindblad_type) const {
   size_t n_initial_conditions = 0;
-  switch (initial_condition.type) {
+  switch (init_cond_settings.type) {
     case InitialConditionType::FROMFILE:
     case InitialConditionType::PRODUCT_STATE:
     case InitialConditionType::PERFORMANCE:
@@ -1005,26 +935,26 @@ size_t Config::computeNumInitialConditions() const {
       break;
     case InitialConditionType::DIAGONAL:
       /* Compute ninit = dim(subsystem defined by list of oscil IDs) */
-      if (!initial_condition.osc_IDs.has_value()) {
+      if (!init_cond_settings.osc_IDs.has_value()) {
         logger.exitWithError("expected diagonal initial condition to have list of oscIDs");
       }
       n_initial_conditions = 1;
-      for (size_t oscilID : initial_condition.osc_IDs.value()) {
+      for (size_t oscilID : init_cond_settings.osc_IDs.value()) {
         if (oscilID < nessential.size()) n_initial_conditions *= nessential[oscilID];
       }
       break;
     case InitialConditionType::BASIS:
       /* Compute ninit = dim(subsystem defined by list of oscil IDs) */
-      if (!initial_condition.osc_IDs.has_value()) {
+      if (!init_cond_settings.osc_IDs.has_value()) {
         logger.exitWithError("expected diagonal initial condition to have list of oscIDs");
       }
       n_initial_conditions = 1;
-      for (size_t oscilID : initial_condition.osc_IDs.value()) {
+      for (size_t oscilID : init_cond_settings.osc_IDs.value()) {
         if (oscilID < nessential.size()) n_initial_conditions *= nessential[oscilID];
       }
       // if Schroedinger solver: ninit = N, do nothing.
       // else Lindblad solver: ninit = N^2
-      if (collapse_type != LindbladType::NONE) {
+      if (lindblad_type != LindbladType::NONE) {
         n_initial_conditions = (size_t)pow(n_initial_conditions, 2.0);
       }
       break;
@@ -1049,38 +979,9 @@ void Config::validateTableKeys(const toml::table& table, const std::set<std::str
   }
 }
 
-template <typename T>
-std::vector<std::vector<T>> Config::parseOscillatorSettings(const toml::array& array_of_tables, size_t num_entries,
-                                                            std::vector<T> default_values,
-                                                            const std::string& field_name,
-                                                            const std::set<std::string>& allowed_keys,
-                                                            const std::string& table_name) const {
-  std::vector<std::vector<T>> result(num_entries, default_values);
-
-  for (auto& elem : array_of_tables) {
-    auto table = *elem.as_table();
-    validateTableKeys(table, allowed_keys, table_name);
-
-    std::vector<T> values = validators::vectorField<T>(table, field_name).value();
-
-    if (auto osc_id_node = table[OSC_ID_KEY]) {
-      // Apply to specific oscillator
-      size_t osc_id = validators::field<size_t>(table, OSC_ID_KEY).lessThan(num_entries).value();
-      result[osc_id] = values;
-    } else {
-      // Apply to ALL oscillators
-      for (size_t i = 0; i < num_entries; i++) {
-        result[i] = values;
-      }
-    }
-  }
-
-  return result;
-}
-
 std::vector<std::vector<double>> Config::parseCarrierFrequencies(const toml::table& toml, size_t num_osc) const {
   std::vector<std::vector<double>> carrier_frequencies(num_osc);
-  
+
   if (toml.contains("carrier_frequency")) {
     auto* carrier_freq_table = toml["carrier_frequency"].as_table();
 
@@ -1178,10 +1079,7 @@ std::vector<double> Config::parseControlBounds(const toml::table& toml, size_t n
   return control_bounds;
 }
 
-InitialConditionSettings Config::parseInitialCondition(std::optional<InitialConditionType> opt_type,
-                                               const std::optional<std::string>& filename,
-                                               const std::optional<std::vector<size_t>>& levels,
-                                               const std::optional<std::vector<size_t>>& osc_IDs) const {
+InitialConditionSettings Config::parseInitialCondition(std::optional<InitialConditionType> opt_type, const std::optional<std::string>& filename, const std::optional<std::vector<size_t>>& levels, const std::optional<std::vector<size_t>>& osc_IDs) const {
   if (!opt_type.has_value()) {
     logger.exitWithError("initial condition type not found.");
   }
@@ -1409,6 +1307,84 @@ std::vector<ControlInitializationSettings> Config::parseControlInitializations(c
   }
 
   return result;
+}
+
+
+OptimTargetSettings Config::parseOptimTarget(const toml::table& toml, size_t num_osc) const {
+
+  const std::string type_key = "type";
+  const std::string gate_type_key = "gate_type";
+  const std::string filename_key = "filename";
+  const std::string gate_rot_freq_key = "gate_rot_freq";
+  const std::string levels_key = "levels";
+  const std::set<std::string> allowed_keys = {type_key, gate_type_key, filename_key, gate_rot_freq_key, levels_key};
+
+  // Initialize the result with defaults (no target)
+  OptimTargetSettings optim_target{ConfigDefaults::OPTIM_TARGET, std::nullopt, std::nullopt, std::nullopt, std::nullopt};
+
+  // If optim_target is specified, parse the provided table
+  if (toml.contains("optim_target")) {
+    if (!toml["optim_target"].as_table()) {
+      logger.exitWithError("optim_target must be a table");
+    }
+    auto* target_table = toml["optim_target"].as_table();
+    validateTableKeys(*target_table, allowed_keys, "optim_target");
+
+    // Get the target type, or default to NONE
+    auto type_str = validators::field<std::string>(*target_table, "type").valueOr("none");
+    auto type_opt = parseEnum(type_str, TARGET_TYPE_MAP);  
+    if (!type_opt.has_value()) {
+      logger.exitWithError("Unknown optim_target type: " + type_str);
+    }
+    optim_target.type = type_opt.value();
+
+    // Parse other settings based on type
+    if (optim_target.type == TargetType::GATE) {
+      // For Gate target: Either gate_type or filename needs to be provided
+      auto gate_type_str = validators::field<std::string>(*target_table, "gate_type").valueOr("none");
+      optim_target.gate_type = parseEnum(gate_type_str, GATE_TYPE_MAP);
+      optim_target.filename = validators::getOptional<std::string>((*target_table)["filename"]);
+      // Make sure either gate_type or filename is provided
+      if (!optim_target.gate_type.has_value() && !optim_target.filename.has_value()) {
+        logger.exitWithError("For optim_target of type 'gate', either gate_type or filename must be specified");
+      }
+      // Prioritize gate from file.
+      if (optim_target.filename.has_value()) {
+        optim_target.gate_type = GateType::FILE;
+      }
+
+      // For gate, check for optional gate rotation frequencies
+      auto gate_rot_freq_opt = validators::getOptionalVector<double>((*target_table)["gate_rot_freq"]);
+      optim_target.gate_rot_freq = gate_rot_freq_opt.value_or(std::vector<double>(num_osc, ConfigDefaults::GATE_ROT_FREQ));
+      copyLast(optim_target.gate_rot_freq.value(), num_osc);
+
+    } else if (optim_target.type == TargetType::STATE) {
+      // State target: Either levels for product state or filename needs to be provided
+      optim_target.filename = validators::getOptional<std::string>((*target_table)["filename"]);
+      optim_target.levels = validators::getOptionalVector<size_t>((*target_table)["levels"]);
+      // Validate levels, if provided
+      if (optim_target.levels.has_value()) {
+        if (optim_target.levels->size() != nlevels.size()) {
+          logger.exitWithError("optim_target levels size does not match number of oscillators");
+        }
+        for (size_t i = 0; i < nlevels.size(); i++) {
+          if (optim_target.levels->at(i) >= nlevels[i]) {
+            logger.exitWithError("ERROR in config setting. The requested product state target |" + std::to_string(optim_target.levels->at(i)) +"> exceeds the number of modeled levels for that oscillator (" + std::to_string(nlevels[i]) + ").\n");
+          }
+        }
+      }
+      // Make sure either levels or filename is provided
+      if (!optim_target.levels.has_value() && !optim_target.filename.has_value()) {
+        logger.exitWithError("For optim_target of type 'state', either levels or filename must be specified");
+      }
+      // Prioritize state from file.
+      if (optim_target.filename.has_value()) {
+        optim_target.levels = std::nullopt;
+      }
+    }
+  }
+
+  return optim_target;
 }
 
 

@@ -31,6 +31,8 @@ TEST_F(CfgParserTest, ParseVectorSettings) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2, 3
+        ntime = 1000
+        dt = 0.1
         transfreq = 4.1, 4.8, 5.2
         rotfreq = 0.0, 0.0
         initialcondition = basis
@@ -53,6 +55,8 @@ TEST_F(CfgParserTest, ParseOutputSettings) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2, 2
+        ntime = 1000
+        dt = 0.1
         transfreq = 4.1, 4.8
         rotfreq = 0.0, 0.0
         initialcondition = basis
@@ -74,6 +78,8 @@ TEST_F(CfgParserTest, ParseStructSettings) {
         nlevels = 2
         transfreq = 4.1
         rotfreq = 0.0
+        ntime = 1000
+        dt = 0.1
         optim_target = gate, cnot
         initialcondition = diagonal, 0
       )",
@@ -92,16 +98,15 @@ TEST_F(CfgParserTest, ApplyDefaults) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2
+        ntime = 1000
+        dt = 0.1
         transfreq = 4.1
-        rotfreq = 0.0
         initialcondition = basis
       )",
       logger);
 
-  // Check defaults were applied
-  EXPECT_EQ(config.getNTime(), 1000); // Default ntime
-  EXPECT_DOUBLE_EQ(config.getDt(), 0.1); // Default dt
   EXPECT_EQ(config.getCollapseType(), LindbladType::NONE); // Default
+  EXPECT_EQ(config.getRotFreq()[0], 0.0); // Default
 }
 
 TEST_F(CfgParserTest, InitialCondition_FromFile) {
@@ -109,6 +114,8 @@ TEST_F(CfgParserTest, InitialCondition_FromFile) {
       R"(
         nlevels = 2
         transfreq = 4.1
+        ntime = 1000
+        dt = 0.1
         rotfreq = 0.0
         initialcondition = file, test.dat
       )",
@@ -124,6 +131,8 @@ TEST_F(CfgParserTest, InitialCondition_Pure) {
       R"(
         nlevels = 3, 2
         transfreq = 4.1, 4.8
+        ntime = 1000
+        dt = 0.1
         rotfreq = 0.0, 0.0
         initialcondition = pure, 1, 0
       )",
@@ -140,6 +149,8 @@ TEST_F(CfgParserTest, InitialCondition_Performance) {
       R"(
         nlevels = 2
         transfreq = 4.1
+        ntime = 1000
+        dt = 0.1
         rotfreq = 0.0
         initialcondition = performance
       )",
@@ -154,6 +165,8 @@ TEST_F(CfgParserTest, InitialCondition_Ensemble) {
       R"(
         nlevels = 3, 2
         transfreq = 4.1, 4.8
+        ntime = 1000
+        dt = 0.1
         rotfreq = 0.0, 0.0
         collapse_type = decay
         initialcondition = ensemble, 0, 1
@@ -170,6 +183,8 @@ TEST_F(CfgParserTest, InitialCondition_ThreeStates) {
       R"(
         nlevels = 3
         transfreq = 4.1
+        ntime = 1000
+        dt = 0.1
         rotfreq = 0.0
         collapse_type = decay
         initialcondition = 3states
@@ -186,6 +201,8 @@ TEST_F(CfgParserTest, InitialCondition_NPlusOne_SingleOscillator) {
         nlevels = 3
         transfreq = 4.1
         rotfreq = 0.0
+        ntime = 1000
+        dt = 0.1
         collapse_type = decay
         initialcondition = nplus1
       )",
@@ -201,6 +218,8 @@ TEST_F(CfgParserTest, InitialCondition_NPlusOne_MultipleOscillators) {
       R"(
         nlevels = 2, 3
         transfreq = 4.1, 4.8
+        ntime = 1000
+        dt = 0.1
         rotfreq = 0.0, 0.0
         collapse_type = decay
         initialcondition = nplus1
@@ -216,6 +235,8 @@ TEST_F(CfgParserTest, InitialCondition_Diagonal_Schrodinger) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 3, 2
+        ntime = 1000
+        dt = 0.1
         nessential = 3, 2
         transfreq = 4.1, 4.8
         rotfreq = 0.0, 0.0
@@ -234,6 +255,8 @@ TEST_F(CfgParserTest, InitialCondition_Basis_Schrodinger) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 3, 2
+        ntime = 1000
+        dt = 0.1
         nessential = 3, 2
         transfreq = 4.1, 4.8
         rotfreq = 0.0, 0.0
@@ -252,6 +275,8 @@ TEST_F(CfgParserTest, InitialCondition_Basis_Lindblad) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 3, 2
+        ntime = 1000
+        dt = 0.1
         nessential = 3, 2
         transfreq = 4.1, 4.8
         rotfreq = 0.0, 0.0
@@ -270,6 +295,8 @@ TEST_F(CfgParserTest, ControlParameterizations_Spline0) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2
+        ntime = 1000
+        dt = 0.1
         transfreq = 4.1
         rotfreq = 0.0
         initialcondition = basis
@@ -288,6 +315,8 @@ TEST_F(CfgParserTest, ControlParameterizations_Spline) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2, 2
+        ntime = 1000
+        dt = 0.1
         transfreq = 4.1, 4.1
         rotfreq = 0.0, 0.0
         initialcondition = basis
@@ -315,6 +344,8 @@ TEST_F(CfgParserTest, ControlParameterizations_Defaults) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2, 2, 2
+        ntime = 1000
+        dt = 0.1
         transfreq = 4.1, 4.8
         rotfreq = 0.0, 0.0
         initialcondition = basis
@@ -351,6 +382,8 @@ TEST_F(CfgParserTest, ControlInitialization_Defaults) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2, 2, 2
+        ntime = 1000
+        dt = 0.1
         transfreq = 4.1, 4.1, 4.1
         rotfreq = 0.0, 0.0, 0.0
         initialcondition = basis
@@ -379,6 +412,8 @@ TEST_F(CfgParserTest, ControlInitializationSettings) {
       R"(
         nlevels = 2, 2, 2, 2, 2
         transfreq = 4.1, 4.1, 4.1, 4.1, 4.1
+        ntime = 1000
+        dt = 0.1
         rotfreq = 0.0, 0.0, 0.0, 0.0, 0.0
         initialcondition = basis
         control_segments0 = spline_amplitude, 10, 1.0
@@ -427,6 +462,8 @@ TEST_F(CfgParserTest, ControlInitialization_File) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2
+        ntime = 1000
+        dt = 0.1
         transfreq = 4.1
         rotfreq = 0.0
         initialcondition = basis
@@ -443,6 +480,8 @@ TEST_F(CfgParserTest, ControlBounds) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2
+        ntime = 1000
+        dt = 0.1
         transfreq = 4.1
         rotfreq = 0.0
         initialcondition = basis
@@ -466,6 +505,8 @@ TEST_F(CfgParserTest, CarrierFrequencies) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2
+        ntime = 1000
+        dt = 0.1
         transfreq = 4.1
         rotfreq = 0.0
         initialcondition = basis
@@ -483,6 +524,8 @@ TEST_F(CfgParserTest, OptimTarget_GateType) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2
+        ntime = 1000
+        dt = 0.1
         transfreq = 4.1
         rotfreq = 0.0
         initialcondition = basis
@@ -499,6 +542,8 @@ TEST_F(CfgParserTest, OptimTarget_GateFromFile) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2
+        ntime = 1000
+        dt = 0.1
         transfreq = 4.1
         rotfreq = 0.0
         initialcondition = basis
@@ -516,6 +561,8 @@ TEST_F(CfgParserTest, OptimTarget_PureState) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 3, 3, 3
+        ntime = 1000
+        dt = 0.1
         transfreq = 4.1
         rotfreq = 0.0
         initialcondition = basis
@@ -538,6 +585,8 @@ TEST_F(CfgParserTest, OptimTarget_FromFile) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2
+        ntime = 1000
+        dt = 0.1
         transfreq = 4.1
         rotfreq = 0.0
         initialcondition = basis
@@ -555,6 +604,8 @@ TEST_F(CfgParserTest, OptimTarget_DefaultNone) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2
+        ntime = 1000
+        dt = 0.1
         transfreq = 4.1
         rotfreq = 0.0
         initialcondition = basis
@@ -569,6 +620,8 @@ TEST_F(CfgParserTest, OptimWeights) {
   Config config = Config::fromCfgString(
       R"(
         nlevels = 2, 2
+        ntime = 1000
+        dt = 0.1
         transfreq = 4.1, 4.1
         rotfreq = 0.0, 0.0
         initialcondition = basis

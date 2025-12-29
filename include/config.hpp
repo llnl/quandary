@@ -158,20 +158,14 @@ class Config {
   void finalize();
   void validate() const;
 
-  size_t computeNumInitialConditions() const;
+  size_t computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, LindbladType lindblad_type) const;
+  
   void setRandSeed(int rand_seed_);
 
   // Table validation helper
-  void validateTableKeys(const toml::table& table, const std::set<std::string>& allowed_keys,
-                         const std::string& table_name) const;
+  void validateTableKeys(const toml::table& table, const std::set<std::string>& allowed_keys, const std::string& table_name) const;
 
-  // Conversion helper methods
-  template <typename T>
-  std::vector<std::vector<T>> parseOscillatorSettings(const toml::array& array_of_tables, size_t num_entries,
-                                                      std::vector<T> default_values, const std::string& field_name,
-                                                      const std::set<std::string>& allowed_keys,
-                                                      const std::string& table_name) const;
-
+  
   InitialConditionSettings parseInitialCondition(std::optional<InitialConditionType> opt_type,
                                          const std::optional<std::string>& filename,
                                          const std::optional<std::vector<size_t>>& levels,
@@ -207,6 +201,14 @@ class Config {
    */
   std::vector<double> parseControlBounds(const toml::table& toml, size_t num_osc) const;
   
+  /**
+   * @brief Parses optimization target settings from TOML table
+   * 
+   * @param table TOML table containing the configuration
+   * @param num_osc Number of oscillators
+   * @return Parsed optimization target settings
+   */
+  OptimTargetSettings parseOptimTarget(const toml::table& table, size_t num_osc) const;
 
   /**
    * @brief Parses coupling parameters from TOML table format
