@@ -3,126 +3,43 @@ ntime = 50
 dt = 0.01
 transfreq = [4.1, 4.2, 4.3, 4.4]
 selfkerr = [0.2, 0.2, 0.2, 0.2]
-crosskerr = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
-Jkl = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
+crosskerr = { "0-1" = 0.001, "0-2" = 0.001, "0-3" = 0.001, "1-2" = 0.001, "1-3" = 0.001, "2-3" = 0.001 }
+Jkl = { "0-1" = 0.001, "0-2" = 0.001, "0-3" = 0.001, "1-2" = 0.001, "1-3" = 0.001, "2-3" = 0.001 }
 rotfreq = [4.1, 4.2, 4.3, 4.4]
-collapse_type = "none"
-decay_time = [0.0, 0.0, 0.0, 0.0]
-dephase_time = [0.0, 0.0, 0.0, 0.0]
+
+decoherence = { type = "none" }
 
 initial_condition = {type = "product_state", levels = [1, 0, 0, 0]}
 
 control_enforceBC = false
 
-optim_target = {target_type = "product_state", levels = [0, 0, 0, 0]}
-optim_objective = "Jtrace"
-optim_weights = [1.0]
-optim_atol = 1e-7
-optim_rtol = 1e-8
-optim_ftol = 1e-5
-optim_inftol = 1e-5
-optim_maxiter = 200
-optim_regul = 0.00001
-optim_penalty = 0.0
-optim_penalty_param = 0.0
-optim_penalty_dpdm = 0.0
-optim_penalty_energy = 0.0
-optim_penalty_variation = 0.0
-optim_regul_tik0 = false
+control_parameterization = { type = "spline", num = 15 }
 
-datadir = "./data_out"
-output_frequency = 1
+control_initialization = { type = "constant", amplitude = 0.005 }
+
+control_bounds = 0.008
+
+carrier_frequency = {
+  "0" = [0.0, -0.2, -0.001],
+  "1" = [0.0, -0.2, -0.001],
+  "2" = [0.0, -0.2, -0.001],
+  "3" = [0.0, -0.2, -0.001]
+}
+
+optim_target = {type = "state", levels = [0, 0, 0, 0]}
+optim_objective = "Jtrace"
+optim_weights = 1.0
+optim_tolerance = { grad_abs = 1e-7, grad_rel = 1e-8, final_cost = 1e-5, infidelity = 1e-5 }
+optim_maxiter = 200
+optim_tikhonov = { coeff = 0.00001, use_x0 = false }
+optim_penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0 }
 optim_monitor_frequency = 1
+
 runtype = "simulation"
+datadir = "./data_out"
+output_type = []
+output_frequency = 1
 usematfree = false
 linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"
 rand_seed = 1234
-
-[[control_segments]]
-oscID = 0
-type = "spline"
-num = 15
-
-[[control_segments]]
-oscID = 1
-type = "spline"
-num = 15
-
-[[control_segments]]
-oscID = 2
-type = "spline"
-num = 15
-
-[[control_segments]]
-oscID = 3
-type = "spline"
-num = 15
-
-[[control_initialization]]
-oscID = 0
-type = "constant"
-amplitude = 0.005
-
-[[control_initialization]]
-oscID = 1
-type = "constant"
-amplitude = 0.005
-
-[[control_initialization]]
-oscID = 2
-type = "constant"
-amplitude = 0.005
-
-[[control_initialization]]
-oscID = 3
-type = "constant"
-amplitude = 0.005
-
-[[control_bounds]]
-oscID = 0
-values = [0.008]
-
-[[control_bounds]]
-oscID = 1
-values = [0.008]
-
-[[control_bounds]]
-oscID = 2
-values = [0.008]
-
-[[control_bounds]]
-oscID = 3
-values = [0.008]
-
-[[carrier_frequency]]
-oscID = 0
-values = [0.0, -0.2, -0.001]
-
-[[carrier_frequency]]
-oscID = 1
-values = [0.0, -0.2, -0.001]
-
-[[carrier_frequency]]
-oscID = 2
-values = [0.0, -0.2, -0.001]
-
-[[carrier_frequency]]
-oscID = 3
-values = [0.0, -0.2, -0.001]
-
-[[write]]
-oscID = 0
-type = []
-
-[[write]]
-oscID = 1
-type = []
-
-[[write]]
-oscID = 2
-type = []
-
-[[write]]
-oscID = 3
-type = []
