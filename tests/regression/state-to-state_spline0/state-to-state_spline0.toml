@@ -24,8 +24,7 @@ output_type = ["fullstate"]
 optim_monitor_frequency = 1
 runtype = "optimization"
 usematfree = true
-linearsolver_type = "gmres"
-linearsolver_maxiter = 20
+linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"
 rand_seed = 1234
 control_initialization = { type = "file", filename = "./params.dat" }

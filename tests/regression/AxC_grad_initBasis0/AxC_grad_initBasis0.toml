@@ -24,8 +24,7 @@ output_type = ["expectedEnergy"]
 optim_monitor_frequency = 1
 runtype = "gradient"
 usematfree = true
-linearsolver_type = "gmres"
-linearsolver_maxiter = 20
+linearsolver = { type = "gmres", maxiter = 20 }
 rand_seed = 1234
 control_initialization = {
   "0" = { type = "constant", amplitude = 5.0 },

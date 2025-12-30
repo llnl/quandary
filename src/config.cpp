@@ -239,9 +239,19 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     usematfree = toml["usematfree"].value_or(ConfigDefaults::USEMATFREE);
 
-    linearsolver_type = parseEnum(toml["linearsolver_type"].value<std::string>(), LINEAR_SOLVER_TYPE_MAP, ConfigDefaults::LINEARSOLVER_TYPE);
-
-    linearsolver_maxiter = validators::field<size_t>(toml, "linearsolver_maxiter").positive().valueOr(ConfigDefaults::LINEARSOLVER_MAXITER);
+    // Parse linearsolver as an inline table
+    if (!toml.contains("linearsolver")) {
+      // No linearsolver table specified, use defaults
+      linearsolver_type = ConfigDefaults::LINEARSOLVER_TYPE;
+      linearsolver_maxiter = ConfigDefaults::LINEARSOLVER_MAXITER;
+    } else {
+      auto* linearsolver_table = toml["linearsolver"].as_table();
+      if (!linearsolver_table) {
+        logger.exitWithError("linearsolver must be a table");
+      }
+      linearsolver_type = parseEnum(validators::field<std::string>(*linearsolver_table, "type").value(), LINEAR_SOLVER_TYPE_MAP, ConfigDefaults::LINEARSOLVER_TYPE);
+      linearsolver_maxiter = validators::field<size_t>(*linearsolver_table, "maxiter").positive().valueOr(ConfigDefaults::LINEARSOLVER_MAXITER);
+    }
 
     timestepper_type = parseEnum(toml["timestepper"].value<std::string>(), TIME_STEPPER_TYPE_MAP, ConfigDefaults::TIMESTEPPER_TYPE);
 
@@ -768,9 +778,14 @@ void Config::printConfig(std::stringstream& log) const {
   if (hamiltonian_file_Hc.has_value()) {
     log << "hamiltonian_file_Hc = \"" << hamiltonian_file_Hc.value() << "\"\n";
   }
+  // Control pulse settings
+  log << "control_parameterization = " << toString(control_parameterizations) << "\n";
+  log << "carrier_frequency = " << toString(carrier_frequencies) << "\n";
+  log << "control_initialization = " << toString(control_initializations) << "\n";
+  log << "control_bounds = " << toString(control_bounds) << "\n";
+  log << "control_enforceBC = " << (control_enforceBC ? "true" : "false") << "\n";
 
   // Optimization parameters
-  log << "control_enforceBC = " << (control_enforceBC ? "true" : "false") << "\n";
   log << "optim_target = " << toString(optim_target) << "\n";
   log << "optim_objective = \"" << enumToString(optim_objective, OBJECTIVE_TYPE_MAP) << "\"\n";
   log << "optim_weights = " << toString(optim_weights) << "\n";
@@ -787,27 +802,23 @@ void Config::printConfig(std::stringstream& log) const {
       << ", variation = " << optim_penalty_variation
       << ", weightedcost = " << optim_penalty_weightedcost
       << ", weightedcost_width = " << optim_penalty_weightedcost_width << " }\n";
+  log << "optim_monitor_frequency = " << optim_monitor_frequency << "\n";
 
-  // Output parameters
+  // Output and solver options 
+  log << "runtype = \"" << enumToString(runtype, RUN_TYPE_MAP) << "\"\n";
   log << "datadir = \"" << datadir << "\"\n";
-  log << "output_frequency = " << output_frequency << "\n";
   log << "output_type = [";
   for (size_t j = 0; j < output_type.size(); ++j) {
     log << "\"" << enumToString(output_type[j], OUTPUT_TYPE_MAP) << "\"";
     if (j < output_type.size() - 1) log << ", ";
   }
   log << "]\n";
-  log << "optim_monitor_frequency = " << optim_monitor_frequency << "\n";
-  log << "runtype = \"" << enumToString(runtype, RUN_TYPE_MAP) << "\"\n";
+  log << "output_frequency = " << output_frequency << "\n";
   log << "usematfree = " << (usematfree ? "true" : "false") << "\n";
-  log << "linearsolver_type = \"" << enumToString(linearsolver_type, LINEAR_SOLVER_TYPE_MAP) << "\"\n";
-  log << "linearsolver_maxiter = " << linearsolver_maxiter << "\n";
+  log << "linearsolver = { type = \"" << enumToString(linearsolver_type, LINEAR_SOLVER_TYPE_MAP) << "\", maxiter = " << linearsolver_maxiter << " }\n";
   log << "timestepper = \"" << enumToString(timestepper_type, TIME_STEPPER_TYPE_MAP) << "\"\n";
   log << "rand_seed = " << rand_seed << "\n";
-  log << "control_initialization = " << toString(control_initializations) << "\n";
-  log << "control_parameterization = " << toString(control_parameterizations) << "\n";
-  log << "carrier_frequency = " << toString(carrier_frequencies) << "\n";
-  log << "control_bounds = " << toString(control_bounds) << "\n";
+
 }
 
 void Config::finalize() {

@@ -32,8 +32,7 @@ output_type = ["population"]
 optim_monitor_frequency = 1
 runtype = "simulation"
 usematfree = false
-linearsolver_type = "gmres"
-linearsolver_maxiter = 20
+linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"
 
 control_parameterization = { type = "spline", num = 6 }

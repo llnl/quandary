@@ -28,8 +28,7 @@ output_type = ["expectedenergy", "fullstate", "population"]
 optim_monitor_frequency = 1
 runtype = "optimization"
 usematfree = true
-linearsolver_type = "gmres"
-linearsolver_maxiter = 20
+linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "imr"
 rand_seed = 1234
 control_initialization = { type = "constant", amplitude = 0.010000 }

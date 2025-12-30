@@ -33,7 +33,7 @@ initial_condition = {type = "basis"}
 # initial_condition = {type = "basis", oscIDs = [0, 1]}
 # initial_condition = {type = "file", filename = "path/to/initial_condition.dat"}
 # initial_condition = {type = "product_state", levels = [1, 0]}
-# initial_condition = {type = "diagonal", oscIDs = [0]}
+# initial_condition = {type = "diagonal"}
 # initial_condition = {type = "ensemble", oscIDs = [0, 1]}
 # initial_condition = {type = "3states"}
 # initial_condition = {type = "nplus1"}
@@ -43,12 +43,58 @@ initial_condition = {type = "basis"}
 # Optional: Read control Hamiltonian from file (default: none - use built-in analytical Hamiltonian)
 # hamiltonian_file_Hc = "/path/to/control_hamiltonian.dat"
 
+
+# ---------------------------------------------------------------
+# ------------------- Control pulse settings -------------------- 
+# ---------------------------------------------------------------
+# Control parameterization options: 
+# Available control types:
+# "spline" - 2nd order B-spline basis functions (recommended)
+# "spline0" - piecewise constant control parameterization (0th order B-splines)
+# "spline_amplitude" - amplitude-only parameterization
+
+# Option 1: Default parameterization that applies to all subsystems
+control_parameterization = { type = "spline", num = 150}
+# control_parameterization = { type = "spline0", num = 300 , tstart = 0.0, tstop = 10.0 }
+
+# Option 2: Per-subsystem parameterization (must specify all subsystems you want to customize)
+# control_parameterization = {
+#   "0" = { type = "spline", num = 150, tstart = 0.0, tstop = 10.0 },
+#   "1" = { type = "spline0", num = 300 }
+# }
+
+# Carrier wave frequencies for all oscillators (GHz).
+# Option 1: Specify different frequencies for each oscillator (per-subsystem)
+carrier_frequency = {
+  "0" = [0.0, -0.2198, -0.1],
+  "1" = [0.0, -0.2252, -0.1]
+}
+# Option 2: Same frequencies for all oscillators (uncomment to use)
+# carrier_frequency = [0.0, -0.2252, -0.1]
+
+## Control pulse initialization: 
+## Option 1: Default initialization that applies to all subsystems 
+control_initialization = { type = "random", amplitude = 0.005}
+# control_initialization = { type = "file", filename = "params.dat"}
+
+## Option 2: Per-subsystem initialization (must specify all subsystems you want to customize)
+# control_initialization = {
+#   "0" = { type = "constant", amplitude = 0.003 },
+#   "1" = { type = "random", amplitude = 0.05 }
+# }
+
+# Maximum amplitude bound for the control pulses (GHz).
+# Option 1: Single value applies to all oscillators
+control_bounds = 0.008
+# Option 2: Per-oscillator bounds using array 
+# control_bounds = [0.008, 0.010]
+
+## Decide whether control pulses should start and end at zero. Default: true.
+control_enforceBC = false
+
 # ---------------------------------------------------------------
 # ------------------- Optimization options ----------------------
 # ---------------------------------------------------------------
-# Decide whether control pulses should start and end at zero. Default: true.
-control_enforceBC = false
-
 # Optimization options: "gate" (either read from file, or choose from defaults), or "state" (either read from file, or choose a levels of a product state), or "none" (no optimization)
 # Default gate types: "cnot", "cqnot", "swap", "swap0q", "qft", "xgate", "ygate", "zgate", "hadamard"
 # Frequency of rotation of the target gate, for each oscillator (GHz). Default: 0.0
@@ -94,13 +140,17 @@ optim_penalty = { leakage = 0.0,                # Penalize leakage into guard le
 optim_monitor_frequency = 1
 
 # ---------------------------------------------------------------
-# ------------------- Output and runtypes -----------------------
+# ------------------- Output and Solver options -----------------
 # ---------------------------------------------------------------
+# Runtype options:
+# "simulation" - a forward simulation only
+# "gradient" - forward simulation and backward simulation
+# "optimization" - a full optimization cycle
+# "evalControls" - Only evaluates the current control pulses (no simulation)
+# runtype = "optimization"
+runtype = "simulation"
 # Directory for output files
 datadir = "./data_out"
-
-# Output frequency in the time domain: write output every <num> time-step
-output_frequency = 1
 # Specify the desired output during time evolution. Format: list of any of the following options:
 # "expectedEnergy" - expected level occupation for each oscillator 
 # "expectedEnergyComposite" - expected level of the full-dimensional composite system
@@ -108,20 +158,12 @@ output_frequency = 1
 # "populationComposite" - level occupation (probabilities) for the full-dimensional composite system
 # "fullstate" - full state of the composite system (full density matrix, or state vector). WARNING: This might result in very large output files - use with care.
 output_type = ["population", "expectedEnergy"]
-
-# Runtype options:
-# "simulation" - a forward simulation only
-# "gradient" - forward simulation and backward simulation
-# "optimization" - a full optimization cycle
-# "evalControls" - Only evaluates the current control pulses (no simulation)
-# "none" - Don't run anything
-runtype = "optimization"
+# Output frequency in the time domain: write output every <num> time-step
+output_frequency = 1
 # Use matrix free solver, instead of sparse matrix implementation. Only available for 2,3,4, or 5 oscillators.
 usematfree = true
-# Solver type for solving the linear system at each time step: "gmres", "neumann"
-linearsolver_type = "gmres"
-# Set maximum number of iterations for the linear solver
-linearsolver_maxiter = 20
+# Linear solver configuration: type can be "gmres" or "neumann", maxiter sets maximum iterations
+linearsolver = { type = "gmres", maxiter = 20 }
 # Switch the time-stepping algorithm. Currently available:
 # "IMR" - Implicit Midpoint Rule (IMR) of 2nd order,
 # "IMR4" - Compositional IMR of order 2 using 3 stages,
@@ -131,45 +173,4 @@ timestepper = "IMR"
 # For reproducability, one can choose to set a fixed seed for the random number generator. Comment out, or set negative if seed should be random (non-reproducable)
 rand_seed = 1234
 
-# Control initialization options: Table with optional default + per-subsystem overrides
 
-# Option 1: Default initialization that applies to all subsystems 
-control_initialization = { type = "random", amplitude = 0.005 }
-# control_initialization = { type = "file", filename = "params.dat" }
-
-# Option 2: Per-subsystem initialization (must specify all subsystems you want to customize)
-# control_initialization = {
-#   "0" = { type = "constant", amplitude = 0.003 },
-#   "1" = { type = "random", amplitude = 0.05 }
-# }
-
-# Control parameterization options: Table with optional default + per-subsystem overrides
-# Available control types:
-# "spline" - 2nd order B-spline basis functions (recommended)
-# "spline0" - piecewise constant control parameterization (0th order B-splines)
-# "spline_amplitude" - amplitude-only parameterization
-
-# Option 1: Default parameterization that applies to all subsystems
-control_parameterization = { type = "spline", num = 150}
-# control_parameterization = { type = "spline0", num = 300 , tstart = 0.0, tstop = 10.0 }
-
-# Option 2: Per-subsystem parameterization (must specify all subsystems you want to customize)
-# control_parameterization = {
-#   "0" = { type = "spline", num = 150, tstart = 0.0, tstop = 10.0 },
-#   "1" = { type = "spline0", num = 300 }
-# }
-
-# Carrier wave frequencies for all oscillators (GHz).
-# Option 1: Specify different frequencies for each oscillator (per-subsystem)
-carrier_frequency = {
-  "0" = [0.0, -0.2198, -0.1],
-  "1" = [0.0, -0.2252, -0.1]
-}
-# Option 2: Same frequencies for all oscillators (uncomment to use)
-# carrier_frequency = [0.0, -0.2252, -0.1]
-
-# Maximum amplitude bound for the control pulses (GHz).
-# Option 1: Single value applies to all oscillators
-control_bounds = 0.008
-# Option 2: Per-oscillator bounds using array 
-# control_bounds = [0.008, 0.010]
