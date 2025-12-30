@@ -231,6 +231,8 @@ int getEigvals(const Mat A, const int neigvals, std::vector<double>& eigvals, st
  */
 void getEigenComplex(const Mat A_re, const Mat A_im, const int neigvals, std::unique_ptr<std::vector<double>>& eigvals_re, std::unique_ptr<std::vector<double>>& eigvals_im, Mat& Evecs_re, Mat& Evecs_im);
 
+int testEigenComplex(const Mat A_re, const Mat A_im, const std::unique_ptr<std::vector<double>>& eigvals_re, const std::unique_ptr<std::vector<double>>& eigvals_im, const Mat& Evecs_re, const Mat& Evecs_im);
+
 /**
  * @brief Tests if complex matrix A+iB is unitary.
  *

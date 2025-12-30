@@ -48,8 +48,11 @@ class OptimTarget{
     bool quietmode; ///< Flag for quiet mode operation
 
 
-    std::unique_ptr<std::vector<double>> eigenvals_re; ///< Storage for eigenvalues log(U^\dagger V)
-    std::unique_ptr<std::vector<double>> eigenvals_im; ///< Storage for eigenvalues log(U^\dagger V)
+    std::unique_ptr<std::vector<double>> evals_LogUdV_re; ///< Storage for eigenvalues log(U^\dagger V)
+    std::unique_ptr<std::vector<double>> evals_LogUdV_im; ///< Storage for eigenvalues log(U^\dagger V)
+
+    Mat Evecs_LogUdV_re; ///< Eigenvectors of log(U^\dagger V) (real part)
+    Mat Evecs_LogUdV_im; ///< Eigenvectors of log(U^\dagger V) (imaginary part)
 
   public:
     OptimTarget();
