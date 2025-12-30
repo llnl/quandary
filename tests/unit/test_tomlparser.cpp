@@ -846,7 +846,7 @@ TEST_F(TomlParserTest, OptimTarget_DefaultNone) {
   EXPECT_FALSE(target.filename.has_value());
 }
 
-TEST_F(TomlParserTest, OptimWeights) {
+TEST_F(TomlParserTest, OptimWeightsVectorNormalization) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2]
@@ -855,16 +855,56 @@ TEST_F(TomlParserTest, OptimWeights) {
         transfreq = [4.1, 4.1]
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
-        optim_weights = [2.0, 1.0]
+        optim_weights = [0.25, 0.50, 0.25, 0.0]
       )",
       logger);
 
   const auto& weights = config.getOptimWeights();
   EXPECT_EQ(weights.size(), 4);
-  EXPECT_DOUBLE_EQ(weights[0], 0.4);
-  EXPECT_DOUBLE_EQ(weights[1], 0.2);
-  EXPECT_DOUBLE_EQ(weights[2], 0.2);
-  EXPECT_DOUBLE_EQ(weights[3], 0.2);
+  EXPECT_DOUBLE_EQ(weights[0], 0.25);
+  EXPECT_DOUBLE_EQ(weights[1], 0.5);
+  EXPECT_DOUBLE_EQ(weights[2], 0.25);
+  EXPECT_DOUBLE_EQ(weights[3], 0.0);
+}
+
+TEST_F(TomlParserTest, OptimWeightsDouble) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 4.1]
+        rotfreq = [0.0, 0.0]
+        initial_condition = {type = "basis"}
+        optim_weights = 1.0
+      )",
+      logger);
+
+  const auto& weights = config.getOptimWeights();
+  EXPECT_EQ(weights.size(), 4);
+  EXPECT_DOUBLE_EQ(weights[0], 0.25); // normalized
+  EXPECT_DOUBLE_EQ(weights[1], 0.25);
+  EXPECT_DOUBLE_EQ(weights[2], 0.25);
+  EXPECT_DOUBLE_EQ(weights[3], 0.25);
+}
+
+TEST_F(TomlParserTest, OptimWeightsDefault) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [4,3]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 3.4]
+        initial_condition = {type = "diagonal", oscIDs = [0]}
+      )",
+      logger);
+
+  const auto& weights = config.getOptimWeights();
+  EXPECT_EQ(weights.size(), 4);
+  EXPECT_DOUBLE_EQ(weights[0], 0.25); // normalized
+  EXPECT_DOUBLE_EQ(weights[1], 0.25);
+  EXPECT_DOUBLE_EQ(weights[2], 0.25);
+  EXPECT_DOUBLE_EQ(weights[3], 0.25);
 }
 
 // TEST_F(TomlParserTest, ComprehensiveNonDefaultSettings_PrintConfigValidation) {

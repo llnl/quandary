@@ -126,8 +126,18 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     optim_objective = parseEnum(toml["optim_objective"].value<std::string>(), OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
 
-    std::optional<std::vector<double>> optim_weights_opt = validators::getOptionalVector<double>(toml["optim_weights"]);
-    optim_weights = optim_weights_opt.value_or(std::vector<double>{ConfigDefaults::OPTIM_WEIGHT});
+    // Parse optional optim_weights: can be a single value or a vector
+    if (!toml.contains("optim_weights")) {
+      optim_weights = std::vector<double>{ConfigDefaults::OPTIM_WEIGHT};
+    } else {
+      if (toml["optim_weights"].as_array()) { // It is an array       
+        std::optional<std::vector<double>> optim_weights_opt = validators::getOptionalVector<double>(toml["optim_weights"]);
+        optim_weights = optim_weights_opt.value_or(std::vector<double>{ConfigDefaults::OPTIM_WEIGHT});
+      } else { // It is a single value
+        auto single_val = validators::field<double>(toml, "optim_weights").value();
+        optim_weights = std::vector<double>{single_val};
+      }
+    }
 
     // Parse optional optimization tolerances
     if (!toml.contains("optim_tolerance")) {
@@ -700,16 +710,23 @@ std::string toString(const std::vector<std::vector<double>>& carrier_frequencies
   return toStringWithOptionalTable(carrier_frequencies, printItem, areEqual);
 }
 
+// Prints a single double value if all vector elements are equal, otherwise prints the vector
 std::string toString(const std::vector<double>& vec) {
-  auto printItem = [](const double& vecelem) {
-    return std::to_string(vecelem);
-  };
-  
-  auto areEqual = [](const double& a, const double& b) {
-    return a == b;
-  };
-  
-  return toStringWithOptionalTable(vec, printItem, areEqual);
+  if (vec.empty()) return "[]";
+
+  bool all_equal = true;
+  for (size_t i = 1; i < vec.size(); ++i) {
+    if (vec[i] != vec[0]) {
+      all_equal = false;
+      break;
+    }
+  }
+
+  if (all_equal) {
+    return std::to_string(vec[0]);
+  } else {
+    return printVector(vec);
+  }
 }
 
 } // namespace
@@ -747,7 +764,7 @@ void Config::printConfig(std::stringstream& log) const {
   log << "control_enforceBC = " << (control_enforceBC ? "true" : "false") << "\n";
   log << "optim_target = " << toString(optim_target) << "\n";
   log << "optim_objective = \"" << enumToString(optim_objective, OBJECTIVE_TYPE_MAP) << "\"\n";
-  log << "optim_weights = " << printVector(optim_weights) << "\n";
+  log << "optim_weights = " << toString(optim_weights) << "\n";
   log << "optim_tolerance = { grad_abs = " << optim_tol_grad_abs
       << ", grad_rel = " << optim_tol_grad_rel
       << ", final_cost = " << optim_tol_finalcost
@@ -826,8 +843,15 @@ void Config::finalize() {
   }
 
   // Scale optimization weights such that they sum up to one
-  copyLast(optim_weights, n_initial_conditions);
+  // If a single value was provided, replicate it for all initial conditions
+  // If a vector was provided, verify it has the correct length
+  if (optim_weights.size() == 1) {
+    copyLast(optim_weights, n_initial_conditions);
+  } else if (optim_weights.size() != n_initial_conditions) {
+    logger.exitWithError("optim_weights vector has length " + std::to_string(optim_weights.size()) + " but must have length " + std::to_string(n_initial_conditions) + " (number of initial conditions)");
+  }
   optim_weights.resize(n_initial_conditions);
+  // Scale the weights so that they sum up to 1
   double scaleweights = 0.0;
   for (size_t i = 0; i < optim_weights.size(); i++) scaleweights += optim_weights[i];
   for (size_t i = 0; i < optim_weights.size(); i++) optim_weights[i] = optim_weights[i] / scaleweights;

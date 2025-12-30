@@ -625,14 +625,14 @@ TEST_F(CfgParserTest, OptimWeights) {
         transfreq = 4.1, 4.1
         rotfreq = 0.0, 0.0
         initialcondition = basis
-        optim_weights = 2.0, 1.0
+        optim_weights = 2.0
       )",
       logger);
 
   const auto& weights = config.getOptimWeights();
   EXPECT_EQ(weights.size(), 4);
-  EXPECT_DOUBLE_EQ(weights[0], 0.4);
-  EXPECT_DOUBLE_EQ(weights[1], 0.2);
-  EXPECT_DOUBLE_EQ(weights[2], 0.2);
-  EXPECT_DOUBLE_EQ(weights[3], 0.2);
+  EXPECT_DOUBLE_EQ(weights[0], 0.25);
+  EXPECT_DOUBLE_EQ(weights[1], 0.25);
+  EXPECT_DOUBLE_EQ(weights[2], 0.25);
+  EXPECT_DOUBLE_EQ(weights[3], 0.25);
 }

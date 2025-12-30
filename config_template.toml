@@ -65,10 +65,8 @@ optim_target = {type = "gate", gate_type = "cnot"}
 # Objective function measure options: "Jtrace", "Jfrobenius", "Jmeasure"
 optim_objective = "Jtrace"
 
-# Weights for summing up the objective function (beta_i).
-# If fewer numbers than oscillators are given, the last one will be propagated to the remaining ones.
-optim_weights = [1.0]
-# optim_weights = [0.5, 0.5]
+# Weights (beta_i) for summing up objective function terms from different initial conditons. Either a single value (same weight for all initial conditions), or a list of weights (one per initialcondition)
+optim_weights = 1.0
 
 # Optimization tolerances (stopping criteria):
 optim_tolerance = { grad_abs = 1e-7,     # absolute gradient norm tolerance (||G|| < grad_abs)
