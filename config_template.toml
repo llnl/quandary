@@ -37,7 +37,6 @@ initial_condition = {type = "basis"}
 # initial_condition = {type = "ensemble", oscIDs = [0, 1]}
 # initial_condition = {type = "3states"}
 # initial_condition = {type = "nplus1"}
-# initial_condition = {type = "performance"}
 
 # Optional: Read system Hamiltonian from file (default: none - use built-in analytical Hamiltonian)
 # hamiltonian_file_Hsys = "/path/to/system_hamiltonian.dat"
@@ -52,15 +51,15 @@ control_enforceBC = false
 
 # Optimization options: "gate" (either read from file, or choose from defaults), or "state" (either read from file, or choose a levels of a product state), or "none" (no optimization)
 # Default gate types: "cnot", "cqnot", "swap", "swap0q", "qft", "xgate", "ygate", "zgate", "hadamard"
+# Frequency of rotation of the target gate, for each oscillator (GHz). Default: 0.0
 optim_target = {type = "gate", gate_type = "cnot"}
 # optim_target = {type = "gate", filename = "/path/to/target_gate.dat"}
 # optim_target = {type = "gate", filename = "/path/to/target_gate.dat", gate_rot_freq = [0.0, 0.0]}
+# optim_target = { type = "gate", gate_type = "cnot", gate_rot_freq = [0.0, 0.0] }
 # optim_target = {type = "state", levels = [0, 0]}
 # optim_target = {type = "state", filename = "/path/to/target_state.dat"}
 #optim_target = {type = "none"}
 
-# Frequency of rotation of the target gate, for each oscillator (GHz). Default: 0.0
-# gate_rot_freq = [0.0, 0.0]
 
 # Objective function measure options: "Jtrace", "Jfrobenius", "Jmeasure"
 optim_objective = "Jtrace"
@@ -172,8 +171,5 @@ carrier_frequency = {
 # Maximum amplitude bound for the control pulses (GHz).
 # Option 1: Single value applies to all oscillators
 control_bounds = 0.008
-# Option 2: Per-oscillator values using table format (uncomment to use)
-# control_bounds = {
-#   "0" = 0.008,
-#   "1" = 0.010
-# }
+# Option 2: Per-oscillator bounds using array 
+# control_bounds = [0.008, 0.010]

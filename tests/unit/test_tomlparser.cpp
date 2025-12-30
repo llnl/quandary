@@ -657,10 +657,7 @@ TEST_F(TomlParserTest, ControlBounds_AllOscillators) {
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        control_bounds = {
-         "0" = 1.0,
-         "1" = 2.0 
-      }
+        control_bounds = [1.0, 2.0]
       )",
       logger);
 
@@ -1016,22 +1013,6 @@ TEST_F(TomlParserTest, ControlInitialization_UnknownKey) {
   }, "ERROR: Unknown key 'foo' in control_initialization\\.");
 }
 
-TEST_F(TomlParserTest, ControlBounds_InvalidOscillatorID) {
-  ASSERT_DEATH({
-    Config config = Config::fromTomlString(
-        R"(
-          nlevels = [2]
-          transfreq = [4.1]
-          ntime = 1000
-          dt = 0.1
-          rotfreq = [0.0]
-          initial_condition = {type = "basis"}
-
-          control_bounds = { "5" = 1.0 }
-        )",
-        logger);
-  }, "control_bounds oscillator ID 5 exceeds number of oscillators");
-}
 
 TEST_F(TomlParserTest, CarrierFrequency_InvalidOscillatorID) {
   ASSERT_DEATH({

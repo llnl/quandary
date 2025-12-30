@@ -78,12 +78,11 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     initial_condition.levels = validators::getOptionalVector<size_t>(init_cond_table["levels"]);
     initial_condition.filename = validators::getOptional<std::string>(init_cond_table["filename"]);
     initial_condition.osc_IDs = validators::getOptionalVector<size_t>(init_cond_table["oscIDs"]);
-    
 
     // Optimization options
     control_enforceBC = toml["control_enforceBC"].value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
 
-    // Parse optional control parameterization
+    // Parse optional control parameterization as a table
     if (!toml.contains("control_parameterization")) {
       // No control_parameterization specified, use defaults
       ControlParameterizationSettings default_param;
@@ -101,7 +100,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       control_parameterizations = parseControlParameterizations(*control_param_table, num_osc);
     }
 
-    // Parse optional control initialization
+    // Parse optional control initialization as a table
     if (!toml.contains("control_initialization")) {
       // No control_initialization specified, use default for each oscillator
       ControlInitializationSettings default_init = ControlInitializationSettings{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt}; 
@@ -115,13 +114,29 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       control_initializations = parseControlInitializations(*control_init_table, num_osc);
     }
 
-    // Parse optional control bounds
-    control_bounds = parseControlBounds(toml, num_osc);
+    // Parse optional control bounds: either single value or per-oscillator array
+    if (!toml.contains("control_bounds")) {
+      // Default bound for all oscillator
+      control_bounds.assign(num_osc, ConfigDefaults::CONTROL_BOUND);
+    } else {
+      if (toml["control_bounds"].as_array()) {
+        // Get control_bounds from array
+        control_bounds = validators::vectorField<double>(toml, "control_bounds").minLength(1).value();
+        copyLast(control_bounds, num_osc);
+        control_bounds.resize(num_osc);
+      } else if (toml["control_bounds"].is_value()){
+        // Get single control_bounds value
+        auto single_val = validators::field<double>(toml, "control_bounds").value();
+        control_bounds = std::vector<double>(num_osc, single_val);
+      } else {
+        logger.exitWithError("control_bounds must be either a single value (applies to all oscillators, or an array of values (one per oscillator).");
+      }
+    }
 
-    // Parse optional carrier frequencies
+    // Parse optional carrier frequencies: either one vector (applies to all oscillators) or per-oscillator table of vectors with oscillator ID keys
     carrier_frequencies = parseCarrierFrequencies(toml, num_osc);
 
-    // Parse optimization target
+    // Parse optimization target:
     optim_target = parseOptimTarget(toml, num_osc);
 
     optim_objective = parseEnum(toml["optim_objective"].value<std::string>(), OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
@@ -130,12 +145,15 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     if (!toml.contains("optim_weights")) {
       optim_weights = std::vector<double>{ConfigDefaults::OPTIM_WEIGHT};
     } else {
-      if (toml["optim_weights"].as_array()) { // It is an array       
-        std::optional<std::vector<double>> optim_weights_opt = validators::getOptionalVector<double>(toml["optim_weights"]);
-        optim_weights = optim_weights_opt.value_or(std::vector<double>{ConfigDefaults::OPTIM_WEIGHT});
-      } else { // It is a single value
+      if (toml["optim_weights"].as_array()) {        
+        // Get optim_weights from array
+        optim_weights = validators::vectorField<double>(toml, "optim_weights").minLength(1).value();
+      } else if (toml["optim_weights"].is_value()) { 
+        // Get single value
         auto single_val = validators::field<double>(toml, "optim_weights").value();
         optim_weights = std::vector<double>{single_val};
+      } else {
+        logger.exitWithError("optim_weights must be either a single value (applies to all initial conditions), or an array of values (one for each inital condition).");
       }
     }
 
@@ -448,30 +466,21 @@ Config Config::fromCfgString(const std::string& cfg_content, const MPILogger& lo
 }
 
 std::vector<double> Config::parseCouplingParameters(const toml::table& toml, const std::string& key, size_t num_osc, double default_value) const {
+
+  // Initialize with default values
   size_t num_pairs = (num_osc - 1) * num_osc / 2;
   std::vector<double> result(num_pairs, default_value);
 
-  // If the key doesn't exist, return default vector, otherwise grab the table
+  // If the key doesn't exist, return default vector
   if (!toml.contains(key)) {
     return result;
   }
-  auto* table = toml[key].as_table();
 
-  // If it's not a table, fall back to the old vector format for backwards compatibility
+  auto* table = toml[key].as_table();
   if (!table) {
-    auto* arr = toml[key].as_array();
-    if (arr) {
-      for (size_t i = 0; i < arr->size() && i < result.size(); i++) {
-        auto val = arr->at(i).value<double>();
-        if (val) {
-          result[i] = *val;
-        }
-      }
-    }
-    return result;
+    logger.exitWithError(key + " must be a table.");
   }
 
-  // Parse table format: keys are "i-j" pairs
   for (auto& [pair_key, value_node] : *table) { // This iterates over key-value pairs in the table
 
     std::string key_str(pair_key.str()); 
@@ -1068,47 +1077,6 @@ std::vector<std::vector<double>> Config::parseCarrierFrequencies(const toml::tab
   }
   
   return carrier_frequencies;
-}
-
-std::vector<double> Config::parseControlBounds(const toml::table& toml, size_t num_osc) const {
-  std::vector<double> control_bounds(num_osc, ConfigDefaults::CONTROL_BOUND);
-  
-  if (toml.contains("control_bounds")) {
-    auto control_bounds_node = toml["control_bounds"];
-    auto* control_bounds_table = control_bounds_node.as_table();
-    auto bound_value = control_bounds_node.value<double>();
-    
-    // Check if a table with per-oscillator bounds is provided: control_bounds = {"0" = <val>, "1" = <val>}
-    if (control_bounds_table) {
-      // Parse per-oscillator settings
-      for (const auto& [key, value] : *control_bounds_table) {
-        std::string key_str = std::string(key.str());
-        size_t osc_id;
-        try {
-          osc_id = std::stoull(key_str);
-        } catch (...) {
-          logger.exitWithError("control_bounds keys must be oscillator IDs (e.g., \\\"0\\\", \\\"1\\\")");
-        }
-        if (osc_id >= num_osc) {
-          logger.exitWithError("control_bounds oscillator ID " + key_str + " exceeds number of oscillators");
-        }
-        auto bound_val = value.value<double>();
-        if (!bound_val.has_value()) {
-          logger.exitWithError("control_bounds values must be numbers");
-        }
-        control_bounds[osc_id] = bound_val.value();
-      }
-    } else if (bound_value.has_value()) {
-      // Check if a single value is provided, in which case it applies to all oscillators
-      for (size_t i = 0; i < num_osc; ++i) {
-        control_bounds[i] = bound_value.value();
-      }
-    } else {
-      logger.exitWithError("control_bounds must be either a table or a number");
-    }
-  } 
-  
-  return control_bounds;
 }
 
 std::vector<ControlParameterizationSettings> Config::parseControlParameterizations(const toml::table& table, size_t num_entries) const {

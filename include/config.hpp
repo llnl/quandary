@@ -184,19 +184,6 @@ class Config {
   std::vector<std::vector<double>> parseCarrierFrequencies(const toml::table& toml, size_t num_osc) const;
   
   /**
-   * @brief Parses control bounds from TOML configuration
-   *
-   * Supports two formats:
-   * 1. control_bounds = <value> (single value applies for all oscillators)
-   * 2. control_bounds = {"0" = <value0>, "1" = <val1>} (per-oscillator bounds)
-   *
-   * @param toml TOML table containing the configuration
-   * @param num_osc Number of oscillators
-   * @return Vector of control bounds per oscillator
-   */
-  std::vector<double> parseControlBounds(const toml::table& toml, size_t num_osc) const;
-  
-  /**
    * @brief Parses optimization target settings from TOML table
    * 
    * @param table TOML table containing the configuration
