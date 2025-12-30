@@ -9,42 +9,39 @@
 /**
  * @brief Validation utilities for TOML configuration parsing.
  *
- * Provides a chainable API for type-safe TOML field validation. Chain validation
+ * Provides a chainable API for type-safe TOML field extraction and validation. Chain validation
  * methods together, then extract the final value in one operation with clear error messages.
+ * 
+ * ## Basic Usage 
  *
- * ## How Method Chaining Works
+ * 1. Create a validator for option "key" within toml_table using
+ *      - `validators::field<T>(toml_table, "key")`: for scalar fields
+ *      - `validators::vectorField<T>(toml_table, "key")`: for vector fields
+ * 2. Append chainable validation methods from below as needed:
+ *    For scalar fields:
+ *      - `greaterThan(value)`: Field must be > value
+ *      - `greaterThanEqual(value)`: Field must be >= value
+ *      - `lessThan(value)`: Field must be < value
+ *      - `positive()`: Field must be > 0 (shorthand for greaterThan(0))
+ *    For vector fields:
+ *      - `minLength(size)`: Vector must have at least sizeelements
+ *      - `positive()`: All elements must be > 0
+ * 3. Extract the value by appending 
+ *         .value()           - for required fields
+ *         .valueOr(default)  - for optional fields with default
+ * 
+ * ## Examples
+ * @code  
+ * // Parse a required positive double with key "step_size".
+ * double step_size = validators::field<double>(toml, "step_size").positive().value();
  *
- * Each validation method (greaterThan(), positive(), etc.) returns `*this`, which
- * allows you to call another method on the same object. This creates a readable
- * chain of validation rules that execute from left to right.
+ * // Parse an optional string with key "output_dir" with default value "./data_out"
+ * std::string output_dir = validators::field<std::string>(toml, "output_dir").valueOr("./data_out");
  *
- * ## Basic Usage Pattern
- *
- * 1. Create a validator using field<T>() or vectorField<T>()
- * 2. Chain validation methods (positive(), greaterThan(), etc.)
- * 3. Extract the value using value() or valueOr(default)
- *
- * @code
- * // Parse required positive double from toml::table config with key "step_size"
- * double step_size = validators::field<double>(config, "step_size")
- *                     .positive()
- *                     .value();
- *
- * // Parse optional string from toml::table config with key "output_dir" with default value "./data_out"
- * std::string output_dir = validators::field<std::string>(config, "output_dir")
- *                            .valueOr("./data_out");
- *
- * // Parse required vector of positive doubles from toml::table config with key "frequencies"
- * std::vector<double> frequencies = validators::vectorField<double>(config, "frequencies")
- *                                    .minLength(1)
- *                                    .positive()
- *                                    .value();
+ * // Parse a required vector of positive doubles with key "frequencies", defaulting to {1.0, 2.0}
+ * std::vector<double> frequencies = validators::vectorField<double>(toml, "frequencies").minLength(1).positive().valueOr(std::vector<double>{1.0, 2.0});
+ * 
  * @endcode
- *
- * ## Error Handling
- *
- * All validators throw ValidationError with descriptive messages when validation fails.
- * This includes missing fields, type mismatches, and constraint violations.
  *
  * ## Supported Types
  *
@@ -95,44 +92,11 @@ class ValidationError : public std::runtime_error {
  * - `greaterThanEqual(value)`: Field must be >= value
  * - `lessThan(value)`: Field must be < value
  * - `positive()`: Field must be > 0 (shorthand for greaterThan(0))
+ * 
+ *  ## Extraction Methods
  *
- * ## Extraction Methods
- *
- * - `value()`: Extract validated value (throws if field missing or invalid)
- * - `valueOr(default)`: Extract value or return default if field missing (throws if field is present and invalid)
- *
- * ## Complete Examples
- *
- * @code
- * // Required positive size_t field, parsed from toml::table config with key "num_steps"
- * size_t num_steps = validators::field<size_t>(config, "num_steps")
- *                     .greaterThan(10)  // Must be greater than 10
- *                     .value();         // Extract the value (throws if invalid or missing)
- *
- * // Optional double parameter with bounds, parsed from toml::table config with key "time_step"
- * double time_step = validators::field<double>(config, "time_step")
- *                      .greaterThanEqual(0.1)  // At least 0.1
- *                      .lessThan(1000.0)       // Less than 1000
- *                      .valueOr(50.0);         // Default to 50 if missing (throws if invalid)
- *
- * // Required positive frequency with multiple constraints, parsed from toml::table config with key "frequency"
- * double frequency = validators::field<double>(config, "frequency")
- *                      .positive()     // Must be > 0
- *                      .lessThan(1e9)  // Must be less than 1e9
- *                      .value();       // Extract the value (throws if invalid or missing)
- *
- * // Optional boolean flag with default, parsed from toml::table config with key "enabled"
- * bool enabled = validators::field<bool>(config, "enabled").valueOr(false);
- *
- * // Required string parameter, parsed from toml::table config with key "filename"
- * std::string filename = validators::field<std::string>(config, "filename")
- *                          .value();       // Extract the value (throws if invalid or missing)
- * @endcode
- *
- * ## Error Behavior
- *
- * Throws ValidationError for missing fields (when using value()), type mismatches, or constraint violations.
- * Use value() when field must exist, valueOr() when field is optional.
+ * - `value()`: Extract scalar or throws an error if field is missing or invalid
+ * - `valueOr(default)`: Extract scalar or return default if field missing
  *
  * @tparam T Type of field to validate (int, double, string, bool, etc.)
  */
@@ -276,37 +240,13 @@ class Validator {
  *
  * ## Available Validation Methods
  *
- * ### Vector-Level Validations:
  * - `minLength(size)`: Vector must have at least `size` elements
- *
- * ### Element-Level Validations:
  * - `positive()`: All elements must be > 0 (only for numeric types)
  *
  * ## Extraction Methods
  *
  * - `value()`: Extract validated array (throws if field missing or invalid)
  * - `valueOr(default)`: Extract array or return default if field missing
- *
- * ## Complete Examples
- *
- * @code
- * // Parse required vector of positive doubles from toml::table config with key "frequencies"
- * std::vector<double> frequencies = validators::vectorField<double>(config, "frequencies")
- *                                    .minLength(1)  // Must have at least 1 element
- *                                    .positive()    // All elements must be > 0
- *                                    .value();      // Extract the vector (throws if invalid or missing)
- *
- * // Parse optional list of coefficients with constraints from toml::table config with key "coefficients"
- * std::vector<double> coefficients = validators::vectorField<double>(config, "coefficients")
- *                                     .minLength(1)                // If present, must not be empty
- *                                     .positive()                  // All coefficients must be positive
- *                                     .valueOr({1.1, 2.2, 3.3});   // Default values (throws if present and invalid)
- * @endcode
- *
- * ## Error Behavior
- *
- * Throws ValidationError for missing fields (when using value()), wrong types, or constraint violations.
- * Use value() when field must exist, valueOr() when field is optional.
  *
  * ## Type Requirements
  *

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <petsc.h>
-
 #include <cstddef>
 #include <optional>
 #include <set>
@@ -9,15 +8,31 @@
 #include <string>
 #include <toml++/toml.hpp>
 #include <vector>
-
 #include "cfgparser.hpp"
 #include "defs.hpp"
 #include "mpi_logger.hpp"
 
+// Adding a new toml configuration option:
+// 1) Add new member variable to the Config class below
+// 2) Add parsing logic in constructor Config::Config(toml::table) in src/config.cpp. Either access directly from toml table, or use chains of validators for type-safe extraction and validation. For example:
+//    Parsing simple scalar fields (T foo): 
+//      * `foo = toml["foo"].value()`: requried scalar field, no default, not validated)
+//      * `foo = toml["foo"].value_or(default_value)`: optional scalar with default, not validated
+//      * `foo = validators::field<T>(toml, "foo").<validation_chain>.value()`: validated required scalar
+//      * `foo = validators::field<T>(toml, "foo").<validation_chain>.valueOr(default_value)`: validated optional scalar with default
+//   Parsing vectors (std::vector<T> foo): 
+//     * `foo = toml["foo"].as_array()->as<T>().value_or(default_vector)`: vector with default, not validated
+//     * `foo = validators::vectorField<T>(toml, "foo").<validation_chain>.value()`: validated required vector
+//     * `foo = validators::vectorField<T>(toml, "foo").<validation_chain>.value(default_vector)`: validated optional vector with default
+//   Available validation chain methods can found in include/config_validators.hpp, such as:
+//      `.positive()`, `.greaterThan(val)`, `.lessThan(val)`, `.minLength(len)`, etc.
+// 3) Add a getter method to the Config class below (`T getFoo() const {return foo};`)
+// 4) Add printing logic in Config::printConfig() in src/config.cpp
+
 /**
  * @brief Final validated configuration class.
  *
- * Contains only validated, typed configuration parameters. All fields are required
+ * Contains validated, typed configuration parameters. All fields are required
  * and have been validated with defaults set. This class is immutable after construction.
  */
 class Config {
