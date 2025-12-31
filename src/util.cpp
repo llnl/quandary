@@ -908,6 +908,75 @@ int testEigenComplex(const Mat A_re, const Mat A_im, const std::unique_ptr<std::
     }
 
   }
+
+  // Test reconstruction of A from eigenvalues and eigenvectors: A = V Lambda V^dagger
+  Mat Atest_re, Atest_im;
+  MatDuplicate(A_re, MAT_DO_NOT_COPY_VALUES, &Atest_re);
+  MatDuplicate(A_im, MAT_DO_NOT_COPY_VALUES, &Atest_im);
+  MatZeroEntries(Atest_re);
+  MatZeroEntries(Atest_im);
+  // Compute A_test = V Diag V^dagger 
+  // A_test_re = V_re * (D_re V_re^T + D_im V_im^T) - V_im * (D_im V_re^T - D_re V_im^T)
+  // A_test_im = V_im * (D_re V_re^T + D_im V_im^T) + V_re * (D_im V_re^T - D_re V_im^T)
+  // using MatDiagonalScale(Mat mat, Vec diag, NULL) for left scaling of rows of a matrix using vector diag
+  Mat VreT, VimT;
+  MatTranspose(Evecs_re, MAT_INITIAL_MATRIX, &VreT);
+  MatTranspose(Evecs_im, MAT_INITIAL_MATRIX, &VimT);
+  // LVT_1 = D_re V_re^T + D_im V_im^T
+  // LVT_2 = D_im V_re^T - D_re V_im^T
+  Mat LVT_1, LVT_2;
+  MatDuplicate(VreT, MAT_DO_NOT_COPY_VALUES, &LVT_1);
+  MatDuplicate(VreT, MAT_DO_NOT_COPY_VALUES, &LVT_2);
+  for (size_t row=0; row<dim; row++){
+    double diag_re = eigvals_re->at(row);
+    double diag_im = eigvals_im->at(row);
+    // scale all columns
+    for (size_t col=0; col<dim; col++){
+      double val_re, val_im;
+      MatGetValue(VreT, row, col, &val_re);
+      MatGetValue(VimT, row, col, &val_im);
+      MatSetValue(LVT_1, row, col, diag_re * val_re + diag_im * val_im, INSERT_VALUES);
+      MatSetValue(LVT_2, row, col, diag_im * val_re - diag_re * val_im, INSERT_VALUES);
+    }
+  }
+  MatAssemblyBegin(LVT_1, MAT_FINAL_ASSEMBLY); 
+  MatAssemblyEnd(LVT_1, MAT_FINAL_ASSEMBLY);
+  MatAssemblyBegin(LVT_2, MAT_FINAL_ASSEMBLY); 
+  MatAssemblyEnd(LVT_2, MAT_FINAL_ASSEMBLY);
+  // Now compute A_test_re and A_test_im
+  // A_test_re = V_re * LVT_1 - V_im * LVT_2
+  // A_test_im = V_im * LVT_1 + V_re * LVT_2
+  Mat temp_re, temp_im;
+  MatMatMult(Evecs_re, LVT_1, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &temp_re);
+  MatMatMult(Evecs_im, LVT_2, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &temp_im);
+  MatAXPY(Atest_re, 1.0, temp_re, DIFFERENT_NONZERO_PATTERN);
+  MatAXPY(Atest_re, -1.0, temp_im, DIFFERENT_NONZERO_PATTERN);
+  MatDestroy(&temp_re);
+  MatDestroy(&temp_im);
+  MatMatMult(Evecs_im, LVT_1, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &temp_re);
+  MatMatMult(Evecs_re, LVT_2, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &temp_im);
+  MatAXPY(Atest_im, 1.0, temp_re, DIFFERENT_NONZERO_PATTERN);
+  MatAXPY(Atest_im, 1.0, temp_im, DIFFERENT_NONZERO_PATTERN);
+  MatDestroy(&temp_re);
+  MatDestroy(&temp_im);
+  MatDestroy(&VreT);
+  MatDestroy(&VimT);
+  MatDestroy(&LVT_1);
+  MatDestroy(&LVT_2);
+
+  // Now test difference A - A_test
+  MatAXPY(Atest_re, -1.0, A_re, SAME_NONZERO_PATTERN);
+  MatAXPY(Atest_im, -1.0, A_im, SAME_NONZERO_PATTERN);
+  double norm_re, norm_im;
+  MatNorm(Atest_re, NORM_FROBENIUS, &norm_re);
+  MatNorm(Atest_im, NORM_FROBENIUS, &norm_im);
+  // printf("Reconstruction of log(UdaggerV): err_frob = %1.14e + i*%1.14e\n", norm_re, norm_im);
+  if (norm_re > 1e-6 || norm_im > 1e-6){
+    printf("Error: Reconstruction failed!\n");
+    exit(1);
+  }
+
+  // Cleanup
   VecDestroy(&v_re);
   VecDestroy(&v_im);
   VecDestroy(&Av_re);
