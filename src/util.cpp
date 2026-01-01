@@ -654,18 +654,24 @@ bool isUnitary(const Mat V_re, const Mat V_im){
 }
 
 
-void getEigenComplex(const Mat A_re, const Mat A_im, const int neigvals, std::unique_ptr<std::vector<double>>& eigvals_re, std::unique_ptr<std::vector<double>>& eigvals_im, Mat& Evecs_re, Mat& Evecs_im){
+void getEigenComplex(const Mat A_re, const Mat A_im, std::unique_ptr<std::vector<double>>& eigvals_re, std::unique_ptr<std::vector<double>>& eigvals_im, Mat& Evecs_re, Mat& Evecs_im, bool print){
 
-  /* Set up the larger matrix A = [A_re -A_im; A_im A_re] */
   PetscInt dim;
   MatGetSize(A_re, &dim, NULL);
+
+  /* Set up the larger matrix A = [A_re -A_im; A_im A_re] */
   Mat A;
   MatCreate(PETSC_COMM_WORLD, &A);
   MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, 2*dim, 2*dim);
   MatSetFromOptions(A);
   MatSetUp(A);
 
+  // Number of eigenvalues to compute of the larger matrix A=[A_re -A_im; A_im A_re]
+  int neigvals = 2*dim; 
+
   // Create storage of Evecs_re and Evecs_im
+  if (Evecs_re) MatDestroy(&Evecs_re);
+  if (Evecs_im) MatDestroy(&Evecs_im);
   MatCreate(PETSC_COMM_WORLD, &Evecs_re);
   MatSetSizes(Evecs_re, PETSC_DECIDE, PETSC_DECIDE, dim, dim);
   MatSetFromOptions(Evecs_re);
@@ -696,12 +702,11 @@ void getEigenComplex(const Mat A_re, const Mat A_im, const int neigvals, std::un
   EPSSetOperators(eigensolver, A, NULL);
   EPSSetProblemType(eigensolver, EPS_NHEP);
   EPSSetFromOptions(eigensolver);
-
-  /* Number of requested eigenvalues */
   EPSSetDimensions(eigensolver,neigvals,PETSC_DEFAULT,PETSC_DEFAULT);
 
   // Solve eigenvalue problem
   EPSSolve(eigensolver);
+  // EPSView(eigensolver, PETSC_VIEWER_STDOUT_WORLD);
 
   /* Get information about convergence */
   // int its, nev, maxit;
@@ -711,14 +716,12 @@ void getEigenComplex(const Mat A_re, const Mat A_im, const int neigvals, std::un
   // EPSGetType(eigensolver,&type);
   // EPSGetDimensions(eigensolver,&nev,NULL,NULL);
   // EPSGetTolerances(eigensolver,&tol,&maxit);
-
   int nconv = 0;
   EPSGetConverged(eigensolver, &nconv );
   if (nconv < neigvals){
     printf("ERROR: Only %d eigenvalues converged, but %d requested!\n", nconv, neigvals);
     exit(1);
   }
-
   // PetscPrintf(PETSC_COMM_WORLD," Solution method: %s\n",type);
   // PetscPrintf(PETSC_COMM_WORLD," Number of requested eigenpairs: %D\n",nev);
   // PetscPrintf(PETSC_COMM_WORLD," Number of iterations taken: %D / %D\n",its, maxit);
@@ -736,11 +739,9 @@ void getEigenComplex(const Mat A_re, const Mat A_im, const int neigvals, std::un
   Vec eigvecLarge_im;
   MatCreateVecs(A, &eigvecLarge_re, NULL);
   MatCreateVecs(A, &eigvecLarge_im, NULL);
-  Vec v_re, v_im, Av_re, Av_im;
+  Vec v_re, v_im;
   MatCreateVecs(A_re, &v_re, NULL);
   MatCreateVecs(A_re, &v_im, NULL);
-  MatCreateVecs(A_re, &Av_re, NULL);
-  MatCreateVecs(A_re, &Av_im, NULL);
   double kr, ki;
   int found_eigenpairs = 0;
   for (int j=0; j<nconv; j++) {
@@ -781,7 +782,7 @@ void getEigenComplex(const Mat A_re, const Mat A_im, const int neigvals, std::un
     VecAssemblyBegin(v_re); VecAssemblyEnd(v_re);
     VecAssemblyBegin(v_im); VecAssemblyEnd(v_im);
 
-    // Test the norm of v, should be zero for every second one:
+    // Test the norm of v, should be zero for half of them (unless multiplicity):
     double norm_v_re, norm_v_im;
     VecNorm(v_re, NORM_2, &norm_v_re);
     VecNorm(v_im, NORM_2, &norm_v_im);
@@ -812,8 +813,6 @@ void getEigenComplex(const Mat A_re, const Mat A_im, const int neigvals, std::un
     eigvals_im->at(found_eigenpairs) = ki;
     found_eigenpairs++;
   }
-  // printf("\n");
-  // EPSView(eigensolver, PETSC_VIEWER_STDOUT_WORLD);
   
   eigvals_re->resize(found_eigenpairs);
   eigvals_im->resize(found_eigenpairs);
@@ -823,11 +822,26 @@ void getEigenComplex(const Mat A_re, const Mat A_im, const int neigvals, std::un
   MatAssemblyBegin(Evecs_im, MAT_FINAL_ASSEMBLY); 
   MatAssemblyEnd(Evecs_im, MAT_FINAL_ASSEMBLY);
 
+  if (print) {
+    // Print each eigenvalue
+    printf("Eigen decomposition of U^dagger V done.\n");
+    for (size_t i=0; i<eigvals_re->size(); i++){
+      double phase = atan2(eigvals_im->at(i), eigvals_re->at(i));
+      double abs = sqrt( eigvals_re->at(i)*eigvals_re->at(i) + eigvals_im->at(i)*eigvals_im->at(i) );
+      printf("Eigenvalue %d: %f + i*%f, abs=%f, phase = %f \n", i, eigvals_re->at(i), eigvals_im->at(i), abs,  phase*180.0/M_PI);
+    }
+    MatView(Evecs_re, NULL);
+    MatView(Evecs_im, NULL);
+
+  }
+
   /* Clean up*/
   EPSDestroy(&eigensolver);
   MatDestroy(&A);
   VecDestroy(&eigvecLarge_re);
   VecDestroy(&eigvecLarge_im);
+  VecDestroy(&v_re);
+  VecDestroy(&v_im);
 }
 
 
@@ -909,32 +923,52 @@ int testEigenComplex(const Mat A_re, const Mat A_im, const std::unique_ptr<std::
 
   }
 
-  // Test reconstruction of A from eigenvalues and eigenvectors: A = V Lambda V^dagger
-  Mat Atest_re, Atest_im;
-  MatDuplicate(A_re, MAT_DO_NOT_COPY_VALUES, &Atest_re);
-  MatDuplicate(A_im, MAT_DO_NOT_COPY_VALUES, &Atest_im);
-  MatZeroEntries(Atest_re);
-  MatZeroEntries(Atest_im);
-  // Compute A_test = V Diag V^dagger 
-  // A_test_re = V_re * (D_re V_re^T + D_im V_im^T) - V_im * (D_im V_re^T - D_re V_im^T)
-  // A_test_im = V_im * (D_re V_re^T + D_im V_im^T) + V_re * (D_im V_re^T - D_re V_im^T)
-  // using MatDiagonalScale(Mat mat, Vec diag, NULL) for left scaling of rows of a matrix using vector diag
+  // Cleanup
+  VecDestroy(&v_re);
+  VecDestroy(&v_im);
+  VecDestroy(&Av_re);
+  VecDestroy(&Av_im);
+
+  return 1;
+}
+
+
+void reconstructMatrixFromEigenComplex(const std::unique_ptr<std::vector<double>>& eigvals_re, const std::unique_ptr<std::vector<double>>& eigvals_im, const Mat& Evecs_re, const Mat& Evecs_im, Mat& Aout_re, Mat& Aout_im, const bool do_log, const Mat& Atest_re, const Mat& Atest_im){
+// Compute A_out = Evecs * diag(evals) * Evecs^dagger, or the log thereof 
+// A_out_re = V_re * (D_re V_re^T + D_im V_im^T) - V_im * (D_im V_re^T - D_re V_im^T)
+// A_out_im = V_im * (D_re V_re^T + D_im V_im^T) + V_re * (D_im V_re^T - D_re V_im^T)
+
+  PetscInt dim;
+  MatGetSize(Evecs_re, &dim, NULL);
+
+  MatDuplicate(Evecs_re, MAT_DO_NOT_COPY_VALUES, &Aout_re);
+  MatDuplicate(Evecs_im, MAT_DO_NOT_COPY_VALUES, &Aout_im);
+  MatZeroEntries(Aout_re);
+  MatZeroEntries(Aout_im);
+
+  // First compute D*V^dagger, for V=Evecs, and D=diag(evals) or D=log(diag(evals))
+  // LVT_1 = D_re V_re^T + D_im V_im^T
+  // LVT_2 = D_im V_re^T - D_re V_im^T
   Mat VreT, VimT;
   MatTranspose(Evecs_re, MAT_INITIAL_MATRIX, &VreT);
   MatTranspose(Evecs_im, MAT_INITIAL_MATRIX, &VimT);
-  // LVT_1 = D_re V_re^T + D_im V_im^T
-  // LVT_2 = D_im V_re^T - D_re V_im^T
   Mat LVT_1, LVT_2;
   MatDuplicate(VreT, MAT_DO_NOT_COPY_VALUES, &LVT_1);
   MatDuplicate(VreT, MAT_DO_NOT_COPY_VALUES, &LVT_2);
   for (size_t row=0; row<dim; row++){
-    double diag_re = eigvals_re->at(row);
+    // scale each row by the diagonal matrix D
+    double diag_re = eigvals_re->at(row); // for reconstruction of A
     double diag_im = eigvals_im->at(row);
-    // scale all columns
+    if (do_log) { // for reconstruction of log(A), compute log of d = diag_re + i diag_im. Know that d is on unit circle, so log(d) = i*phi with phi = atan2(diag_im, diag_re)
+      double phi = atan2(diag_im, diag_re);
+      diag_re = 0.0;
+      diag_im = phi;
+    }
     for (size_t col=0; col<dim; col++){
       double val_re, val_im;
       MatGetValue(VreT, row, col, &val_re);
       MatGetValue(VimT, row, col, &val_im);
+
       MatSetValue(LVT_1, row, col, diag_re * val_re + diag_im * val_im, INSERT_VALUES);
       MatSetValue(LVT_2, row, col, diag_im * val_re - diag_re * val_im, INSERT_VALUES);
     }
@@ -943,44 +977,138 @@ int testEigenComplex(const Mat A_re, const Mat A_im, const std::unique_ptr<std::
   MatAssemblyEnd(LVT_1, MAT_FINAL_ASSEMBLY);
   MatAssemblyBegin(LVT_2, MAT_FINAL_ASSEMBLY); 
   MatAssemblyEnd(LVT_2, MAT_FINAL_ASSEMBLY);
-  // Now compute A_test_re and A_test_im
+
+  // printf("log(diag) @ Evecs: \n");
+  // MatView(LVT_1, NULL);
+  // MatView(LVT_2, NULL);
+
+  // Now compute Aout_re and Aout_im
   // A_test_re = V_re * LVT_1 - V_im * LVT_2
   // A_test_im = V_im * LVT_1 + V_re * LVT_2
   Mat temp_re, temp_im;
   MatMatMult(Evecs_re, LVT_1, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &temp_re);
   MatMatMult(Evecs_im, LVT_2, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &temp_im);
-  MatAXPY(Atest_re, 1.0, temp_re, DIFFERENT_NONZERO_PATTERN);
-  MatAXPY(Atest_re, -1.0, temp_im, DIFFERENT_NONZERO_PATTERN);
+  MatAXPY(Aout_re, 1.0, temp_re, DIFFERENT_NONZERO_PATTERN);
+  MatAXPY(Aout_re, -1.0, temp_im, DIFFERENT_NONZERO_PATTERN);
   MatDestroy(&temp_re);
   MatDestroy(&temp_im);
   MatMatMult(Evecs_im, LVT_1, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &temp_re);
   MatMatMult(Evecs_re, LVT_2, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &temp_im);
-  MatAXPY(Atest_im, 1.0, temp_re, DIFFERENT_NONZERO_PATTERN);
-  MatAXPY(Atest_im, 1.0, temp_im, DIFFERENT_NONZERO_PATTERN);
+  MatAXPY(Aout_im, 1.0, temp_re, DIFFERENT_NONZERO_PATTERN);
+  MatAXPY(Aout_im, 1.0, temp_im, DIFFERENT_NONZERO_PATTERN);
   MatDestroy(&temp_re);
   MatDestroy(&temp_im);
+  
+  // Test the reconstruction if requested
+  if (Atest_re != NULL && Atest_im != NULL){
+    Mat A_diff_re, A_diff_im;
+    MatDuplicate(Atest_re, MAT_COPY_VALUES, &A_diff_re);
+    MatDuplicate(Atest_im, MAT_COPY_VALUES, &A_diff_im);
+    MatAXPY(A_diff_re, -1.0, Aout_re, SAME_NONZERO_PATTERN);
+    MatAXPY(A_diff_im, -1.0, Aout_im, SAME_NONZERO_PATTERN);
+    double norm_re, norm_im;
+    MatNorm(A_diff_re, NORM_FROBENIUS, &norm_re);
+    MatNorm(A_diff_im, NORM_FROBENIUS, &norm_im);
+    // if (do_log)
+    //   printf("Reconstruction test of log(A): ||log(A) - log(A)_test||_F = %1.14e + i*%1.14e\n", norm_re, norm_im);
+    // else
+    //   printf("Reconstruction test: ||A - A_test||_F = %1.14e + i*%1.14e\n", norm_re, norm_im);
+    if (norm_re > 1e-6 || norm_im > 1e-6){
+      printf("Error: Reconstruction from eigen decomposition failed!\n");
+      exit(1);
+    }
+    MatDestroy(&A_diff_re);
+    MatDestroy(&A_diff_im);
+  }
+
+  // Cleanup
   MatDestroy(&VreT);
   MatDestroy(&VimT);
   MatDestroy(&LVT_1);
   MatDestroy(&LVT_2);
+}
 
-  // Now test difference A - A_test
-  MatAXPY(Atest_re, -1.0, A_re, SAME_NONZERO_PATTERN);
-  MatAXPY(Atest_im, -1.0, A_im, SAME_NONZERO_PATTERN);
-  double norm_re, norm_im;
-  MatNorm(Atest_re, NORM_FROBENIUS, &norm_re);
-  MatNorm(Atest_im, NORM_FROBENIUS, &norm_im);
-  // printf("Reconstruction of log(UdaggerV): err_frob = %1.14e + i*%1.14e\n", norm_re, norm_im);
-  if (norm_re > 1e-6 || norm_im > 1e-6){
-    printf("Error: Reconstruction failed!\n");
+// computeMatrixLogTaylor(UdagV_re, UdagV_im, logUdagV_re, logUdagV_im);
+double computeMatrixLogTaylor(const Mat& A_re, const Mat& A_im, Mat& logA_re, Mat& logA_im){
+  PetscInt dim;
+  MatGetSize(A_re, &dim, NULL);
+
+  // Initialize logA_re and logA_im to zero
+  MatDuplicate(A_re, MAT_DO_NOT_COPY_VALUES, &logA_re);
+  MatDuplicate(A_im, MAT_DO_NOT_COPY_VALUES, &logA_im);
+  MatZeroEntries(logA_re);
+  MatZeroEntries(logA_im);
+
+  // Compute log(A) = - sum_{n=1}^\infty (I - A)^n / n
+  Mat I_minus_A_re, I_minus_A_im;
+  MatDuplicate(A_re, MAT_COPY_VALUES, &I_minus_A_re);
+  MatDuplicate(A_im, MAT_COPY_VALUES, &I_minus_A_im);
+  MatScale(I_minus_A_re, -1.0); // -A_re
+  MatScale(I_minus_A_im, -1.0); // -A_im
+  MatShift(I_minus_A_re, 1.0); // I - A_re
+
+  // Test norm of I_minus_A
+  double Anorm_re, Anorm_im;
+  MatNorm(I_minus_A_re, NORM_FROBENIUS, &Anorm_re);
+  MatNorm(I_minus_A_im, NORM_FROBENIUS, &Anorm_im);
+  if (Anorm_re >= 1.0 || Anorm_im >= 1.0){
+    printf("ERROR for Log with Taylor: Norm of I - A is >= 1 (%1.14e + i*%1.14e). Taylor expansion may not converge!\n", Anorm_re, Anorm_im);
     exit(1);
   }
 
-  // Cleanup
-  VecDestroy(&v_re);
-  VecDestroy(&v_im);
-  VecDestroy(&Av_re);
-  VecDestroy(&Av_im);
+  // Now do the Taylor expansion
+  Mat term_re, term_im;
+  // First term: I-A
+  MatDuplicate(I_minus_A_re, MAT_COPY_VALUES, &term_re); // = I-A_re
+  MatDuplicate(I_minus_A_im, MAT_COPY_VALUES, &term_im); // =  -A_im
+  MatAXPY(logA_re, -1.0, term_re, DIFFERENT_NONZERO_PATTERN);
+  MatAXPY(logA_im, -1.0, term_im, DIFFERENT_NONZERO_PATTERN);
+  // Higher order terms
+  int max_terms = 1000;
+  double tol = 1e-12;
+  double err_est = 0.0;
+  for (int n=2; n<=max_terms; n++){
+    // Update log_A += -term_new / n where term_new = term * (I - A)
+    //  real part of term * (I-A) is  term_re*I_minus_A_re - term_im*I_minus_A_im
+    // imaginary part of term * (I-A) is  term_im*I_minus_A_re + term_re*I_minus_A_im  
+    Mat term_new_re, term_new_im, tmp;
+    MatMatMult(term_re, I_minus_A_re, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &term_new_re);
+    MatMatMult(term_im, I_minus_A_im, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &tmp);
+    MatAXPY(term_new_re, -1.0, tmp, DIFFERENT_NONZERO_PATTERN); // term_new_re = term_re*I_minus_A_re - term_im*I_minus_A_im
+    MatDestroy(&tmp);
+    // Update logA_re 
+    MatAXPY(logA_re, -1.0/n, term_new_re, DIFFERENT_NONZERO_PATTERN);
 
-  return 1;
+    MatMatMult(term_im, I_minus_A_re, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &term_new_im);
+    MatMatMult(term_re, I_minus_A_im, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &tmp);
+    MatAXPY(term_new_im, 1.0, tmp, DIFFERENT_NONZERO_PATTERN); // term_new_im = term_im*I_minus_A_re + term_re*I_minus_A_im
+    MatDestroy(&tmp);
+    // Update logA_im
+    MatAXPY(logA_im, -1.0/n, term_new_im, DIFFERENT_NONZERO_PATTERN);
+
+    // Update term 
+    MatCopy(term_new_re, term_re, DIFFERENT_NONZERO_PATTERN);
+    MatCopy(term_new_im, term_im, DIFFERENT_NONZERO_PATTERN);
+    MatDestroy(&term_new_re);
+    MatDestroy(&term_new_im);
+
+    // Check convergence by norm of term / n
+    double norm_re, norm_im;
+    MatNorm(term_re, NORM_FROBENIUS, &norm_re);
+    MatNorm(term_im, NORM_FROBENIUS, &norm_im);
+    err_est = sqrt( (norm_re/n)*(norm_re/n) + (norm_im/n)*(norm_im/n) );
+    if (norm_re/n < tol && norm_im/n < tol){
+      printf("Matrix log converged after %d terms.\n", n);
+      break;  
+    }
+  }
+
+  // Ceanup
+  MatDestroy(&I_minus_A_re);
+  MatDestroy(&I_minus_A_im);
+  MatDestroy(&term_re);
+  MatDestroy(&term_im);
+
+
+  return err_est;
 }

@@ -48,11 +48,11 @@ class OptimTarget{
     bool quietmode; ///< Flag for quiet mode operation
 
 
-    std::unique_ptr<std::vector<double>> evals_LogUdV_re; ///< Storage for eigenvalues log(U^\dagger V)
-    std::unique_ptr<std::vector<double>> evals_LogUdV_im; ///< Storage for eigenvalues log(U^\dagger V)
+    std::unique_ptr<std::vector<double>> evals_UdV_re; ///< Storage for eigenvalues log(U^\dagger V)
+    std::unique_ptr<std::vector<double>> evals_UdV_im; ///< Storage for eigenvalues log(U^\dagger V)
 
-    Mat Evecs_LogUdV_re; ///< Eigenvectors of log(U^\dagger V) (real part)
-    Mat Evecs_LogUdV_im; ///< Eigenvectors of log(U^\dagger V) (imaginary part)
+    Mat Evecs_UdV_re; ///< Eigenvectors of log(U^\dagger V) (real part)
+    Mat Evecs_UdV_im; ///< Eigenvectors of log(U^\dagger V) (imaginary part)
 
   public:
     OptimTarget();
@@ -149,7 +149,7 @@ class OptimTarget{
     double finalizeJ(const double obj_cost_re, const double obj_cost_im); 
 
     /**
-     * @brief Computes the Riemannian distance between target and current unitary: J(U) = 1/2 || log(U^\dagger V) ||^2_F
+     * @brief Computes the Riemannian distance between target and current unitary: J(U) = 1/2 || log(U^\dagger V) ||^2_F, or its trace invariant version. 
      * @param U_final_re Real part of final-time unitary matrix
      * @param U_final_im Imaginary part of final-time unitary matrix
      * @param phase_invariant Flag to use phase-invariant version of Riemannian

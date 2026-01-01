@@ -17,8 +17,8 @@ OptimTarget::OptimTarget(){
   mpisize_petsc=0;
   mpirank_petsc=0;
   mpirank_world=0;
-  Evecs_LogUdV_re = NULL;
-  Evecs_LogUdV_im = NULL;
+  Evecs_UdV_re = NULL;
+  Evecs_UdV_im = NULL;
 }
 
 
@@ -315,16 +315,16 @@ OptimTarget::OptimTarget(std::vector<std::string> target_str, const std::string&
   }
 
   /* Allocate storage of eigenvalues of U_final, size dim */
-  evals_LogUdV_re = std::make_unique<std::vector<double>>(mastereq->getDim());
-  evals_LogUdV_im = std::make_unique<std::vector<double>>(mastereq->getDim());
+  evals_UdV_re = std::make_unique<std::vector<double>>(mastereq->getDim());
+  evals_UdV_im = std::make_unique<std::vector<double>>(mastereq->getDim());
 }
 
 OptimTarget::~OptimTarget(){
   if (objective_type == ObjectiveType::JFROBENIUS) VecDestroy(&aux);
   if (target_type == TargetType::GATE || target_type == TargetType::FROMFILE)  VecDestroy(&targetstate);
 
-  if (Evecs_LogUdV_re != NULL) MatDestroy(&Evecs_LogUdV_re);
-  if (Evecs_LogUdV_im != NULL) MatDestroy(&Evecs_LogUdV_im); 
+  if (Evecs_UdV_re != NULL) MatDestroy(&Evecs_UdV_re);
+  if (Evecs_UdV_im != NULL) MatDestroy(&Evecs_UdV_im); 
 
   delete targetgate;
 }
@@ -905,13 +905,12 @@ void OptimTarget::finalizeJ_diff(const double obj_cost_re, const double obj_cost
 
 
 double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_im, bool phase_invariant){
-  /* Compute the Riemannian distance J = 1/2 || log(U^\dagger V)||_F^2 */
 
-  /* First, get U^\dagger V */
+  /* Set up A = U^\dagger V */
   Mat UdagV_re, UdagV_im;
+  Mat tmp;
   // UdagV_re = U_final_re^T * VxV_re + U_final_im^T * VxV_im
   MatTransposeMatMult(U_final_re, targetgate->VxV_re, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &UdagV_re);
-  Mat tmp;
   MatTransposeMatMult(U_final_im, targetgate->VxV_im,MAT_INITIAL_MATRIX, PETSC_DETERMINE, &tmp);
   MatAXPY(UdagV_re, 1.0, tmp, SAME_NONZERO_PATTERN);
   // UdagV_im = U_final_re^T * VxV_im - U_final_im^T * VxV_re
@@ -920,54 +919,36 @@ double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_i
   MatAXPY(UdagV_im, -1.0, tmp, SAME_NONZERO_PATTERN);
   MatDestroy(&tmp);
 
-  /* Now get the eigenvalues of A. Note, only the first half is needed, since the second half will be their complex conjugate */
-  int neigvals = 2*dim; // All? Weird... even if I request dim eigenvalues, somehow I anyways get all of them?? TEST! TODO.
-  Mat Evecs_re, Evecs_im;
-  getEigenComplex(UdagV_re, UdagV_im, neigvals, evals_LogUdV_re, evals_LogUdV_im, Evecs_re, Evecs_im);
 
-  // Test the eigenvalues and eigenvectors of UdagV
-  testEigenComplex(UdagV_re, UdagV_im, evals_LogUdV_re, evals_LogUdV_im, Evecs_re, Evecs_im);
+  /* Get eigendecomposition of A=U^dagger V */
+  bool printevals = false;
+  getEigenComplex(UdagV_re, UdagV_im, evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im, printevals);
 
-  // // Print each eigenvalue
-  // printf("Eigen decomposition of U^dagger V done.\n");
-  // for (size_t i=0; i<evals_LogUdV_re->size(); i++){
-  //   double phase = atan2(evals_LogUdV_im->at(i), evals_LogUdV_re->at(i));
-  //   double abs = sqrt( evals_LogUdV_re->at(i)*evals_LogUdV_re->at(i) + evals_LogUdV_im->at(i)*evals_LogUdV_im->at(i) );
-  //   printf("Eigenvalue %d: %f + i*%f, abs=%f, phase = %f \n", i, evals_LogUdV_re->at(i), evals_LogUdV_im->at(i), abs,  phase*180.0/M_PI);
-  // }
-  // MatView(Evecs_re, NULL);
-  // MatView(Evecs_im, NULL);
+  // Test the eigendecomposition of UdagV. 
+  testEigenComplex(UdagV_re, UdagV_im, evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im);
+  // Test the reconstruction of UdagV from its eigendecomposition
+  Mat UdagV_test_re, UdagV_test_im;
+  bool do_log = false;
+  reconstructMatrixFromEigenComplex(evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im, UdagV_test_re, UdagV_test_im, false, UdagV_re, UdagV_im);
+  MatDestroy(&UdagV_test_re);
+  MatDestroy(&UdagV_test_im);
 
-  // Store eigenvectors for gradient computation later
-  if (Evecs_LogUdV_re == NULL) {
-    MatDuplicate(Evecs_re, MAT_COPY_VALUES, &Evecs_LogUdV_re);
-    MatDuplicate(Evecs_im, MAT_COPY_VALUES, &Evecs_LogUdV_im);
-  } else {
-    MatCopy(Evecs_re, Evecs_LogUdV_re, SAME_NONZERO_PATTERN);
-    MatCopy(Evecs_im, Evecs_LogUdV_im, SAME_NONZERO_PATTERN);
-  }
-  
-  MatDestroy(&Evecs_re);
-  MatDestroy(&Evecs_im);
-  // exit(1);
-
-  /* Now get the phases (theta) of the eigenvalues such that eigvals_re + i*eigvals_im = e^{i*theta}, and sum up the objective function */
-  // first sum up to get the average
+  /* Sum up the objective function from eigenvalue phases, eigval = e^{i*theta} */
+  // For phase invariance, sum up theta_average first
   double avg_theta = 0.0;
   if (phase_invariant) {
-    for (int i=0; i<evals_LogUdV_re->size(); i++){
-      double theta = atan2(evals_LogUdV_im->at(i), evals_LogUdV_re->at(i));
+    for (int i=0; i<evals_UdV_re->size(); i++){
+      double theta = atan2(evals_UdV_im->at(i), evals_UdV_re->at(i));
       avg_theta += theta;
     }
     avg_theta = avg_theta / double(dim);
   }
-  // Now sum up the objective function 
+  // Sum up the objective function 
   double obj = 0.0;
-  for (int i=0; i<evals_LogUdV_re->size(); i++){
-    double theta = atan2(evals_LogUdV_im->at(i), evals_LogUdV_re->at(i));
+  for (int i=0; i<evals_UdV_re->size(); i++){
+    double theta = atan2(evals_UdV_im->at(i), evals_UdV_re->at(i));
     obj += (theta - avg_theta) * (theta - avg_theta);
-
-    // if (mpirank_world == 0) printf("Eigenvalue %d: %f + i*%f  -> theta (degree)= %f \n", j, evals_LogUdV_re->at(j), evals_LogUdV_im->at(j), theta*180.0/M_PI);
+    // if (mpirank_world == 0) printf("Eigenvalue %d: %f + i*%f  -> theta (degree)= %f \n", j, evals_UdV_re->at(j), evals_UdV_im->at(j), theta*180.0/M_PI);
   }
   obj = obj / 2.0;
 
@@ -980,13 +961,99 @@ double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_i
 
 
 void OptimTarget::RiemannianDistance_diff(const Mat U_final_re, const Mat U_final_im, Mat U_final_re_bar, Mat U_final_im_bar, bool phase_invariant){
-  // Compute the derivative of the Riemannian distance J = 1/2 || log(U^\dagger V)||_F^2
-  // Gradient: U_final_bar = - U_final * log(U_final^\dagger V)^\dagger + phase correction term if phase_invariant
+/* Compute derivative of the Riemannian distance:
+ *      U_final_bar = - U_final * log(U_final^\dagger V) 
+ *                    + (tr log(U^† V))/d * U  (if phase_invariant)
+ */
 
-  printf("In grad:\n");
-  for (size_t j=0; j<evals_LogUdV_re->size(); j+=2) {
-    double theta = atan2(evals_LogUdV_im->at(j), evals_LogUdV_re->at(j));
-    printf("Eigenvalue %d: %f + i*%f  -> theta (degree)= %f \n", j, evals_LogUdV_re->at(j), evals_LogUdV_im->at(j), theta*180.0/M_PI);
+  
+  // // TEST for Obj_cost = sum_ij U_final_re(i,j)
+  // // Gradient: U_final_re_bar(i,j) = 1.0
+  // MatZeroEntries(U_final_re_bar);
+  // MatZeroEntries(U_final_im_bar);
+  // for (int i=0; i<dim; i++){
+  //   for (int j=0; j<dim; j++){
+  //     // MatSetValue(U_final_re_bar, i, j, 1.0, ADD_VALUES);
+  //     double val_ufinal_re, val_ufinal_im;
+  //     MatGetValue(U_final_re, i, j, &val_ufinal_re);
+  //     MatGetValue(U_final_im, i, j, &val_ufinal_im);
+  //     if (i < dim/2 && j < dim/2) {
+  //       MatSetValue(U_final_re_bar, i, j, 2.0*val_ufinal_re, ADD_VALUES);
+  //       MatSetValue(U_final_im_bar, i, j, 2.0*val_ufinal_im, ADD_VALUES);
+  //     }
+  //   }
+  // }
+  // MatAssemblyBegin(U_final_re_bar, MAT_FINAL_ASSEMBLY); 
+  // MatAssemblyEnd(U_final_re_bar, MAT_FINAL_ASSEMBLY);
+  // MatAssemblyBegin(U_final_im_bar, MAT_FINAL_ASSEMBLY); 
+  // MatAssemblyEnd(U_final_im_bar, MAT_FINAL_ASSEMBLY);
+  // return;
+
+  // // TEST THE RECONSTRUCTION OF log(UdagV)
+  // // Get log from taylor seriesexpansion. NOT WORKING.
+  // Mat logUdagV_taylor_re, logUdagV_taylor_im;
+  // double error_est = computeMatrixLogTaylor(UdagV_re, UdagV_im, logUdagV_taylor_re, logUdagV_taylor_im);
+  // printf("Matrix log Taylor series expansion error estimate: %e \n", error_est);
+
+  // // Test Reconstruct log(UdagV) from eigen decomposition of UdagV
+  // printf("\n\n\n TESTING RECONSTRUCTION\n\n");
+  // Mat log_test_re, log_test_im;
+  // reconstructMatrixFromEigenComplex(evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im, log_test_re, log_test_im, true);
+
+  // printf("UdagV:\n");
+  // MatView(UdagV_re, NULL);
+  // MatView(UdagV_im, NULL);
+  // printf("log_UdagV:\n");
+  // MatView(log_test_re, NULL);
+  // MatView(log_test_im, NULL);
+  // printf("Eigenvectors of UdagV:\n");
+  // MatView(Evecs_UdV_re, NULL);
+  // MatView(Evecs_UdV_im, NULL);
+  // //print all eigenvalues:
+  // for (int j=0; j<evals_UdV_re->size(); j++){
+  //   double theta = atan2(evals_UdV_im->at(j), evals_UdV_re->at(j));
+  //   printf("Eigenvalue %d: %f + i*%f  -> theta (degree)= %f, theta(radiants) = %f \n", j, evals_UdV_re->at(j), evals_UdV_im->at(j), theta*180.0/M_PI, theta);
+  // }
+  
+  // MatDestroy(&log_test_re);
+  // MatDestroy(&log_test_im);
+  // // MatDestroy(&logUdagV_taylor_re);
+  // // MatDestroy(&logUdagV_taylor_im);
+  // exit(1);
+
+  // Reconstruct log(U^\dagger V) from eigen decomposition of UdagV
+  Mat logUdagV_re, logUdagV_im;
+  reconstructMatrixFromEigenComplex(evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im, logUdagV_re, logUdagV_im, true);
+
+  // Now compute U_final_bar = - U_final * log(U_final^\dagger V)
+  // U_final_bar_re = - (U_final_re * logUdagV_re - U_final_im * logUdagV_im)
+  // U_final_bar_im = - (U_final_im * logUdagV_re + U_final_re * logUdagV_im)
+  MatZeroEntries(U_final_re_bar);
+  MatZeroEntries(U_final_im_bar);
+  Mat tmp1, tmp2;
+  MatMatMult(U_final_re, logUdagV_re, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &tmp1);
+  MatMatMult(U_final_im, logUdagV_im, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &tmp2);
+  MatAXPY(U_final_re_bar, -1.0, tmp1, SAME_NONZERO_PATTERN);
+  MatAXPY(U_final_re_bar, 1.0, tmp2, SAME_NONZERO_PATTERN);
+  MatDestroy(&tmp1);
+  MatDestroy(&tmp2);
+  MatMatMult(U_final_im, logUdagV_re, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &tmp1);
+  MatMatMult(U_final_re, logUdagV_im, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &tmp2);
+  MatAXPY(U_final_im_bar, -1.0, tmp1, SAME_NONZERO_PATTERN);
+  MatAXPY(U_final_im_bar, -1.0, tmp2, SAME_NONZERO_PATTERN);
+  MatDestroy(&tmp1);
+  MatDestroy(&tmp2);
+
+  // If phase invariant, add (tr log(U^† V))/d * U_final to the gradient
+  if (phase_invariant) {
+    double trace = 0.0;
+    for (int i=0; i<evals_UdV_re->size(); i++){
+      double theta = atan2(evals_UdV_im->at(i), evals_UdV_re->at(i));
+      trace += theta;
+    }
+    trace = trace / double(dim);
+    MatAXPY(U_final_re_bar, trace, U_final_re, SAME_NONZERO_PATTERN);
+    MatAXPY(U_final_im_bar, trace, U_final_im, SAME_NONZERO_PATTERN);
   }
 
 }

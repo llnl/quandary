@@ -229,9 +229,14 @@ int getEigvals(const Mat A, const int neigvals, std::vector<double>& eigvals, st
  * @param eigvals_re Vector of real parts of eigenvalues
  * @param eigvals_im Vector to store imaginary parts of eigenvalues
  */
-void getEigenComplex(const Mat A_re, const Mat A_im, const int neigvals, std::unique_ptr<std::vector<double>>& eigvals_re, std::unique_ptr<std::vector<double>>& eigvals_im, Mat& Evecs_re, Mat& Evecs_im);
+void getEigenComplex(const Mat A_re, const Mat A_im, std::unique_ptr<std::vector<double>>& eigvals_re, std::unique_ptr<std::vector<double>>& eigvals_im, Mat& Evecs_re, Mat& Evecs_im, bool print=false);
 
 int testEigenComplex(const Mat A_re, const Mat A_im, const std::unique_ptr<std::vector<double>>& eigvals_re, const std::unique_ptr<std::vector<double>>& eigvals_im, const Mat& Evecs_re, const Mat& Evecs_im);
+
+void reconstructMatrixFromEigenComplex(const std::unique_ptr<std::vector<double>>& eigvals_re, const std::unique_ptr<std::vector<double>>& eigvals_im, const Mat& Evecs_re, const Mat& Evecs_im, Mat& A_re_out, Mat& A_im_out, const bool do_log=false, const Mat& Atest_re=NULL, const Mat& Atest_im=NULL);
+
+
+double computeMatrixLogTaylor(const Mat& A_re, const Mat& A_im, Mat& logA_re, Mat& logA_im);
 
 /**
  * @brief Tests if complex matrix A+iB is unitary.

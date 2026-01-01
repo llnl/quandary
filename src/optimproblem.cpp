@@ -375,11 +375,12 @@ double OptimProblem::evalF(const Vec x) {
     fidelity = fidelity_re; 
   }
  
-  /* Finalize the objective function */
-  obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im);
+  if (!use_new_objective) {
+    /* Finalize the objective function */
+    obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im);
 
-  /* New objective function: Riemannian distance */
-  if (use_new_objective) {
+  } else {
+    /* New objective function: Riemannian distance */
 
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -578,12 +579,13 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
     fidelity = fidelity_re; 
   }
  
-  /* Finalize the objective function Jtrace to get the infidelity. 
+  if (!use_new_objective) {
+    /* Finalize the objective function Jtrace to get the infidelity. 
      If Schroedingers solver, need to take the absolute value */
-  obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im);
+    obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im);
 
-  /* New objective function: Riemannian distance */
-  if (use_new_objective) {
+  } else {
+    /* New objective function: Riemannian distance */
 
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -646,9 +648,24 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
       VecZeroEntries(rho_t0_bar);
 
       /* Terminal condition for adjoint variable: Derivative of final time objective J */
-      double obj_cost_re_bar, obj_cost_im_bar;
-      optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
-      optim_target->evalJ_diff(store_finalstates[iinit], rho_t0_bar, obj_weights[iinit]*obj_cost_re_bar, obj_weights[iinit]*obj_cost_im_bar);
+      if (!use_new_objective) {
+        double obj_cost_re_bar, obj_cost_im_bar;
+        optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
+        optim_target->evalJ_diff(store_finalstates[iinit], rho_t0_bar, obj_weights[iinit]*obj_cost_re_bar, obj_weights[iinit]*obj_cost_im_bar);
+      } else {
+        // Pass i-th column of U_final_bar into rho_t0_bar
+        for (size_t row = 0; row < timestepper->mastereq->getDim(); row++) {
+          int id_re = row;
+          int id_im = row + timestepper->mastereq->getDim();
+          double val_ufinal_re_bar, val_ufinal_im_bar;
+          MatGetValue(U_final_re_bar, row, iinit_global, &val_ufinal_re_bar);
+          MatGetValue(U_final_im_bar, row, iinit_global, &val_ufinal_im_bar);
+          VecSetValue(rho_t0_bar, id_re, val_ufinal_re_bar, ADD_VALUES);
+          VecSetValue(rho_t0_bar, id_im, val_ufinal_im_bar, ADD_VALUES);
+        }
+        VecAssemblyBegin(rho_t0_bar);
+        VecAssemblyEnd(rho_t0_bar);
+      }
 
       /* Derivative of time-stepping */
       timestepper->solveAdjointODE(rho_t0_bar, store_finalstates[iinit], obj_weights[iinit] * gamma_penalty, obj_weights[iinit]*gamma_penalty_dpdm, obj_weights[iinit]*gamma_penalty_energy);
