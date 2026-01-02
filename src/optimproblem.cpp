@@ -284,6 +284,7 @@ double OptimProblem::evalF(const Vec x) {
 
   /*  Iterate over initial condition */
   obj_cost  = 0.0;
+  obj_riemann = 0.0;
   obj_regul = 0.0;
   obj_penal = 0.0;
   obj_penal_dpdm = 0.0;
@@ -399,6 +400,7 @@ double OptimProblem::evalF(const Vec x) {
 
     // if (mpirank_world == 0) printf("\nRiemannian distance objective: %1.14e\n\n", obj_riemannian);
     obj_cost = obj_riemannian;
+    obj_riemann = obj_riemannian;
   }
 
   /* Evaluate Tikhonov regularization term: gamma/2 * ||x-x0||^2*/
@@ -426,6 +428,7 @@ double OptimProblem::evalF(const Vec x) {
   if (mpirank_world == 0 && !quietmode) {
     std::cout<< "Objective = " << std::scientific<<std::setprecision(14) << obj_cost << " + " << obj_regul << " + " << obj_penal << " + " << obj_penal_dpdm << " + " << obj_penal_energy << " + " << obj_penal_variation << std::endl;
     std::cout<< "Fidelity = " << fidelity  << std::endl;
+    std::cout<< "Riemannian = " << obj_riemann  << std::endl;
   }
 
   return objective;
@@ -441,6 +444,9 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
 
   /* Pass design vector x to oscillators */
   mastereq->setControlAmplitudes(x); 
+
+  // TEST
+  output->writeControls(x, timestepper->mastereq, timestepper->ntime, timestepper->dt);
 
   /* Reset Gradient */
   VecZeroEntries(G);
@@ -467,6 +473,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
 
   /*  Iterate over initial condition */
   obj_cost = 0.0;
+  obj_riemann = 0.0;
   obj_regul = 0.0;
   obj_penal = 0.0;
   obj_penal_dpdm = 0.0;
@@ -604,6 +611,8 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
 
     // if (mpirank_world == 0) printf("\nRiemannian distance objective: %1.14e\n\n", obj_riemannian);
     obj_cost = obj_riemannian;
+    obj_riemann = obj_riemannian;
+
   }
 
   /* Evaluate Tikhonov regularization term += gamma/2 * ||x||^2*/
@@ -754,12 +763,19 @@ PetscErrorCode TaoMonitor(Tao tao,void*ptr){
 
   /* Grab some output stuff */
   double obj_cost = ctx->getCostT();
+  double obj_riemann = ctx->getRiemannDistance();
   double obj_regul = ctx->getRegul();
   double obj_penal = ctx->getPenalty();
   double obj_penal_dpdm = ctx->getPenaltyDpDm();
   double obj_penal_energy = ctx->getPenaltyEnergy();
   double obj_penal_variation= ctx->getPenaltyVariation();
   double F_avg = ctx->getFidelity();
+
+  // // Switch objective functions if infidelity is smaller 0.73
+  // if (1.0 - F_avg < 0.73) {
+  //   printf("Switching to infidelity measure.\n");
+  //   ctx->setRiemannianDistance(false);
+  // }
 
   /* Additional Stopping criteria */
   bool lastIter = false;
@@ -788,10 +804,11 @@ PetscErrorCode TaoMonitor(Tao tao,void*ptr){
   /* Every <optim_monitor_freq> iterations: Output of optimization history */
   if (iter % ctx->output->optim_monitor_freq == 0 ||lastIter) {
     // Add to optimization history file 
-    ctx->output->writeOptimFile(iter, f, gnorm, deltax, F_avg, obj_cost, obj_regul, obj_penal, obj_penal_dpdm, obj_penal_energy, obj_penal_variation);
+    ctx->output->writeOptimFile(iter, f, gnorm, deltax, F_avg, obj_cost, obj_riemann, obj_regul, obj_penal, obj_penal_dpdm, obj_penal_energy, obj_penal_variation);
     // Screen output 
     if (ctx->getMPIrank_world() == 0) {
       std::cout<< iter <<  "  " << std::scientific<<std::setprecision(14) << obj_cost << " + " << obj_regul << " + " << obj_penal << " + " << obj_penal_dpdm << " + " << obj_penal_energy << " + " << obj_penal_variation;
+      std::cout<< "  Rie = " << obj_riemann;
       std::cout<< "  Fidelity = " << F_avg;
       std::cout<< "  ||Grad|| = " << gnorm;
       std::cout<< std::endl;

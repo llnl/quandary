@@ -74,6 +74,7 @@ class OptimProblem {
   int ndesign; ///< Number of global design (optimization) parameters
   double objective; ///< Current objective function value (sum over final-time cost, regularization terms and penalty terms)
   double obj_cost; ///< Final-time measure J(T) in objective
+  double obj_riemann; ///< Riemannian distance measure 
   double obj_regul; ///< Regularization term in objective
   double obj_penal; ///< Penalty integral term for pure-state preparation in objective 
   double obj_penal_dpdm; ///< Penalty term second-order state derivatives (penalizes variations of the state evolution)
@@ -141,6 +142,9 @@ class OptimProblem {
    * @return double Final-time cost J(T)
    */
   double getCostT()    { return obj_cost; };
+
+  // Get riemannian distance measure
+  double getRiemannDistance()    { return obj_riemann; };
 
   /**
    * @brief Retrieves the Tikhonov regularization term.
@@ -218,6 +222,8 @@ class OptimProblem {
    * @return int Maximum iteration limit
    */
   int getMaxIter()     { return maxiter; };
+
+  void setRiemannianDistance(bool flag) { use_new_objective = flag; };
 
   /**
    * @brief Evaluates the objective function F(x).

@@ -79,7 +79,7 @@ class Output{
      * @param penalty_energy Energy penalty term
      * @param penalty_variation Control variation penalty
      */
-    void writeOptimFile(int optim_iter, double objective, double gnorm, double stepsize, double Favg, double cost, double tikh_regul,  double penalty, double penalty_dpdm, double penalty_energy, double penalty_variation);
+    void writeOptimFile(int optim_iter, double objective, double gnorm, double stepsize, double Favg, double cost, double obj_riemann, double tikh_regul,  double penalty, double penalty_dpdm, double penalty_energy, double penalty_variation);
 
     /**
      * @brief Writes current control pulses per oscillator and control parameters.
