@@ -1,6 +1,6 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1765219046947,
-  "repoUrl": "https://github.com/LLNL/quandary",
+  "lastUpdate": 1767663468836,
+  "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
       {
@@ -2155,6 +2155,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
             "value": 4261.94,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Tara Drwenski",
+            "username": "tdrwenski",
+            "email": "tdrwenski@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "7fc111c2d90ed1abf31364d8287e600148507076",
+          "message": "Merge pull request #104 from LLNL/fix-output-bug\n\nFix output writing synchronization bug",
+          "timestamp": "2025-12-08T18:13:47Z",
+          "url": "https://github.com/llnl/quandary/commit/7fc111c2d90ed1abf31364d8287e600148507076"
+        },
+        "date": 1767663467173,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "value": 0.754552184836939,
+            "range": "0.1604821983085154",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "value": 87.69,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "value": 5.243459861725569,
+            "range": "0.029764067656555777",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "value": 4262.38,
             "unit": "MB"
           }
         ]
