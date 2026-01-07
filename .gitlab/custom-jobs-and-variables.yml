@@ -33,7 +33,8 @@ variables:
 # Project specific variants for tioga
   PROJECT_TIOGA_VARIANTS: "+test"
 # Project specific deps for tioga
-  PROJECT_TIOGA_DEPS: ""
+# Force use of petsc >= 3.23 as 3.22 doesn't seem to work with rocm 6.4.1
+  PROJECT_TIOGA_DEPS: "^petsc@3.23:"
 
 # Configuration shared by build and test jobs specific to this project.
 # Not all configuration can be shared. Here projects can fine tune the
