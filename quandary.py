@@ -78,6 +78,9 @@ class Quandary:
     gamma_dpdm          # Parameter for integral penality term on second state derivative. Default: 0.01
     gamma_variation     # Parameter for penality term on variations in the control parameters: Default: 0.01
 
+    use_Riemannian_objective # Switch to use Riemannian objective function for gate optimization. Default: False
+    phase_invariant         # Switch to use phase-invariant Riemannian objective. Default: False
+
     # General options
     rand_seed            # Set a fixed random number generator seed. Default: None (non-reproducable)
     print_frequency_iter # Output frequency for optimization iterations. (Print every <x> iterations). Default: 1
@@ -156,6 +159,8 @@ class Quandary:
     gamma_energy           : float = 0.1
     gamma_dpdm             : float = 0.01        
     gamma_variation        : float = 0.01        
+    use_Riemannian_objective :  bool = False
+    phase_invariant         :  bool = False
     # General options
     rand_seed              : int  = None
     print_frequency_iter   : int  = 1
@@ -740,6 +745,10 @@ class Quandary:
             mystring += "usematfree = " + str(self.usematfree) + "\n"
         else:
             mystring += "usematfree = false\n"
+
+        mystring += "use_Riemannian_objective= " + str(self.use_Riemannian_objective) + "\n"
+        mystring += "phase_invariant= " + str(self.phase_invariant) + "\n"
+ 
         mystring += "linearsolver_type = gmres\n"
         mystring += "linearsolver_maxiter = 20\n"
         if not self.standardmodel:

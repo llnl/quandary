@@ -39,12 +39,12 @@ OptimProblem::OptimProblem(Config config, TimeStepper* timestepper_, MPI_Comm co
   }
 
   // Check for new Riemannian objective function:
-  use_new_objective = config.GetBoolParam("use_new_objective", false, true);
+  use_Riemannian_objective = config.GetBoolParam("use_Riemannian_objective", false, true);
   phase_invariant = config.GetBoolParam("phase_invariant", false, true);
   if (timestepper->mastereq->lindbladtype != LindbladType::NONE) {
-    use_new_objective = false;
+    use_Riemannian_objective = false;
   }
-  if (use_new_objective) {
+  if (use_Riemannian_objective) {
     if (mpisize_petsc>1){
       printf("New objective function only works with one petsc core right now.\n");
       exit(1);
@@ -56,7 +56,7 @@ OptimProblem::OptimProblem(Config config, TimeStepper* timestepper_, MPI_Comm co
   }
 
   // Allocate storage for final-time unitary if new objective function is used
-  if (use_new_objective) {
+  if (use_Riemannian_objective) {
     PetscInt globalsize_rows = timestepper->mastereq->getDim();
     PetscInt globalsize_cols = ninit;;
     PetscInt localsize_rows = globalsize_rows / mpisize_petsc;
@@ -261,7 +261,7 @@ OptimProblem::~OptimProblem() {
   for (size_t i = 0; i < store_finalstates.size(); i++) {
     VecDestroy(&(store_finalstates[i]));
   }
-  if (use_new_objective) {
+  if (use_Riemannian_objective) {
     MatDestroy(&U_final_re);
     MatDestroy(&U_final_im);
     MatDestroy(&U_final_re_bar);
@@ -309,7 +309,7 @@ double OptimProblem::evalF(const Vec x) {
     Vec finalstate = timestepper->solveODE(initid, rho_t0);
 
     /* Store the final state for Riemannian objective function */
-    if (use_new_objective) {
+    if (use_Riemannian_objective) {
       const PetscScalar *finalstate_array;
       VecGetArrayRead(finalstate, &finalstate_array);
       for (size_t row = 0; row < timestepper->mastereq->getDim(); row++) {
@@ -346,7 +346,7 @@ double OptimProblem::evalF(const Vec x) {
 
     // printf("%d, %d: iinit obj_iinit: %f * (%1.14e + i %1.14e, Overlap=%1.14e + i %1.14e\n", mpirank_world, mpirank_init, obj_weights[iinit], obj_iinit_re, obj_iinit_im, fidelity_iinit_re, fidelity_iinit_im);
   }
-  if (use_new_objective) {
+  if (use_Riemannian_objective) {
     MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
@@ -376,7 +376,7 @@ double OptimProblem::evalF(const Vec x) {
     fidelity = fidelity_re; 
   }
  
-  if (!use_new_objective) {
+  if (!use_Riemannian_objective) {
     /* Finalize the objective function */
     obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im);
 
@@ -500,7 +500,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
     Vec finalstate = timestepper->solveODE(initid, rho_t0);
 
     /* Store the final state for Riemannian objective function */
-    if (use_new_objective) {
+    if (use_Riemannian_objective) {
       const PetscScalar *finalstate_array;
       VecGetArrayRead(finalstate, &finalstate_array);
       for (size_t row = 0; row < timestepper->mastereq->getDim(); row++) {
@@ -556,7 +556,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
       VecAXPY(G, 1.0, timestepper->redgrad);
     }
   }
-  if (use_new_objective) {
+  if (use_Riemannian_objective) {
     MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
@@ -586,7 +586,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
     fidelity = fidelity_re; 
   }
  
-  if (!use_new_objective) {
+  if (!use_Riemannian_objective) {
     /* Finalize the objective function Jtrace to get the infidelity. 
      If Schroedingers solver, need to take the absolute value */
     obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im);
@@ -637,7 +637,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   objective = obj_cost + obj_regul + obj_penal + obj_penal_dpdm + obj_penal_energy + obj_penal_variation;
 
   /* Derivative of new objective function */
-  if (use_new_objective) {
+  if (use_Riemannian_objective) {
     optim_target->RiemannianDistance_diff(U_final_re, U_final_im, U_final_re_bar, U_final_im_bar, phase_invariant);
   }
 
@@ -657,7 +657,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
       VecZeroEntries(rho_t0_bar);
 
       /* Terminal condition for adjoint variable: Derivative of final time objective J */
-      if (!use_new_objective) {
+      if (!use_Riemannian_objective) {
         double obj_cost_re_bar, obj_cost_im_bar;
         optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
         optim_target->evalJ_diff(store_finalstates[iinit], rho_t0_bar, obj_weights[iinit]*obj_cost_re_bar, obj_weights[iinit]*obj_cost_im_bar);
