@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1767663468836,
+  "lastUpdate": 1767808320427,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -2199,6 +2199,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
             "value": 4262.38,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Tara Drwenski",
+            "username": "tdrwenski",
+            "email": "tdrwenski@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "809b12652ced42703cb0638fa6144ee49d012868",
+          "message": "Merge pull request #105 from llnl/update-shared-ci-and-spack-configs\n\nUpdate CI",
+          "timestamp": "2026-01-07T17:04:38Z",
+          "url": "https://github.com/llnl/quandary/commit/809b12652ced42703cb0638fa6144ee49d012868"
+        },
+        "date": 1767808318954,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "value": 0.769419935066253,
+            "range": "0.14782719480476925",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "value": 99.08,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "value": 5.473831309936941,
+            "range": "0.09263098417496651",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "value": 4509.91,
             "unit": "MB"
           }
         ]
