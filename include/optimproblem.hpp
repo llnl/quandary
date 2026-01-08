@@ -56,7 +56,7 @@ class OptimProblem {
   Mat U_final_im; ///< Storage for final-time unitary matrix. TODO: Remove the above store_finalstates, and use this one instead.
   Mat U_final_re_bar; ///< Storage for derivative of final-time unitary matrix
   Mat U_final_im_bar; ///< Storage for derivative of final-time unitary matrix
-  bool use_Riemannian_objective; ///< Flag to use new objective function based on Riemannian distance
+  double use_Riemannian_objective; ///< Flag to use new objective function based on Riemannian distance
   bool phase_invariant; ///< Flag to use phase-invariant version of Riemannian distance objective
 
   OptimTarget* optim_target; ///< Pointer to the optimization target (gate or state)
