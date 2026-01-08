@@ -928,7 +928,6 @@ double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_i
   testEigenComplex(UdagV_re, UdagV_im, evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im);
   // Test the reconstruction of UdagV from its eigendecomposition
   Mat UdagV_test_re, UdagV_test_im;
-  bool do_log = false;
   reconstructMatrixFromEigenComplex(evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im, UdagV_test_re, UdagV_test_im, false, UdagV_re, UdagV_im);
   MatDestroy(&UdagV_test_re);
   MatDestroy(&UdagV_test_im);

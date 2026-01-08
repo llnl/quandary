@@ -282,6 +282,16 @@ double OptimProblem::evalF(const Vec x) {
   /* Pass design vector x to oscillators */
   mastereq->setControlAmplitudes(x); 
 
+  // Reset U_final
+  if (use_Riemannian_objective) {
+    MatZeroEntries(U_final_re);
+    MatZeroEntries(U_final_im);
+    MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
+  }
+
   /*  Iterate over initial condition */
   obj_cost  = 0.0;
   obj_riemann = 0.0;
@@ -451,6 +461,22 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   /* Reset Gradient */
   VecZeroEntries(G);
 
+  // Reset U_final
+  if (use_Riemannian_objective) {
+    MatZeroEntries(U_final_re);
+    MatZeroEntries(U_final_im);
+    MatZeroEntries(U_final_re_bar);
+    MatZeroEntries(U_final_im_bar);
+    MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_re_bar, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_im_bar, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_re_bar, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_im_bar, MAT_FINAL_ASSEMBLY);
+  }
+
   /* Derivative of regulatization terms (ADD ON ONE PROC ONLY!) */
   // if (mpirank_init == 0 && mpirank_optim == 0) { // TODO: Which one?? 
   if (mpirank_init == 0 ) {
@@ -510,6 +536,12 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
         MatSetValue(U_final_im, row, iinit_global, finalstate_array[id_im], INSERT_VALUES);
       }
       VecRestoreArrayRead(finalstate, &finalstate_array);
+      
+      // Assembly here, or could be after the loop over iinit. 
+      MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
+      MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
+      MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
+      MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
     }
 
     /* Store the final state for the Schroedinger solver */
@@ -555,12 +587,6 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
       /* Add to optimizers's gradient */
       VecAXPY(G, 1.0, timestepper->redgrad);
     }
-  }
-  if (use_Riemannian_objective) {
-    MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
   }
 
   /* Sum up from initial conditions processors */
@@ -771,8 +797,9 @@ PetscErrorCode TaoMonitor(Tao tao,void*ptr){
   double obj_penal_variation= ctx->getPenaltyVariation();
   double F_avg = ctx->getFidelity();
 
-  // // Switch objective functions if infidelity is smaller 0.73
+  // Switch objective functions
   // if (1.0 - F_avg < 0.73) {
+  // if (iter > 50) {
   //   printf("Switching to infidelity measure.\n");
   //   ctx->setRiemannianDistance(false);
   // }
