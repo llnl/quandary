@@ -654,7 +654,7 @@ bool isUnitary(const Mat V_re, const Mat V_im){
 }
 
 
-void getEigenComplex(const Mat A_re, const Mat A_im, std::unique_ptr<std::vector<double>>& eigvals_re, std::unique_ptr<std::vector<double>>& eigvals_im, Mat& Evecs_re, Mat& Evecs_im, bool print){
+int getEigenComplex(const Mat A_re, const Mat A_im, std::unique_ptr<std::vector<double>>& eigvals_re, std::unique_ptr<std::vector<double>>& eigvals_im, Mat& Evecs_re, Mat& Evecs_im, bool print){
 
   PetscInt dim;
   MatGetSize(A_re, &dim, NULL);
@@ -720,7 +720,7 @@ void getEigenComplex(const Mat A_re, const Mat A_im, std::unique_ptr<std::vector
   EPSGetConverged(eigensolver, &nconv );
   if (nconv < neigvals){
     printf("ERROR: Only %d eigenvalues converged, but %d requested!\n", nconv, neigvals);
-    exit(1);
+    return 1;
   }
   // PetscPrintf(PETSC_COMM_WORLD," Solution method: %s\n",type);
   // PetscPrintf(PETSC_COMM_WORLD," Number of requested eigenpairs: %D\n",nev);
@@ -842,6 +842,8 @@ void getEigenComplex(const Mat A_re, const Mat A_im, std::unique_ptr<std::vector
   VecDestroy(&eigvecLarge_im);
   VecDestroy(&v_re);
   VecDestroy(&v_im);
+
+  return 0;
 }
 
 
@@ -858,7 +860,7 @@ int testEigenComplex(const Mat A_re, const Mat A_im, const std::unique_ptr<std::
   // Test total number of eigenvalues = dim
   if (eigvals_re->size()!= dim){
     printf("Error in RiemannianDistance: Wrong number of eigenvalues received: %d instead of %d\n", (int)eigvals_re->size(), dim);
-    exit(1);
+    return 1;
   }
   for (size_t i=0; i<eigvals_re->size(); i++){
     // Get eigenvector i
@@ -872,7 +874,7 @@ int testEigenComplex(const Mat A_re, const Mat A_im, const std::unique_ptr<std::
     double norm = sqrt(norm_re*norm_re + norm_im*norm_im);
     if (fabs(norm - 1.0) > 1e-12){
       printf("Error in RiemannianDistance: Eigenvector %d has norm %f != 1!\n", (int)i, norm);
-      exit(1);
+      return 1;
     }
 
     // Test that A v = lambda v
@@ -894,7 +896,7 @@ int testEigenComplex(const Mat A_re, const Mat A_im, const std::unique_ptr<std::
       double diff_im = valAv_im - (eigvals_re->at(i)*val_im + eigvals_im->at(i)*val_re);
       if (fabs(diff_re) > 1e-10 || fabs(diff_im) > 1e-10){
         printf("Error in RiemannianDistance: Vector %d is not an eigenvector! Diff = %f + i*%f\n", (int)i, diff_re, diff_im);
-        exit(1);
+        return 1;
       }
     }
 
@@ -916,6 +918,7 @@ int testEigenComplex(const Mat A_re, const Mat A_im, const std::unique_ptr<std::
       if (fabs(dot_re) > 1e-5 || fabs(dot_im) > 1e-5){
         printf("WARNING in RiemannianDistance: Eigenvector %d is not orthogonal to eigenvector %d! Dot = %1.14e + i*%1.14e\n", (int)i, (int)j, dot_re, dot_im);
         // exit(1);
+        return 1;
       }
       VecDestroy(&v2_re);
       VecDestroy(&v2_im);
@@ -929,11 +932,11 @@ int testEigenComplex(const Mat A_re, const Mat A_im, const std::unique_ptr<std::
   VecDestroy(&Av_re);
   VecDestroy(&Av_im);
 
-  return 1;
+  return 0;
 }
 
 
-void reconstructMatrixFromEigenComplex(const std::unique_ptr<std::vector<double>>& eigvals_re, const std::unique_ptr<std::vector<double>>& eigvals_im, const Mat& Evecs_re, const Mat& Evecs_im, Mat& Aout_re, Mat& Aout_im, const bool do_log, const Mat& Atest_re, const Mat& Atest_im){
+int reconstructMatrixFromEigenComplex(const std::unique_ptr<std::vector<double>>& eigvals_re, const std::unique_ptr<std::vector<double>>& eigvals_im, const Mat& Evecs_re, const Mat& Evecs_im, Mat& Aout_re, Mat& Aout_im, const bool do_log, const Mat& Atest_re, const Mat& Atest_im){
 // Compute A_out = Evecs * diag(evals) * Evecs^dagger, or the log thereof 
 // A_out_re = V_re * (D_re V_re^T + D_im V_im^T) - V_im * (D_im V_re^T - D_re V_im^T)
 // A_out_im = V_im * (D_re V_re^T + D_im V_im^T) + V_re * (D_im V_re^T - D_re V_im^T)
@@ -1015,7 +1018,8 @@ void reconstructMatrixFromEigenComplex(const std::unique_ptr<std::vector<double>
     //   printf("Reconstruction test: ||A - A_test||_F = %1.14e + i*%1.14e\n", norm_re, norm_im);
     if (norm_re > 1e-6 || norm_im > 1e-6){
       printf("Error: Reconstruction from eigen decomposition failed!\n");
-      exit(1);
+      // exit(1);
+      return 1;
     }
     MatDestroy(&A_diff_re);
     MatDestroy(&A_diff_im);
@@ -1026,6 +1030,8 @@ void reconstructMatrixFromEigenComplex(const std::unique_ptr<std::vector<double>
   MatDestroy(&VimT);
   MatDestroy(&LVT_1);
   MatDestroy(&LVT_2);
+
+  return 0;
 }
 
 // computeMatrixLogTaylor(UdagV_re, UdagV_im, logUdagV_re, logUdagV_im);

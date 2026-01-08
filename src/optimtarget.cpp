@@ -922,13 +922,22 @@ double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_i
 
   /* Get eigendecomposition of A=U^dagger V */
   bool printevals = false;
-  getEigenComplex(UdagV_re, UdagV_im, evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im, printevals);
+  int ierr = getEigenComplex(UdagV_re, UdagV_im, evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im, printevals);
+  if (ierr > 0) {
+    return 0.0;
+  }
 
   // Test the eigendecomposition of UdagV. 
-  testEigenComplex(UdagV_re, UdagV_im, evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im);
+  ierr = testEigenComplex(UdagV_re, UdagV_im, evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im);
+  if (ierr > 0) {
+    return 0.0;
+  }
   // Test the reconstruction of UdagV from its eigendecomposition
   Mat UdagV_test_re, UdagV_test_im;
-  reconstructMatrixFromEigenComplex(evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im, UdagV_test_re, UdagV_test_im, false, UdagV_re, UdagV_im);
+  ierr = reconstructMatrixFromEigenComplex(evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im, UdagV_test_re, UdagV_test_im, false, UdagV_re, UdagV_im);
+  if (ierr > 0) {
+    return 0.0;
+  }
   MatDestroy(&UdagV_test_re);
   MatDestroy(&UdagV_test_im);
 
@@ -1022,7 +1031,10 @@ void OptimTarget::RiemannianDistance_diff(const Mat U_final_re, const Mat U_fina
 
   // Reconstruct log(U^\dagger V) from eigen decomposition of UdagV
   Mat logUdagV_re, logUdagV_im;
-  reconstructMatrixFromEigenComplex(evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im, logUdagV_re, logUdagV_im, true);
+  int ierr = reconstructMatrixFromEigenComplex(evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im, logUdagV_re, logUdagV_im, true);
+  if (ierr > 0){
+    return;
+  }
 
   // Now compute U_final_bar = - U_final * log(U_final^\dagger V)
   // U_final_bar_re = - (U_final_re * logUdagV_re - U_final_im * logUdagV_im)
