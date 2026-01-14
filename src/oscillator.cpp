@@ -37,7 +37,7 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
     carrier_freq[i] *= 2.0*M_PI;
   }
 
-  lindbladtype = config.getCollapseType();
+  decoherence_type = config.getDecoherenceType();
   const std::vector<double>& decay_time_config = config.getDecayTime();
   const std::vector<double>& dephase_time_config = config.getDephaseTime();
   decay_time = decay_time_config[id];
@@ -54,7 +54,7 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   for (size_t ioscil = 0; ioscil < nlevels_all_.size(); ioscil++) {
     dim *= nlevels_all_[ioscil];
   }
-  if (lindbladtype != LindbladType::NONE) dim *= dim; // Lindblad: N^2
+  if (decoherence_type != DecoherenceType::NONE) dim *= dim; // Lindblad: N^2
 
   // Set local sizes of subvectors u,v in state x=[u,v]
   localsize_u = dim / mpisize_petsc; 
@@ -357,7 +357,7 @@ double Oscillator::expectedEnergy(const Vec x) {
   PetscInt dim;
   VecGetSize(x, &dim);
   PetscInt dimmat;
-  if (lindbladtype != LindbladType::NONE)  dimmat = (PetscInt) sqrt(dim/2);
+  if (decoherence_type != DecoherenceType::NONE)  dimmat = (PetscInt) sqrt(dim/2);
   else dimmat = (PetscInt) dim/2;
 
   /* Iterate over diagonal elements to add up expected energy level */
@@ -368,10 +368,10 @@ double Oscillator::expectedEnergy(const Vec x) {
     num_diag = num_diag / dim_postOsc;
     // Vectorize if Lindblad 
     PetscInt idx_diag = i;
-    if (lindbladtype != LindbladType::NONE) idx_diag = getVecID(i,i,dimmat);
+    if (decoherence_type != DecoherenceType::NONE) idx_diag = getVecID(i,i,dimmat);
     
     double xdiag = 0.0;
-    if (lindbladtype != LindbladType::NONE){ // Lindblad solver: += i * rho_ii
+    if (decoherence_type != DecoherenceType::NONE){ // Lindblad solver: += i * rho_ii
       if (ilow <= idx_diag && idx_diag < iupp) {
         PetscInt id_global_x = idx_diag + mpirank_petsc*localsize_u; 
         VecGetValues(x, 1, &id_global_x, &xdiag);
@@ -402,7 +402,7 @@ void Oscillator::expectedEnergy_diff(const Vec x, Vec x_bar, const double obj_ba
   PetscInt dim;
   VecGetSize(x, &dim);
   PetscInt dimmat;
-  if (lindbladtype != LindbladType::NONE) dimmat = (PetscInt) sqrt(dim/2);
+  if (decoherence_type != DecoherenceType::NONE) dimmat = (PetscInt) sqrt(dim/2);
   else dimmat = dim/2;
   double xdiag, val;
 
@@ -410,7 +410,7 @@ void Oscillator::expectedEnergy_diff(const Vec x, Vec x_bar, const double obj_ba
   for (PetscInt i=0; i<dimmat; i++) {
     PetscInt num_diag = i % (nlevels*dim_postOsc);
     num_diag = num_diag / dim_postOsc;
-    if (lindbladtype != LindbladType::NONE) { // Lindblas solver
+    if (decoherence_type != DecoherenceType::NONE) { // Lindblas solver
       val = num_diag * obj_bar;
       PetscInt idx_diag = getVecID(i, i, dimmat);
       if (ilow <= idx_diag && idx_diag < iupp) {
@@ -460,7 +460,7 @@ void Oscillator::population(const Vec x, std::vector<double> &pop) {
       for (PetscInt l=0; l < dim_postOsc; l++) {
         /* Get diagonal element */
         PetscInt rhoID = blockstartID + identitystartID + l; // Diagonal element of rho
-        if (lindbladtype != LindbladType::NONE) { // Lindblad solver
+        if (decoherence_type != DecoherenceType::NONE) { // Lindblad solver
           PetscInt diagID = getVecID(rhoID, rhoID, dimN);  // Position in vectorized rho
           double val = 0.0;
           if (ilow <= diagID && diagID < iupp)  {

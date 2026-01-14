@@ -20,7 +20,7 @@
 class HamiltonianFileReader{
   protected:
 
-    LindbladType lindbladtype; ///< Type of solver (Lindblad vs Schroedinger)
+    DecoherenceType decoherence_type; ///< Type of solver (Lindblad vs Schroedinger)
     PetscInt dim_rho; ///< Dimension of the Hilbert space (N)
     std::optional<std::string> hamiltonian_file_Hsys; ///< Filename for system Hamiltonian data
     std::optional<std::string> hamiltonian_file_Hc; ///< Filename for control Hamiltonian data
@@ -36,11 +36,11 @@ class HamiltonianFileReader{
      *
      * @param hamiltonian_file_Hsys Path to file containing system Hamiltonian data
      * @param hamiltonian_file_Hc Path to file containing control Hamiltonian data
-     * @param lindbladtype_ Type of solver (Lindblad or Schroedinger)
+     * @param decoherence_type_ Type of solver (Lindblad or Schroedinger)
      * @param dim_rho_ Dimension of the Hilbert space
      * @param quietmode_ Flag for quiet operation
      */
-    HamiltonianFileReader(std::optional<std::string> hamiltonian_file_Hsys, std::optional<std::string> hamiltonian_file_Hc, LindbladType lindbladtype_, PetscInt dim_rho_, bool quietmode_);
+    HamiltonianFileReader(std::optional<std::string> hamiltonian_file_Hsys, std::optional<std::string> hamiltonian_file_Hc, DecoherenceType decoherence_type_, PetscInt dim_rho_, bool quietmode_);
 
     ~HamiltonianFileReader();
 

@@ -160,7 +160,7 @@ int main(int argc,char **argv)
   /* My time stepper */
   bool storeFWD = false;
   RunType runtype = config.getRuntype();
-  if (mastereq->lindbladtype != LindbladType::NONE &&   
+  if (mastereq->decoherence_type != DecoherenceType::NONE &&   
      (runtype == RunType::GRADIENT || runtype == RunType::OPTIMIZATION) ) storeFWD = true;  // if NOT Schroedinger solver and running gradient optim: store forward states. Otherwise, they will be recomputed during gradient. 
 
   TimeStepperType timesteppertype = config.getTimestepperType();

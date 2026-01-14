@@ -53,7 +53,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     if (!toml.contains("decoherence")) {
       // No decoherence table specified, use defaults
-      collapse_type = ConfigDefaults::COLLAPSE_TYPE;
+      decoherence_type = ConfigDefaults::DECOHERENCE_TYPE;
       decay_time = std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME);
       dephase_time = std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME);
     } else {
@@ -63,7 +63,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
         logger.exitWithError("decoherence must be a table");
       }
       auto type_str = validators::field<std::string>(*decoherence_table, "type").valueOr("none");
-      collapse_type = parseEnum(type_str, LINDBLAD_TYPE_MAP, ConfigDefaults::COLLAPSE_TYPE);
+      decoherence_type = parseEnum(type_str, DECOHERENCE_TYPE_MAP, ConfigDefaults::DECOHERENCE_TYPE);
       decay_time = validators::vectorField<double>(*decoherence_table, "decay_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
       dephase_time = validators::vectorField<double>(*decoherence_table, "dephase_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
     }
@@ -317,7 +317,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   hamiltonian_file_Hsys = settings.hamiltonian_file_Hsys;
   hamiltonian_file_Hc = settings.hamiltonian_file_Hc;
 
-  collapse_type = settings.collapse_type.value_or(ConfigDefaults::COLLAPSE_TYPE);
+  decoherence_type = settings.decoherence_type.value_or(ConfigDefaults::DECOHERENCE_TYPE);
 
   decay_time = settings.decay_time.value_or(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
   copyLast(decay_time, num_osc);
@@ -767,7 +767,7 @@ void Config::printConfig(std::stringstream& log) const {
   log << "Jkl = " << printCouplingParameters(Jkl, nlevels.size()) << "\n";
   log << "rotfreq = " << printVector(rotfreq) << "\n";
   log << "decoherence = {\n";
-  log << "  type = \"" << enumToString(collapse_type, LINDBLAD_TYPE_MAP) << "\",\n";
+  log << "  type = \"" << enumToString(decoherence_type, DECOHERENCE_TYPE_MAP) << "\",\n";
   log << "  decay_time = " << printVector(decay_time) << ",\n";
   log << "  dephase_time = " << printVector(dephase_time) << "\n";
   log << "}\n";
@@ -838,7 +838,7 @@ void Config::finalize() {
   }
 
   // DIAGONAL and BASIS initial conditions in the Schroedinger case are the same. Overwrite it to DIAGONAL
-  if (collapse_type == LindbladType::NONE && initial_condition.type == InitialConditionType::BASIS) {
+  if (decoherence_type == DecoherenceType::NONE && initial_condition.type == InitialConditionType::BASIS) {
     initial_condition.type = InitialConditionType::DIAGONAL;
   }
 
@@ -853,12 +853,12 @@ void Config::finalize() {
   }
 
   // Compute number of initial conditions
-  n_initial_conditions = computeNumInitialConditions(initial_condition, nlevels, nessential, collapse_type);
+  n_initial_conditions = computeNumInitialConditions(initial_condition, nlevels, nessential, decoherence_type);
 
-  // overwrite decay or dephase times with zeros, if the collapse type is only one of them.
-  if (collapse_type == LindbladType::DECAY) {
+  // overwrite decay or dephase times with zeros, if the decoherence type is only one of them.
+  if (decoherence_type == DecoherenceType::DECAY) {
     std::fill(dephase_time.begin(), dephase_time.end(), 0);
-  } else if (collapse_type == LindbladType::DEPHASE) {
+  } else if (decoherence_type == DecoherenceType::DEPHASE) {
     std::fill(decay_time.begin(), decay_time.end(), 0);
   }
 
@@ -910,7 +910,7 @@ void Config::validate() const {
   }
 
   /* Sanity check for Schrodinger solver initial conditions */
-  if (collapse_type == LindbladType::NONE) {
+  if (decoherence_type == DecoherenceType::NONE) {
     if (initial_condition.type == InitialConditionType::ENSEMBLE ||
         initial_condition.type == InitialConditionType::THREESTATES ||
         initial_condition.type == InitialConditionType::NPLUSONE) {
@@ -965,7 +965,7 @@ void Config::validate() const {
   }
 }
 
-size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, LindbladType lindblad_type) const {
+size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, DecoherenceType decoherence_type) const {
   size_t n_initial_conditions = 0;
   switch (init_cond_settings.type) {
     case InitialConditionType::FROMFILE:
@@ -1006,7 +1006,7 @@ size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_se
       }
       // if Schroedinger solver: ninit = N, do nothing.
       // else Lindblad solver: ninit = N^2
-      if (lindblad_type != LindbladType::NONE) {
+      if (decoherence_type != DecoherenceType::NONE) {
         n_initial_conditions = (size_t)pow(n_initial_conditions, 2.0);
       }
       break;

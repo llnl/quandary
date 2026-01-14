@@ -34,7 +34,7 @@ class OptimTarget{
     PetscInt purestateID; ///< For product state preparation: integer m for preparing the target state \f$ e_m e_m^{\dagger}\f$
     Vec targetstate; ///< Storage for the target state vector (NULL for product states, \f$V\rho V^\dagger\f$ for gates, density matrix from file)
     InitialConditionSettings initcond; ///< Initial conditions
-    LindbladType lindbladtype; ///< Type of Lindblad decoherence operators, or NONE for Schroedinger solver
+    DecoherenceType decoherence_type; ///< Type of Lindblad decoherence operators, or NONE for Schroedinger solver
     int mpisize_petsc; ///< Size of PETSc communicator
     int mpirank_petsc; ///< Rank of PETSc communicator
     PetscInt localsize_u; ///< Size of local sub vector u or v in state x=[u,v]

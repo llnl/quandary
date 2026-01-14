@@ -10,7 +10,7 @@ OptimTarget::OptimTarget(){
   noscillators = 0;
   target_type = TargetType::NONE;
   objective_type = ObjectiveType::JTRACE;
-  lindbladtype = LindbladType::NONE;
+  decoherence_type = DecoherenceType::NONE;
   targetgate = NULL;
   purity_rho0 = 1.0;
   purestateID = -1;
@@ -27,7 +27,7 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
   dim_rho = mastereq->getDimRho();
   dim_ess = mastereq->getDimEss();
   quietmode = quietmode_;
-  lindbladtype = mastereq->lindbladtype;
+  decoherence_type = mastereq->decoherence_type;
   MPI_Comm_size(PETSC_COMM_WORLD, &mpisize_petsc);
   MPI_Comm_rank(PETSC_COMM_WORLD, &mpirank_petsc);
   int mpirank_world;
@@ -56,7 +56,7 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
     }
     // Vectorize if lindblad solver
     PetscInt vec_id = diag_id;
-    if (lindbladtype != LindbladType::NONE) vec_id = getVecID( diag_id, diag_id, dim_rho); 
+    if (decoherence_type != DecoherenceType::NONE) vec_id = getVecID( diag_id, diag_id, dim_rho); 
     // Set 1.0 on the processor who owns this index
     if (ilow <= vec_id && vec_id < iupp) {
       PetscInt id_global_x =  vec_id + mpirank_petsc*localsize_u; // Global index of u_i in x=[u,v]
@@ -66,7 +66,7 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
   else if (initcond.type == InitialConditionType::FROMFILE) {
     /* Read initial condition from file */
     int nelems = 0;
-    if (mastereq->lindbladtype != LindbladType::NONE) nelems = 2*dim_ess*dim_ess;
+    if (mastereq->decoherence_type != DecoherenceType::NONE) nelems = 2*dim_ess*dim_ess;
     else nelems = 2 * dim_ess;
     double * vec = new double[nelems];
     if (mpirank_world == 0) {
@@ -74,7 +74,7 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
       read_vector(filename.c_str(), vec, nelems, quietmode);
     }
     MPI_Bcast(vec, nelems, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    if (lindbladtype != LindbladType::NONE) { // Lindblad solver, fill density matrix
+    if (decoherence_type != DecoherenceType::NONE) { // Lindblad solver, fill density matrix
       for (PetscInt i = 0; i < dim_ess*dim_ess; i++) {
         PetscInt k = i % dim_ess;
         PetscInt j = i / dim_ess;
@@ -172,7 +172,7 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
     const std::vector<double>& gate_rot_freq = target.gate_rot_freq.value_or(std::vector<double>(mastereq->getNOscillators(), 0.0));
 
     /* Initialize the targetgate, either from file or using default set of gates */
-    targetgate = initTargetGate(target.gate_type.value(), target.filename.value_or(""), mastereq->nlevels, mastereq->nessential, total_time, lindbladtype, gate_rot_freq, quietmode);
+    targetgate = initTargetGate(target.gate_type.value(), target.filename.value_or(""), mastereq->nlevels, mastereq->nessential, total_time, decoherence_type, gate_rot_freq, quietmode);
 
   } else if (target_type == TargetType::STATE) {
     // Initialize a the target state, either pure state prep (store only the purestateID) or read state from file
@@ -186,13 +186,13 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
       /* Read the target state from file into vec */
       auto target_filename = target.filename.value();
       PetscInt nelems = 0;
-      if (mastereq->lindbladtype != LindbladType::NONE) nelems = 2*dim_ess*dim_ess;
+      if (mastereq->decoherence_type != DecoherenceType::NONE) nelems = 2*dim_ess*dim_ess;
       else nelems = 2 * dim_ess;
       double* vec = new double[nelems];
       if (mpirank_world == 0) 
         read_vector(target_filename.c_str(), vec, nelems, quietmode);
       MPI_Bcast(vec, nelems, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-      if (lindbladtype != LindbladType::NONE) { // Lindblad solver, fill density matrix
+      if (decoherence_type != DecoherenceType::NONE) { // Lindblad solver, fill density matrix
         for (PetscInt i = 0; i < dim_ess*dim_ess; i++) {
           PetscInt k = i % dim_ess;
           PetscInt j = i / dim_ess;
@@ -273,7 +273,7 @@ void OptimTarget::HilbertSchmidtOverlap(const Vec state, const bool scalebypurit
 
     // Vectorize pure state ID if Lindblad
     PetscInt idm = purestateID;
-    if (lindbladtype != LindbladType::NONE) idm = getVecID(purestateID, purestateID, (PetscInt)sqrt(dim));
+    if (decoherence_type != DecoherenceType::NONE) idm = getVecID(purestateID, purestateID, (PetscInt)sqrt(dim));
 
     // Get real and imag values from the processor who owns the subvector index.
     if (ilow <= idm && idm < iupp) {
@@ -282,7 +282,7 @@ void OptimTarget::HilbertSchmidtOverlap(const Vec state, const bool scalebypurit
       id_global_x += localsize_u; // Imaginary part
       VecGetValues(state, 1, &id_global_x, &HS_im); // Should be 0.0 if Lindblad!
     }
-    if (lindbladtype != LindbladType::NONE) assert(fabs(HS_im) <= 1e-14);
+    if (decoherence_type != DecoherenceType::NONE) assert(fabs(HS_im) <= 1e-14);
 
     // Communicate over all petsc processors.
     double myre = HS_re;
@@ -292,7 +292,7 @@ void OptimTarget::HilbertSchmidtOverlap(const Vec state, const bool scalebypurit
 
   } else { // Target is not of the form e_m (schroedinger) or e_m e_m^\dagger (lindblad).
 
-    if (lindbladtype != LindbladType::NONE) // Lindblad solver. HS overlap is real!
+    if (decoherence_type != DecoherenceType::NONE) // Lindblad solver. HS overlap is real!
       VecTDot(targetstate, state, &HS_re);  
     else {  // Schroedinger solver. target^\dagger * state
       // Get local data pointers
@@ -336,7 +336,7 @@ void OptimTarget::HilbertSchmidtOverlap_diff(Vec statebar, bool scalebypurity, c
   // Simplified computation if target is product state
   if (target_type == TargetType::STATE && purestateID >= 0){
     PetscInt idm = purestateID;
-    if (lindbladtype != LindbladType::NONE) idm = getVecID(purestateID, purestateID, (PetscInt)sqrt(dim));
+    if (decoherence_type != DecoherenceType::NONE) idm = getVecID(purestateID, purestateID, (PetscInt)sqrt(dim));
 
     if (ilow <= idm && idm < iupp) {
       PetscInt id_global_x = idm + mpirank_petsc*localsize_u; // Global index of u_i in x=[u,v]
@@ -346,7 +346,7 @@ void OptimTarget::HilbertSchmidtOverlap_diff(Vec statebar, bool scalebypurity, c
 
   } else { // Target is not of the form e_m or e_m*e_m^\dagger 
 
-    if (lindbladtype != LindbladType::NONE)
+    if (decoherence_type != DecoherenceType::NONE)
       VecAXPY(statebar, HS_re_bar*scale, targetstate);
     else {
       const PetscScalar* target_ptr;
@@ -379,7 +379,7 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
     VecZeroEntries(rho0);
 
     for (PetscInt i=0; i<dim_rho; i++){
-      if (lindbladtype == LindbladType::NONE) {
+      if (decoherence_type == DecoherenceType::NONE) {
         double val = 1./ sqrt(2.*dim_rho);
         if (ilow <= i && i < iupp) {
           PetscInt id_global_x =  i + mpirank_petsc*localsize_u; // Global index of u_i in x=[u,v]
@@ -402,7 +402,7 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
   } else if(initcond.type == InitialConditionType::ENSEMBLE) {
     /* Do nothing. Init cond is already stored */
   } else if (initcond.type == InitialConditionType::THREESTATES) {
-    assert(lindbladtype != LindbladType::NONE);
+    assert(decoherence_type != DecoherenceType::NONE);
     VecZeroEntries(rho0);
 
     /* Set the <iinit>'th initial state */
@@ -447,7 +447,7 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
     }
     VecAssemblyBegin(rho0); VecAssemblyEnd(rho0);
   } else if (initcond.type == InitialConditionType::NPLUSONE) {
-    assert(lindbladtype != LindbladType::NONE);
+    assert(decoherence_type != DecoherenceType::NONE);
 
     if (iinit < dim_rho) {// Diagonal e_j e_j^\dag
       VecZeroEntries(rho0);
@@ -494,7 +494,7 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
 
     // Vectorize if Lindblad
     elemID = diagelem;
-    if (lindbladtype != LindbladType::NONE) elemID = getVecID(diagelem, diagelem, dim_rho); 
+    if (decoherence_type != DecoherenceType::NONE) elemID = getVecID(diagelem, diagelem, dim_rho); 
     val = 1.0;
     if (ilow <= elemID && elemID < iupp) {
       PetscInt id_global_x =  elemID + mpirank_petsc*localsize_u; 
@@ -503,13 +503,13 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
     VecAssemblyBegin(rho0); VecAssemblyEnd(rho0);
 
     /* Set initial conditon ID */
-    if (lindbladtype != LindbladType::NONE) initID = iinit * ninit + iinit;
+    if (decoherence_type != DecoherenceType::NONE) initID = iinit * ninit + iinit;
     else initID = iinit;
 
   } else if (initcond.type == InitialConditionType::BASIS) {
     const auto& initcond_IDs = initcond.osc_IDs.value();
 
-    assert(lindbladtype != LindbladType::NONE); // should never happen. For Schroedinger: BASIS equals DIAGONAL, and should go into the above switch case. 
+    assert(decoherence_type != DecoherenceType::NONE); // should never happen. For Schroedinger: BASIS equals DIAGONAL, and should go into the above switch case. 
 
     /* Reset the initial conditions */
     VecZeroEntries(rho0);
@@ -638,7 +638,7 @@ void OptimTarget::evalJ(const Vec state, double* J_re_ptr, double* J_im_ptr){
       if (target_type == TargetType::STATE && purestateID >= 0){ 
         // substract 1.0 from m-th diagonal element then take the vector norm 
         PetscInt diagID = purestateID;
-        if (lindbladtype != LindbladType::NONE) diagID = getVecID(purestateID,purestateID,(PetscInt)sqrt(dim));
+        if (decoherence_type != DecoherenceType::NONE) diagID = getVecID(purestateID,purestateID,(PetscInt)sqrt(dim));
         if (ilow <= diagID && diagID < iupp) {
           PetscInt id_global_x = diagID + mpirank_petsc*localsize_u; 
           VecSetValue(state, id_global_x, -1.0, ADD_VALUES);
@@ -673,12 +673,12 @@ void OptimTarget::evalJ(const Vec state, double* J_re_ptr, double* J_im_ptr){
       }
 
       dimsq = dim;   // Schroedinger solver: dim = N
-      if (lindbladtype != LindbladType::NONE) dimsq = (PetscInt)sqrt(dim); // Lindblad solver: dim = N^2
+      if (decoherence_type != DecoherenceType::NONE) dimsq = (PetscInt)sqrt(dim); // Lindblad solver: dim = N^2
 
       // iterate over diagonal elements 
       sum = 0.0;
       for (PetscInt i=0; i<dimsq; i++){
-        if (lindbladtype != LindbladType::NONE) {
+        if (decoherence_type != DecoherenceType::NONE) {
           PetscInt diagID = getVecID(i,i,dimsq);
           rhoii = 0.0;
           if (ilow <= diagID && diagID < iupp) {
@@ -728,7 +728,7 @@ void OptimTarget::evalJ_diff(const Vec state, Vec statebar, const double J_re_ba
         VecAXPY(statebar, J_re_bar, state);
         // now substract 1.0*Jbar from m-th diagonal element
         PetscInt diagID = purestateID;
-        if (lindbladtype != LindbladType::NONE) diagID = getVecID(purestateID,purestateID,(PetscInt)sqrt(dim));
+        if (decoherence_type != DecoherenceType::NONE) diagID = getVecID(purestateID,purestateID,(PetscInt)sqrt(dim));
         if (ilow <= diagID && diagID < iupp) {
           PetscInt id_global_x = diagID + mpirank_petsc*localsize_u;
           VecSetValue(statebar, id_global_x, -1.0*J_re_bar, ADD_VALUES);
@@ -745,12 +745,12 @@ void OptimTarget::evalJ_diff(const Vec state, Vec statebar, const double J_re_ba
     case ObjectiveType::JMEASURE:
 
       PetscInt dimsq = dim;   // Schroedinger solver: dim = N
-      if (lindbladtype != LindbladType::NONE) dimsq = (PetscInt)sqrt(dim); // Lindblad solver: dim = N^2
+      if (decoherence_type != DecoherenceType::NONE) dimsq = (PetscInt)sqrt(dim); // Lindblad solver: dim = N^2
 
       // iterate over diagonal elements 
       for (PetscInt i=0; i<dimsq; i++){
         lambdai = fabs(i - purestateID);
-        if (lindbladtype != LindbladType::NONE) {
+        if (decoherence_type != DecoherenceType::NONE) {
           PetscInt diagID = getVecID(i,i,dimsq);
           val = lambdai * J_re_bar;
           if (ilow <= diagID && diagID < iupp) {
@@ -783,7 +783,7 @@ double OptimTarget::finalizeJ(const double obj_cost_re, const double obj_cost_im
 
   double obj_cost = 0.0;
   if (objective_type == ObjectiveType::JTRACE) {
-    if (lindbladtype == LindbladType::NONE) {
+    if (decoherence_type == DecoherenceType::NONE) {
       obj_cost = 1.0 - (pow(obj_cost_re,2.0) + pow(obj_cost_im, 2.0));
     } else {
       obj_cost = 1.0 - obj_cost_re;
@@ -805,7 +805,7 @@ void OptimTarget::finalizeJ_diff(const double obj_cost_re, const double obj_cost
   }
 
   if (objective_type == ObjectiveType::JTRACE) {
-    if (lindbladtype == LindbladType::NONE) {
+    if (decoherence_type == DecoherenceType::NONE) {
       // obj_cost = 1.0 - (pow(obj_cost_re,2.0) + pow(obj_cost_im, 2.0));
       *obj_cost_re_bar = -2.*obj_cost_re;
       *obj_cost_im_bar = -2.*obj_cost_im;

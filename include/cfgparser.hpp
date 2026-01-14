@@ -38,7 +38,7 @@ struct ParsedConfigData {
   std::optional<std::vector<double>> crosskerr;
   std::optional<std::vector<double>> Jkl;
   std::optional<std::vector<double>> rotfreq;
-  std::optional<LindbladType> collapse_type;
+  std::optional<DecoherenceType> decoherence_type;
   std::optional<std::vector<double>> decay_time;
   std::optional<std::vector<double>> dephase_time;
   std::optional<InitialConditionSettings> initialcondition;

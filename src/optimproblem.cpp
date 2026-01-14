@@ -25,7 +25,7 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
   ninit_local = ninit / mpisize_init; 
 
   /*  If Schroedingers solver, allocate storage for the final states at time T for each initial condition. Schroedinger's solver does not store the time-trajectories during forward ODE solve, but instead recomputes the primal states during the adjoint solve. Therefore we need to store the terminal condition for the backwards primal solve. Be aware that the final states stored here will be overwritten during backwards computation!! */
-  if (timestepper->mastereq->lindbladtype == LindbladType::NONE) {
+  if (timestepper->mastereq->decoherence_type == DecoherenceType::NONE) {
     for (int i = 0; i < ninit_local; i++) {
 
       PetscInt globalsize = 2 * timestepper->mastereq->getDim();  // Global state vector: 2 for real and imaginary part
@@ -83,7 +83,7 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
   gamma_penalty_dpdm = config.getOptimPenaltyDpdm();
   gamma_penalty_variation = config.getOptimPenaltyVariation();
 
-  if (gamma_penalty_dpdm > 1e-13 && timestepper->mastereq->lindbladtype != LindbladType::NONE){
+  if (gamma_penalty_dpdm > 1e-13 && timestepper->mastereq->decoherence_type != DecoherenceType::NONE){
     if (mpirank_world == 0 && !quietmode) {
       printf("Warning: Disabling DpDm penalty term because it is not implemented for the Lindblad solver.\n");
     }
@@ -265,7 +265,7 @@ double OptimProblem::evalF(const Vec x) {
   MPI_Allreduce(&myfidelity_im, &fidelity_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
 
   /* Set the fidelity: If Schroedinger, need to compute the absolute value: Fid= |\sum_i \phi^\dagger \phi_target|^2 */
-  if (timestepper->mastereq->lindbladtype == LindbladType::NONE) {
+  if (timestepper->mastereq->decoherence_type == DecoherenceType::NONE) {
     fidelity = pow(fidelity_re, 2.0) + pow(fidelity_im, 2.0);
   } else {
     fidelity = fidelity_re; 
@@ -367,7 +367,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
     Vec finalstate = timestepper->solveODE(initid, rho_t0);
 
     /* Store the final state for the Schroedinger solver */
-    if (timestepper->mastereq->lindbladtype == LindbladType::NONE) VecCopy(finalstate, store_finalstates[iinit]);
+    if (timestepper->mastereq->decoherence_type == DecoherenceType::NONE) VecCopy(finalstate, store_finalstates[iinit]);
 
     /* Add to leakage penalty term */
     obj_penal_leakage += obj_weights[iinit] * gamma_penalty_leakage * timestepper->getLeakageIntegral();
@@ -395,7 +395,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
     fidelity_im += 1./ ninit * fidelity_iinit_im;
 
     /* If Lindblas solver, compute adjoint for this initial condition. Otherwise (Schroedinger solver), compute adjoint only after all initial conditions have been propagated through (separate loop below) */
-    if (timestepper->mastereq->lindbladtype != LindbladType::NONE) {
+    if (timestepper->mastereq->decoherence_type != DecoherenceType::NONE) {
       // if (mpirank_optim == 0) printf("%d: %d BWD.", mpirank_init, initid);
 
       /* Reset adjoint */
@@ -433,7 +433,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   MPI_Allreduce(&myfidelity_im, &fidelity_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
 
   /* Set the fidelity: If Schroedinger, need to compute the absolute value: Fid= |\sum_i \phi^\dagger \phi_target|^2 */
-  if (timestepper->mastereq->lindbladtype == LindbladType::NONE) {
+  if (timestepper->mastereq->decoherence_type == DecoherenceType::NONE) {
     fidelity = pow(fidelity_re, 2.0) + pow(fidelity_im, 2.0);
   } else {
     fidelity = fidelity_re; 
@@ -465,7 +465,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   objective = obj_cost + obj_regul + obj_penal_leakage + obj_penal_dpdm + obj_penal_energy + obj_penal_variation + obj_penal_weightedcost;
 
   /* For Schroedinger solver: Solve adjoint equations for all initial conditions here. */
-  if (timestepper->mastereq->lindbladtype == LindbladType::NONE) {
+  if (timestepper->mastereq->decoherence_type == DecoherenceType::NONE) {
 
     // Iterate over all initial conditions 
     for (int iinit = 0; iinit < ninit_local; iinit++) {

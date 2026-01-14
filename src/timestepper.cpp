@@ -271,7 +271,7 @@ double TimeStepper::evalLeakage(const Vec x){
     if ( isGuardLevel(i, mastereq->nlevels, mastereq->nessential) ) {
       // vectorize if lindblad
       PetscInt vecID = i;
-      if (mastereq->lindbladtype != LindbladType::NONE) vecID = getVecID(i,i,dim_rho);
+      if (mastereq->decoherence_type != DecoherenceType::NONE) vecID = getVecID(i,i,dim_rho);
       x_re = 0.0; 
       x_im = 0.0;
       if (ilow <= vecID && vecID < iupp) {
@@ -297,7 +297,7 @@ void TimeStepper::evalLeakage_diff(const Vec x, Vec xbar, double Jbar){
   for (PetscInt i=0; i<dim_rho; i++) {
     if ( isGuardLevel(i, mastereq->nlevels, mastereq->nessential) ) {
       PetscInt  vecID = i;
-      if (mastereq->lindbladtype != LindbladType::NONE) vecID = getVecID(i,i,dim_rho);
+      if (mastereq->decoherence_type != DecoherenceType::NONE) vecID = getVecID(i,i,dim_rho);
       x_re = 0.0; 
       x_im = 0.0;
       if (ilow <= vecID && vecID < iupp) {

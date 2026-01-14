@@ -50,9 +50,9 @@ class Config {
   std::vector<double> crosskerr; ///< Cross-kerr coupling frequencies for each oscillator coupling (GHz)
   std::vector<double> Jkl; ///< Dipole-dipole coupling frequencies for each oscillator coupling (GHz)
   std::vector<double> rotfreq; ///< Rotational wave approximation frequencies for each subsystem (GHz)
-  LindbladType collapse_type; ///< Switch between Schroedinger and Lindblad solver
-  std::vector<double> decay_time; ///< Time of decay collapse operation (T1) per oscillator (for Lindblad solver)
-  std::vector<double> dephase_time; ///< Time of dephase collapse operation (T2) per oscillator (for Lindblad solver)
+  DecoherenceType decoherence_type; ///< Switch between Schroedinger and Lindblad solver
+  std::vector<double> decay_time; ///< Time of decay operation (T1) per oscillator (for Lindblad solver)
+  std::vector<double> dephase_time; ///< Time of dephase operation (T2) per oscillator (for Lindblad solver)
   size_t n_initial_conditions; ///< Number of initial conditions
   InitialConditionSettings initial_condition; ///< Initial condition configuration
   std::optional<std::string> hamiltonian_file_Hsys; ///< File to read the system Hamiltonian from
@@ -126,7 +126,7 @@ class Config {
   const std::vector<double>& getCrossKerr() const { return crosskerr; }
   const std::vector<double>& getJkl() const { return Jkl; }
   const std::vector<double>& getRotFreq() const { return rotfreq; }
-  LindbladType getCollapseType() const { return collapse_type; }
+  DecoherenceType getDecoherenceType() const { return decoherence_type; }
   const std::vector<double>& getDecayTime() const { return decay_time; }
   const std::vector<double>& getDephaseTime() const { return dephase_time; }
   size_t getNInitialConditions() const { return n_initial_conditions; }
@@ -173,7 +173,7 @@ class Config {
   void finalize();
   void validate() const;
 
-  size_t computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, LindbladType lindblad_type) const;
+  size_t computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, DecoherenceType decoherence_type) const;
   
   void setRandSeed(int rand_seed_);
 

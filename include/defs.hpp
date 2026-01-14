@@ -28,18 +28,18 @@
  * @note If this is NONE, the quantum system is considered closed, solving Schroedinger's 
  * equation rather than Lindblad's master equation.
  */
-enum class LindbladType {
+enum class DecoherenceType {
   NONE,    ///< No Lindblad operators (closed system)
   DECAY,   ///< Decay operators only
   DEPHASE, ///< Dephasing operators only
   BOTH     ///< Both decay and dephasing operators
 };
 
-const std::map<std::string, LindbladType> LINDBLAD_TYPE_MAP = {
-    {"none", LindbladType::NONE},
-    {"decay", LindbladType::DECAY},
-    {"dephase", LindbladType::DEPHASE},
-    {"both", LindbladType::BOTH}
+const std::map<std::string, DecoherenceType> DECOHERENCE_TYPE_MAP = {
+    {"none", DecoherenceType::NONE},
+    {"decay", DecoherenceType::DECAY},
+    {"dephase", DecoherenceType::DEPHASE},
+    {"both", DecoherenceType::BOTH}
 };
 
 /**

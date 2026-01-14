@@ -42,9 +42,9 @@ class Oscillator {
     double selfkerr; ///< Self-Kerr frequency \f$\xi_k\f$, multiplies \f$a_k^\dagger a_k^\dagger a_k a_k\f$
 
     double detuning_freq; ///< Detuning frequency, detuning = ground_freq - rotational_freq, multiplies \f$a_k^\dagger a_k\f$
-    LindbladType lindbladtype; ///< Type of Lindblad collapse operators to include
-    double decay_time; ///< Characteristic time for T1 decay collapse operations
-    double dephase_time; ///< Characteristic time for T2 dephasing collapse operations
+    DecoherenceType decoherence_type; ///< Type of Lindblad decoherence operators to include
+    double decay_time; ///< Characteristic time for T1 decay operations
+    double dephase_time; ///< Characteristic time for T2 dephasing operations
 
     std::vector<double> params; ///< Control parameters for this oscillator
     double Tfinal; ///< Final evolution time

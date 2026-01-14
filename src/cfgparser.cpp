@@ -21,7 +21,7 @@ CfgParser::CfgParser(const MPILogger& logger) : logger(logger) {
   registerConfig("crosskerr", settings.crosskerr);
   registerConfig("Jkl", settings.Jkl);
   registerConfig("rotfreq", settings.rotfreq);
-  registerConfig("collapse_type", settings.collapse_type);
+  registerConfig("collapse_type", settings.decoherence_type);
   registerConfig("decay_time", settings.decay_time);
   registerConfig("dephase_time", settings.dephase_time);
   registerConfig("initialcondition", settings.initialcondition);
@@ -190,10 +190,10 @@ RunType CfgParser::convertFromString<RunType>(const std::string& str) {
 }
 
 template <>
-LindbladType CfgParser::convertFromString<LindbladType>(const std::string& str) {
-  auto it = LINDBLAD_TYPE_MAP.find(toLower(str));
-  if (it == LINDBLAD_TYPE_MAP.end()) {
-    logger.exitWithError("\n\n ERROR: Unknown Lindblad type: " + str + ".\n");
+DecoherenceType CfgParser::convertFromString<DecoherenceType>(const std::string& str) {
+  auto it = DECOHERENCE_TYPE_MAP.find(toLower(str));
+  if (it == DECOHERENCE_TYPE_MAP.end()) {
+    logger.exitWithError("\n\n ERROR: Unknown collapse type: " + str + ".\n");
   }
   return it->second;
 }

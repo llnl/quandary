@@ -24,7 +24,7 @@ TEST_F(CfgParserTest, ParseBasicSettings) {
 
   EXPECT_EQ(config.getNTime(), 500);
   EXPECT_DOUBLE_EQ(config.getDt(), 0.05);
-  EXPECT_EQ(config.getCollapseType(), LindbladType::NONE);
+  EXPECT_EQ(config.getDecoherenceType(), DecoherenceType::NONE);
 }
 
 TEST_F(CfgParserTest, ParseVectorSettings) {
@@ -105,7 +105,7 @@ TEST_F(CfgParserTest, ApplyDefaults) {
       )",
       logger);
 
-  EXPECT_EQ(config.getCollapseType(), LindbladType::NONE); // Default
+  EXPECT_EQ(config.getDecoherenceType(), DecoherenceType::NONE); // Default
   EXPECT_EQ(config.getRotFreq()[0], 0.0); // Default
 }
 
@@ -247,7 +247,7 @@ TEST_F(CfgParserTest, InitialCondition_Diagonal_Schrodinger) {
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::DIAGONAL);
   EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({1}));
-  // For Schrodinger solver (collapse_type = none), n_initial_conditions = nessential[1] = 2
+  // For Schrodinger solver (decoherence_type = none), n_initial_conditions = nessential[1] = 2
   EXPECT_EQ(config.getNInitialConditions(), 2);
 }
 
