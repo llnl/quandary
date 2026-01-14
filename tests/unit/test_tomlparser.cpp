@@ -145,6 +145,46 @@ TEST_F(TomlParserTest, ApplyDefaults) {
   EXPECT_EQ(config.getDecoherenceType(), DecoherenceType::NONE); // Default
 }
 
+
+TEST_F(TomlParserTest, Decoherence_Decay) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [3, 2]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 4.8]
+        rotfreq = [0.0, 0.0]
+        decoherence = {type = "decay", decay_time = [30.0, 40.0], dephase_time = [20.0, 25.0]}
+        initial_condition = {type = "basis"}
+      )",
+      logger);
+  EXPECT_EQ(config.getDecoherenceType(), DecoherenceType::DECAY);
+  EXPECT_DOUBLE_EQ(config.getDecayTime()[0], 30.0);
+  EXPECT_DOUBLE_EQ(config.getDecayTime()[1], 40.0);
+  EXPECT_DOUBLE_EQ(config.getDephaseTime()[0], 0.0); // Overwritten to 0
+  EXPECT_DOUBLE_EQ(config.getDephaseTime()[1], 0.0); // Overwritten to 0
+}
+
+TEST_F(TomlParserTest, Decoherence_Dephase) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [3, 2]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 4.8]
+        rotfreq = [0.0, 0.0]
+        decoherence = {type = "dephase", decay_time = [30.0, 40.0], dephase_time = [20.0, 25.0]}
+        initial_condition = {type = "basis"}
+      )",
+      logger);
+  EXPECT_EQ(config.getDecoherenceType(), DecoherenceType::DEPHASE);
+  EXPECT_DOUBLE_EQ(config.getDecayTime()[0], 0.0); // Overwritten to 0
+  EXPECT_DOUBLE_EQ(config.getDecayTime()[1], 0.0); // Overwritten to 0
+  EXPECT_DOUBLE_EQ(config.getDephaseTime()[0], 20.0);
+  EXPECT_DOUBLE_EQ(config.getDephaseTime()[1], 25.0);
+}
+
+
 TEST_F(TomlParserTest, InitialCondition_FromFile) {
   Config config = Config::fromTomlString(
       R"(
