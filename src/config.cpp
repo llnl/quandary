@@ -129,7 +129,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
         auto single_val = validators::field<double>(toml, "control_bounds").value();
         control_bounds = std::vector<double>(num_osc, single_val);
       } else {
-        logger.exitWithError("control_bounds must be either a single value (applies to all oscillators, or an array of values (one per oscillator).");
+        logger.exitWithError("control_bounds must be either a single value (applies to all oscillators), or an array of values (one per oscillator).");
       }
     }
 
