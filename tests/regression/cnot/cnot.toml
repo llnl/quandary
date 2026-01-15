@@ -23,9 +23,9 @@ optim_penalty = { leakage = 0.0, weightedcost = 0.0, weightedcost_width = 0.0, d
 runtype = "optimization"
 usematfree = true
 datadir = "./data_out"
-output_frequency = 1
+output_timestep_stride = 1
 output_type = ["population", "expectedEnergy"]
-optim_monitor_frequency = 1
+output_optimization_stride = 1
 linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"
 rand_seed = 1234

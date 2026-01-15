@@ -33,12 +33,12 @@ optim_tolerance = { grad_abs = 1e-7, grad_rel = 1e-8, final_cost = 1e-5, infidel
 optim_maxiter = 200
 optim_tikhonov = { coeff = 0.00001, use_x0 = false }
 optim_penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0 }
-optim_monitor_frequency = 1
+output_optimization_stride = 1
 
 runtype = "simulation"
 datadir = "./data_out"
 output_type = []
-output_frequency = 1
+output_timestep_stride = 1
 usematfree = false
 linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"

@@ -57,8 +57,8 @@ const double OPTIM_PENALTY_VARIATION = 0.01; ///< Default amplitude variation pe
 
 const std::string DATADIR = "./data_out"; ///< Default output directory
 
-const size_t OUTPUT_FREQUENCY = 1; ///< Default output frequency
-const size_t OPTIM_MONITOR_FREQUENCY = 10; ///< Default optimization monitoring frequency
+const size_t OUTPUT_TIMESTEP_STRIDE = 1; ///< Default output frequency
+const size_t OUTPUT_OPTIMIZATION_STRIDE = 10; ///< Default optimization monitoring frequency
 
 const RunType RUNTYPE = RunType::SIMULATION; ///< Default run type
 const bool USEMATFREE = false; ///< Default matrix-free solver setting

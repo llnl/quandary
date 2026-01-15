@@ -231,9 +231,9 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       }
     }
 
-    output_frequency = validators::field<size_t>(toml, "output_frequency").greaterThanEqual(0).valueOr(ConfigDefaults::OUTPUT_FREQUENCY);
+    output_timestep_stride = validators::field<size_t>(toml, "output_timestep_stride").greaterThanEqual(0).valueOr(ConfigDefaults::OUTPUT_TIMESTEP_STRIDE);
 
-    optim_monitor_frequency = validators::field<size_t>(toml, "optim_monitor_frequency").greaterThanEqual(0).valueOr(ConfigDefaults::OPTIM_MONITOR_FREQUENCY);
+    output_optimization_stride = validators::field<size_t>(toml, "output_optimization_stride").greaterThanEqual(0).valueOr(ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE);
 
     runtype = parseEnum(toml["runtype"].value<std::string>(), RUN_TYPE_MAP, ConfigDefaults::RUNTYPE);
 
@@ -425,8 +425,8 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   // Convert set to vector
   output_type.assign(unique_types.begin(), unique_types.end());
   
-  output_frequency = settings.output_frequency.value_or(ConfigDefaults::OUTPUT_FREQUENCY);
-  optim_monitor_frequency = settings.optim_monitor_frequency.value_or(ConfigDefaults::OPTIM_MONITOR_FREQUENCY);
+  output_timestep_stride = settings.output_timestep_stride.value_or(ConfigDefaults::OUTPUT_TIMESTEP_STRIDE);
+  output_optimization_stride = settings.output_optimization_stride.value_or(ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE);
   runtype = settings.runtype.value_or(ConfigDefaults::RUNTYPE);
   usematfree = settings.usematfree.value_or(ConfigDefaults::USEMATFREE);
   linearsolver_type = settings.linearsolver_type.value_or(ConfigDefaults::LINEARSOLVER_TYPE);
@@ -802,7 +802,7 @@ void Config::printConfig(std::stringstream& log) const {
       << ", variation = " << optim_penalty_variation
       << ", weightedcost = " << optim_penalty_weightedcost
       << ", weightedcost_width = " << optim_penalty_weightedcost_width << " }\n";
-  log << "optim_monitor_frequency = " << optim_monitor_frequency << "\n";
+  log << "output_optimization_stride = " << output_optimization_stride << "\n";
 
   // Output and solver options 
   log << "runtype = \"" << enumToString(runtype, RUN_TYPE_MAP) << "\"\n";
@@ -813,7 +813,7 @@ void Config::printConfig(std::stringstream& log) const {
     if (j < output_type.size() - 1) log << ", ";
   }
   log << "]\n";
-  log << "output_frequency = " << output_frequency << "\n";
+  log << "output_timestep_stride = " << output_timestep_stride << "\n";
   log << "usematfree = " << (usematfree ? "true" : "false") << "\n";
   log << "linearsolver = { type = \"" << enumToString(linearsolver_type, LINEAR_SOLVER_TYPE_MAP) << "\", maxiter = " << linearsolver_maxiter << " }\n";
   log << "timestepper = \"" << enumToString(timestepper_type, TIME_STEPPER_TYPE_MAP) << "\"\n";

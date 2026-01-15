@@ -72,8 +72,8 @@ struct ParsedConfigData {
   // Output parameters
   std::optional<std::string> datadir;
   std::optional<std::map<int, std::vector<OutputType>>> indexed_output;
-  std::optional<size_t> output_frequency;
-  std::optional<size_t> optim_monitor_frequency;
+  std::optional<size_t> output_timestep_stride;
+  std::optional<size_t> output_optimization_stride;
   std::optional<RunType> runtype;
   std::optional<bool> usematfree;
   std::optional<LinearSolverType> linearsolver_type;

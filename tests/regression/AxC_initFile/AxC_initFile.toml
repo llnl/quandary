@@ -19,9 +19,9 @@ optim_tikhonov = { coeff = 1e-05, use_x0 = false }
 optim_penalty = { leakage = 1.0, weightedcost = 1.0, weightedcost_width = 0.5, dpdm = 0.0, energy = 0.1, variation = 0.0 }
 
 datadir = "data_out"
-output_frequency = 100
+output_timestep_stride = 100
 output_type = ["fullstate"]
-optim_monitor_frequency = 1
+output_optimization_stride = 1
 runtype = "simulation"
 usematfree = true
 linearsolver = { type = "gmres", maxiter = 20 }

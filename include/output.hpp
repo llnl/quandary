@@ -23,7 +23,7 @@ class Output{
   bool quietmode; ///< Flag for reduced screen output
   
   FILE* optimfile; ///< Output file for logging optimization progress
-  int output_frequency; ///< Time domain output frequency (write every N time steps)
+  int output_timestep_stride; ///< Time domain output frequency (write every N time steps)
   std::vector<OutputType> output_type; ///< List of output types applied to all oscillators
 
   size_t noscillators; ///< Number of oscillators in the system
@@ -44,7 +44,7 @@ class Output{
 
   public:
     std::string datadir; ///< Directory path for output data files
-    int optim_monitor_freq; ///< Write output files every N optimization iterations
+    int output_optimization_stride; ///< Write output files every N optimization iterations
 
   public:
     Output();
@@ -85,7 +85,7 @@ class Output{
     /**
      * @brief Writes current control pulses per oscillator and control parameters.
      *
-     * Called every optim_monitor_freq optimization iterations. 
+     * Called every output_optimization_stride optimization iterations. 
      * Control pulses are written to `<datadir>/control<ioscillator>.dat`
      * Control parameters are written to `<datadir>/params.dat`
      *

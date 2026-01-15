@@ -595,8 +595,8 @@ PetscErrorCode TaoMonitor(Tao tao,void*ptr){
     std::cout<<  "    Objective             Tikhonov               Penalty-Leakage        Penalty-StateVar       Penalty-TotalEnergy    Penalty-CtrlVar        Penalty-WeightedCost" << std::endl;
   }
 
-  /* Every <optim_monitor_freq> iterations: Output of optimization history */
-  if (iter % ctx->output->optim_monitor_freq == 0 ||lastIter) {
+  /* Every <output_optimization_stride> iterations: Output of optimization history */
+  if (iter % ctx->output->output_optimization_stride == 0 ||lastIter) {
     // Add to optimization history file 
     ctx->output->writeOptimFile(iter, f, gnorm, deltax, F_avg, obj_cost, obj_regul, obj_penal_leakage, obj_penal_dpdm, obj_penal_energy, obj_penal_variation, obj_penal_weightedcost);
     // Screen output 

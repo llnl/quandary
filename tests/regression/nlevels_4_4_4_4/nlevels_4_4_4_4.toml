@@ -18,9 +18,9 @@ optim_tikhonov = { coeff = 1e-05, use_x0 = false }
 optim_penalty = { leakage = 0.0, weightedcost = 0.0, weightedcost_width = 0.0, dpdm = 0.0, energy = 0.0, variation = 0.0 }
 
 datadir = "./data_out"
-output_frequency = 1
+output_timestep_stride = 1
 output_type = ["expectedEnergy", "expectedEnergyComposite", "population", "populationComposite"]
-optim_monitor_frequency = 1
+output_optimization_stride = 1
 runtype = "simulation"
 usematfree = false
 linearsolver = { type = "gmres", maxiter = 20 }

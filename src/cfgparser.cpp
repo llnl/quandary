@@ -58,8 +58,8 @@ CfgParser::CfgParser(const MPILogger& logger) : logger(logger) {
   // Output and runtypes
   registerConfig("datadir", settings.datadir);
   // Note: "output" is handled as indexed config in the indexed settings section above
-  registerConfig("output_frequency", settings.output_frequency);
-  registerConfig("optim_monitor_frequency", settings.optim_monitor_frequency);
+  registerConfig("output_frequency", settings.output_timestep_stride);
+  registerConfig("optim_monitor_frequency", settings.output_optimization_stride);
   registerConfig("runtype", settings.runtype);
   registerConfig("usematfree", settings.usematfree);
   registerConfig("linearsolver_type", settings.linearsolver_type);

@@ -136,9 +136,6 @@ optim_penalty = { leakage = 0.0,                # Penalize leakage into guard le
                   weightedcost_width = 0.0      # Width paramter for weighted cost function integral
                 }
 
-# Frequency of writing information during optimization iterations: write every <num> iterations
-optim_monitor_frequency = 1
-
 # ---------------------------------------------------------------
 # ------------------- Output and Solver options -----------------
 # ---------------------------------------------------------------
@@ -159,7 +156,9 @@ datadir = "./data_out"
 # "fullstate" - full state of the composite system (full density matrix, or state vector). WARNING: This might result in very large output files - use with care.
 output_type = ["population", "expectedEnergy"]
 # Output frequency in the time domain: write output every <num> time-step
-output_frequency = 1
+output_timestep_stride = 1
+# Output frequency for optimization history: write every <num> optimization iterations
+output_optimization_stride = 1
 # Use matrix free solver, instead of sparse matrix implementation. Only available for 2,3,4, or 5 oscillators.
 usematfree = true
 # Linear solver configuration: type can be "gmres" or "neumann", maxiter sets maximum iterations

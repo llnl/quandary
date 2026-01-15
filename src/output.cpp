@@ -6,7 +6,7 @@ Output::Output(){
   mpirank_world = -1;
   mpirank_petsc = -1;
   mpirank_init  = -1;
-  output_frequency = 0;
+  output_timestep_stride = 0;
   quietmode = false;
 }
 
@@ -32,8 +32,8 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
   MPI_Barrier(MPI_COMM_WORLD);
 
   /* Prepare output for optimizer */
-  optim_monitor_freq = config.getOptimMonitorFrequency();
-  output_frequency = config.getOutputFrequency();
+  output_optimization_stride = config.getOutputOptimizationStride();
+  output_timestep_stride = config.getOutputTimestepStride();
   if (mpirank_world == 0) {
     char filename[255];
     snprintf(filename, 254, "%s/optim_history.dat", datadir.c_str());
@@ -162,7 +162,7 @@ void Output::writeControls(Vec params, MasterEq* mastereq, int ntime, double dt)
       fprintf(file_c, "#\"time\"         \"p(t) (rotating)\"          \"q(t) (rotating)\"         \"f(t) (labframe)\"\n");
 
       /* Write every <num> timestep to file */
-      for (int i=0; i<=ntime; i+=output_frequency) {
+      for (int i=0; i<=ntime; i+=output_timestep_stride) {
         double time = i*dt; 
 
         double ReI, ImI, LabI;
@@ -250,7 +250,7 @@ void Output::openTrajectoryDataFiles(std::string prefix, int initid){
 void Output::writeTrajectoryDataFiles(int timestep, double time, const Vec state, MasterEq* mastereq){
 
   /* Write output only every <num> time-steps */
-  if (timestep % output_frequency == 0) {
+  if (timestep % output_timestep_stride == 0) {
 
     /* Write expected energy levels to file */
     if (writeExpectedEnergy) {

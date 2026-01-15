@@ -980,8 +980,8 @@ TEST_F(TomlParserTest, OptimWeightsDefault) {
 // optim_penalty_variation = 0.03
 // optim_regul_tik0 = true
 // datadir = "/custom/output/path"
-// output_frequency = 5
-// optim_monitor_frequency = 25
+// output_timestep_stride = 5
+// output_optimization_stride = 25
 // runtype = "optimization"
 // usematfree = true
 // linearsolver_type = "gmres"

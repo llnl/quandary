@@ -84,8 +84,8 @@ class Config {
   // Output and runtypes
   std::string datadir; ///< Directory for output files
   std::vector<OutputType> output_type; ///< Specify the desired output types. 
-  size_t output_frequency; ///< Output frequency in the time domain: write output every <num> time-step
-  size_t optim_monitor_frequency; ///< Frequency of writing output during optimization iterations
+  size_t output_timestep_stride; ///< Output frequency in the time domain: write output every <num> time-step
+  size_t output_optimization_stride; ///< Frequency of writing output during optimization iterations
   RunType runtype; ///< Runtype options: simulation, gradient, or optimization
   bool usematfree; ///< Use matrix free solver, instead of sparse matrix implementation
   LinearSolverType linearsolver_type; ///< Solver type for solving the linear system at each time step
@@ -160,8 +160,8 @@ class Config {
 
   const std::string& getDataDir() const { return datadir; }
   const std::vector<OutputType>& getOutputType() const { return output_type; }
-  size_t getOutputFrequency() const { return output_frequency; }
-  size_t getOptimMonitorFrequency() const { return optim_monitor_frequency; }
+  size_t getOutputTimestepStride() const { return output_timestep_stride; }
+  size_t getOutputOptimizationStride() const { return output_optimization_stride; }
   RunType getRuntype() const { return runtype; }
   bool getUseMatFree() const { return usematfree; }
   LinearSolverType getLinearSolverType() const { return linearsolver_type; }
