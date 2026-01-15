@@ -1049,8 +1049,8 @@ std::vector<std::vector<double>> Config::parseCarrierFrequencies(const toml::tab
         size_t osc_id;
         try {
           osc_id = std::stoull(key_str);
-        } catch (...) {
-          logger.exitWithError("carrier_frequency keys must be oscillator IDs (e.g., \"0\", \"1\")");
+        } catch (const std::exception& e) {
+          logger.exitWithError("carrier_frequency keys must be oscillator IDs (e.g., \"0\", \"1\"): " + std::string(e.what()));
         }
         if (osc_id >= num_osc) {
           logger.exitWithError("carrier_frequency oscillator ID " + key_str + " exceeds number of oscillators");
