@@ -129,7 +129,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
         auto single_val = validators::field<double>(toml, "control_bounds").value();
         control_bounds = std::vector<double>(num_osc, single_val);
       } else {
-        logger.exitWithError("control_bounds must be either a single value (applies to all oscillators, or an array of values (one per oscillator).");
+        logger.exitWithError("control_bounds must be either a single value (applies to all oscillators), or an array of values (one per oscillator).");
       }
     }
 
@@ -153,7 +153,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
         auto single_val = validators::field<double>(toml, "optim_weights").value();
         optim_weights = std::vector<double>{single_val};
       } else {
-        logger.exitWithError("optim_weights must be either a single value (applies to all initial conditions), or an array of values (one for each inital condition).");
+        logger.exitWithError("optim_weights must be either a single value (applies to all initial conditions), or an array of values (one for each initial condition).");
       }
     }
 
@@ -1049,8 +1049,8 @@ std::vector<std::vector<double>> Config::parseCarrierFrequencies(const toml::tab
         size_t osc_id;
         try {
           osc_id = std::stoull(key_str);
-        } catch (...) {
-          logger.exitWithError("carrier_frequency keys must be oscillator IDs (e.g., \"0\", \"1\")");
+        } catch (const std::exception& e) {
+          logger.exitWithError("carrier_frequency keys must be oscillator IDs (e.g., \"0\", \"1\"): " + std::string(e.what()));
         }
         if (osc_id >= num_osc) {
           logger.exitWithError("carrier_frequency oscillator ID " + key_str + " exceeds number of oscillators");
