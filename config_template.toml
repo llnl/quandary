@@ -136,16 +136,12 @@ optim_penalty = { leakage = 0.0,                # Penalize leakage into guard le
                   weightedcost_width = 0.0      # Width paramter for weighted cost function integral
                 }
 
+
+
 # ---------------------------------------------------------------
-# ------------------- Output and Solver options -----------------
+# ------------------- Output options -----------------
 # ---------------------------------------------------------------
-# Runtype options:
-# "simulation" - a forward simulation only
-# "gradient" - forward simulation and backward simulation
-# "optimization" - a full optimization cycle
-# "evalControls" - Only evaluates the current control pulses (no simulation)
-# runtype = "optimization"
-runtype = "simulation"
+
 # Directory for output files
 datadir = "./data_out"
 # Specify the desired output during time evolution. Format: list of any of the following options:
@@ -159,6 +155,18 @@ output_type = ["population", "expectedEnergy"]
 output_timestep_stride = 1
 # Output frequency for optimization history: write every <num> optimization iterations
 output_optimization_stride = 1
+
+
+# ---------------------------------------------------------------
+# ------------------- Solver options -----------------
+# ---------------------------------------------------------------
+# Runtype options:
+# "simulation" - a forward simulation only
+# "gradient" - forward simulation and backward simulation
+# "optimization" - a full optimization cycle
+# "evalControls" - Only evaluates the current control pulses (no simulation)
+# runtype = "optimization"
+runtype = "simulation"
 # Use matrix free solver, instead of sparse matrix implementation. Only available for 2,3,4, or 5 oscillators.
 usematfree = true
 # Linear solver configuration: type can be "gmres" or "neumann", maxiter sets maximum iterations
