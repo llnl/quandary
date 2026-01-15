@@ -802,7 +802,6 @@ void Config::printConfig(std::stringstream& log) const {
       << ", variation = " << optim_penalty_variation
       << ", weightedcost = " << optim_penalty_weightedcost
       << ", weightedcost_width = " << optim_penalty_weightedcost_width << " }\n";
-  log << "output_optimization_stride = " << output_optimization_stride << "\n";
 
   // Output and solver options 
   log << "runtype = \"" << enumToString(runtype, RUN_TYPE_MAP) << "\"\n";
@@ -814,6 +813,7 @@ void Config::printConfig(std::stringstream& log) const {
   }
   log << "]\n";
   log << "output_timestep_stride = " << output_timestep_stride << "\n";
+  log << "output_optimization_stride = " << output_optimization_stride << "\n";
   log << "usematfree = " << (usematfree ? "true" : "false") << "\n";
   log << "linearsolver = { type = \"" << enumToString(linearsolver_type, LINEAR_SOLVER_TYPE_MAP) << "\", maxiter = " << linearsolver_maxiter << " }\n";
   log << "timestepper = \"" << enumToString(timestepper_type, TIME_STEPPER_TYPE_MAP) << "\"\n";
