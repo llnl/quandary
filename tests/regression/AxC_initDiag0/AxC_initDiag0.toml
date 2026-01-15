@@ -26,16 +26,16 @@ runtype = "simulation"
 usematfree = true
 linearsolver = { type = "gmres", maxiter = 20 }
 rand_seed = 1234
-control_initialization = {
-  "0" = { type = "constant", amplitude = 5.0 },
-  "1" = { type = "constant", amplitude = 1.0 }
-}
+control_initialization = [
+  { subsystem = 0, type = "constant", amplitude = 5.0 },
+  { subsystem = 1, type = "constant", amplitude = 1.0 }
+]
 
 control_parameterization = { type = "spline", num = 75 }
 
-carrier_frequency = {
-  "0" = [0.0, -230.56, 1.176],
-  "1" = [0.0, 1.176]
-}
+carrier_frequency = [
+  { subsystem = 0, values = [0.0, -230.56, 1.176] },
+  { subsystem = 1, values = [0.0, 1.176] }
+]
 control_bounds = [25.0, 100.0]
 

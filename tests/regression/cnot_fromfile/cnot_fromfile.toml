@@ -41,10 +41,10 @@ control_initialization = {type = "constant", amplitude = 0.005 }
 
 control_parameterization = {type = "spline", num = 150 }
 
-carrier_frequency = {
-  "0" = [0, -0.2198, -0.10000000000000001],
-  "1" = [0, -0.22520000000000001, -0.10000000000000001]
-}
+carrier_frequency = [
+  {subsystem = 0, values = [0, -0.2198, -0.10000000000000001]},
+  {subsystem = 1, values = [0, -0.22520000000000001, -0.10000000000000001]}
+]
 
 control_bounds = 0.008
 

@@ -397,10 +397,10 @@ TEST_F(TomlParserTest, ControlParameterizations_Spline) {
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        control_parameterization = {
-          "0" = { type = "spline", num = 10 },
-          "1" = { type = "spline", num = 20, tstart = 0.0, tstop = 1.0 }
-        }
+        control_parameterization = [
+          { subsystem = 0, type = "spline", num = 10 },
+          { subsystem = 1, type = "spline", num = 20, tstart = 0.0, tstop = 1.0 }
+        ]
       )",
       logger);
 
@@ -427,9 +427,9 @@ TEST_F(TomlParserTest, ControlParameterizations_Defaults) {
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        control_parameterization = {
-          "1" = { type = "spline0", num = 150, tstart = 0.0, tstop = 1.0 }
-        }
+        control_parameterization = [
+          { subsystem = 1, type = "spline0", num = 150, tstart = 0.0, tstop = 1.0 }
+        ]
       )",
       logger);
 
@@ -492,9 +492,9 @@ TEST_F(TomlParserTest, ControlInitialization_Defaults) {
         rotfreq = [0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        control_initialization = { 
-          "1" = { type = "random", amplitude = 2.0 }
-        }
+        control_initialization = [
+           { subsystem = 1, type = "random", amplitude = 2.0 }
+        ]
       )",
       logger);
 
@@ -524,19 +524,19 @@ TEST_F(TomlParserTest, ControlInitializationSettings) {
         rotfreq = [0.0, 0.0, 0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        control_initialization = {
-          "0" = { type = "constant", amplitude = 1.0, phase = 1.1 },
-          "1" = { type = "constant", amplitude = 2.0 },
-          "2" = { type = "random", amplitude = 3.0, phase = 3.1 },
-          "3" = { type = "random", amplitude = 4.0 },
-          "4" = { type = "random", amplitude = 5.0, phase = 5.1 }
-        }
+        control_initialization = [
+          { subsystem = 0, type = "constant", amplitude = 1.0, phase = 1.1 },
+          { subsystem = 1, type = "constant", amplitude = 2.0 },
+          { subsystem = 2, type = "random", amplitude = 3.0, phase = 3.1 },
+          { subsystem = 3, type = "random", amplitude = 4.0 },
+          { subsystem = 4, type = "random", amplitude = 5.0, phase = 5.1 }
+        ]
 
-        control_parameterization = {
-          "0" = { type = "spline_amplitude", num = 10, scaling = 1.0 },
-          "2" = { type = "spline_amplitude", num = 10, scaling = 1.0 },
-          "4" = { type = "spline_amplitude", num = 10, scaling = 1.0 }
-        }
+        control_parameterization = [
+          { subsystem = 0, type = "spline_amplitude", num = 10, scaling = 1.0 },
+          { subsystem = 2, type = "spline_amplitude", num = 10, scaling = 1.0 },
+          { subsystem = 4, type = "spline_amplitude", num = 10, scaling = 1.0 }
+        ]
       )",
       logger);
 
@@ -623,9 +623,9 @@ TEST_F(TomlParserTest, ControlInitialization_DefaultWithOverrides) {
         rotfreq = [0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        control_initialization = { 
-          "1" = { type = "random", amplitude = 0.05 }
-        }
+        control_initialization = [ 
+          { subsystem = 1, type = "random", amplitude = 0.05 }
+        ]
       )",
       logger);
 
@@ -708,17 +708,69 @@ TEST_F(TomlParserTest, ControlBounds_AllOscillators) {
   EXPECT_DOUBLE_EQ(control_bound1, 2.0);
 }
 
-TEST_F(TomlParserTest, CarrierFrequencies) {
+TEST_F(TomlParserTest, CarrierFrequenciesDefaults) {
   Config config = Config::fromTomlString(
       R"(
-        nlevels = [2]
+        nlevels = [2,2]
         ntime = 1000
         dt = 0.1
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
 
-        carrier_frequency = {"0" = [1.0, 2.0]}
+        carrier_frequency = [
+          {subsystem = 1, values = [4.0, 5.0]}
+        ]
+      )",
+      logger);
+
+  const auto& carrier_freq0 = config.getCarrierFrequencies(0);
+  EXPECT_EQ(carrier_freq0.size(), 1);
+  EXPECT_EQ(carrier_freq0[0], 0.0);
+  const auto& carrier_freq1 = config.getCarrierFrequencies(1);
+  EXPECT_EQ(carrier_freq1.size(), 2);
+  EXPECT_EQ(carrier_freq1[0], 4.0);
+  EXPECT_EQ(carrier_freq1[1], 5.0);
+}
+
+TEST_F(TomlParserTest, CarrierFrequenciesPerSubsystem) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2,2]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1]
+        initial_condition = {type = "basis"}
+
+        carrier_frequency = [
+          {subsystem = 0, values = [1.0, 2.0, 3.0]},
+          {subsystem = 1, values = [4.0, 5.0]}
+        ]
+      )",
+      logger);
+
+  const auto& carrier_freq0 = config.getCarrierFrequencies(0);
+  EXPECT_EQ(carrier_freq0.size(), 3);
+  EXPECT_EQ(carrier_freq0[0], 1.0);
+  EXPECT_EQ(carrier_freq0[1], 2.0);
+  EXPECT_EQ(carrier_freq0[2], 3.0);
+  const auto& carrier_freq1 = config.getCarrierFrequencies(1);
+  EXPECT_EQ(carrier_freq1.size(), 2);
+  EXPECT_EQ(carrier_freq1[0], 4.0);
+  EXPECT_EQ(carrier_freq1[1], 5.0);
+}
+
+TEST_F(TomlParserTest, CarrierFrequencies_AllOscillators) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 4.1]
+        rotfreq = [0.0, 0.0]
+        initial_condition = {type = "basis"}
+
+        carrier_frequency = { values = [1.0, 2.0] }
       )",
       logger);
 
@@ -726,9 +778,13 @@ TEST_F(TomlParserTest, CarrierFrequencies) {
   EXPECT_EQ(carrier_freq0.size(), 2);
   EXPECT_EQ(carrier_freq0[0], 1.0);
   EXPECT_EQ(carrier_freq0[1], 2.0);
-}
 
-TEST_F(TomlParserTest, CarrierFrequencies_AllOscillators) {
+  const auto& carrier_freq1 = config.getCarrierFrequencies(1);
+  EXPECT_EQ(carrier_freq1.size(), 2);
+  EXPECT_EQ(carrier_freq1[0], 1.0);
+  EXPECT_EQ(carrier_freq1[1], 2.0);
+}
+TEST_F(TomlParserTest, CarrierFrequencies_AllOscillatorsShorthand) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2]
@@ -752,6 +808,25 @@ TEST_F(TomlParserTest, CarrierFrequencies_AllOscillators) {
   EXPECT_EQ(carrier_freq1[0], 1.0);
   EXPECT_EQ(carrier_freq1[1], 2.0);
 }
+
+TEST_F(TomlParserTest, CarrierFrequency_InvalidID) {
+  ASSERT_DEATH({
+    Config config = Config::fromTomlString(
+        R"(
+          nlevels = [2]
+          transfreq = [4.1]
+          ntime = 1000
+          dt = 0.1
+          rotfreq = [0.0]
+          initial_condition = {type = "basis"}
+
+          carrier_frequency = [{subsystem = 5, values = [4.0]}]
+        )",
+        logger);
+  }, "ERROR: Validation error for field 'subsystem': must be < 1, got 5");
+}
+
+
 
 TEST_F(TomlParserTest, OptimTarget_GateType) {
   Config config = Config::fromTomlString(
@@ -1052,22 +1127,3 @@ TEST_F(TomlParserTest, ControlInitialization_UnknownKey) {
         logger);
   }, "ERROR: Unknown key 'foo' in control_initialization\\.");
 }
-
-
-TEST_F(TomlParserTest, CarrierFrequency_InvalidOscillatorID) {
-  ASSERT_DEATH({
-    Config config = Config::fromTomlString(
-        R"(
-          nlevels = [2]
-          transfreq = [4.1]
-          ntime = 1000
-          dt = 0.1
-          rotfreq = [0.0]
-          initial_condition = {type = "basis"}
-
-          carrier_frequency = {"5" = [4.0]}
-        )",
-        logger);
-  }, "ERROR: carrier_frequency oscillator ID 5 exceeds number of oscillators");
-}
-

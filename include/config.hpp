@@ -180,23 +180,14 @@ class Config {
   // Table validation helper
   void validateTableKeys(const toml::table& table, const std::set<std::string>& allowed_keys, const std::string& table_name) const;
 
+  // Helper function to parse a single control parameterization table
+  ControlParameterizationSettings parseControlParameterizationSpecs(const toml::table& param_table) const;
 
-  std::vector<ControlParameterizationSettings> parseControlParameterizations(const toml::table& table, size_t num_entries) const;
-
-  std::vector<ControlInitializationSettings> parseControlInitializations(const toml::table& table, size_t num_entries) const;
+  // Helper function to parse a single control initialization table 
+  ControlInitializationSettings parseControlInitializationSpecs(const toml::table& table) const;
   
-  /**
-   * @brief Parses carrier frequencies from TOML configuration
-   *
-   * Supports two formats:
-   * 1. carrier_frequency = {"0" = [...], "1" = [...]} (per-oscillator)
-   * 2. carrier_frequency = [...] (same for all oscillators)
-   *
-   * @param toml TOML table containing the configuration
-   * @param num_osc Number of oscillators
-   * @return Vector of carrier frequency vectors, one per oscillator
-   */
-  std::vector<std::vector<double>> parseCarrierFrequencies(const toml::table& toml, size_t num_osc) const;
+  // Helper function to parse a single carrier frequency table
+  std::vector<double> parseCarrierFrequencySpecs(const toml::table& table) const;
   
   /**
    * @brief Parses optimization target settings from TOML table

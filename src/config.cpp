@@ -18,7 +18,67 @@
 // Common TOML table key constants
 namespace {
 const std::string OSC_ID_KEY = "oscID";
+
+/**
+ * Generic template function for parsing per-subsystem settings.
+ * Handles two formats:
+ * 1. A single table that applies to all subsystems
+ * 2. An array of tables with 'subsystem' field for per-subsystem specification
+ * 
+ * @tparam SettingsType The type of settings to parse (e.g., ControlParameterizationSettings)
+ * @tparam ParseFunc The type of the parsing function
+ * @param toml The TOML table containing the configuration
+ * @param key The key name in the TOML table (e.g., "control_parameterization")
+ * @param num_subsystems The total number of subsystems
+ * @param default_settings The default settings to use for all subsystems initially
+ * @param parse_func Function to parse a single table into SettingsType
+ * @param logger Logger for error reporting
+ * @return Vector of settings, one per subsystem
+ */
+template<typename SettingsType, typename ParseFunc>
+std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, const std::string& key, size_t num_subsystems, const SettingsType& default_settings, ParseFunc parse_func, const MPILogger& logger) {
+  
+  // Initialize all subsystems with default settings
+  std::vector<SettingsType> settings(num_subsystems, default_settings);
+  
+  // Return defaults, if key is not present 
+  if (!toml.contains(key)) {
+    return settings;
+  }
+  
+  // Case 1: Single table applies to all subsystems
+  if (toml[key].is_table()) {
+    auto* settings_table = toml[key].as_table();
+    SettingsType parsed_settings = parse_func(*settings_table);
+    settings.assign(num_subsystems, parsed_settings);
+  }
+  // Case 2: Array of tables for per-subsystem specification
+  else if (toml[key].is_array()) {
+    auto* settings_array = toml[key].as_array();
+    for (const auto& elem : *settings_array) {
+      if (!elem.is_table()) {
+        logger.exitWithError(key + " array elements must be tables");
+      }
+      auto* elem_table = elem.as_table();
+      
+      // Get the subsystem index
+      const std::string subsystem_key = "subsystem";
+      if (!elem_table->contains(subsystem_key)) {
+        logger.exitWithError(key + " array element must have 'subsystem' field");
+      }
+      size_t subsystem_id = validators::field<size_t>(*elem_table, subsystem_key).greaterThanEqual(0).lessThan(num_subsystems).value();
+      
+      // Parse the settings for this subsystem
+      settings[subsystem_id] = parse_func(*elem_table);
+    }
+  } else {
+    logger.exitWithError(key + " must be a table (applies to all) or an array of tables (per-subsystem specification)");
+  }
+  
+  return settings;
 }
+
+} // namespace
 
 
 Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger) {
@@ -82,37 +142,23 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     // Optimization options
     control_enforceBC = toml["control_enforceBC"].value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
 
-    // Parse optional control parameterization as a table
-    if (!toml.contains("control_parameterization")) {
-      // No control_parameterization specified, use defaults
-      ControlParameterizationSettings default_param;
-      default_param.type = ConfigDefaults::CONTROL_TYPE;
-      default_param.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
-      default_param.tstart = std::nullopt;
-      default_param.tstop = std::nullopt;
-      control_parameterizations.resize(num_osc, default_param);
-    } else {
-      // Parse control_parameterization table
-      if (!toml["control_parameterization"].is_table()) {
-        logger.exitWithError("control_parameterization must be a table");
-      }
-      auto* control_param_table = toml["control_parameterization"].as_table();
-      control_parameterizations = parseControlParameterizations(*control_param_table, num_osc);
-    }
+    // Parse control parameterization, either table (applies to all) or array (per-oscillator)
+    ControlParameterizationSettings default_param;
+    default_param.type = ConfigDefaults::CONTROL_TYPE;
+    default_param.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
+    default_param.tstart = std::nullopt;
+    default_param.tstop = std::nullopt;
+    auto parseParamFunc = [this](const toml::table& t) { return parseControlParameterizationSpecs(t); };
+    control_parameterizations = parsePerSubsystemSettings<ControlParameterizationSettings>(toml, "control_parameterization", num_osc, default_param, parseParamFunc, logger);
 
-    // Parse optional control initialization as a table
-    if (!toml.contains("control_initialization")) {
-      // No control_initialization specified, use default for each oscillator
-      ControlInitializationSettings default_init = ControlInitializationSettings{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt}; 
-      control_initializations.resize(num_osc, default_init);
-    } else {
-      // Parse control_initialization table
-      if (!toml["control_initialization"].is_table()) {
-        logger.exitWithError("control_initialization must be a table");
-      }
-      auto* control_init_table = toml["control_initialization"].as_table();
-      control_initializations = parseControlInitializations(*control_init_table, num_osc);
-    }
+    // Parse control initialization, either as a table (applies to all) or per-oscillator table
+    ControlInitializationSettings default_init;
+    default_init.type = ConfigDefaults::CONTROL_INIT_TYPE; 
+    default_init.amplitude = ConfigDefaults::CONTROL_INIT_AMPLITUDE; 
+    default_init.phase = std::nullopt; 
+    default_init.filename = std::nullopt;
+    auto parseInitFunc = [this](const toml::table& t) { return parseControlInitializationSpecs(t); };
+    control_initializations = parsePerSubsystemSettings<ControlInitializationSettings>(toml, "control_initialization", num_osc, default_init, parseInitFunc, logger);
 
     // Parse optional control bounds: either single value or per-oscillator array
     if (!toml.contains("control_bounds")) {
@@ -133,8 +179,22 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       }
     }
 
-    // Parse optional carrier frequencies: either one vector (applies to all oscillators) or per-oscillator table of vectors with oscillator ID keys
-    carrier_frequencies = parseCarrierFrequencies(toml, num_osc);
+    // Parse carrier frequencies: either one vector (applies to all oscillators) or per-oscillator array of tables
+    std::vector<double> default_carrier_freq = {ConfigDefaults::CARRIER_FREQ};
+    carrier_frequencies.assign(num_osc, default_carrier_freq);
+    if (toml.contains("carrier_frequency")) {
+      // Check if carrier_frequency is a direct array of values (shorthand for applying to all)
+      auto* carrier_freq_array = toml["carrier_frequency"].as_array();
+      if (carrier_freq_array && !carrier_freq_array->empty() && !carrier_freq_array->front().is_table()) {
+        // Direct array format: carrier_frequency = [1.0, 2.0]
+        auto values = validators::vectorField<double>(toml, "carrier_frequency").value();
+        carrier_frequencies.assign(num_osc, values);
+      } else {
+        // Table or array of tables format
+        auto parseCarrierFunc = [this](const toml::table& t) { return parseCarrierFrequencySpecs(t); };
+        carrier_frequencies = parsePerSubsystemSettings<std::vector<double>>(toml, "carrier_frequency", num_osc, default_carrier_freq, parseCarrierFunc, logger);
+      }
+    } 
 
     // Parse optimization target:
     optim_target = parseOptimTarget(toml, num_osc);
@@ -643,12 +703,9 @@ std::string toString(const OptimTargetSettings& optim_target) {
   return "unknown";
 }
 
-// Template helper for toString functions that output either a single value or a table with per-item overrides
+// Template helper for toString functions that output either a single item or an array with per-item overrides
 template <typename T, typename PrintFunc, typename CompareFunc>
-std::string toStringWithOptionalTable(
-    const std::vector<T>& items,
-    PrintFunc printItem,
-    CompareFunc areEqual) {
+std::string toStringWithOptionalPerSubsystem(const std::vector<T>& items, PrintFunc printItems, CompareFunc areEqual) {
   
   if (items.empty()) return "[]";
   
@@ -663,70 +720,79 @@ std::string toStringWithOptionalTable(
   }
   
   if (all_same) {
-    return printItem(first);
+    std::string out = printItems(first);
+    // If items are not wrapped in either {...} or [...], add {} here.
+    if (out.front() != '{' && out.front() != '[') {
+      out = "{" + out + "}";
+    }
+    return out;
   } else {
-    // Output as table with per-item overrides
-    std::string out = "{\n";
+    // Output as array with per-subsystem overrides
+    std::string out = "[\n";
     for (size_t i = 0; i < items.size(); ++i) {
-      out += "  \"" + std::to_string(i) + "\" = " + printItem(items[i]);
+      out += "  { subsystem = " + std::to_string(i) + ", " + printItems(items[i])+ "}";
       if (i < items.size() - 1) {
         out += ",";
       }
       out += "\n";
     }
-    out += "}";
+    out += "]";
     return out;
   }
 }
 
 std::string toString(const std::vector<ControlInitializationSettings>& control_initializations) {
-  auto printItem = [](const ControlInitializationSettings& init) {
-    std::string out = "{";
+  // Helper function to print all items of a single ControlInitializationSettings
+  auto printItems = [](const ControlInitializationSettings& init) {
+    std::string out = "";
     out += "type = \"" + enumToString(init.type, CONTROL_INITIALIZATION_TYPE_MAP) + "\"";
     out += init.filename.has_value() ? ", filename = \"" + init.filename.value() + "\"" : "";
     out += init.amplitude.has_value() ? ", amplitude = " + std::to_string(init.amplitude.value()) : "";
     out += init.phase.has_value() ? ", phase = " + std::to_string(init.phase.value()) : "";
-    out += "}";
     return out;
   };
   
+  // Helper function to compare two ControlInitializationSettings items
   auto areEqual = [](const ControlInitializationSettings& a, const ControlInitializationSettings& b) {
     return a.type == b.type && a.amplitude == b.amplitude && a.phase == b.phase;
   };
   
-  return toStringWithOptionalTable(control_initializations, printItem, areEqual);
+  return toStringWithOptionalPerSubsystem(control_initializations, printItems, areEqual);
 }
 
 std::string toString(const std::vector<ControlParameterizationSettings>& control_parameterizations) {
-  auto printItem = [](const ControlParameterizationSettings& param) {
-    std::string out = "{";
+  // Helper function to print all items of a single ControlParameterizationSetting
+  auto printItems = [](const ControlParameterizationSettings& param) {
+    std::string out = "";
     out += "type = \"" + enumToString(param.type, CONTROL_TYPE_MAP) + "\"";
     out += param.nspline.has_value() ? ", num = " + std::to_string(param.nspline.value()) : "";
     out += param.tstart.has_value() ? ", tstart = " + std::to_string(param.tstart.value()) : "";
     out += param.tstop.has_value() ? ", tstop = " + std::to_string(param.tstop.value()) : "";
     out += param.scaling.has_value() ? ", scaling = " + std::to_string(param.scaling.value()) : "";
-    out += "}";
     return out;
   };
   
+  // Helper function to compare two ControlParameterizationSettings items
   auto areEqual = [](const ControlParameterizationSettings& a, const ControlParameterizationSettings& b) {
     return a.type == b.type && a.nspline == b.nspline && 
            a.tstart == b.tstart && a.tstop == b.tstop && a.scaling == b.scaling;
   };
   
-  return toStringWithOptionalTable(control_parameterizations, printItem, areEqual);
+  return toStringWithOptionalPerSubsystem(control_parameterizations, printItems, areEqual);
 }
 
 std::string toString(const std::vector<std::vector<double>>& carrier_frequencies) {
-  auto printItem = [](const std::vector<double>& freqs) {
+  // Helper function to print all items of a single vector<double>
+  auto printItems = [](const std::vector<double>& freqs) {
     return printVector(freqs);
   };
   
+  // Helper function to compare two vector<double> items
   auto areEqual = [](const std::vector<double>& a, const std::vector<double>& b) {
     return a == b;
   };
   
-  return toStringWithOptionalTable(carrier_frequencies, printItem, areEqual);
+  return toStringWithOptionalPerSubsystem(carrier_frequencies, printItems, areEqual);
 }
 
 // Prints a single double value if all vector elements are equal, otherwise prints the vector
@@ -1033,221 +1099,95 @@ void Config::validateTableKeys(const toml::table& table, const std::set<std::str
   }
 }
 
-std::vector<std::vector<double>> Config::parseCarrierFrequencies(const toml::table& toml, size_t num_osc) const {
-  std::vector<std::vector<double>> carrier_frequencies(num_osc);
-
-  if (toml.contains("carrier_frequency")) {
-    auto* carrier_freq_table = toml["carrier_frequency"].as_table();
-
-    // Format 1: table with per-oscillator arrays: carrier_frequency = {"0" = [...], "1" = [...]}
-    if (carrier_freq_table) {
-      // Initialize all oscillators with default
-      for (size_t i = 0; i < num_osc; ++i) {
-        carrier_frequencies[i] = {ConfigDefaults::CARRIER_FREQ};
-      }
-      // Parse per-oscillator settings
-      for (const auto& [key, value] : *carrier_freq_table) {
-        std::string key_str = std::string(key.str());
-        size_t osc_id;
-        try {
-          osc_id = std::stoull(key_str);
-        } catch (const std::exception& e) {
-          logger.exitWithError("carrier_frequency keys must be oscillator IDs (e.g., \"0\", \"1\"): " + std::string(e.what()));
-        }
-        if (osc_id >= num_osc) {
-          logger.exitWithError("carrier_frequency oscillator ID " + key_str + " exceeds number of oscillators");
-        }
-        auto freq_array = value.as_array();
-        if (!freq_array) {
-          logger.exitWithError("carrier_frequency values must be arrays");
-        }
-        std::vector<double> freqs;
-        for (const auto& elem : *freq_array) {
-          auto freq_val = elem.value<double>();
-          if (!freq_val.has_value()) {
-            logger.exitWithError("carrier_frequency array elements must be numbers");
-          }
-          freqs.push_back(freq_val.value());
-        }
-        carrier_frequencies[osc_id] = freqs;
-      }
-    } else {
-      // Format 2: single array applied to all oscillators: carrier_frequency = [...]
-      auto carrier_freq_opt = validators::getOptionalVector<double>(toml["carrier_frequency"]);
-      if (!carrier_freq_opt.has_value()) {
-        logger.exitWithError("carrier_frequency must be either a table or an array");
-      }
-      std::vector<double> carrier_freq = carrier_freq_opt.value();
-      for (size_t i = 0; i < num_osc; ++i) {
-        carrier_frequencies[i] = carrier_freq;
-      }
-    }
-  } else {
-    // No carrier frequencies specified, use defaults
-    for (size_t i = 0; i < num_osc; ++i) {
-      carrier_frequencies[i] = {ConfigDefaults::CARRIER_FREQ};
-    }
-  }
+std::vector<double> Config::parseCarrierFrequencySpecs(const toml::table& table) const {
+  const std::string subsystem_key = "subsystem";
+  const std::string values_key = "values";
+  const std::set<std::string> allowed_keys = {subsystem_key, values_key};
   
-  return carrier_frequencies;
+  validateTableKeys(table, allowed_keys, "carrier_frequency");
+  
+  return validators::vectorField<double>(table, values_key).value();
 }
 
-std::vector<ControlParameterizationSettings> Config::parseControlParameterizations(const toml::table& table, size_t num_entries) const {
-
+ControlParameterizationSettings Config::parseControlParameterizationSpecs(const toml::table& param_table) const {
+  
+  const std::string subsystem_key = "subsystem";
   const std::string type_key = "type";
   const std::string num_key = "num";
   const std::string scaling_key = "scaling";
   const std::string tstart_key = "tstart";
   const std::string tstop_key = "tstop";
-  const std::set<std::string> allowed_keys = {type_key, num_key, scaling_key, tstart_key, tstop_key};
+  const std::set<std::string> allowed_keys = {subsystem_key, type_key, num_key, scaling_key, tstart_key, tstop_key};
 
-  // Helper function to parse a single parameterization spec from a table
-  auto parseParamSpec = [&](const toml::table& param_table) -> ControlParameterizationSettings {
-    validateTableKeys(param_table, allowed_keys, "control_parameterization");
-    
-    // Parse type of parameterization
-    std::string type_str = validators::field<std::string>(param_table, type_key).value();
-    auto type_enum = parseEnum(type_str, CONTROL_TYPE_MAP);
-    if (!type_enum.has_value()) {
-      logger.exitWithError("Unknown control parameterization type: " + type_str);
-    }
-
-    // Parse other parameters based on type
-    ControlParameterizationSettings param;
-    param.type = type_enum.value();
-    
-    switch (param.type) {
-      case ControlType::BSPLINE:
-      case ControlType::BSPLINE0: {
-        param.nspline = validators::field<size_t>(param_table, num_key).value();
-        param.tstart = validators::getOptional<double>(param_table[tstart_key]);
-        param.tstop = validators::getOptional<double>(param_table[tstop_key]);
-        break;
-      }
-      case ControlType::BSPLINEAMP: {
-        param.nspline = validators::field<size_t>(param_table, num_key).value();
-        param.scaling = validators::field<double>(param_table, scaling_key).value();
-        param.tstart = validators::getOptional<double>(param_table[tstart_key]);
-        param.tstop = validators::getOptional<double>(param_table[tstop_key]);
-        break;
-      }
-      case ControlType::NONE:
-        // Do nothing, no parameters needed
-        break;
-    }
-    return param;
-  };
-
-  ControlParameterizationSettings default_param;
-  default_param.type = ConfigDefaults::CONTROL_TYPE;
-  default_param.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
-  std::vector<ControlParameterizationSettings> result(num_entries, default_param);
-
-  // Check if this is a global parameterization (table with "type" key directly), or per-oscillator specification (table with numeric keys)
-  if (table.contains(type_key)) {
-    // Global parameterization: applies to ALL oscillators
-    ControlParameterizationSettings global_param = parseParamSpec(table);
-    for (size_t i = 0; i < num_entries; i++) {
-      result[i] = global_param;
-    }
-  } else {
-    // Per-oscillator specification: parse each oscillator's parameterization
-    for (auto& [key, value] : table) {
-      std::string key_str(key.str());
-      
-      // Try to parse the key as an oscillator ID
-      try {
-        size_t osc_id = std::stoul(key_str);
-        if (osc_id >= num_entries) {
-          logger.exitWithError("control_parameterization: oscillator ID " + key_str + " out of range (must be < " + std::to_string(num_entries) + ")");
-        }
-
-        if (value.is_table()) {
-          auto* osc_table = value.as_table();
-          result[osc_id] = parseParamSpec(*osc_table);
-        } else {
-          logger.exitWithError("control_parameterization: value for oscillator '" + key_str + "' must be a table");
-        }
-      } catch (const std::invalid_argument& e) {
-        // Not a numeric key - invalid configuration
-        logger.exitWithError("control_parameterization: unexpected key '" + key_str + "'. Expected either a 'type' field for global parameterization, or numeric oscillator IDs (e.g., \"0\", \"1\", etc.) for per-oscillator specification.");
-      }
-    }
+  validateTableKeys(param_table, allowed_keys, "control_parameterization");
+  
+  // Parse type of parameterization
+  std::string type_str = validators::field<std::string>(param_table, type_key).value();
+  auto type_enum = parseEnum(type_str, CONTROL_TYPE_MAP);
+  if (!type_enum.has_value()) {
+    logger.exitWithError("Unknown control parameterization type: " + type_str);
   }
 
-  return result;
+  ControlParameterizationSettings param;
+  param.type = type_enum.value();
+  
+  // Parse other parameters based on type
+  switch (param.type) {
+    case ControlType::BSPLINE:
+    case ControlType::BSPLINE0:
+      param.nspline = validators::field<size_t>(param_table, num_key).value();
+      param.tstart = validators::getOptional<double>(param_table[tstart_key]);
+      param.tstop = validators::getOptional<double>(param_table[tstop_key]);
+      break;
+      
+    case ControlType::BSPLINEAMP:
+      param.nspline = validators::field<size_t>(param_table, num_key).value();
+      param.scaling = validators::field<double>(param_table, scaling_key).value();
+      param.tstart = validators::getOptional<double>(param_table[tstart_key]);
+      param.tstop = validators::getOptional<double>(param_table[tstop_key]);
+      break;
+      
+    case ControlType::NONE:
+      break;
+  }
+  
+  return param;
 }
 
-std::vector<ControlInitializationSettings> Config::parseControlInitializations(const toml::table& table, size_t num_entries) const {
 
+ControlInitializationSettings Config::parseControlInitializationSpecs(const toml::table& init_table) const {
+
+  const std::string subsystem_key = "subsystem";
   const std::string type_key = "type";
   const std::string filename_key = "filename";
   const std::string amplitude_key = "amplitude";
   const std::string phase_key = "phase";
-  const std::set<std::string> allowed_keys = {type_key, filename_key, amplitude_key, phase_key};
+  const std::set<std::string> allowed_keys = {subsystem_key, type_key, filename_key, amplitude_key, phase_key};
 
-  // Helper function to parse a single initialization spec from a table
-  auto parseInitSpec = [&](const toml::table& init_table) -> ControlInitializationSettings {
-    validateTableKeys(init_table, allowed_keys, "control_initialization");
-    
-    // Parse type of initialization
-    std::string type = validators::field<std::string>(init_table, type_key).value();
-    auto type_enum = parseEnum(type, CONTROL_INITIALIZATION_TYPE_MAP);
-    if (!type_enum.has_value()) {
-      logger.exitWithError("Unknown control initialization type: " + type);
-    }
-
-    // Parse other parameters based on type
-    ControlInitializationSettings init;
-    init.type = type_enum.value();
-    if (init.type == ControlInitializationType::FILE) {
-      init.filename = validators::field<std::string>(init_table, filename_key).value();
-      if (!init.filename.has_value()){
-        logger.exitWithError("control_initialization of type 'file' must have a 'filename' parameter");
-      }
-    } else {
-      init.amplitude = validators::field<double>(init_table, amplitude_key).valueOr(ConfigDefaults::CONTROL_INIT_AMPLITUDE);
-      init.phase = validators::field<double>(init_table, phase_key).greaterThanEqual(0.0).valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
-    }
-    return init;
-  };
-
-  ControlInitializationSettings default_init = ControlInitializationSettings{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt}; 
-  std::vector<ControlInitializationSettings> result(num_entries, default_init);
-
-  // Check if this is a global initialization (table with "type" key directly), or per-oscillator specification (table with numeric keys)
-  if (table.contains(type_key)) {
-    // Global initialization: applies to ALL oscillators
-    ControlInitializationSettings global_init = parseInitSpec(table);
-    for (size_t i = 0; i < num_entries; i++) {
-      result[i] = global_init;
-    }
-  } else {
-    // Per-oscillator specification: parse each oscillator's initialization
-    for (auto& [key, value] : table) {
-      std::string key_str(key.str());
-      
-      // Try to parse the key as an oscillator ID
-      try {
-        size_t osc_id = std::stoul(key_str);
-        if (osc_id >= num_entries) {
-          logger.exitWithError("control_initialization: oscillator ID " + key_str + " out of range (must be < " + std::to_string(num_entries) + ")");
-        }
-
-        if (value.is_table()) {
-          auto* osc_table = value.as_table();
-          result[osc_id] = parseInitSpec(*osc_table);
-        } else {
-          logger.exitWithError("control_initialization: value for oscillator '" + key_str + "' must be a table");
-        }
-      } catch (const std::invalid_argument& e) {
-        // Not a numeric key - invalid configuration
-        logger.exitWithError("control_initialization: unexpected key '" + key_str + "'. Expected either a 'type' field for global initialization, or numeric oscillator IDs (e.g., \"0\", \"1\", etc.) for per-oscillator specification.");
-      }
-    }
+  validateTableKeys(init_table, allowed_keys, "control_initialization");
+  
+  // Parse type of initialization
+  std::string type = validators::field<std::string>(init_table, type_key).value();
+  auto type_enum = parseEnum(type, CONTROL_INITIALIZATION_TYPE_MAP);
+  if (!type_enum.has_value()) {
+    logger.exitWithError("Unknown control initialization type: " + type);
   }
 
-  return result;
+  ControlInitializationSettings init;
+  init.type = type_enum.value();
+
+  // Parse other parameters based on type
+  if (init.type == ControlInitializationType::FILE) {
+    init.filename = validators::field<std::string>(init_table, filename_key).value();
+    if (!init.filename.has_value()){
+      logger.exitWithError("control_initialization of type 'file' must have a 'filename' parameter");
+    }
+  } else {
+    init.amplitude = validators::field<double>(init_table, amplitude_key).valueOr(ConfigDefaults::CONTROL_INIT_AMPLITUDE);
+    init.phase = validators::field<double>(init_table, phase_key).greaterThanEqual(0.0).valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
+  }
+
+  return init;
 }
 
 

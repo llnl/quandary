@@ -54,22 +54,24 @@ initial_condition = {type = "basis"}
 # "spline_amplitude" - amplitude-only parameterization
 
 # Option 1: Default parameterization that applies to all subsystems
-control_parameterization = { type = "spline", num = 150}
+# control_parameterization = { type = "spline", num = 150}
 # control_parameterization = { type = "spline0", num = 300 , tstart = 0.0, tstop = 10.0 }
 
 # Option 2: Per-subsystem parameterization (must specify all subsystems you want to customize)
-# control_parameterization = {
-#   "0" = { type = "spline", num = 150, tstart = 0.0, tstop = 10.0 },
-#   "1" = { type = "spline0", num = 300 }
-# }
+control_parameterization = [
+  { subsystem = 0, type = "spline", num = 150, tstart = 0.0, tstop = 10.0 },
+  { subsystem = 1, type = "spline0", num = 300 }
+]
 
 # Carrier wave frequencies for all oscillators (GHz).
 # Option 1: Specify different frequencies for each oscillator (per-subsystem)
-carrier_frequency = {
-  "0" = [0.0, -0.2198, -0.1],
-  "1" = [0.0, -0.2252, -0.1]
-}
-# Option 2: Same frequencies for all oscillators (uncomment to use)
+carrier_frequency = [
+  {subsystem = 0, values = [0.0, -0.2198, -0.1]},
+  {subsystem = 1, values = [0.0, -0.2252, -0.1]}
+]
+# Option 2: Same frequencies for all oscillators using table format
+# carrier_frequency = { values = [0.0, -0.2252, -0.1] }
+# Option 3: Same frequencies for all oscillators using array shorthand
 # carrier_frequency = [0.0, -0.2252, -0.1]
 
 ## Control pulse initialization: 
@@ -78,10 +80,10 @@ control_initialization = { type = "random", amplitude = 0.005}
 # control_initialization = { type = "file", filename = "params.dat"}
 
 ## Option 2: Per-subsystem initialization (must specify all subsystems you want to customize)
-# control_initialization = {
-#   "0" = { type = "constant", amplitude = 0.003 },
-#   "1" = { type = "random", amplitude = 0.05 }
-# }
+# control_initialization = [
+#   { subsystem = 0, type = "constant", amplitude = 0.003 },
+#   { subsystem = 1, type = "random", amplitude = 0.05 }
+# ]
 
 # Maximum amplitude bound for the control pulses (GHz).
 # Option 1: Single value applies to all oscillators

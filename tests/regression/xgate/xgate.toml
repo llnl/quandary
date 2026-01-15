@@ -28,7 +28,9 @@ usematfree = true
 linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"
 rand_seed = 1234
-control_initialization = { "0" = { type = "constant", amplitude = 0.01 } }
+control_initialization = [
+  { subsystem = 0, type = "constant", amplitude = 0.01 }
+]
 
 control_parameterization = { type = "spline", num = 150 }
 
