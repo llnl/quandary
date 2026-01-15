@@ -153,7 +153,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
         auto single_val = validators::field<double>(toml, "optim_weights").value();
         optim_weights = std::vector<double>{single_val};
       } else {
-        logger.exitWithError("optim_weights must be either a single value (applies to all initial conditions), or an array of values (one for each inital condition).");
+        logger.exitWithError("optim_weights must be either a single value (applies to all initial conditions), or an array of values (one for each initial condition).");
       }
     }
 
