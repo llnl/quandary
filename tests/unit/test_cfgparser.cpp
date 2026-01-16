@@ -91,7 +91,7 @@ TEST_F(CfgParserTest, ParseStructSettings) {
 
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::DIAGONAL);
-  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>{0});
+  EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>{0});
 }
 
 TEST_F(CfgParserTest, ApplyDefaults) {
@@ -174,7 +174,7 @@ TEST_F(CfgParserTest, InitialCondition_Ensemble) {
       logger);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::ENSEMBLE);
-  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({0, 1}));
+  EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>({0, 1}));
   EXPECT_EQ(config.getNInitialConditions(), 1);
 }
 
@@ -246,7 +246,7 @@ TEST_F(CfgParserTest, InitialCondition_Diagonal_Schrodinger) {
       logger);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::DIAGONAL);
-  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({1}));
+  EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>({1}));
   // For Schrodinger solver (decoherence_type = none), n_initial_conditions = nessential[1] = 2
   EXPECT_EQ(config.getNInitialConditions(), 2);
 }
@@ -267,7 +267,7 @@ TEST_F(CfgParserTest, InitialCondition_Basis_Schrodinger) {
   // For Schrodinger solver, BASIS is converted to DIAGONAL, so n_initial_conditions = nessential[1] = 2
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::DIAGONAL);
-  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({1}));
+  EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>({1}));
   EXPECT_EQ(config.getNInitialConditions(), 2);
 }
 
@@ -286,7 +286,7 @@ TEST_F(CfgParserTest, InitialCondition_Basis_Lindblad) {
       logger);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::BASIS);
-  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({1}));
+  EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>({1}));
   // For Lindblad solver, n_initial_conditions = nessential[1]^2 = 2^2 = 4
   EXPECT_EQ(config.getNInitialConditions(), 4);
 }

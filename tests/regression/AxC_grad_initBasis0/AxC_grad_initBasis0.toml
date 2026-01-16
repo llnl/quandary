@@ -7,7 +7,7 @@ crosskerr =  1.176000
 Jkl = 0.0
 rotfreq = [4416.66, 6840.815]
 decoherence = { type = "both", decay_time = [80.0, 0.3892042], dephase_time = [26.0, 5.0] }
-initial_condition = {type = "basis", oscIDs = [0]}
+initial_condition = {type = "basis", subsystem = [0]}
 
 control_enforceBC = true
 optim_target = {type = "state", levels = [0, 0]}

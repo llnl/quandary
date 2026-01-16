@@ -104,7 +104,7 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
     }
     delete [] vec;
   } else if (initcond.type == InitialConditionType::ENSEMBLE) {
-    const auto& osc_IDs = initcond.osc_IDs.value();
+    const auto& osc_IDs = initcond.subsystem.value();
 
     // get dimension of subsystems defined by ensemble_init.level_indices, as well as the one before and after. Span in essential levels only.
     PetscInt dimpost = 1;
@@ -477,7 +477,7 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
     initID = iinit;
     VecAssemblyBegin(rho0); VecAssemblyEnd(rho0);
   } else if (initcond.type == InitialConditionType::DIAGONAL) {
-    const auto& initcond_IDs = initcond.osc_IDs.value();
+    const auto& initcond_IDs = initcond.subsystem.value();
     PetscInt diagelem;
     VecZeroEntries(rho0);
 
@@ -507,7 +507,7 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
     else initID = iinit;
 
   } else if (initcond.type == InitialConditionType::BASIS) {
-    const auto& initcond_IDs = initcond.osc_IDs.value();
+    const auto& initcond_IDs = initcond.subsystem.value();
 
     assert(decoherence_type != DecoherenceType::NONE); // should never happen. For Schroedinger: BASIS equals DIAGONAL, and should go into the above switch case. 
 

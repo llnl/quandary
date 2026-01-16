@@ -169,7 +169,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     initial_condition.type = type_opt.value();
     initial_condition.levels = validators::getOptionalVector<size_t>(init_cond_table["levels"]);
     initial_condition.filename = validators::getOptional<std::string>(init_cond_table["filename"]);
-    initial_condition.osc_IDs = validators::getOptionalVector<size_t>(init_cond_table["oscIDs"]);
+    initial_condition.subsystem= validators::getOptionalVector<size_t>(init_cond_table["subsystem"]);
 
     // Optimization options
     control_enforceBC = toml["control_enforceBC"].value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
@@ -427,7 +427,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   initial_condition.type = settings.initialcondition.value().type;
   initial_condition.filename = settings.initialcondition.value().filename;
   initial_condition.levels = settings.initialcondition.value().levels;
-  initial_condition.osc_IDs = settings.initialcondition.value().osc_IDs;
+  initial_condition.subsystem = settings.initialcondition.value().subsystem;
 
   // Control and optimization parameters
   control_enforceBC = settings.control_enforceBC.value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
@@ -652,20 +652,20 @@ std::string toString(const InitialConditionSettings& initial_condition) {
       return out;
     }
     case InitialConditionType::ENSEMBLE: {
-      std::string out = "{" + type_str + ", oscIDs = ";
-      out += printVector(initial_condition.osc_IDs.value());
+      std::string out = "{" + type_str + ", subsystem = ";
+      out += printVector(initial_condition.subsystem.value());
       out += "}";
       return out;
     }
     case InitialConditionType::DIAGONAL: {
-      std::string out = "{" + type_str + ", oscIDs = ";
-      out += printVector(initial_condition.osc_IDs.value());
+      std::string out = "{" + type_str + ", subsystem = ";
+      out += printVector(initial_condition.subsystem.value());
       out += "}";
       return out;
     }
     case InitialConditionType::BASIS: {
-      std::string out = "{" + type_str + ", oscIDs = ";
-      out += printVector(initial_condition.osc_IDs.value());
+      std::string out = "{" + type_str + ", subsystem = ";
+      out += printVector(initial_condition.subsystem.value());
       out += "}";
       return out;
     }
@@ -920,10 +920,10 @@ void Config::finalize() {
 
   // For BASIS, ENSEMBLE, and DIAGONAL, or default to all oscillators IDs 
   if (initial_condition.type == InitialConditionType::BASIS || initial_condition.type == InitialConditionType::ENSEMBLE || initial_condition.type == InitialConditionType::DIAGONAL) {
-    if (!initial_condition.osc_IDs.has_value()) {
-      initial_condition.osc_IDs = std::vector<size_t>(nlevels.size());
+    if (!initial_condition.subsystem.has_value()) {
+      initial_condition.subsystem = std::vector<size_t>(nlevels.size());
       for (size_t i = 0; i < nlevels.size(); i++) {
-        initial_condition.osc_IDs->at(i) = i;
+        initial_condition.subsystem->at(i) = i;
       }
     }
   }
@@ -1030,14 +1030,14 @@ void Config::validate() const {
   if (initial_condition.type == InitialConditionType::BASIS ||
       initial_condition.type == InitialConditionType::DIAGONAL ||
       initial_condition.type == InitialConditionType::ENSEMBLE) {
-    if (!initial_condition.osc_IDs.has_value()) {
-      logger.exitWithError("initialcondition of type BASIS, DIAGONAL, or ENSEMBLE must have 'osc_IDs'");
+    if (!initial_condition.subsystem.has_value()) {
+      logger.exitWithError("initialcondition of type BASIS, DIAGONAL, or ENSEMBLE must have 'subsystem'");
     }
-    if (initial_condition.osc_IDs->back() >= nlevels.size()) {
+    if (initial_condition.subsystem->back() >= nlevels.size()) {
       logger.exitWithError("Last element in initialcondition params exceeds number of oscillators");
     }
-    for (size_t i = 1; i < initial_condition.osc_IDs->size() - 1; i++) {
-      if (initial_condition.osc_IDs->at(i) + 1 != initial_condition.osc_IDs->at(i + 1)) {
+    for (size_t i = 1; i < initial_condition.subsystem->size() - 1; i++) {
+      if (initial_condition.subsystem->at(i) + 1 != initial_condition.subsystem->at(i + 1)) {
         logger.exitWithError("List of oscillators for ensemble initialization should be consecutive!\n");
       }
     }
@@ -1066,21 +1066,21 @@ size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_se
       break;
     case InitialConditionType::DIAGONAL:
       /* Compute ninit = dim(subsystem defined by list of oscil IDs) */
-      if (!init_cond_settings.osc_IDs.has_value()) {
-        logger.exitWithError("expected diagonal initial condition to have list of oscIDs");
+      if (!init_cond_settings.subsystem.has_value()) {
+        logger.exitWithError("expected diagonal initial condition to have list of subsystems ");
       }
       n_initial_conditions = 1;
-      for (size_t oscilID : init_cond_settings.osc_IDs.value()) {
+      for (size_t oscilID : init_cond_settings.subsystem.value()) {
         if (oscilID < nessential.size()) n_initial_conditions *= nessential[oscilID];
       }
       break;
     case InitialConditionType::BASIS:
       /* Compute ninit = dim(subsystem defined by list of oscil IDs) */
-      if (!init_cond_settings.osc_IDs.has_value()) {
-        logger.exitWithError("expected diagonal initial condition to have list of oscIDs");
+      if (!init_cond_settings.subsystem.has_value()) {
+        logger.exitWithError("expected diagonal initial condition to have list of subsystems");
       }
       n_initial_conditions = 1;
-      for (size_t oscilID : init_cond_settings.osc_IDs.value()) {
+      for (size_t oscilID : init_cond_settings.subsystem.value()) {
         if (oscilID < nessential.size()) n_initial_conditions *= nessential[oscilID];
       }
       // if Schroedinger solver: ninit = N, do nothing.

@@ -235,7 +235,7 @@ TEST_F(TomlParserTest, ParseStructSettings) {
         ntime = 1000
         dt = 0.1
         rotfreq = [0.0]
-        initial_condition = {type = "diagonal", oscIDs = [0]}
+        initial_condition = {type = "diagonal", subsystem = [0]}
         optim_target = {type = "gate", gate_type = "cnot"}
       )",
       logger);
@@ -246,7 +246,7 @@ TEST_F(TomlParserTest, ParseStructSettings) {
 
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::DIAGONAL);
-  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>{0});
+  EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>{0});
 }
 
 TEST_F(TomlParserTest, ApplyDefaults) {
@@ -366,12 +366,12 @@ TEST_F(TomlParserTest, InitialCondition_Ensemble) {
         transfreq = [4.1, 4.8]
         rotfreq = [0.0, 0.0]
         decoherence = {type = "decay"}
-        initial_condition = {type = "ensemble", oscIDs = [0, 1]}
+        initial_condition = {type = "ensemble", subsystem = [0, 1]}
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::ENSEMBLE);
-  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({0, 1}));
+  EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>({0, 1}));
   EXPECT_EQ(config.getNInitialConditions(), 1);
 }
 
@@ -438,12 +438,12 @@ TEST_F(TomlParserTest, InitialCondition_Diagonal_Schrodinger) {
         transfreq = [4.1, 4.8]
         rotfreq = [0.0, 0.0]
         decoherence = {type = "none"}
-        initial_condition = {type = "diagonal", oscIDs = [1]}
+        initial_condition = {type = "diagonal", subsystem = [1]}
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::DIAGONAL);
-  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({1}));
+  EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>({1}));
   // For Schrodinger solver (decoherence_type = none), n_initial_conditions = nessential[1] = 2
   EXPECT_EQ(config.getNInitialConditions(), 2);
 }
@@ -458,13 +458,13 @@ TEST_F(TomlParserTest, InitialCondition_Basis_Schrodinger) {
         transfreq = [4.1, 4.8]
         rotfreq = [0.0, 0.0]
         decoherence = {type = "none"}
-        initial_condition = {type = "basis", oscIDs = [1]}
+        initial_condition = {type = "basis", subsystem = [1]}
       )",
       logger);
   // For Schrodinger solver, BASIS is converted to DIAGONAL, so n_initial_conditions = nessential[1] = 2
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::DIAGONAL);
-  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({1}));
+  EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>({1}));
   EXPECT_EQ(config.getNInitialConditions(), 2);
 }
 
@@ -478,12 +478,12 @@ TEST_F(TomlParserTest, InitialCondition_Basis_Lindblad) {
         transfreq = [4.1, 4.8]
         rotfreq = [0.0, 0.0]
         decoherence = {type = "decay"}
-        initial_condition = {type = "basis", oscIDs = [1]}
+        initial_condition = {type = "basis", subsystem = [1]}
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::BASIS);
-  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({1}));
+  EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>({1}));
   // For Lindblad solver, n_initial_conditions = nessential[1]^2 = 2^2 = 4
   EXPECT_EQ(config.getNInitialConditions(), 4);
 }
@@ -1129,7 +1129,7 @@ TEST_F(TomlParserTest, OptimWeightsDefault) {
         ntime = 1000
         dt = 0.1
         transfreq = [4.1, 3.4]
-        initial_condition = {type = "diagonal", oscIDs = [0]}
+        initial_condition = {type = "diagonal", subsystem = [0]}
       )",
       logger);
 

@@ -300,9 +300,9 @@ InitialConditionSettings CfgParser::convertFromString<InitialConditionSettings>(
   } else if (type == InitialConditionType::ENSEMBLE || type == InitialConditionType::DIAGONAL ||
              type == InitialConditionType::BASIS) {
     if (parts.size() > 1) {
-      init_cond.osc_IDs = std::vector<size_t>();
+      init_cond.subsystem= std::vector<size_t>();
       for (size_t i = 1; i < parts.size(); ++i) {
-        init_cond.osc_IDs.value().push_back(convertFromString<int>(parts[i]));
+        init_cond.subsystem.value().push_back(convertFromString<int>(parts[i]));
       }
     }
   }

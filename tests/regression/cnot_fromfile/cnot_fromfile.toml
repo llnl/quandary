@@ -14,7 +14,7 @@ decoherence = {
   decay_time = [0, 0],
   dephase_time = [0, 0]
 }
-initial_condition = {type = "diagonal", oscIDs = [0, 1]}
+initial_condition = {type = "diagonal", subsystem = [0, 1]}
 control_enforceBC = false
 optim_target = {type = "gate", 
                 filename = "./gate.dat", 
