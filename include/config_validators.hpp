@@ -24,7 +24,8 @@
  *      - `lessThan(value)`: Field must be < value
  *      - `positive()`: Field must be > 0 (shorthand for greaterThan(0))
  *    For vector fields:
- *      - `minLength(size)`: Vector must have at least sizeelements
+ *      - `minLength(size)`: Vector must have at least size elements
+ *      - `hasLength(size)`: Vector must have exactly size elements
  *      - `positive()`: All elements must be > 0
  * 3. Extract the value by appending 
  *         .value()           - for required fields
@@ -241,6 +242,7 @@ class Validator {
  * ## Available Validation Methods
  *
  * - `minLength(size)`: Vector must have at least `size` elements
+ * - `hasLength(size)`: Vector must have exactly `size` elements
  * - `positive()`: All elements must be > 0 (only for numeric types)
  *
  * ## Extraction Methods
@@ -262,6 +264,7 @@ class VectorValidator {
   const toml::table& config;
   std::string key;
   std::optional<size_t> min_length;
+  std::optional<size_t> exact_length;
   bool is_positive = false;
 
  public:
@@ -285,6 +288,17 @@ class VectorValidator {
    */
   VectorValidator& positive() {
     is_positive = true;
+    return *this;
+  }
+
+  /**
+   * @brief Requires vector to have exactly the specified length.
+   *
+   * @param exact_len_ Exact number of elements required
+   * @return Reference to this validator for chaining
+   */
+  VectorValidator& hasLength(size_t exact_len_) {
+    exact_length = exact_len_;
     return *this;
   }
 
