@@ -751,7 +751,7 @@ std::string toString(const std::vector<ControlParameterizationSettings>& control
 std::string toString(const std::vector<std::vector<double>>& carrier_frequencies) {
   // Helper function to print all items of a single vector<double>
   auto printItems = [](const std::vector<double>& freqs) {
-    return printVector(freqs);
+    return "value = " + printVector(freqs);
   };
   
   // Helper function to compare two vector<double> items
