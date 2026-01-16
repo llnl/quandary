@@ -5,8 +5,6 @@ dt = 0.15
 transfreq = [4.10595]
 rotfreq = [4.10595]
 selfkerr = [0.2198]
-crosskerr = {}
-Jkl = {}
 initial_condition = {type = "state", levels = [1]}
 
 control_enforceBC = true

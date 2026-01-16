@@ -3,8 +3,8 @@ ntime = 2500
 dt = 0.0001
 transfreq = [4416.66, 6840.815]
 selfkerr = [230.56, 0.0]
-crosskerr = { "0-1" = 1.176000 }
-Jkl = {  }
+crosskerr = 1.176000
+Jkl = 0.0
 rotfreq = [4416.66, 6840.815]
 decoherence = { type = "both", decay_time = [80.0, 0.3892042], dephase_time = [26.0, 5.0] }
 initial_condition = {type = "state", levels = [2, 0]}
@@ -33,7 +33,7 @@ control_initialization = [
 control_parameterization = { type = "spline", num = 75 }
 
 carrier_frequency = [
-  { subsystem = 0, values = [0.0, -230.56, 1.176] },
-  { subsystem = 1, values = [0.0, 1.176] }
+  { subsystem = 0, value = [0.0, -230.56, 1.176] },
+  { subsystem = 1, value = [0.0, 1.176] }
 ]
 control_bounds = [25.0, 100.0]

@@ -38,22 +38,15 @@ const std::string OSC_ID_KEY = "oscID";
 template<typename SettingsType, typename ParseFunc>
 std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, const std::string& key, size_t num_subsystems, const SettingsType& default_settings, ParseFunc parse_func, const MPILogger& logger) {
   
-  // Initialize all subsystems with default settings
-  std::vector<SettingsType> settings(num_subsystems, default_settings);
-  
-  // Return defaults, if key is not present 
-  if (!toml.contains(key)) {
-    return settings;
-  }
-  
   // Case 1: Single table applies to all subsystems
   if (toml[key].is_table()) {
     auto* settings_table = toml[key].as_table();
     SettingsType parsed_settings = parse_func(*settings_table);
-    settings.assign(num_subsystems, parsed_settings);
+    return std::vector<SettingsType>(num_subsystems, parsed_settings);
   }
   // Case 2: Array of tables for per-subsystem specification
   else if (toml[key].is_array()) {
+    std::vector<SettingsType> settings;
     auto* settings_array = toml[key].as_array();
     for (const auto& elem : *settings_array) {
       if (!elem.is_table()) {
@@ -61,21 +54,42 @@ std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, con
       }
       auto* elem_table = elem.as_table();
       
-      // Get the subsystem index
+      // Get the subsystem index, or pair of indices for coupling parameters
       const std::string subsystem_key = "subsystem";
       if (!elem_table->contains(subsystem_key)) {
         logger.exitWithError(key + " array element must have 'subsystem' field");
       }
-      size_t subsystem_id = validators::field<size_t>(*elem_table, subsystem_key).greaterThanEqual(0).lessThan(num_subsystems).value();
-      
-      // Parse the settings for this subsystem
-      settings[subsystem_id] = parse_func(*elem_table);
+      // For coupling parameters, subsystem is a pair of indices, otherwise its a single index
+      // Check if subsystem field is an array or a simple index
+      size_t index;
+      if (elem_table->get(subsystem_key)->is_array()) {
+        // Coupling parameter case: subsystem is an array of two indices
+        auto subsys_array = validators::vectorField<size_t>(*elem_table, subsystem_key).hasLength(2).value();
+        size_t i = subsys_array[0];;
+        size_t j = subsys_array[1];
+        // if (i >= num_entries || j >= num_entries) {
+        //   throw validators::ValidationError(key, "subsystem index out of range for key '" + key + "'");
+        // }
+        // Compute unique index for pair (i,j) with i<j: Convert to linear index: (0,1), (0,2), ..., (0,n-1), (1,2), ..., (1,n-1), ..., (n-2,n-1)
+        if (i > j) std::swap(i, j);
+        index = i * num_subsystems - i - i * (i - 1) / 2 + (j - i - 1);
+        size_t num_pairs = (num_subsystems * (num_subsystems - 1)) / 2;
+        settings.resize(num_pairs, default_settings);
+      } else if (elem_table->get(subsystem_key)->is_value()) {
+        // Single subsystem index case
+        index = validators::field<size_t>(*elem_table, subsystem_key).greaterThanEqual(0).lessThan(num_subsystems).value();
+        settings.resize(num_subsystems, default_settings);
+      } else {
+        logger.exitWithError("subsystem field must be an integer index or an array of two indices");
+      }
+      // Parse the settings for this entry
+      settings[index] = parse_func(*elem_table);
     }
+    return settings;
   } else {
     logger.exitWithError(key + " must be a table (applies to all) or an array of tables (per-subsystem specification)");
   }
-  
-  return settings;
+  return std::vector<SettingsType>();
 }
 
 } // namespace
@@ -101,9 +115,34 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     selfkerr = validators::vectorField<double>(toml, "selfkerr").minLength(1).valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
     copyLast(selfkerr, num_osc);
 
-    crosskerr = parseCouplingParameters(toml, "crosskerr", num_osc, ConfigDefaults::CROSSKERR);
-
-    Jkl = parseCouplingParameters(toml, "Jkl", num_osc, ConfigDefaults::JKL);
+    // Parse crosskerr and Jkl coupling: either one value (all-to-all coupling) or array of tables with 'subsystem = [i,j]' field for i-j coupling)
+    size_t num_pairs = (num_osc - 1) * num_osc / 2;
+    crosskerr.assign(num_pairs, ConfigDefaults::CROSSKERR);
+    Jkl.assign(num_pairs, ConfigDefaults::JKL);
+    // Overwrite for crosskerr
+    if (toml.contains("crosskerr")) {
+      // Check if crosskerr is a value (all-to-all coupling)
+      if (toml["crosskerr"].is_value()) {
+        double single_val = validators::field<double>(toml, "crosskerr").value();
+        crosskerr.assign(num_pairs, single_val);
+      } else {
+      // Parse as array of tables format
+      auto parseCouplingFunc = [this](const toml::table& t) { return parseCouplingParameterSpecs(t, "crosskerr"); };
+      crosskerr = parsePerSubsystemSettings<double>(toml, "crosskerr", num_osc, ConfigDefaults::CROSSKERR, parseCouplingFunc, logger);
+      }
+    }
+    // Overwrite for Jkl
+    if (toml.contains("Jkl")) {
+      // Check if Jkl is a value (all-to-all coupling)
+      if (toml["Jkl"].is_value()) {
+        double single_val = validators::field<double>(toml, "Jkl").value();
+        Jkl.assign(num_pairs, single_val);
+      } else {
+      // Parse as array of tables format
+      auto parseCouplingFunc = [this](const toml::table& t) { return parseCouplingParameterSpecs(t, "Jkl"); };
+      Jkl = parsePerSubsystemSettings<double>(toml, "Jkl", num_osc, ConfigDefaults::JKL, parseCouplingFunc, logger);
+      }
+    }
 
     rotfreq = validators::vectorField<double>(toml, "rotfreq").minLength(1).valueOr(std::vector<double>(num_osc, ConfigDefaults::ROTFREQ));
     copyLast(rotfreq, num_osc);
@@ -148,8 +187,11 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     default_param.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
     default_param.tstart = std::nullopt;
     default_param.tstop = std::nullopt;
-    auto parseParamFunc = [this](const toml::table& t) { return parseControlParameterizationSpecs(t); };
-    control_parameterizations = parsePerSubsystemSettings<ControlParameterizationSettings>(toml, "control_parameterization", num_osc, default_param, parseParamFunc, logger);
+    control_parameterizations.assign(num_osc, default_param);
+    if (toml.contains("control_parameterization")) {
+      auto parseParamFunc = [this](const toml::table& t) { return parseControlParameterizationSpecs(t); };
+      control_parameterizations = parsePerSubsystemSettings<ControlParameterizationSettings>(toml, "control_parameterization", num_osc, default_param, parseParamFunc, logger);
+    }
 
     // Parse control initialization, either as a table (applies to all) or per-oscillator table
     ControlInitializationSettings default_init;
@@ -157,14 +199,15 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     default_init.amplitude = ConfigDefaults::CONTROL_INIT_AMPLITUDE; 
     default_init.phase = std::nullopt; 
     default_init.filename = std::nullopt;
-    auto parseInitFunc = [this](const toml::table& t) { return parseControlInitializationSpecs(t); };
-    control_initializations = parsePerSubsystemSettings<ControlInitializationSettings>(toml, "control_initialization", num_osc, default_init, parseInitFunc, logger);
+    control_initializations.assign(num_osc, default_init);
+    if (toml.contains("control_initialization")) {
+      auto parseInitFunc = [this](const toml::table& t) { return parseControlInitializationSpecs(t); };
+      control_initializations = parsePerSubsystemSettings<ControlInitializationSettings>(toml, "control_initialization", num_osc, default_init, parseInitFunc, logger);
+    }
 
     // Parse optional control bounds: either single value or per-oscillator array
-    if (!toml.contains("control_bounds")) {
-      // Default bound for all oscillator
-      control_bounds.assign(num_osc, ConfigDefaults::CONTROL_BOUND);
-    } else {
+    control_bounds.assign(num_osc, ConfigDefaults::CONTROL_BOUND);
+    if (toml.contains("control_bounds")) {
       if (toml["control_bounds"].as_array()) {
         // Get control_bounds from array
         control_bounds = validators::vectorField<double>(toml, "control_bounds").minLength(1).value();
@@ -535,56 +578,23 @@ Config Config::fromCfgString(const std::string& cfg_content, const MPILogger& lo
   return Config(logger, settings);
 }
 
-std::vector<double> Config::parseCouplingParameters(const toml::table& toml, const std::string& key, size_t num_osc, double default_value) const {
-
-  // Initialize with default values
-  size_t num_pairs = (num_osc - 1) * num_osc / 2;
-  std::vector<double> result(num_pairs, default_value);
-
-  // If the key doesn't exist, return default vector
-  if (!toml.contains(key)) {
-    return result;
-  }
-
-  auto* table = toml[key].as_table();
-  if (!table) {
-    logger.exitWithError(key + " must be a table.");
-  }
-
-  for (auto& [pair_key, value_node] : *table) { // This iterates over key-value pairs in the table
-
-    std::string key_str(pair_key.str()); 
-    size_t dash_pos = key_str.find('-'); 
-    if (dash_pos == std::string::npos) {
-      throw validators::ValidationError(key, "coupling key must be in format 'i-j' (e.g., '0-1')");
-    }
-    size_t i = std::stoul(key_str.substr(0, dash_pos));
-    size_t j = std::stoul(key_str.substr(dash_pos + 1));
-
-    // Ensure i < j and i,j < num_oscillators
-    if (i >= num_osc || j >= num_osc) {
-      throw validators::ValidationError(key, "oscillator index out of range for key '" + key_str + "'");
-    }
-    if (i > j) {
-      std::swap(i, j);
-    }
-
-    // Convert (i,j) pair to linear index: (0,1), (0,2), ..., (0,n-1), (1,2), ..., (1,n-1), ..., (n-2,n-1)
-    // Offset for first element i: i*num_osc - i - i*(i-1)/2
-    // Index within pairs starting with i: j - i - 1
-    size_t pair_index = i * num_osc - i - i * (i - 1) / 2 + (j - i - 1);
-    auto coupling_val = value_node.value<double>();
-    if (!coupling_val) {
-      throw validators::ValidationError(key, "coupling value for key '" + key_str + "' must be a number");
-    }
-    result[pair_index] = *coupling_val;
-  }
-
-  return result;
-}
-
 std::string Config::printCouplingParameters(const std::vector<double>& couplings, size_t num_osc) const {
-  if (couplings.empty()) return "{}";
+  if (couplings.empty()) return "[]";
+
+  // If all couplings are the same, print single value
+  bool all_same = true;
+  for (size_t i = 1; i < couplings.size(); ++i) {
+    if (couplings[i] != couplings[0]) {
+      all_same = false;
+      break;
+    }
+  }
+  if (all_same) {
+    std::ostringstream oss;
+    oss << std::setprecision(std::numeric_limits<double>::max_digits10);
+    oss << couplings[0];
+    return oss.str();
+  }
 
   // Collect non-zero couplings with their pair indices
   std::vector<std::pair<std::pair<size_t, size_t>, double>> nonzero_couplings;
@@ -599,16 +609,21 @@ std::string Config::printCouplingParameters(const std::vector<double>& couplings
   }
 
   // Build TOML table format
-  std::string result = "{ ";
+  std::string result = "[\n";
+  std::ostringstream oss;
+  oss << std::setprecision(std::numeric_limits<double>::max_digits10);
   for (size_t i = 0; i < nonzero_couplings.size(); ++i) {
     auto [pair, value] = nonzero_couplings[i];
     auto [first, second] = pair;
-    result += "\"" + std::to_string(first) + "-" + std::to_string(second) + "\" = " + std::to_string(value);
+    oss.str("");  // Clear the stringstream for reuse
+    oss << value;
+    result += " { subsystem = [" + std::to_string(first) + "," + std::to_string(second) + "], value = " + oss.str() + "}";
     if (i < nonzero_couplings.size() - 1) {
       result += ", ";
     }
+    result += "\n";
   }
-  result += " }";
+  result += "]";
   return result;
 }
 
@@ -1099,9 +1114,19 @@ void Config::validateTableKeys(const toml::table& table, const std::set<std::str
   }
 }
 
+double Config::parseCouplingParameterSpecs(const toml::table& table, const std::string& key) const {
+  const std::string subsystem_key = "subsystem";
+  const std::string value_key = "value";
+  const std::set<std::string> allowed_keys = {subsystem_key, value_key};
+  
+  validateTableKeys(table, allowed_keys, key);
+  
+  return validators::field<double>(table, value_key).value();
+}
+
 std::vector<double> Config::parseCarrierFrequencySpecs(const toml::table& table) const {
   const std::string subsystem_key = "subsystem";
-  const std::string values_key = "values";
+  const std::string values_key = "value";
   const std::set<std::string> allowed_keys = {subsystem_key, values_key};
   
   validateTableKeys(table, allowed_keys, "carrier_frequency");

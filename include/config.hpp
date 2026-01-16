@@ -180,6 +180,9 @@ class Config {
   // Table validation helper
   void validateTableKeys(const toml::table& table, const std::set<std::string>& allowed_keys, const std::string& table_name) const;
 
+  // Helper function to parse coupling parameters from table
+  double parseCouplingParameterSpecs(const toml::table& table, const std::string& key) const;
+
   // Helper function to parse a single control parameterization table
   ControlParameterizationSettings parseControlParameterizationSpecs(const toml::table& param_table) const;
 
@@ -197,22 +200,6 @@ class Config {
    * @return Parsed optimization target settings
    */
   OptimTargetSettings parseOptimTarget(const toml::table& table, size_t num_osc) const;
-
-  /**
-   * @brief Parses coupling parameters from TOML table format
-   *
-   * Converts a TOML table of coupling parameters specified with string keys like "0-1", "1-4"
-   * into a flat vector indexed by pair index. Pairs are ordered as (0,1), (0,2), ..., (0,n-1),
-   * (1,2), (1,3), ..., (1,n-1), ..., (n-2,n-1).
-   *
-   * @param toml TOML table containing the configuration
-   * @param key Name of the parameter (e.g., "Jkl", "crosskerr")
-   * @param num_osc Number of oscillators
-   * @param default_value Default value for unspecified couplings
-   * @return Vector of coupling values indexed by pair
-   */
-  std::vector<double> parseCouplingParameters(const toml::table& toml, const std::string& key, size_t num_osc, double default_value) const;
-
 
   /**
    * @brief Prints coupling parameters in table format

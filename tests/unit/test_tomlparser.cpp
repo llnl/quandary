@@ -51,17 +51,15 @@ TEST_F(TomlParserTest, ParseVectorSettings) {
   EXPECT_DOUBLE_EQ(transfreq[2], 5.2);
 }
 
-TEST_F(TomlParserTest, ParseJklAndCrossKerrSettings) {
+TEST_F(TomlParserTest, ParseJklSettingsAllToAll) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2, 2, 2]
         transfreq = [4.1, 4.8, 5.2]
         ntime = 1000
         dt = 0.1
-        rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
-        Jkl = { "0-1" = 0.15, "1-2" = 0.25, "2-3" = 0.35 }
-        crosskerr = { "0-1" = 0.1, "2-3" = 0.05 }
+        Jkl = 0.5
       )",
       logger);
 
@@ -69,20 +67,144 @@ TEST_F(TomlParserTest, ParseJklAndCrossKerrSettings) {
   size_t num_osc = config.getNumOsc();
   size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
   EXPECT_EQ(Jkl.size(), num_pairs_osc);
-  EXPECT_DOUBLE_EQ(Jkl[0], 0.15); // 0-1
-  EXPECT_DOUBLE_EQ(Jkl[1], 0.0);  // 0-2
-  EXPECT_DOUBLE_EQ(Jkl[2], 0.0);  // 0-3
-  EXPECT_DOUBLE_EQ(Jkl[3], 0.25); // 1-2
-  EXPECT_DOUBLE_EQ(Jkl[4], 0.0);  // 1-3
-  EXPECT_DOUBLE_EQ(Jkl[5], 0.35); // 2-3
+  for (size_t i = 0; i < num_pairs_osc; ++i) {
+    EXPECT_DOUBLE_EQ(Jkl[i], 0.5);
+  }
+}
+
+TEST_F(TomlParserTest, ParseJklSettingsOneCoupling) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2, 2, 2]
+        transfreq = [4.1, 4.8, 5.2]
+        ntime = 1000
+        dt = 0.1
+        initial_condition = {type = "basis"}
+        Jkl = [
+        { subsystem=[1,2], value=0.4 },
+        ]
+      )",
+      logger);
+
+  auto Jkl = config.getJkl();
+  size_t num_osc = config.getNumOsc();
+  size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
+  EXPECT_EQ(Jkl.size(), num_pairs_osc);
+  EXPECT_DOUBLE_EQ(Jkl[0], 0.0);
+  EXPECT_DOUBLE_EQ(Jkl[1], 0.0);
+  EXPECT_DOUBLE_EQ(Jkl[2], 0.0);
+  EXPECT_DOUBLE_EQ(Jkl[3], 0.4);
+  EXPECT_DOUBLE_EQ(Jkl[4], 0.0);
+  EXPECT_DOUBLE_EQ(Jkl[5], 0.0);
+}
+
+TEST_F(TomlParserTest, ParseJklSettingsPerPair) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2, 2, 2]
+        transfreq = [4.1, 4.8, 5.2]
+        ntime = 1000
+        dt = 0.1
+        initial_condition = {type = "basis"}
+        Jkl = [
+        { subsystem=[0,1], value=0.1 },
+        { subsystem=[0,2], value=0.2 },
+        { subsystem=[0,3], value=0.3 },
+        { subsystem=[1,2], value=0.4 },
+        { subsystem=[1,3], value=0.5 },
+        { subsystem=[2,3], value=0.6 }
+        ]
+      )",
+      logger);
+
+  auto Jkl = config.getJkl();
+  size_t num_osc = config.getNumOsc();
+  size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
+  EXPECT_EQ(Jkl.size(), num_pairs_osc);
+  EXPECT_DOUBLE_EQ(Jkl[0], 0.1);
+  EXPECT_DOUBLE_EQ(Jkl[1], 0.2);
+  EXPECT_DOUBLE_EQ(Jkl[2], 0.3);
+  EXPECT_DOUBLE_EQ(Jkl[3], 0.4);
+  EXPECT_DOUBLE_EQ(Jkl[4], 0.5);
+  EXPECT_DOUBLE_EQ(Jkl[5], 0.6);
+}
+
+TEST_F(TomlParserTest, ParseCrosskerrSettingsAllToAll) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2, 2, 2]
+        transfreq = [4.1, 4.8, 5.2]
+        ntime = 1000
+        dt = 0.1
+        initial_condition = {type = "basis"}
+        crosskerr = 0.5
+      )",
+      logger);
+
   auto crosskerr = config.getCrossKerr();
+  size_t num_osc = config.getNumOsc();
+  size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
   EXPECT_EQ(crosskerr.size(), num_pairs_osc);
-  EXPECT_DOUBLE_EQ(crosskerr[0], 0.1); // 0-1
-  EXPECT_DOUBLE_EQ(crosskerr[1], 0.0); // 0-2
-  EXPECT_DOUBLE_EQ(crosskerr[2], 0.0); // 0-3
-  EXPECT_DOUBLE_EQ(crosskerr[3], 0.0); // 1-2
-  EXPECT_DOUBLE_EQ(crosskerr[4], 0.0); // 1-3
-  EXPECT_DOUBLE_EQ(crosskerr[5], 0.05); // 2-3
+  for (size_t i = 0; i < num_pairs_osc; ++i) {
+    EXPECT_DOUBLE_EQ(crosskerr[i], 0.5);
+  }
+}
+
+TEST_F(TomlParserTest, ParseCrosskerrSettingsOneCoupling) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2, 2, 2]
+        transfreq = [4.1, 4.8, 5.2]
+        ntime = 1000
+        dt = 0.1
+        initial_condition = {type = "basis"}
+        crosskerr = [
+        { subsystem=[1,2], value=0.4 },
+        ]
+      )",
+      logger);
+
+  auto crosskerr = config.getCrossKerr();
+  size_t num_osc = config.getNumOsc();
+  size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
+  EXPECT_EQ(crosskerr.size(), num_pairs_osc);
+  EXPECT_DOUBLE_EQ(crosskerr[0], 0.0);
+  EXPECT_DOUBLE_EQ(crosskerr[1], 0.0);
+  EXPECT_DOUBLE_EQ(crosskerr[2], 0.0);
+  EXPECT_DOUBLE_EQ(crosskerr[3], 0.4);
+  EXPECT_DOUBLE_EQ(crosskerr[4], 0.0);
+  EXPECT_DOUBLE_EQ(crosskerr[5], 0.0);
+}
+
+TEST_F(TomlParserTest, ParseCrosskerrSettingsPerPair) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2, 2, 2]
+        transfreq = [4.1, 4.8, 5.2]
+        ntime = 1000
+        dt = 0.1
+        initial_condition = {type = "basis"}
+        crosskerr = [
+        { subsystem=[0,1], value=0.1 },
+        { subsystem=[0,2], value=0.2 },
+        { subsystem=[0,3], value=0.3 },
+        { subsystem=[1,2], value=0.4 },
+        { subsystem=[1,3], value=0.5 },
+        { subsystem=[2,3], value=0.6 }
+        ]
+      )",
+      logger);
+
+  auto crosskerr = config.getCrossKerr();
+  size_t num_osc = config.getNumOsc();
+  size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
+  EXPECT_EQ(crosskerr.size(), num_pairs_osc);
+  EXPECT_DOUBLE_EQ(crosskerr[0], 0.1);
+  EXPECT_DOUBLE_EQ(crosskerr[1], 0.2);
+  EXPECT_DOUBLE_EQ(crosskerr[2], 0.3);
+  EXPECT_DOUBLE_EQ(crosskerr[3], 0.4);
+  EXPECT_DOUBLE_EQ(crosskerr[4], 0.5);
+  EXPECT_DOUBLE_EQ(crosskerr[5], 0.6);
 }
 
 TEST_F(TomlParserTest, ParseOutputSettings_AllOscillators) {
@@ -719,7 +841,7 @@ TEST_F(TomlParserTest, CarrierFrequenciesDefaults) {
         initial_condition = {type = "basis"}
 
         carrier_frequency = [
-          {subsystem = 1, values = [4.0, 5.0]}
+          {subsystem = 1, value = [4.0, 5.0]}
         ]
       )",
       logger);
@@ -743,8 +865,8 @@ TEST_F(TomlParserTest, CarrierFrequenciesPerSubsystem) {
         initial_condition = {type = "basis"}
 
         carrier_frequency = [
-          {subsystem = 0, values = [1.0, 2.0, 3.0]},
-          {subsystem = 1, values = [4.0, 5.0]}
+          {subsystem = 0, value = [1.0, 2.0, 3.0]},
+          {subsystem = 1, value = [4.0, 5.0]}
         ]
       )",
       logger);
@@ -770,7 +892,7 @@ TEST_F(TomlParserTest, CarrierFrequencies_AllOscillators) {
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        carrier_frequency = { values = [1.0, 2.0] }
+        carrier_frequency = { value = [1.0, 2.0] }
       )",
       logger);
 
@@ -820,7 +942,7 @@ TEST_F(TomlParserTest, CarrierFrequency_InvalidID) {
           rotfreq = [0.0]
           initial_condition = {type = "basis"}
 
-          carrier_frequency = [{subsystem = 5, values = [4.0]}]
+          carrier_frequency = [{subsystem = 5, value = [4.0]}]
         )",
         logger);
   }, "ERROR: Validation error for field 'subsystem': must be < 1, got 5");
@@ -1072,11 +1194,11 @@ TEST_F(TomlParserTest, OptimWeightsDefault) {
 
 // [[control_bounds]]
 // oscID = 0
-// values = [5.000000, 8.000000]
+// value = [5.000000, 8.000000]
 
 // [[carrier_frequency]]
 // oscID = 0
-// values = [2.500000, 3.000000]
+// value = [2.500000, 3.000000]
 
 
 // )";

@@ -5,26 +5,17 @@ dt = 0.01
 transfreq = [0.2676797443720237, -0.015629849901717438, 0.1459611334938404, 0.1944500354748219, -0.06349206375770339, -0.3096811297032389, -0.11637775015444579, -0.03832806182101765]
 rotfreq = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 selfkerr = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-crosskerr = {  }
 
-Jkl = { "0-1" = 0.3183098861837907, 
-        "1-2" = 0.3183098861837907, 
-        "2-3" = 0.3183098861837907, 
-        "3-4" = 0.3183098861837907, 
-        "4-5" = 0.3183098861837907, 
-        "5-6" = 0.3183098861837907, 
-        "6-7" = 0.3183098861837907
-        }
+Jkl = [ { subsystem = [0,1], value = 0.3183098861837907}, 
+        { subsystem = [1,2], value = 0.3183098861837907}, 
+        { subsystem = [2,3], value = 0.3183098861837907}, 
+        { subsystem = [3,4], value = 0.3183098861837907}, 
+        { subsystem = [4,5], value = 0.3183098861837907}, 
+        { subsystem = [5,6], value = 0.3183098861837907}, 
+        { subsystem = [6,7], value = 0.3183098861837907}
+      ]
 
 initial_condition = {type = "state", levels = [1, 1, 1, 1, 0, 0, 0, 0]}
-
-control_enforceBC = false
-optim_objective = "Jtrace"
-optim_weights = 1.0
-optim_tolerance = { grad_abs = 0.0001, grad_rel = 0.0001, final_cost = 0.0001, infidelity = 1e-05 }
-optim_maxiter = 200
-optim_tikhonov = { coeff = 0.0001, use_x0 = false }
-optim_penalty = { leakage = 0.1, weightedcost = 0.0, weightedcost_width = 0.0, dpdm = 0.01, energy = 0.1, variation = 0.01 }
 
 datadir = "./data_out"
 output_timestep_stride = 1
@@ -34,7 +25,3 @@ runtype = "simulation"
 usematfree = false
 linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"
-
-control_parameterization = { type = "spline", num = 6 }
-
-carrier_frequency = [0.0]

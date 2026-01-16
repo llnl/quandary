@@ -6,8 +6,7 @@ initial_condition = {type = "basis"}
 transfreq = [4.10595, 4.81526]
 rotfreq = [4.10595, 4.81526]
 selfkerr = [0.2198, 0.2252]
-crosskerr = { "0-1" = 0.100000 }
-Jkl = {  }
+crosskerr = 0.100000 
 control_enforceBC = false
 optim_target = {type = "gate", 
                 gate_type = "cnot",
@@ -36,7 +35,7 @@ control_initialization = {
 control_parameterization = { type = "spline", num = 150 }
 
 carrier_frequency = [
-  { subsystem = 0, values = [0.0, -0.2198, -0.1] },
-  { subsystem = 1, values = [0.0, -0.2252, -0.1] }
+  { subsystem = 0, value = [0.0, -0.2198, -0.1] },
+  { subsystem = 1, value = [0.0, -0.2252, -0.1] }
 ]
 control_bounds = 0.008
