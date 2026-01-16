@@ -8,9 +8,18 @@
 #include <string>
 #include <toml++/toml.hpp>
 #include <vector>
+#include <cassert>
+#include <iostream>
+#include <iomanip>
+#include <limits>
+#include <random>
+#include <type_traits>
 #include "cfgparser.hpp"
 #include "defs.hpp"
 #include "mpi_logger.hpp"
+#include "config_defaults.hpp"
+#include "config_validators.hpp"
+
 
 // Adding a new toml configuration option:
 // 1) Add new member variable to the Config class below
@@ -29,11 +38,14 @@
 // 3) Add a getter method to the Config class below (`T getFoo() const {return foo};`)
 // 4) Add printing logic in Config::printConfig() in src/config.cpp
 
+
 /**
- * @brief Final validated configuration class.
+ * @brief Configuration class containing all validated settings.
  *
- * Contains validated, typed configuration parameters. All fields are required
- * and have been validated with defaults set. This class is immutable after construction.
+ * Contains validated, typed configuration parameters. All fields have been 
+ * validated with defaults set. Handles parsing from TOML configuration files 
+ * and deprecated CFG format, as well as printing log of used configuration.
+ * This class is immutable after construction.
  */
 class Config {
  private:

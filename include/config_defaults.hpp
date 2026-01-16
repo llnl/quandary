@@ -68,3 +68,50 @@ const TimeStepperType TIMESTEPPER_TYPE = TimeStepperType::IMR; ///< Default time
 const int RAND_SEED = 1; ///< Default random seed
 
 } // namespace ConfigDefaults
+
+/* Structs to group certain configuration settings */
+
+/**
+ * @brief Settings for initial conditions. Required, no defaults.
+ */
+struct InitialConditionSettings {
+  InitialConditionType type; ///< Type of initial condition
+
+  // Optional settings - populate based on type
+  std::optional<std::string> filename; ///< For FROMFILE: File to read initial condition from
+  std::optional<std::vector<size_t>> levels; ///< For PRODUCT_STATE: Quantum level for each oscillator
+  std::optional<std::vector<size_t>> subsystem; ///< For ENSEMBLE, DIAGONAL, BASIS: Oscillator IDs
+};
+
+/**
+ * @brief Settings for optimization targets with defaults
+ */
+struct OptimTargetSettings {
+  TargetType type = ConfigDefaults::OPTIM_TARGET; ///< Type of optimization target
+  std::optional<GateType> gate_type = std::nullopt; ///< For GATE: Type of the gate
+  std::optional<std::vector<double>> gate_rot_freq = std::nullopt; ///< For GATE: Gate rotation frequencies for each oscillator 
+  std::optional<std::vector<size_t>> levels = std::nullopt; ///< For STATE: Level occupations for each oscillator
+  std::optional<std::string> filename = std::nullopt; ///< For GATE or STATE: File path to target gate or state
+};
+
+/**
+ * @brief Settings for control parameterizations with defaults.
+ */
+struct ControlParameterizationSettings {
+  ControlType type = ConfigDefaults::CONTROL_TYPE; ///< Type of control parameterization
+  std::optional<size_t> nspline = ConfigDefaults::CONTROL_SPLINE_COUNT; ///< Number of basis functions in this parameterization
+  std::optional<double> tstart = std::nullopt; ///< Start time of the control parameterization
+  std::optional<double> tstop = std::nullopt; ///< Stop time of the control parameterization
+  std::optional<double> scaling = std::nullopt; ///< Amplitude scaling factor, only for BSPLINEAMP
+
+};
+
+/**
+ * @brief Settings for control initialization with defaults.
+ */
+struct ControlInitializationSettings {
+  ControlInitializationType type = ConfigDefaults::CONTROL_INIT_TYPE; ///< Initialization type
+  std::optional<double> amplitude = ConfigDefaults::CONTROL_INIT_AMPLITUDE; ///< Initial control pulse amplitude
+  std::optional<double> phase = std::nullopt; ///< Initial control pulse phase
+  std::optional<std::string> filename = std::nullopt; ///< Filename for FILE type
+};

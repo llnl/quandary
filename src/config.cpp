@@ -1,20 +1,5 @@
 #include "config.hpp"
 
-#include <cassert>
-#include <cstddef>
-#include <iostream>
-#include <iomanip>
-#include <limits>
-#include <optional>
-#include <random>
-#include <string>
-#include <type_traits>
-#include <vector>
-
-#include "config_defaults.hpp"
-#include "config_validators.hpp"
-#include "util.hpp"
-
 namespace {
 
 /**
@@ -94,7 +79,7 @@ std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, con
 
 Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger) {
   try {
-    // System options
+    // Parse system options from toml
 
     nlevels = validators::vectorField<size_t>(toml, "nlevels").minLength(1).positive().value();
     size_t num_osc = nlevels.size();
@@ -176,10 +161,6 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     // Parse control parameterization, either table (applies to all) or array (per-oscillator)
     ControlParameterizationSettings default_param;
-    default_param.type = ConfigDefaults::CONTROL_TYPE;
-    default_param.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
-    default_param.tstart = std::nullopt;
-    default_param.tstop = std::nullopt;
     control_parameterizations.assign(num_osc, default_param);
     if (toml.contains("control_parameterization")) {
       auto parseParamFunc = [this](const toml::table& t) { return parseControlParameterizationSpecs(t); };
@@ -188,10 +169,6 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     // Parse control initialization, either as a table (applies to all) or per-oscillator table
     ControlInitializationSettings default_init;
-    default_init.type = ConfigDefaults::CONTROL_INIT_TYPE; 
-    default_init.amplitude = ConfigDefaults::CONTROL_INIT_AMPLITUDE; 
-    default_init.phase = std::nullopt; 
-    default_init.filename = std::nullopt;
     control_initializations.assign(num_osc, default_init);
     if (toml.contains("control_initialization")) {
       auto parseInitFunc = [this](const toml::table& t) { return parseControlInitializationSpecs(t); };
@@ -472,11 +449,6 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   } else {
     // No optim_target specified, use default (no target)
     OptimTargetSettings default_target;
-    default_target.type = ConfigDefaults::OPTIM_TARGET;
-    default_target.gate_type = std::nullopt;
-    default_target.gate_rot_freq = std::nullopt;
-    default_target.levels = std::nullopt;
-    default_target.filename = std::nullopt;
     optim_target = default_target;
   }
 
@@ -1234,7 +1206,7 @@ OptimTargetSettings Config::parseOptimTarget(const toml::table& toml, size_t num
   const std::set<std::string> allowed_keys = {type_key, gate_type_key, filename_key, gate_rot_freq_key, levels_key};
 
   // Initialize the result with defaults (no target)
-  OptimTargetSettings optim_target{ConfigDefaults::OPTIM_TARGET, std::nullopt, std::nullopt, std::nullopt, std::nullopt};
+  OptimTargetSettings optim_target;
 
   // If optim_target is specified, parse the provided table
   if (toml.contains("optim_target")) {
@@ -1324,10 +1296,8 @@ std::vector<std::vector<T>> Config::parseOscillatorSettingsCfg(
 }
 
 std::vector<ControlParameterizationSettings> Config::parseControlParameterizationsCfg(const std::optional<std::map<int, ControlParameterizationData>>& parameterizations_map) const {
-  // Set up a default parameterization for one oscillator
+  // Use default-initialized struct (defaults provided in struct definition)
   ControlParameterizationSettings default_parameterization;
-  default_parameterization.type = ConfigDefaults::CONTROL_TYPE;
-  default_parameterization.nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
 
   // Populate default if paramterization is not specified
   if (!parameterizations_map.has_value()) {
@@ -1367,7 +1337,7 @@ std::vector<ControlParameterizationSettings> Config::parseControlParameterizatio
 
 std::vector<ControlInitializationSettings> Config::parseControlInitializationsCfg(const std::optional<std::map<int, ControlInitializationSettings>>& init_configs) const {
 
-  ControlInitializationSettings default_init = ControlInitializationSettings{ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt};
+  ControlInitializationSettings default_init;
 
   std::vector<ControlInitializationSettings> control_initializations(nlevels.size(), default_init);
 

@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "config_defaults.hpp"
 #include "defs.hpp"
 #include "mpi_logger.hpp"
 #include "util.hpp"
