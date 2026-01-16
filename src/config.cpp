@@ -15,9 +15,7 @@
 #include "config_validators.hpp"
 #include "util.hpp"
 
-// Common TOML table key constants
 namespace {
-const std::string OSC_ID_KEY = "oscID";
 
 /**
  * Generic template function for parsing per-subsystem settings.
@@ -60,19 +58,18 @@ std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, con
         logger.exitWithError(key + " array element must have 'subsystem' field");
       }
       // For coupling parameters, subsystem is a pair of indices, otherwise its a single index
-      // Check if subsystem field is an array or a simple index
       size_t index;
       if (elem_table->get(subsystem_key)->is_array()) {
         // Coupling parameter case: subsystem is an array of two indices
         auto subsys_array = validators::vectorField<size_t>(*elem_table, subsystem_key).hasLength(2).value();
         size_t i = subsys_array[0];;
         size_t j = subsys_array[1];
-        // if (i >= num_entries || j >= num_entries) {
-        //   throw validators::ValidationError(key, "subsystem index out of range for key '" + key + "'");
-        // }
+        if (i >= num_subsystems || j >= num_subsystems) {
+          throw validators::ValidationError(key, "subsystem index out of range for key '" + key + "'");
+        }
         // Compute unique index for pair (i,j) with i<j: Convert to linear index: (0,1), (0,2), ..., (0,n-1), (1,2), ..., (1,n-1), ..., (n-2,n-1)
         if (i > j) std::swap(i, j);
-        index = i * num_subsystems - i - i * (i - 1) / 2 + (j - i - 1);
+        index = i * (num_subsystems-1) - i * (i - 1) / 2 + (j - i - 1);
         size_t num_pairs = (num_subsystems * (num_subsystems - 1)) / 2;
         settings.resize(num_pairs, default_settings);
       } else if (elem_table->get(subsystem_key)->is_value()) {
@@ -97,7 +94,7 @@ std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, con
 
 Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger) {
   try {
-    // General options
+    // System options
 
     nlevels = validators::vectorField<size_t>(toml, "nlevels").minLength(1).positive().value();
     size_t num_osc = nlevels.size();
@@ -121,24 +118,20 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     Jkl.assign(num_pairs, ConfigDefaults::JKL);
     // Overwrite for crosskerr
     if (toml.contains("crosskerr")) {
-      // Check if crosskerr is a value (all-to-all coupling)
       if (toml["crosskerr"].is_value()) {
         double single_val = validators::field<double>(toml, "crosskerr").value();
         crosskerr.assign(num_pairs, single_val);
       } else {
-      // Parse as array of tables format
       auto parseCouplingFunc = [this](const toml::table& t) { return parseCouplingParameterSpecs(t, "crosskerr"); };
       crosskerr = parsePerSubsystemSettings<double>(toml, "crosskerr", num_osc, ConfigDefaults::CROSSKERR, parseCouplingFunc, logger);
       }
     }
     // Overwrite for Jkl
     if (toml.contains("Jkl")) {
-      // Check if Jkl is a value (all-to-all coupling)
       if (toml["Jkl"].is_value()) {
         double single_val = validators::field<double>(toml, "Jkl").value();
         Jkl.assign(num_pairs, single_val);
       } else {
-      // Parse as array of tables format
       auto parseCouplingFunc = [this](const toml::table& t) { return parseCouplingParameterSpecs(t, "Jkl"); };
       Jkl = parsePerSubsystemSettings<double>(toml, "Jkl", num_osc, ConfigDefaults::JKL, parseCouplingFunc, logger);
       }
@@ -150,13 +143,11 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     hamiltonian_file_Hsys = validators::getOptional<std::string>(toml["hamiltonian_file_Hsys"]);
     hamiltonian_file_Hc = validators::getOptional<std::string>(toml["hamiltonian_file_Hc"]);
 
-    if (!toml.contains("decoherence")) {
-      // No decoherence table specified, use defaults
-      decoherence_type = ConfigDefaults::DECOHERENCE_TYPE;
-      decay_time = std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME);
-      dephase_time = std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME);
-    } else {
-      // Parse decoherence table
+    // Parse decoherence setting
+    decoherence_type = ConfigDefaults::DECOHERENCE_TYPE;
+    decay_time = std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME);
+    dephase_time = std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME);
+    if (toml.contains("decoherence")) {
       auto* decoherence_table = toml["decoherence"].as_table();
       if (!decoherence_table) {
         logger.exitWithError("decoherence must be a table");
@@ -164,7 +155,9 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       auto type_str = validators::field<std::string>(*decoherence_table, "type").valueOr("none");
       decoherence_type = parseEnum(type_str, DECOHERENCE_TYPE_MAP, ConfigDefaults::DECOHERENCE_TYPE);
       decay_time = validators::vectorField<double>(*decoherence_table, "decay_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
+      copyLast(decay_time, num_osc);
       dephase_time = validators::vectorField<double>(*decoherence_table, "dephase_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
+      copyLast(dephase_time, num_osc);
     }
 
     // Parse initial condition table
@@ -938,11 +931,14 @@ void Config::finalize() {
   // Compute number of initial conditions
   n_initial_conditions = computeNumInitialConditions(initial_condition, nlevels, nessential, decoherence_type);
 
-  // overwrite decay or dephase times with zeros, if the decoherence type is only one of them.
+  // overwrite decay or dephase times with zeros, if the decoherence type is only one of them, or none.
   if (decoherence_type == DecoherenceType::DECAY) {
     std::fill(dephase_time.begin(), dephase_time.end(), 0);
   } else if (decoherence_type == DecoherenceType::DEPHASE) {
     std::fill(decay_time.begin(), decay_time.end(), 0);
+  } else if (decoherence_type == DecoherenceType::NONE) {
+    std::fill(decay_time.begin(), decay_time.end(), 0);
+    std::fill(dephase_time.begin(), dephase_time.end(), 0);
   }
 
   // Scale optimization weights such that they sum up to one
