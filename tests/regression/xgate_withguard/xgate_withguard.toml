@@ -1,0 +1,38 @@
+# Configuration settings
+# =============================================
+
+nlevels = [3]
+nessential = [2]
+ntime = 700
+dt = 0.1
+transfreq = [4.0999999999999996]
+selfkerr = [0.2198]
+rotfreq = [4]
+decoherence = {
+  type = "none",
+}
+initial_condition = {type = "basis"}
+control_enforceBC = true
+optim_target = {type = "gate", gate_type = "xgate"}
+optim_objective = "jfrobenius"
+optim_weights = [0.5, 0.5]
+optim_tolerance = { grad_abs = 0.0001, grad_rel = 1e-05, final_cost = 1e-05, infidelity = 1e-05 }
+optim_maxiter = 100
+optim_tikhonov = { coeff = 1e-05, use_x0 = false }
+optim_penalty = { leakage = 0.01, weightedcost = 0.0, weightedcost_width = 0.5, dpdm = 0.01, energy = 0.01, variation = 0.01 }
+datadir = "./data_out"
+output_timestep_stride = 1
+output_type = ["expectedenergy", "fullstate", "population"]
+output_optimization_stride = 1
+runtype = "optimization"
+usematfree = true
+linearsolver = { type = "gmres", maxiter = 20 }
+timestepper = "imr"
+rand_seed = 1234
+control_initialization = { type = "constant", amplitude = 0.010000 }
+
+control_parameterization = { type = "spline", num = 150, tstart = 0, tstop = 70 }
+
+carrier_frequency = [0.10000000000000001]
+control_bounds = 0.050000000000000003
+

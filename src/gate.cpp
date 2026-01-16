@@ -7,7 +7,7 @@ Gate::Gate(){
   quietmode=false;
 }
 
-Gate::Gate(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nessential_, double time_, const std::vector<double>& gate_rot_freq_, LindbladType lindbladtype_, bool quietmode_){
+Gate::Gate(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nessential_, double time_, const std::vector<double>& gate_rot_freq_, DecoherenceType decoherence_type_, bool quietmode_){
 
   MPI_Comm_rank(PETSC_COMM_WORLD, &mpirank_petsc);
   MPI_Comm_size(PETSC_COMM_WORLD, &mpisize_petsc);
@@ -18,7 +18,7 @@ Gate::Gate(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nesse
   nlevels = nlevels_;
   final_time = time_;
   gate_rot_freq = gate_rot_freq_;
-  lindbladtype = lindbladtype_;
+  decoherence_type = decoherence_type_;
   for (size_t i=0; i<gate_rot_freq.size(); i++){
     gate_rot_freq[i] *= 2.*M_PI;
   }
@@ -49,7 +49,7 @@ Gate::Gate(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nesse
   /* If Lindblad solver: Gate G = V_full x V_full, where V is the full-dimension gate (inserting identities for all non-essential levels) */ 
   /* Else Schroedinger solver: Gate G = V_full */
   PetscInt dim_gate;
-  if (lindbladtype != LindbladType::NONE) dim_gate = dim_rho*dim_rho;
+  if (decoherence_type != DecoherenceType::NONE) dim_gate = dim_rho*dim_rho;
   else dim_gate = dim_rho;
   MatCreate(PETSC_COMM_WORLD, &VxV_re);
   MatCreate(PETSC_COMM_WORLD, &VxV_im);
@@ -146,7 +146,7 @@ void Gate::assembleGate(){
 #endif
 
 
- if (lindbladtype != LindbladType::NONE){ // Lindblad solver. Gate is G = V\kron V
+ if (decoherence_type != DecoherenceType::NONE){ // Lindblad solver. Gate is G = V\kron V
   /* Assemble vectorized gate G=V\kron V where V = PV_eP^T for essential dimension gate V_e (user input) and projection P lifting V_e to the full dimension by inserting identity blocks for non-essential levels. */
   // Each element in V\kron V is a product V(i,j)*V(r,c), for rows and columns i,j,r,c!
   PetscInt ilow, iupp;
@@ -284,7 +284,7 @@ void Gate::applyGate(const Vec state, Vec VrhoV){
 }
 
 
-XGate::XGate(const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential, double time, const std::vector<double>& gate_rot_freq, LindbladType lindbladtype_, bool quietmode) : Gate(nlevels, nessential, time, gate_rot_freq, lindbladtype_, quietmode) {
+XGate::XGate(const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential, double time, const std::vector<double>& gate_rot_freq, DecoherenceType decoherence_type_, bool quietmode) : Gate(nlevels, nessential, time, gate_rot_freq, decoherence_type_, quietmode) {
 
   assert(dim_ess == 2);
 
@@ -303,7 +303,7 @@ XGate::XGate(const std::vector<size_t>& nlevels, const std::vector<size_t>& ness
 
 XGate::~XGate() {}
 
-YGate::YGate(const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential, double time, const std::vector<double>& gate_rot_freq, LindbladType lindbladtype_, bool quietmode) : Gate(nlevels, nessential, time, gate_rot_freq, lindbladtype_, quietmode) {
+YGate::YGate(const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential, double time, const std::vector<double>& gate_rot_freq, DecoherenceType decoherence_type_, bool quietmode) : Gate(nlevels, nessential, time, gate_rot_freq, decoherence_type_, quietmode) {
 
   assert(dim_ess == 2);
   
@@ -321,7 +321,7 @@ YGate::YGate(const std::vector<size_t>& nlevels, const std::vector<size_t>& ness
 }
 YGate::~YGate() {}
 
-ZGate::ZGate(const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential, double time, const std::vector<double>& gate_rot_freq, LindbladType lindbladtype_, bool quietmode) : Gate(nlevels, nessential, time, gate_rot_freq, lindbladtype_, quietmode) {
+ZGate::ZGate(const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential, double time, const std::vector<double>& gate_rot_freq, DecoherenceType decoherence_type_, bool quietmode) : Gate(nlevels, nessential, time, gate_rot_freq, decoherence_type_, quietmode) {
 
   assert(dim_ess == 2);
 
@@ -340,7 +340,7 @@ ZGate::ZGate(const std::vector<size_t>& nlevels, const std::vector<size_t>& ness
 
 ZGate::~ZGate() {}
 
-HadamardGate::HadamardGate(const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential, double time, const std::vector<double>& gate_rot_freq, LindbladType lindbladtype_, bool quietmode) : Gate(nlevels, nessential, time, gate_rot_freq, lindbladtype_, quietmode) {
+HadamardGate::HadamardGate(const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential, double time, const std::vector<double>& gate_rot_freq, DecoherenceType decoherence_type_, bool quietmode) : Gate(nlevels, nessential, time, gate_rot_freq, decoherence_type_, quietmode) {
 
   assert(dim_ess == 2);
 
@@ -363,7 +363,7 @@ HadamardGate::~HadamardGate() {}
 
 
 
-CNOT::CNOT(const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential, double time, const std::vector<double>& gate_rot_freq, LindbladType lindbladtype_, bool quietmode) : Gate(nlevels, nessential,time, gate_rot_freq, lindbladtype_,  quietmode) {
+CNOT::CNOT(const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential, double time, const std::vector<double>& gate_rot_freq, DecoherenceType decoherence_type_, bool quietmode) : Gate(nlevels, nessential,time, gate_rot_freq, decoherence_type_,  quietmode) {
 
   assert(dim_ess == 4);
 
@@ -388,7 +388,7 @@ CNOT::CNOT(const std::vector<size_t>& nlevels, const std::vector<size_t>& nessen
 CNOT::~CNOT(){}
 
 
-SWAP::SWAP(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nessential_, double time_, const std::vector<double>& gate_rot_freq_, LindbladType lindbladtype_, bool quietmode) : Gate(nlevels_, nessential_, time_, gate_rot_freq_, lindbladtype_, quietmode) {
+SWAP::SWAP(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nessential_, double time_, const std::vector<double>& gate_rot_freq_, DecoherenceType decoherence_type_, bool quietmode) : Gate(nlevels_, nessential_, time_, gate_rot_freq_, decoherence_type_, quietmode) {
   assert(dim_ess == 4);
 
   /* Fill lab-frame swap gate in essential dimension system V_re = Re(V), V_im = Im(V) = 0 */
@@ -409,7 +409,7 @@ SWAP::SWAP(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nesse
 
 SWAP::~SWAP(){}
 
-SWAP_0Q::SWAP_0Q(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nessential_, double time_, const std::vector<double>& gate_rot_freq_, LindbladType lindbladtype_, bool quietmode) : Gate(nlevels_, nessential_, time_, gate_rot_freq_, lindbladtype_, quietmode) {
+SWAP_0Q::SWAP_0Q(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nessential_, double time_, const std::vector<double>& gate_rot_freq_, DecoherenceType decoherence_type_, bool quietmode) : Gate(nlevels_, nessential_, time_, gate_rot_freq_, decoherence_type_, quietmode) {
   int Q = nlevels.size();  // Number of total oscillators 
 
   /* Fill lab-frame swap 0<->Q-1 gate in essential dimension system V_re = Re(V), V_im = Im(V) = 0 */
@@ -449,7 +449,7 @@ SWAP_0Q::SWAP_0Q(const std::vector<size_t>& nlevels_, const std::vector<size_t>&
 SWAP_0Q::~SWAP_0Q(){}
 
 
-CQNOT::CQNOT(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nessential_, double time_, const std::vector<double>& gate_rot_freq_, LindbladType lindbladtype_, bool quietmode) : Gate(nlevels_, nessential_, time_, gate_rot_freq_, lindbladtype_, quietmode) {
+CQNOT::CQNOT(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nessential_, double time_, const std::vector<double>& gate_rot_freq_, DecoherenceType decoherence_type_, bool quietmode) : Gate(nlevels_, nessential_, time_, gate_rot_freq_, decoherence_type_, quietmode) {
 
   /* Fill lab-frame CQNOT gate in essential dimension system V_re = Re(V), V_im = Im(V) = 0 */
   /* V = [1 0 0 ...
@@ -478,7 +478,7 @@ CQNOT::CQNOT(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nes
 CQNOT::~CQNOT(){}
 
 
-QFT::QFT(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nessential_, double time_, const std::vector<double>& gate_rot_freq_, LindbladType lindbladtype_, bool quietmode) : Gate(nlevels_, nessential_, time_, gate_rot_freq_, lindbladtype_, quietmode) {
+QFT::QFT(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nessential_, double time_, const std::vector<double>& gate_rot_freq_, DecoherenceType decoherence_type_, bool quietmode) : Gate(nlevels_, nessential_, time_, gate_rot_freq_, decoherence_type_, quietmode) {
 
   double sq = sqrt(dim_ess);
 
@@ -503,7 +503,7 @@ QFT::QFT(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nessent
 QFT::~QFT(){}
 
 
-FromFile::FromFile(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nessential_, double time_, const std::vector<double>& gate_rot_freq_, LindbladType lindbladtype_, const std::string& filename, bool quietmode) : Gate(nlevels_, nessential_, time_, gate_rot_freq_, lindbladtype_, quietmode){
+FromFile::FromFile(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nessential_, double time_, const std::vector<double>& gate_rot_freq_, DecoherenceType decoherence_type_, const std::string& filename, bool quietmode) : Gate(nlevels_, nessential_, time_, gate_rot_freq_, decoherence_type_, quietmode){
 
   // Read the gate from a file
   int nelems = 2*dim_ess*dim_ess;
@@ -544,31 +544,31 @@ FromFile::FromFile(const std::vector<size_t>& nlevels_, const std::vector<size_t
 FromFile::~FromFile(){}
 
 
-Gate* initTargetGate(GateType target_gate, const std::string& file, const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential, double total_time, LindbladType lindbladtype, const std::vector<double>& gate_rot_freq, bool quietmode){
+Gate* initTargetGate(GateType target_gate, const std::string& file, const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential, double total_time, DecoherenceType decoherence_type, const std::vector<double>& gate_rot_freq, bool quietmode){
 
   switch (target_gate) {
     case GateType::NONE:
       return new Gate();
     case GateType::XGATE:
-      return new XGate(nlevels, nessential, total_time, gate_rot_freq, lindbladtype, quietmode);
+      return new XGate(nlevels, nessential, total_time, gate_rot_freq, decoherence_type, quietmode);
     case GateType::YGATE:
-      return new YGate(nlevels, nessential, total_time, gate_rot_freq, lindbladtype, quietmode);
+      return new YGate(nlevels, nessential, total_time, gate_rot_freq, decoherence_type, quietmode);
     case GateType::ZGATE:
-      return new ZGate(nlevels, nessential, total_time, gate_rot_freq, lindbladtype, quietmode);
+      return new ZGate(nlevels, nessential, total_time, gate_rot_freq, decoherence_type, quietmode);
     case GateType::HADAMARD:
-      return new HadamardGate(nlevels, nessential, total_time, gate_rot_freq, lindbladtype, quietmode);
+      return new HadamardGate(nlevels, nessential, total_time, gate_rot_freq, decoherence_type, quietmode);
     case GateType::CNOT:
-      return new CNOT(nlevels, nessential, total_time, gate_rot_freq, lindbladtype, quietmode);
+      return new CNOT(nlevels, nessential, total_time, gate_rot_freq, decoherence_type, quietmode);
     case GateType::SWAP:
-      return new SWAP(nlevels, nessential, total_time, gate_rot_freq, lindbladtype, quietmode);
+      return new SWAP(nlevels, nessential, total_time, gate_rot_freq, decoherence_type, quietmode);
     case GateType::SWAP_0Q:
-      return new SWAP_0Q(nlevels, nessential, total_time, gate_rot_freq, lindbladtype, quietmode);
+      return new SWAP_0Q(nlevels, nessential, total_time, gate_rot_freq, decoherence_type, quietmode);
     case GateType::CQNOT:
-      return new CQNOT(nlevels, nessential, total_time, gate_rot_freq, lindbladtype, quietmode);
+      return new CQNOT(nlevels, nessential, total_time, gate_rot_freq, decoherence_type, quietmode);
     case GateType::QFT:
-      return new QFT(nlevels, nessential, total_time, gate_rot_freq, lindbladtype, quietmode);
+      return new QFT(nlevels, nessential, total_time, gate_rot_freq, decoherence_type, quietmode);
     case GateType::FILE:
-      return new FromFile(nlevels, nessential, total_time, gate_rot_freq, lindbladtype, file, quietmode);
+      return new FromFile(nlevels, nessential, total_time, gate_rot_freq, decoherence_type, file, quietmode);
   }
 
   // should not happen, but make compiler happy

@@ -28,18 +28,18 @@
  * @note If this is NONE, the quantum system is considered closed, solving Schroedinger's 
  * equation rather than Lindblad's master equation.
  */
-enum class LindbladType {
+enum class DecoherenceType {
   NONE,    ///< No Lindblad operators (closed system)
   DECAY,   ///< Decay operators only
   DEPHASE, ///< Dephasing operators only
   BOTH     ///< Both decay and dephasing operators
 };
 
-const std::map<std::string, LindbladType> LINDBLAD_TYPE_MAP = {
-    {"none", LindbladType::NONE},
-    {"decay", LindbladType::DECAY},
-    {"dephase", LindbladType::DEPHASE},
-    {"both", LindbladType::BOTH}
+const std::map<std::string, DecoherenceType> DECOHERENCE_TYPE_MAP = {
+    {"none", DecoherenceType::NONE},
+    {"decay", DecoherenceType::DECAY},
+    {"dephase", DecoherenceType::DEPHASE},
+    {"both", DecoherenceType::BOTH}
 };
 
 /**
@@ -49,19 +49,19 @@ const std::map<std::string, LindbladType> LINDBLAD_TYPE_MAP = {
  * for simulation or optimization.
  */
 enum class InitialConditionType {
-  FROMFILE,    ///< Read initial condition from file
-  PURE,        ///< Pure state initial condition
-  ENSEMBLE,    ///< Ensemble of states
-  DIAGONAL,    ///< Diagonal density matrix
-  BASIS,       ///< Basis state
-  THREESTATES, ///< Three-state system
-  NPLUSONE,    ///< N+1 state system
-  PERFORMANCE  ///< Performance test configuration
+  FROMFILE,      ///< Read initial condition from file
+  PRODUCT_STATE, ///< Product state initial condition
+  ENSEMBLE,      ///< Ensemble of states
+  DIAGONAL,      ///< Diagonal density matrix
+  BASIS,         ///< Basis state
+  THREESTATES,   ///< Three-state system
+  NPLUSONE,      ///< N+1 state system
+  PERFORMANCE    ///< Performance test configuration
 };
 
 const std::map<std::string, InitialConditionType> INITCOND_TYPE_MAP = {
     {"file", InitialConditionType::FROMFILE},
-    {"pure", InitialConditionType::PURE},
+    {"state", InitialConditionType::PRODUCT_STATE},
     {"ensemble", InitialConditionType::ENSEMBLE},
     {"diagonal", InitialConditionType::DIAGONAL},
     {"basis", InitialConditionType::BASIS},
@@ -76,15 +76,15 @@ const std::map<std::string, InitialConditionType> INITCOND_TYPE_MAP = {
  * Defines the target quantum state or operation for optimization.
  */
 enum class TargetType {
-  GATE,      ///< Gate optimization: \f$\rho_{\text{target}} = V\rho(0) V^\dagger\f$
-  PURE,      ///< Pure state preparation: \f$\rho_{\text{target}} = e_m e_m^\dagger\f$ for some integer \f$m\f$
-  FROMFILE   ///< Target state read from file, vectorized density matrix format
+  NONE,          ///< No target specified (no optimization)
+  GATE,          ///< Gate optimization: \f$\rho_{\text{target}} = V\rho(0) V^\dagger\f$ for V either read from file or chosen from default set of gates
+  STATE,         ///< State preparation: Either read from file, or \f$\rho_{\text{target}} = e_m e_m^\dagger\f$ for some integer \f$m\f$
 };
 
 const std::map<std::string, TargetType> TARGET_TYPE_MAP = {
+    {"none", TargetType::NONE},
     {"gate", TargetType::GATE},
-    {"pure", TargetType::PURE},
-    {"file", TargetType::FROMFILE}
+    {"state", TargetType::STATE},
 };
 
 /**
@@ -142,7 +142,7 @@ const std::map<std::string, RunType> RUN_TYPE_MAP = {
 };
 
 /**
- * @brief Types of control parameterizations for quantum control pulses.
+ * @brief Types of control parameterizations.
  *
  * Defines how control pulses are parameterized for optimization and simulation.
  */
@@ -150,7 +150,6 @@ enum class ControlType {
   NONE,       ///< Non-controllable
   BSPLINE,    ///< Control pulses are parameterized with 2nd order BSpline basis functions with carrier waves
   BSPLINEAMP, ///< Paramerizes only the amplitudes of the control pulse with 2nd order BSpline basis functions 
-  STEP,       ///< Control parameter is the width of a step function for a given amplitude
   BSPLINE0    ///< Control pulses are parameterized with Zeroth order Bspline (piece-wise constant)
 };
 
@@ -158,23 +157,22 @@ const std::map<std::string, ControlType> CONTROL_TYPE_MAP = {
     {"none", ControlType::NONE},
     {"spline", ControlType::BSPLINE},
     {"spline_amplitude", ControlType::BSPLINEAMP},
-    {"step", ControlType::STEP},
     {"spline0", ControlType::BSPLINE0}
 };
 
 /**
- * @brief Types of control initializations per segment
+ * @brief Types of control initializations 
  */
-enum class ControlSegmentInitType {
+enum class ControlInitializationType {
   CONSTANT, ///< Constant
   RANDOM,   ///< Random
   FILE,     ///< From file
 };
 
-const std::map<std::string, ControlSegmentInitType> CONTROL_SEGMENT_INIT_TYPE_MAP = {
-    {"constant", ControlSegmentInitType::CONSTANT},
-    {"random", ControlSegmentInitType::RANDOM},
-    {"file", ControlSegmentInitType::FILE},
+const std::map<std::string, ControlInitializationType> CONTROL_INITIALIZATION_TYPE_MAP = {
+    {"constant", ControlInitializationType::CONSTANT},
+    {"random", ControlInitializationType::RANDOM},
+    {"file", ControlInitializationType::FILE},
 };
 
 /**
@@ -244,74 +242,4 @@ const std::map<std::string, OutputType> OUTPUT_TYPE_MAP = {
   {"population", OutputType::POPULATION},
   {"populationcomposite", OutputType::POPULATION_COMPOSITE},
   {"fullstate", OutputType::FULLSTATE},
-};
-
-// Structs
-
-/**
- * @brief Initial condition configuration.
- */
-struct InitialCondition {
-  InitialConditionType type; ///< Type of initial condition
-
-  // Optional fields - populate based on type
-  std::optional<std::string> filename; ///< For FROMFILE: File to read initial condition from
-  std::optional<std::vector<size_t>> levels; ///< For PURE: Quantum level for each oscillator
-  std::optional<std::vector<size_t>> osc_IDs; ///< For ENSEMBLE, DIAGONAL, BASIS: Oscillator IDs
-};
-
-/**
- * @brief Optimization target configuration.
- */
-struct OptimTargetSettings {
-  TargetType type; ///< Type of optimization target
-
-  // Optional fields - populate based on type
-  std::optional<GateType> gate_type; ///< For GATE: Gate type
-  std::optional<std::string> gate_file; ///< For GATE with FILE type: Gate file path
-  std::optional<std::vector<size_t>> levels; ///< For PURE: Pure state levels
-  std::optional<std::string> file; ///< For FROMFILE: Target file path
-};
-
-/**
- * @brief Structure for storing pi-pulse parameters for one segment.
- *
- * Stores timing and amplitude information for pi-pulse sequences.
- */
-struct PiPulseSegment {
-  double tstart; ///< Start time for pulse segment
-  double tstop; ///< Stop time for pulse segment
-  double amp; ///< Amplitude for pulse segment
-};
-
-/**
- * @brief Control segment initialization settings.
- */
-struct ControlSegmentInitialization {
-  ControlSegmentInitType type; ///< Initialization type
-  double amplitude; ///< Initial control pulse amplitude
-  double phase; ///< Initial control pulse phase
-};
-
-/**
- * @brief Structure for defining control segments.
- *
- * Defines a controllable segment for an oscillator and the type of parameterization,
- * with corresponding starting and finish times. Which fields are used depends on the control type.
- */
-struct ControlSegment {
-  ControlType type; ///< Type of control segment
-
-  // Common fields for B-spline types (BSPLINE, BSPLINEAMP, BSPLINE0)
-  std::optional<size_t> nspline; ///< Number of basis functions in this segment
-  std::optional<double> tstart; ///< Start time of the control segment
-  std::optional<double> tstop; ///< Stop time of the control segment
-
-  // Additional field for amplitude-scaled B-spline (BSPLINEAMP)
-  std::optional<double> scaling; ///< Amplitude scaling factor
-
-  // Fields for step function control (STEP)
-  std::optional<double> step_amp1; ///< Real part of amplitude of the step pulse
-  std::optional<double> step_amp2; ///< Imaginary part of amplitude of the step pulse
-  std::optional<double> tramp; ///< Ramp time
 };

@@ -5,83 +5,33 @@ dt = 0.02
 transfreq = [4.10595]
 rotfreq = [0.0, 0.0]
 selfkerr = [0.0, 0.0]
-crosskerr = [0.0]
-Jkl = [0.0]
-collapse_type = "both"
-decay_time = [10.0, 20.0]
-dephase_time = [30.0, 40.0]
+decoherence = {type="both",decay_time = [10.0, 20.0], dephase_time = [30.0, 40.0]}
 initial_condition = {type = "diagonal"}
 hamiltonian_file_Hsys = "hamiltonian_Hsys.dat"
 hamiltonian_file_Hc = "hamiltonian_Hc.dat"
 
 control_enforceBC = false
-optim_target = {target_type = "gate", gate_type = "cnot"}
+optim_target = {type = "gate", gate_type = "cnot"}
 optim_objective = "Jtrace"
-gate_rot_freq = [0.0, 0.0]
 optim_weights = 1.0
-optim_atol = 0.0001
-optim_rtol = 0.0001
-optim_ftol = 0.0001
-optim_inftol = 1e-05
+optim_tolerance = { grad_abs = 0.0001, grad_rel = 0.0001, final_cost = 0.0001, infidelity = 1e-05 }
 optim_maxiter = 200
-optim_regul = 0.0001
-optim_regul_tik0 = false
-optim_penalty = 0.1
-optim_penalty_param = 0.0
-optim_penalty_dpdm = 0.0
-optim_penalty_variation = 0.0
-optim_penalty_energy = 0.0
+optim_tikhonov = { coeff = 0.0001, use_x0 = false }
+optim_penalty = { leakage = 0.1, weightedcost = 0.0, weightedcost_width = 0.0, dpdm = 0.0, energy = 0.0, variation = 0.0 }
 
 datadir = "./data_out"
-output_frequency = 1
-optim_monitor_frequency = 1
+output_timestep_stride = 1
+output_type = ["population"]
+output_optimization_stride = 1
 runtype = "simulation"
 usematfree = false
-linearsolver_type = "gmres"
-linearsolver_maxiter = 20
+linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"
 rand_seed = 1234
+control_initialization = {
+  type = "constant", amplitude = 0.0070710678118654745
+}
 
-[[control_segments]]
-oscID = 0
-type = "spline"
-num = 6
+control_parameterization = { type = "spline", num = 6 }
 
-[[control_segments]]
-oscID = 1
-type = "spline"
-num = 6
-
-[[control_bounds]]
-oscID = 0
-values = [1000000000000.0]
-
-[[control_bounds]]
-oscID = 1
-values = [1000000000000.0]
-
-[[control_initialization]]
-oscID = 0
-type = "constant"
-amplitude = 0.0070710678118654745
-
-[[control_initialization]]
-oscID = 1
-type = "constant"
-amplitude = 0.0070710678118654745
-
-[[carrier_frequency]]
-oscID = 0
-values = [0.0]
-
-[[carrier_frequency]]
-oscID = 1
-values = [0.0]
-
-[[write]]
-oscID = 0
-type = ["population"]
-
-[[write]]
-oscID = 1
-type = ["population"]
+carrier_frequency = [0.0]

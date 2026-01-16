@@ -26,7 +26,7 @@ typedef struct {
   std::vector<double> crosskerr; ///< Cross-Kerr coupling coefficients
   std::vector<double> Jkl; ///< Dipole-dipole coupling strength
   std::vector<double> eta; ///< Frequency differences of the rotating frames
-  LindbladType lindbladtype; ///< Type of Lindblad operators to include
+  DecoherenceType decoherence_type; ///< Type of Lindblad operators to include
   bool addT1, addT2; ///< Flags for T1 decay and T2 dephasing
   std::vector<double> control_Re;  ///< Real parts of control pulse \f$p(t)\f$
   std::vector<double> control_Im;  ///< Imaginary parts of control pulse \f$q(t)\f$
@@ -129,7 +129,7 @@ class MasterEq{
     std::vector<size_t> nlevels; ///< Number of levels per oscillator
     std::vector<size_t> nessential; ///< Number of essential levels per oscillator
     bool usematfree; ///< Flag for using matrix-free solver
-    LindbladType lindbladtype; ///< Type of Lindblad operators to include (NONE means Schroedinger equation)
+    DecoherenceType decoherence_type; ///< Type of Lindblad operators to include (NONE means Schroedinger equation)
 
   public:
     MasterEq();
@@ -290,10 +290,10 @@ void compute_dRHS_dParams_sparsemat(const double t,const Vec x,const Vec x_bar, 
  * @param[in] alpha Scaling factor
  * @param[out] grad Gradient vector to update
  * @param[in] nlevels Number of energy levels per subsystem
- * @param[in] lindbladtype Type of Lindblad decoherence operators, or NONE
+ * @param[in] decoherence_type Type of Lindblad decoherence operators, or NONE
  * @param[in] oscil_vec Vector of quantum oscillators 
  */
-void compute_dRHS_dParams_matfree(const PetscInt dim, const double t,const Vec x,const Vec x_bar, const double alpha, Vec grad, std::vector<size_t>& nlevels, LindbladType lindbladtype, Oscillator** oscil_vec);
+void compute_dRHS_dParams_matfree(const PetscInt dim, const double t,const Vec x,const Vec x_bar, const double alpha, Vec grad, std::vector<size_t>& nlevels, DecoherenceType decoherence_type, Oscillator** oscil_vec);
 
 
 

@@ -5,210 +5,23 @@ dt = 0.01
 transfreq = [0.2676797443720237, -0.015629849901717438, 0.1459611334938404, 0.1944500354748219, -0.06349206375770339, -0.3096811297032389, -0.11637775015444579, -0.03832806182101765]
 rotfreq = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 selfkerr = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-crosskerr = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-Jkl = [0.3183098861837907, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3183098861837907, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3183098861837907, 0.0, 0.0, 0.0, 0.0, 0.3183098861837907, 0.0, 0.0, 0.0, 0.3183098861837907, 0.0, 0.0, 0.3183098861837907, 0.0, 0.3183098861837907]
-collapse_type = "none"
-initial_condition = {type = "pure", levels = [1, 1, 1, 1, 0, 0, 0, 0]}
 
-control_enforceBC = false
-optim_target = {target_type = "gate", gate_type = "none"}
-optim_objective = "Jtrace"
-gate_rot_freq = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-optim_weights = 1.0
-optim_atol = 0.0001
-optim_rtol = 0.0001
-optim_ftol = 0.0001
-optim_inftol = 1e-05
-optim_maxiter = 200
-optim_regul = 0.0001
-optim_regul_tik0 = false
-optim_penalty = 0.1
-optim_penalty_param = 0.0
-optim_penalty_dpdm = 0.01
-optim_penalty_variation = 0.01
-optim_penalty_energy = 0.1
+Jkl = [ { subsystem = [0,1], value = 0.3183098861837907}, 
+        { subsystem = [1,2], value = 0.3183098861837907}, 
+        { subsystem = [2,3], value = 0.3183098861837907}, 
+        { subsystem = [3,4], value = 0.3183098861837907}, 
+        { subsystem = [4,5], value = 0.3183098861837907}, 
+        { subsystem = [5,6], value = 0.3183098861837907}, 
+        { subsystem = [6,7], value = 0.3183098861837907}
+      ]
+
+initial_condition = {type = "state", levels = [1, 1, 1, 1, 0, 0, 0, 0]}
 
 datadir = "./data_out"
-output_frequency = 1
-optim_monitor_frequency = 1
+output_timestep_stride = 1
+output_type = ["population"]
+output_optimization_stride = 1
 runtype = "simulation"
 usematfree = false
-linearsolver_type = "gmres"
-linearsolver_maxiter = 20
+linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"
-
-[[control_segments]]
-oscID = 0
-type = "spline"
-num = 6
-
-[[control_segments]]
-oscID = 1
-type = "spline"
-num = 6
-
-[[control_segments]]
-oscID = 2
-type = "spline"
-num = 6
-
-[[control_segments]]
-oscID = 3
-type = "spline"
-num = 6
-
-[[control_segments]]
-oscID = 4
-type = "spline"
-num = 6
-
-[[control_segments]]
-oscID = 5
-type = "spline"
-num = 6
-
-[[control_segments]]
-oscID = 6
-type = "spline"
-num = 6
-
-[[control_segments]]
-oscID = 7
-type = "spline"
-num = 6
-
-[[control_bounds]]
-oscID = 0
-values = [1000000000000.0]
-
-[[control_bounds]]
-oscID = 1
-values = [1000000000000.0]
-
-[[control_bounds]]
-oscID = 2
-values = [1000000000000.0]
-
-[[control_bounds]]
-oscID = 3
-values = [1000000000000.0]
-
-[[control_bounds]]
-oscID = 4
-values = [1000000000000.0]
-
-[[control_bounds]]
-oscID = 5
-values = [1000000000000.0]
-
-[[control_bounds]]
-oscID = 6
-values = [1000000000000.0]
-
-[[control_bounds]]
-oscID = 7
-values = [1000000000000.0]
-
-[[control_initialization]]
-oscID = 0
-type = "random"
-amplitude = 0.0
-
-[[control_initialization]]
-oscID = 1
-type = "random"
-amplitude = 0.0
-
-[[control_initialization]]
-oscID = 2
-type = "random"
-amplitude = 0.0
-
-[[control_initialization]]
-oscID = 3
-type = "random"
-amplitude = 0.0
-
-[[control_initialization]]
-oscID = 4
-type = "random"
-amplitude = 0.0
-
-[[control_initialization]]
-oscID = 5
-type = "random"
-amplitude = 0.0
-
-[[control_initialization]]
-oscID = 6
-type = "random"
-amplitude = 0.0
-
-[[control_initialization]]
-oscID = 7
-type = "random"
-amplitude = 0.0
-
-[[carrier_frequency]]
-oscID = 0
-values = [0.0]
-
-[[carrier_frequency]]
-oscID = 1
-values = [0.0]
-
-[[carrier_frequency]]
-oscID = 2
-values = [0.0]
-
-[[carrier_frequency]]
-oscID = 3
-values = [0.0]
-
-[[carrier_frequency]]
-oscID = 4
-values = [0.0]
-
-[[carrier_frequency]]
-oscID = 5
-values = [0.0]
-
-[[carrier_frequency]]
-oscID = 6
-values = [0.0]
-
-[[carrier_frequency]]
-oscID = 7
-values = [0.0]
-
-[[write]]
-oscID = 0
-type = ["population"]
-
-[[write]]
-oscID = 1
-type = ["population"]
-
-[[write]]
-oscID = 2
-type = ["population"]
-
-[[write]]
-oscID = 3
-type = ["population"]
-
-[[write]]
-oscID = 4
-type = ["population"]
-
-[[write]]
-oscID = 5
-type = ["population"]
-
-[[write]]
-oscID = 6
-type = ["population"]
-
-[[write]]
-oscID = 7
-type = ["population"]

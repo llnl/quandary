@@ -1,7 +1,6 @@
 #pragma once
 
 #include <petsc.h>
-
 #include <cstddef>
 #include <optional>
 #include <set>
@@ -9,16 +8,44 @@
 #include <string>
 #include <toml++/toml.hpp>
 #include <vector>
-
+#include <cassert>
+#include <iostream>
+#include <iomanip>
+#include <limits>
+#include <random>
+#include <type_traits>
 #include "cfgparser.hpp"
 #include "defs.hpp"
 #include "mpi_logger.hpp"
+#include "config_defaults.hpp"
+#include "config_validators.hpp"
+
+
+// Adding a new toml configuration option:
+// 1) Add new member variable to the Config class below
+// 2) Add parsing logic in constructor Config::Config(toml::table) in src/config.cpp. Either access directly from toml table, or use chains of validators for type-safe extraction and validation. For example:
+//    Parsing simple scalar fields (T foo): 
+//      * `foo = toml["foo"].value()`: requried scalar field, no default, not validated)
+//      * `foo = toml["foo"].value_or(default_value)`: optional scalar with default, not validated
+//      * `foo = validators::field<T>(toml, "foo").<validation_chain>.value()`: validated required scalar
+//      * `foo = validators::field<T>(toml, "foo").<validation_chain>.valueOr(default_value)`: validated optional scalar with default
+//   Parsing vectors (std::vector<T> foo): 
+//     * `foo = toml["foo"].as_array()->as<T>().value_or(default_vector)`: vector with default, not validated
+//     * `foo = validators::vectorField<T>(toml, "foo").<validation_chain>.value()`: validated required vector
+//     * `foo = validators::vectorField<T>(toml, "foo").<validation_chain>.value(default_vector)`: validated optional vector with default
+//   Available validation chain methods can found in include/config_validators.hpp, such as:
+//      `.positive()`, `.greaterThan(val)`, `.lessThan(val)`, `.minLength(len)`, etc.
+// 3) Add a getter method to the Config class below (`T getFoo() const {return foo};`)
+// 4) Add printing logic in Config::printConfig() in src/config.cpp
+
 
 /**
- * @brief Final validated configuration class.
+ * @brief Configuration class containing all validated settings.
  *
- * Contains only validated, typed configuration parameters. All fields are required
- * and have been validated with defaults set. This class is immutable after construction.
+ * Contains validated, typed configuration parameters. All fields have been 
+ * validated with defaults set. Handles parsing from TOML configuration files 
+ * and deprecated CFG format, as well as printing log of used configuration.
+ * This class is immutable after construction.
  */
 class Config {
  private:
@@ -35,45 +62,42 @@ class Config {
   std::vector<double> crosskerr; ///< Cross-kerr coupling frequencies for each oscillator coupling (GHz)
   std::vector<double> Jkl; ///< Dipole-dipole coupling frequencies for each oscillator coupling (GHz)
   std::vector<double> rotfreq; ///< Rotational wave approximation frequencies for each subsystem (GHz)
-  LindbladType collapse_type; ///< Switch between Schroedinger and Lindblad solver
-  std::vector<double> decay_time; ///< Time of decay collapse operation (T1) per oscillator (for Lindblad solver)
-  std::vector<double> dephase_time; ///< Time of dephase collapse operation (T2) per oscillator (for Lindblad solver)
+  DecoherenceType decoherence_type; ///< Switch between Schroedinger and Lindblad solver
+  std::vector<double> decay_time; ///< Time of decay operation (T1) per oscillator (for Lindblad solver)
+  std::vector<double> dephase_time; ///< Time of dephase operation (T2) per oscillator (for Lindblad solver)
   size_t n_initial_conditions; ///< Number of initial conditions
-  InitialCondition initial_condition; ///< Initial condition configuration
-  std::vector<std::vector<PiPulseSegment>> apply_pipulse; ///< Apply a pi-pulse to oscillator with specified parameters
+  InitialConditionSettings initial_condition; ///< Initial condition configuration
   std::optional<std::string> hamiltonian_file_Hsys; ///< File to read the system Hamiltonian from
   std::optional<std::string> hamiltonian_file_Hc; ///< File to read the control Hamiltonian from
 
   // Optimization options
   bool control_enforceBC; ///< Decide whether control pulses should start and end at zero
-  std::optional<std::string> control_initialization_file; ///< Global control initialization file for all oscillators
-  std::vector<std::vector<ControlSegment>> control_segments; ///< Control segments for each oscillator
-  std::vector<std::vector<ControlSegmentInitialization>>
-      control_initializations; ///< Control initializations for each oscillator
-  std::vector<std::vector<double>> control_bounds; ///< Control bounds for each oscillator
+  std::vector<ControlParameterizationSettings> control_parameterizations; ///< Control parameterizations for each oscillator
+  std::vector<ControlInitializationSettings> control_initializations; ///< Control initializations for each oscillator
+  std::vector<double> control_bounds; ///< Control bounds for each oscillator
   std::vector<std::vector<double>> carrier_frequencies; ///< Carrier frequencies for each oscillator
   OptimTargetSettings optim_target; ///< Grouped optimization target configuration
-  std::vector<double> gate_rot_freq; ///< Frequency of rotation of the target gate, for each oscillator (GHz)
   ObjectiveType optim_objective; ///< Objective function measure
   std::vector<double> optim_weights; ///< Weights for summing up the objective function
-  double optim_atol; ///< Absolute gradient tolerance
-  double optim_rtol; ///< Relative gradient tolerance
-  double optim_ftol; ///< Final time cost tolerance
-  double optim_inftol; ///< Infidelity tolerance
+  double optim_tol_grad_abs; ///< Absolute gradient tolerance
+  double optim_tol_grad_rel; ///< Relative gradient tolerance
+  double optim_tol_finalcost; ///< Final time cost tolerance
+  double optim_tol_infidelity; ///< Infidelity tolerance
   size_t optim_maxiter; ///< Maximum iterations
-  double optim_regul; ///< Coefficient of Tikhonov regularization for the design variables
-  double optim_penalty; ///< First integral penalty coefficient
-  double optim_penalty_param; ///< Gaussian variance parameter
+  double optim_tikhonov_coeff; ///< Coefficient of Tikhonov regularization for the design variables
+  bool optim_tikhonov_use_x0; ///< Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
+  double optim_penalty_leakage; ///< Leakage penalty coefficient
+  double optim_penalty_weightedcost; ///< Weighted cost penalty coefficient
+  double optim_penalty_weightedcost_width; ///< Width parameter for weighted cost penalty
   double optim_penalty_dpdm; ///< Second derivative penalty coefficient
   double optim_penalty_energy; ///< Energy penalty coefficient
   double optim_penalty_variation; ///< Amplitude variation penalty coefficient
-  bool optim_regul_tik0; ///< Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
 
   // Output and runtypes
   std::string datadir; ///< Directory for output files
-  std::vector<std::vector<OutputType>> output_to_write; ///< Specify the desired output for each oscillator
-  size_t output_frequency; ///< Output frequency in the time domain: write output every <num> time-step
-  size_t optim_monitor_frequency; ///< Frequency of writing output during optimization iterations
+  std::vector<OutputType> output_type; ///< Specify the desired output types. 
+  size_t output_timestep_stride; ///< Output frequency in the time domain: write output every <num> time-step
+  size_t output_optimization_stride; ///< Frequency of writing output during optimization iterations
   RunType runtype; ///< Runtype options: simulation, gradient, or optimization
   bool usematfree; ///< Use matrix free solver, instead of sparse matrix implementation
   LinearSolverType linearsolver_type; ///< Solver type for solving the linear system at each time step
@@ -114,48 +138,42 @@ class Config {
   const std::vector<double>& getCrossKerr() const { return crosskerr; }
   const std::vector<double>& getJkl() const { return Jkl; }
   const std::vector<double>& getRotFreq() const { return rotfreq; }
-  LindbladType getCollapseType() const { return collapse_type; }
+  DecoherenceType getDecoherenceType() const { return decoherence_type; }
   const std::vector<double>& getDecayTime() const { return decay_time; }
   const std::vector<double>& getDephaseTime() const { return dephase_time; }
   size_t getNInitialConditions() const { return n_initial_conditions; }
-  const InitialCondition& getInitialCondition() const { return initial_condition; }
-  const std::vector<std::vector<PiPulseSegment>>& getApplyPiPulses() const { return apply_pipulse; }
-  const std::vector<PiPulseSegment>& getApplyPiPulse(size_t i_osc) const { return apply_pipulse[i_osc]; }
+  const InitialConditionSettings& getInitialCondition() const { return initial_condition; }
   const std::optional<std::string>& getHamiltonianFileHsys() const { return hamiltonian_file_Hsys; }
   const std::optional<std::string>& getHamiltonianFileHc() const { return hamiltonian_file_Hc; }
 
-  const std::vector<ControlSegment>& getControlSegments(size_t i_osc) const { return control_segments[i_osc]; }
+  const ControlParameterizationSettings& getControlParameterizations(size_t i_osc) const { return control_parameterizations[i_osc]; }
   bool getControlEnforceBC() const { return control_enforceBC; }
-  const std::vector<ControlSegmentInitialization>& getControlInitializations(size_t i_osc) const {
-    return control_initializations[i_osc];
+  const ControlInitializationSettings& getControlInitializations(size_t i_osc) const {
+    return control_initializations[i_osc]; 
   }
-  const std::optional<std::string> getControlInitializationFile() const { return control_initialization_file; }
-  const std::vector<double>& getControlBounds(size_t i_osc) const { return control_bounds[i_osc]; }
-  double getControlBound(size_t i_osc, size_t i_seg) const { return control_bounds[i_osc][i_seg]; }
+  double getControlBound(size_t i_osc) const { return control_bounds[i_osc]; }
   const std::vector<double>& getCarrierFrequencies(size_t i_osc) const { return carrier_frequencies[i_osc]; }
-  double getCarrierFrequency(size_t i_osc, size_t i_seg) const { return carrier_frequencies[i_osc][i_seg]; }
   const OptimTargetSettings& getOptimTarget() const { return optim_target; }
-  const std::vector<double>& getGateRotFreq() const { return gate_rot_freq; }
   ObjectiveType getOptimObjective() const { return optim_objective; }
   const std::vector<double>& getOptimWeights() const { return optim_weights; }
-  double getOptimAtol() const { return optim_atol; }
-  double getOptimRtol() const { return optim_rtol; }
-  double getOptimFtol() const { return optim_ftol; }
-  double getOptimInftol() const { return optim_inftol; }
+  double getOptimTolGradAbs() const { return optim_tol_grad_abs; }
+  double getOptimTolGradRel() const { return optim_tol_grad_rel; }
+  double getOptimTolFinalCost() const { return optim_tol_finalcost; }
+  double getOptimTolInfidelity() const { return optim_tol_infidelity; }
   size_t getOptimMaxiter() const { return optim_maxiter; }
-  double getOptimRegul() const { return optim_regul; }
-  double getOptimPenalty() const { return optim_penalty; }
-  double getOptimPenaltyParam() const { return optim_penalty_param; }
+  double getOptimTikhonovCoeff() const { return optim_tikhonov_coeff; }
+  bool getOptimTikhonovUseX0() const { return optim_tikhonov_use_x0; }
+  double getOptimPenaltyLeakage() const { return optim_penalty_leakage; }
+  double getOptimPenaltyWeightedCost() const { return optim_penalty_weightedcost; }
+  double getOptimPenaltyWeightedCostWidth() const { return optim_penalty_weightedcost_width; }
   double getOptimPenaltyDpdm() const { return optim_penalty_dpdm; }
   double getOptimPenaltyEnergy() const { return optim_penalty_energy; }
   double getOptimPenaltyVariation() const { return optim_penalty_variation; }
-  bool getOptimRegulTik0() const { return optim_regul_tik0; }
 
   const std::string& getDataDir() const { return datadir; }
-  const std::vector<std::vector<OutputType>>& getOutput() const { return output_to_write; }
-  const std::vector<OutputType>& getOutput(size_t i) const { return output_to_write[i]; }
-  size_t getOutputFrequency() const { return output_frequency; }
-  size_t getOptimMonitorFrequency() const { return optim_monitor_frequency; }
+  const std::vector<OutputType>& getOutputType() const { return output_type; }
+  size_t getOutputTimestepStride() const { return output_timestep_stride; }
+  size_t getOutputOptimizationStride() const { return output_optimization_stride; }
   RunType getRuntype() const { return runtype; }
   bool getUseMatFree() const { return usematfree; }
   LinearSolverType getLinearSolverType() const { return linearsolver_type; }
@@ -167,51 +185,40 @@ class Config {
   void finalize();
   void validate() const;
 
-  size_t computeNumInitialConditions() const;
+  size_t computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, DecoherenceType decoherence_type) const;
+  
   void setRandSeed(int rand_seed_);
 
   // Table validation helper
-  void validateTableKeys(const toml::table& table, const std::set<std::string>& allowed_keys,
-                         const std::string& table_name) const;
+  void validateTableKeys(const toml::table& table, const std::set<std::string>& allowed_keys, const std::string& table_name) const;
 
-  // Conversion helper methods
-  template <typename T>
-  std::vector<std::vector<T>> parseOscillatorSettings(const toml::array& array_of_tables, size_t num_entries,
-                                                      std::vector<T> default_values, const std::string& field_name,
-                                                      const std::set<std::string>& allowed_keys,
-                                                      const std::string& table_name) const;
+  // Helper function to parse coupling parameters from table
+  double parseCouplingParameterSpecs(const toml::table& table, const std::string& key) const;
 
-  InitialCondition parseInitialCondition(std::optional<InitialConditionType> opt_type,
-                                         const std::optional<std::string>& filename,
-                                         const std::optional<std::vector<size_t>>& levels,
-                                         const std::optional<std::vector<size_t>>& osc_IDs) const;
+  // Helper function to parse a single control parameterization table
+  ControlParameterizationSettings parseControlParameterizationSpecs(const toml::table& param_table) const;
 
-  void addPiPulseSegment(std::vector<std::vector<PiPulseSegment>>& apply_pipulse, size_t oscilID, double tstart,
-                         double tstop, double amp) const;
+  // Helper function to parse a single control initialization table 
+  ControlInitializationSettings parseControlInitializationSpecs(const toml::table& table) const;
+  
+  // Helper function to parse a single carrier frequency table
+  std::vector<double> parseCarrierFrequencySpecs(const toml::table& table) const;
+  
+  /**
+   * @brief Parses optimization target settings from TOML table
+   * 
+   * @param table TOML table containing the configuration
+   * @param num_osc Number of oscillators
+   * @return Parsed optimization target settings
+   */
+  OptimTargetSettings parseOptimTarget(const toml::table& table, size_t num_osc) const;
 
-  ControlSegment parseControlSegment(const toml::table& table) const;
-  std::vector<std::vector<ControlSegment>> parseControlSegments(const toml::array& array_of_tables,
-                                                                size_t num_entries) const;
-
-  std::vector<std::vector<ControlSegmentInitialization>> parseControlInitializations(
-      const toml::array& array_of_tables, size_t num_entries, std::optional<std::string>& control_init_file) const;
-
-  OptimTargetSettings parseOptimTarget(TargetType type, const std::optional<GateType>& gate_type,
-                                       const std::optional<std::string>& gate_file,
-                                       const std::optional<std::vector<size_t>>& levels,
-                                       const std::optional<std::string>& file) const;
-
-  std::vector<double> parseOptimWeights(const std::optional<std::vector<double>>& optim_weights_) const;
 
   // TODO cfg: delete these when .cfg format is removed.
   template <typename T>
-  std::vector<std::vector<T>> parseOscillatorSettingsCfg(const std::optional<std::map<int, std::vector<T>>>& indexed,
-                                                         size_t num_entries,
-                                                         const std::vector<T>& default_values = {}) const;
+  std::vector<std::vector<T>> parseOscillatorSettingsCfg(const std::optional<std::map<int, std::vector<T>>>& indexed, size_t num_entries, const std::vector<T>& default_values = {}) const;
 
-  std::vector<std::vector<ControlSegment>> parseControlSegmentsCfg(
-      const std::optional<std::map<int, std::vector<ControlSegmentData>>>& segments_opt) const;
-  ControlSegment parseControlSegmentCfg(const ControlSegmentData& seg_config) const;
-  std::vector<std::vector<ControlSegmentInitialization>> parseControlInitializationsCfg(
-      const std::optional<std::map<int, std::vector<ControlInitializationData>>>& init_configs) const;
+  std::vector<ControlParameterizationSettings> parseControlParameterizationsCfg(const std::optional<std::map<int, ControlParameterizationData>>& parameterizations_map) const;
+
+  std::vector<ControlInitializationSettings> parseControlInitializationsCfg(const std::optional<std::map<int, ControlInitializationSettings>>& init_configs) const;
 };

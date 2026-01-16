@@ -101,7 +101,7 @@ Using trigonometric identities, the real and imaginary part of the rotating-fram
 where $B^{(1)}(t) = \sum_{s=1}^{N_s^k} \alpha^{k(1)}_{s,f} B_s(t)$ and $B^{(2)}(t) = \sum_{s=1}^{N_s^k} \alpha^{k(2)}_{s,f} B_s(t)$ evaluate the splines using the control coefficients $\alpha_{f,s}^{k(1)}, \alpha_{f,s}^{k(2)}\in \R$. 
 By default, the basis functions are piecewise quadratic B-spline polynomials with compact support, centered on an equally spaced grid in time. To instead use a piecewise constant (0th order) Bspline basis, see Section [0-th order Bspline basis functions](#sec:bspline-0).
 
-The control parameter vector $\boldsymbol{\alpha} = (\alpha_{f,s}^{k(i)})$ (*design* variables) can be either specified (e.g. a constant pulse, a pi-pulse, or pulses whose parameters are read from a given file), or can be optimized for in order to realize a desired system behavior (Section [The Optimal Control Problem](#sec:optim)).  
+The control parameter vector $\boldsymbol{\alpha} = (\alpha_{f,s}^{k(i)})$ (*design* variables) can be either specified or can be optimized for in order to realize a desired system behavior (Section [The Optimal Control Problem](#sec:optim)).  
 
 ### Carrier wave frequencies
 The rotating-frame carrier wave frequencies $\Omega^k_f \in \R$ should be chosen to trigger intrinsic system resonance frequencies. For example, when $\xi_{kl} << \xi_k$, the intrinsic qubit transition frequencies are $\omega_k - n\xi_k$. Thus by choosing $\Omega^k_f = \omega_k-\omega_k^r - n \xi_k$ in the rotating frame, one triggers transition between energy levels $n$ and $n+1$ in subsystem $k$. Choosing effective carrier wave frequencies is quite important for optimization performance, particulary when qubit interactions are desired, such as when optimizing for a CNOT gate. Using the python interface for Quandary, the carrier wave frequencies $\Omega^k_f$ are automatically computed based on an eigenvalue decomposition of the system Hamiltonian. For the C++ code, it is recommended to follow [@petersson2021optimal] for details on how to choose them effectively.  
@@ -167,10 +167,9 @@ Further note that this fidelity is averaged over the chosen initial conditions, 
 ### Gate optimization
 Quandary can be used to design control pulses that realize logical gate operations. Let $V\in \C^{N\times N}$ be the unitary matrix (gate), optimized control pulses drive any initial state $\rho(0)$ to the unitary transformation $\rho^{target} = V\rho(0)V^{\dagger}$ (Lindblad), or, in the Schroedinger case, drive any $\psi(0)$ to $\psi(T) =  V\psi(0)$.
 Some default target gates that are readily available, or can be specified from file or through the Python interface. (File format: column-wise vectorization, first all real parts then all imaginary parts.)
+Optionally, the user can specify frequencies to rotate the target gate, using the configuration option `gate_rot_freq`.
 
 Since *any* initial quantum state should be transformed by the control pulses, the corresponding initial conditions must span a basis with $n_{init} = N$ for Schroedinger solver, and $n_{init}=N^2$ for Lindblad solver, see Section [Initial conditions](#sec:initcond). 
-
-Target gates will by default be rotated into the computational frame (Section [Model equation](#sec:model)). Alternatively, the user can specify the rotation of the target gate through the configuration option `gate_rot_freq`.
 
 
 If guard levels are used ($n_k > n_k^e$, compare Section [Essential and guard levels](#sec:essential)), the gate should be defined in the essential-level dimensions only. Internally, the gate is projected upwards to the full dimensions by inserting identity blocks for rows/columns that correspond to a non-essential levels of the subsystems. Hence, a realization of the gate $\tilde{V}$ will not alter the occupation of higher (non-essential) energy level compared to their initial occupation at $t=0$.
@@ -178,8 +177,7 @@ If guard levels are used ($n_k > n_k^e$, compare Section [Essential and guard le
 ### State preparation {#sec:stateprep}
 Quandary can be used to optimize for pulses that drive (one or multiple) initial states to a fixed target state $\rho^{target}$. Depending on the choice of the [Initial conditions](#sec:initcond), this enables pulses for either direct **state-to-state transfer** (by choosing one specific initial condition, $n_{init}=1$), and one specific target state), or **unconditional state preparation** such as qubit reset (by spanning a basis of initial conditions, $n_{init}=N$ or $N^2, and one specific target state). Driving a basis of initial state to a common target will require to couple to a dissipative bath, which should be accounted for in the model setup. For unconditional *pure*-state preparation, it is shown in [@guenther2021quantum] that if one chooses the objective function $J_{measure}$ with corresponding measurement operator $N_m$ (see eq. $\eqref{eq:Jmeasure}$), one can reduce the number of initial conditions to only *one* being an ensemble of all basis states, and hence $n_{init}=1$ independent of $N$. Compare [@guenther2021quantum] for details.
 
-If the target state is *pure*, internal computations are simplified and it is recommended to pass the specific identifier ``pure, i0, i1, i2, ...`` to the Quandary configuration for the optimization target, denoting a pure target state of the form $\psi = |i_0i_1i_2...\rangle$, or $\rho = \psi\psi^\dagger$
-
+A desired target state can either be read from file (format vectorized target state in the essential dimensions, first all real parts, then all imaginary parts), or it can be set to a pure product state of the form $\psi_{target} = |i_0, i_1, i_2, ...\rangle$, or $\rho_{target} = \psi_{target}\psi_{target}^\dagger$.
 
 ## Initial conditions {#sec:initcond}
 The initial states $\rho_i(0)$ which are accounted for in the objective function eq. $\eqref{eq:minproblem}$ can be specified with the configuration option `initialcondition`. 
@@ -208,9 +206,9 @@ The three initial states from above do not suffice to estimate the fidelity of t
 <br>
 Note: The $N+1$ initial states are spanned in the *full* dimension of the system, including non-essential levels, see above for 3-state initialization.
 
-* **Pure initial state for state-to-state transfer**: $n_{init} = 1$. The user can choose a pure initial state of the form $\psi(0) = |i_0, i_1, i_2, ...\rangle$, or $\rho(0) = \psi(0)\psi(0)^\dagger$, through the configuration option ``pure, i0, i1, i2, ...``
+* **Pure initial product state for state-to-state transfer**: $n_{init} = 1$. The user can choose a pure initial product state of the form $\psi(0) = |i_0, i_1, i_2, ...\rangle$, or $\rho(0) = \psi(0)\psi(0)^\dagger$.
 
-* **Arbitrary initial state for state-to-state transformation**: $n_{init}=1$. An arbitrary (non-pure) initial state can be passed to Quandary directly through the Python interface, or can be read from a file in the C++ code. File format: column-wise vectorized density matrix or the state vector, first all real parts, then all imaginary parts. 
+* **Arbitrary initial state for state-to-state transformation**: $n_{init}=1$. An arbitrary initial state can be passed to Quandary directly through the Python interface, or can be read from a file in the C++ code. File format: column-wise vectorized density matrix or the state vector, first all real parts, then all imaginary parts. 
 
 * **Ensemble state for unconditional pure-state preparation**: $n_{init}=1$. *Only valid for Lindblad's solver.* When choosing the objective function $J_{measure}$ $\eqref{eq:Jmeasure}$, one can use the ensemble state $\rho_s(0) = \frac{1}{N^2}\sum_{i,j=0}^{N-1} B^{kj}$ as the only initial condition for optimizing for pulses that realize unconditional pure-state preparation, compare [@guenther2021quantum]). To specify the ensemble state in Quandary (C++), one can provide a list of consecutive integer ID's that determine in which of the subsystems the ensemble state should be spanned. Other subsystems will be initialized in the ground state.
 <br>
@@ -227,13 +225,14 @@ In order to regularize the optimization problem (stabilize optimization converge
 In addition, the following penalty terms can be added to the objective function, if desired:
 
 \begin{align*}
-  Penalty &= \frac{\gamma_2}{T} \int_0^T P\left(\{\rho_i(t)\}\right) \, \mathrm{d} t   \hspace{3cm} \rightarrow \text{Leakage prevention}\\
-         &+  \frac{\gamma_3}{T} \int_0^T \, \| \partial_{tt} \mbox{Pop}(\rho_i(t)) \|^2 \mathrm{d}t \hspace{2cm} \rightarrow \text{State variation penalty} \\
-        &+\frac{\gamma_4}{T} \int_0^T \, \sum_k |d^k(\alpha^k,t)|^2\, dt  \hspace{2cm}\rightarrow  \text{Control energy penalty}\\
-        &+ \frac{\gamma_5}{2} Var(\vec{\alpha}) \hspace{4cm}\rightarrow  \text{Control variation penalty}
+  Penalty &= \frac{\gamma_2}{T} \int_0^T \mbox{Leakage}\left(\rho(t)\right) \, \mathrm{d} t   \hspace{3.5cm} \rightarrow \text{Leakage prevention}\\
+         &+  \frac{\gamma_3}{T} \int_0^T \, \| \partial_{tt} \mbox{Pop}(\rho(t)) \|^2 \mathrm{d}t \hspace{3.2cm} \rightarrow \text{State variation penalty} \\
+        &+\frac{\gamma_4}{T} \int_0^T \, \sum_k |p^k(\alpha^k,t)|^2 + |q^k(\alpha^k,t)|^2\, dt  \hspace{0.7cm}\rightarrow  \text{Control energy penalty}\\
+        &+ \frac{\gamma_5}{2} Var(\vec{\alpha}) \hspace{6.2cm}\rightarrow  \text{Control variation penalty}\\
+        &+\frac{\gamma_6}{T} \int_0^T \, w(t)J(t)\, dt  \hspace{4.5cm}\rightarrow  \text{Weighted running cost penalty}\\
 \end{align*}
 
-* **Leakage prevention:** Choose a small $\gamma_2 > 0$ to penalize (suppress) leakage into non-essential energy levels (if $n_k^e < n_k$ for at least $k$, compare Sec. [Essential and non-essential energy levels](#sec:essential)). This term penalizes the occupation of all *guard levels* with $P(\rho(t)) = \sum_{r} \| \rho(t)_{rr} \|^2_2$, where $r$ iterates over all indices that correspond to a guard level (i.e., the final (highest) non-essential energy level) of at least one of the subsystems, and $\rho(t)_{rr}$ denotes their corresponding population.
+* **Leakage prevention:** Choose a small $\gamma_2 > 0$ to penalize (suppress) leakage into non-essential energy levels (if $n_k^e < n_k$ for at least $k$, compare Sec. [Essential and non-essential energy levels](#sec:essential)). This term penalizes the occupation of all *guard levels* with $\mbox{Leakage}(\rho(t)) = \sum_{r} \| \rho(t)_{rr} \|^2_2$, where $r$ iterates over all indices that correspond to a guard level (i.e., the final (highest) non-essential energy level) of at least one of the subsystems.
 
 * **State variation penalty**: Choose a small $\gamma_3 > 0$ to encourage state evolutions whose populations vary slowly in time by penalizing the second derivative of the populations of the state.
 
@@ -242,17 +241,10 @@ In addition, the following penalty terms can be added to the objective function,
 * **Control variation penalty**: Choose a small $\gamma_5>0$ to penalize variations in control strength between consecutive B-spline coefficients. It is currently only implemented for piecewise zeroth order spline functions, see Section [Zeroth order B-spline basis functions](#sec:bspline-0), where it is useful to prevent noisy control pulses. Referring to the control function representation in $\eqref{eq:spline-ctrl}$, this penalty function takes the form:
 $Var(\vec{\alpha}) = \sum_{k=1}^Q Var_k(\vec{\alpha})$ with $Var_k(\vec{\alpha}) = \sum_{f,s}|\alpha_{s,f}^k - \alpha_{s-1,f}^k|^2$.
 
+* **Weighted running cost penalty**: Choose a small $\gamma_6>0$ to penalize a weighted objective function throughout the time domain. The weight is a gaussian centered at final time $T$: $w(t) =
+  \frac{1}{a} e^{ -\left(\frac{t-T}{a} \right)^2}$ for a width parameter $0 \leq a \leq 1$. Note, that as $a\to 0$, the weighting function $w(t)$ converges to the Dirac delta distribution with peak at final time $T$, hence reducing $a$ leads to more emphasis on the final time $T$ while larger $a$ penalize the objective function at earlier times $t\leq T$.
 
 Note: All regularization and penalty coefficients $\gamma_i$ should be chosen small enough so that they do not dominate the final-time objective function $J$. This might require some fine-tuning. It is recommended to always add $\gamma_1>0$, e.g. $\gamma_1 = 10^{-4}$, and add other penalties only if needed.
-
-<!--
-Achieving a target at EARLIER time-steps:
-\begin{align}\label{eq:penaltyterm}
-  P(\rho(t))  =  w(t) J\left(\rho(t)\right) \quad \text{where} \quad w(t) =
-  \frac{1}{a} e^{ -\left(\frac{t-T}{a} \right)^2},
-\end{align}
-for a penalty parameter $0 \leq a \leq 1$. Note, that as $a\to 0$, the weighting function $w(t)$ converges to the Dirac delta distribution with peak at final time $T$, hence reducing $a$ leads to more emphasis on the final time $T$ while larger $a$ penalize non-zero energy states at earlier times $t\leq T$.
--->
 
 ## Optimization algorithm
 Quandary utilized Petsc's Toolkit for Advanced Optimization (TAO) package to solve the optimal control problem. In the current setup, Quasi-Newton updates are applied to the control parameters using L-BFGS Hessian approximations. A projected line-search is used to incorporate box constraints for control pulse amplitude bounds $|p^k(t)| \leq c^k_{max}$, $|q^k(t)| \leq c^k_{max}$ via

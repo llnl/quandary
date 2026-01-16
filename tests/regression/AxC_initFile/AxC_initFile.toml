@@ -3,78 +3,37 @@ ntime = 100
 dt = 0.0001
 transfreq = [4416.66, 6840.815]
 selfkerr = [230.56, 0.0]
-crosskerr = [1.176]
-Jkl = [0.0]
+crosskerr = 1.176000 
 rotfreq = [4416.66, 6840.815]
-collapse_type = "both"
-decay_time = [80.0, 0.3892042]
-dephase_time = [26.0, 5.0]
+decoherence = { type = "both", decay_time = [80.0, 0.3892042], dephase_time = [26.0, 5.0] }
 initial_condition = {type = "file", filename = "./alice_sumbasis.dat"}
 
 control_enforceBC = true
-optim_target = {target_type = "pure", levels = [0, 0]}
+optim_target = {type = "state", levels = [0, 0]}
 optim_objective = "Jmeasure"
 optim_weights = [1.0]
-optim_ftol = 1e-05
-optim_inftol = 1e-05
-optim_atol = 1e-07
-optim_rtol = 1e-08
+optim_tolerance = { grad_abs = 1e-07, grad_rel = 1e-08, final_cost = 1e-05, infidelity = 1e-05 }
 optim_maxiter = 200
-optim_regul = 1e-05
-optim_penalty = 1.0
-optim_penalty_param = 0.5
-optim_penalty_dpdm = 0.0
-optim_penalty_energy = 0.1
+optim_tikhonov = { coeff = 1e-05, use_x0 = false }
+optim_penalty = { leakage = 1.0, weightedcost = 1.0, weightedcost_width = 0.5, dpdm = 0.0, energy = 0.1, variation = 0.0 }
 
 datadir = "data_out"
-output_frequency = 100
-optim_monitor_frequency = 1
+output_timestep_stride = 100
+output_type = ["fullstate"]
+output_optimization_stride = 1
 runtype = "simulation"
 usematfree = true
-linearsolver_type = "gmres"
-linearsolver_maxiter = 20
+linearsolver = { type = "gmres", maxiter = 20 }
 rand_seed = 1234
+control_initialization = [
+  { subsystem = 0, type = "constant", amplitude = 5.0 },
+  { subsystem = 1, type = "constant", amplitude = 1.0 }
+]
 
-[[control_segments]]
-oscID = 0
-type = "spline"
-num = 75
+control_parameterization = { type = "spline", num = 75 }
 
-[[control_segments]]
-oscID = 1
-type = "spline"
-num = 75
-
-[[control_bounds]]
-oscID = 0
-values = [25.0]
-
-[[control_bounds]]
-oscID = 1
-values = [100.0]
-
-[[control_initialization]]
-oscID = 0
-type = "constant"
-amplitude = 5.0
-
-[[control_initialization]]
-oscID = 1
-type = "constant"
-amplitude = 1.0
-
-[[carrier_frequency]]
-oscID = 0
-values = [0.0, -230.56, 1.176]
-
-[[carrier_frequency]]
-oscID = 1
-values = [0.0, 1.176]
-
-[[write]]
-oscID = 0
-type = ["fullstate"]
-
-[[write]]
-oscID = 1
-type = ["fullstate"]
+carrier_frequency = [
+  { subsystem = 0, value = [0.0, -230.56, 1.176] },
+  { subsystem = 1, value = [0.0, 1.176] }
+]
+control_bounds = [25.0, 100.0]

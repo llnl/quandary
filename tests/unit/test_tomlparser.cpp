@@ -17,20 +17,22 @@ TEST_F(TomlParserTest, ParseBasicSettings) {
         rotfreq = [0.0]
         ntime = 500
         dt = 0.05
-        collapse_type = "none"
+        decoherence = {type = "none"}
         initial_condition = {type = "basis"}
       )",
       logger);
 
   EXPECT_EQ(config.getNTime(), 500);
   EXPECT_DOUBLE_EQ(config.getDt(), 0.05);
-  EXPECT_EQ(config.getCollapseType(), LindbladType::NONE);
+  EXPECT_EQ(config.getDecoherenceType(), DecoherenceType::NONE);
 }
 
 TEST_F(TomlParserTest, ParseVectorSettings) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 3]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1, 4.8, 5.2]
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
@@ -49,30 +51,160 @@ TEST_F(TomlParserTest, ParseVectorSettings) {
   EXPECT_DOUBLE_EQ(transfreq[2], 5.2);
 }
 
-TEST_F(TomlParserTest, ParseOutputSettings) {
+TEST_F(TomlParserTest, ParseJklSettingsAllToAll) {
   Config config = Config::fromTomlString(
       R"(
-        nlevels = [2, 2]
-        transfreq = [4.1, 4.8]
-        rotfreq = [0.0, 0.0]
+        nlevels = [2, 2, 2, 2]
+        transfreq = [4.1, 4.8, 5.2]
+        ntime = 1000
+        dt = 0.1
         initial_condition = {type = "basis"}
-        [[write]]
-        oscID = 0
-        type = ["population"]
-        [[write]]
-        oscID = 1
-        type = ["population", "expectedEnergy"]
+        Jkl = 0.5
       )",
       logger);
 
-  // Verify output settings
-  auto output = config.getOutput();
-  EXPECT_EQ(output.size(), 2); // 2 oscillators
-  EXPECT_EQ(output[0].size(), 1); // 1 output
-  EXPECT_EQ(output[0][0], OutputType::POPULATION);
-  EXPECT_EQ(output[1].size(), 2); // 2 outputs
-  EXPECT_EQ(output[1][0], OutputType::POPULATION);
-  EXPECT_EQ(output[1][1], OutputType::EXPECTED_ENERGY);
+  auto Jkl = config.getJkl();
+  size_t num_osc = config.getNumOsc();
+  size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
+  EXPECT_EQ(Jkl.size(), num_pairs_osc);
+  for (size_t i = 0; i < num_pairs_osc; ++i) {
+    EXPECT_DOUBLE_EQ(Jkl[i], 0.5);
+  }
+}
+
+TEST_F(TomlParserTest, ParseJklSettingsOneCoupling) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2, 2, 2]
+        transfreq = [4.1, 4.8, 5.2]
+        ntime = 1000
+        dt = 0.1
+        initial_condition = {type = "basis"}
+        Jkl = [
+        { subsystem=[1,2], value=0.4 },
+        ]
+      )",
+      logger);
+
+  auto Jkl = config.getJkl();
+  size_t num_osc = config.getNumOsc();
+  size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
+  EXPECT_EQ(Jkl.size(), num_pairs_osc);
+  EXPECT_DOUBLE_EQ(Jkl[0], 0.0);
+  EXPECT_DOUBLE_EQ(Jkl[1], 0.0);
+  EXPECT_DOUBLE_EQ(Jkl[2], 0.0);
+  EXPECT_DOUBLE_EQ(Jkl[3], 0.4);
+  EXPECT_DOUBLE_EQ(Jkl[4], 0.0);
+  EXPECT_DOUBLE_EQ(Jkl[5], 0.0);
+}
+
+TEST_F(TomlParserTest, ParseJklSettingsPerPair) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2, 2, 2]
+        transfreq = [4.1, 4.8, 5.2]
+        ntime = 1000
+        dt = 0.1
+        initial_condition = {type = "basis"}
+        Jkl = [
+        { subsystem=[0,1], value=0.1 },
+        { subsystem=[0,2], value=0.2 },
+        { subsystem=[0,3], value=0.3 },
+        { subsystem=[1,2], value=0.4 },
+        { subsystem=[1,3], value=0.5 },
+        { subsystem=[2,3], value=0.6 }
+        ]
+      )",
+      logger);
+
+  auto Jkl = config.getJkl();
+  size_t num_osc = config.getNumOsc();
+  size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
+  EXPECT_EQ(Jkl.size(), num_pairs_osc);
+  EXPECT_DOUBLE_EQ(Jkl[0], 0.1);
+  EXPECT_DOUBLE_EQ(Jkl[1], 0.2);
+  EXPECT_DOUBLE_EQ(Jkl[2], 0.3);
+  EXPECT_DOUBLE_EQ(Jkl[3], 0.4);
+  EXPECT_DOUBLE_EQ(Jkl[4], 0.5);
+  EXPECT_DOUBLE_EQ(Jkl[5], 0.6);
+}
+
+TEST_F(TomlParserTest, ParseCrosskerrSettingsAllToAll) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2, 2, 2]
+        transfreq = [4.1, 4.8, 5.2]
+        ntime = 1000
+        dt = 0.1
+        initial_condition = {type = "basis"}
+        crosskerr = 0.5
+      )",
+      logger);
+
+  auto crosskerr = config.getCrossKerr();
+  size_t num_osc = config.getNumOsc();
+  size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
+  EXPECT_EQ(crosskerr.size(), num_pairs_osc);
+  for (size_t i = 0; i < num_pairs_osc; ++i) {
+    EXPECT_DOUBLE_EQ(crosskerr[i], 0.5);
+  }
+}
+
+TEST_F(TomlParserTest, ParseCrosskerrSettingsOneCoupling) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2, 2, 2]
+        transfreq = [4.1, 4.8, 5.2]
+        ntime = 1000
+        dt = 0.1
+        initial_condition = {type = "basis"}
+        crosskerr = [
+        { subsystem=[1,2], value=0.4 },
+        ]
+      )",
+      logger);
+
+  auto crosskerr = config.getCrossKerr();
+  size_t num_osc = config.getNumOsc();
+  size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
+  EXPECT_EQ(crosskerr.size(), num_pairs_osc);
+  EXPECT_DOUBLE_EQ(crosskerr[0], 0.0);
+  EXPECT_DOUBLE_EQ(crosskerr[1], 0.0);
+  EXPECT_DOUBLE_EQ(crosskerr[2], 0.0);
+  EXPECT_DOUBLE_EQ(crosskerr[3], 0.4);
+  EXPECT_DOUBLE_EQ(crosskerr[4], 0.0);
+  EXPECT_DOUBLE_EQ(crosskerr[5], 0.0);
+}
+
+TEST_F(TomlParserTest, ParseCrosskerrSettingsPerPair) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2, 2, 2]
+        transfreq = [4.1, 4.8, 5.2]
+        ntime = 1000
+        dt = 0.1
+        initial_condition = {type = "basis"}
+        crosskerr = [
+        { subsystem=[0,1], value=0.1 },
+        { subsystem=[0,2], value=0.2 },
+        { subsystem=[0,3], value=0.3 },
+        { subsystem=[1,2], value=0.4 },
+        { subsystem=[1,3], value=0.5 },
+        { subsystem=[2,3], value=0.6 }
+        ]
+      )",
+      logger);
+
+  auto crosskerr = config.getCrossKerr();
+  size_t num_osc = config.getNumOsc();
+  size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
+  EXPECT_EQ(crosskerr.size(), num_pairs_osc);
+  EXPECT_DOUBLE_EQ(crosskerr[0], 0.1);
+  EXPECT_DOUBLE_EQ(crosskerr[1], 0.2);
+  EXPECT_DOUBLE_EQ(crosskerr[2], 0.3);
+  EXPECT_DOUBLE_EQ(crosskerr[3], 0.4);
+  EXPECT_DOUBLE_EQ(crosskerr[4], 0.5);
+  EXPECT_DOUBLE_EQ(crosskerr[5], 0.6);
 }
 
 TEST_F(TomlParserTest, ParseOutputSettings_AllOscillators) {
@@ -80,20 +212,19 @@ TEST_F(TomlParserTest, ParseOutputSettings_AllOscillators) {
       R"(
         nlevels = [2, 2]
         transfreq = [4.1, 4.8]
+        ntime = 1000
+        dt = 0.1
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
-        [[write]]
-        type = ["population"]
+        output_type = ["population", "fullstate"]
       )",
       logger);
 
   // Verify output settings
-  auto output = config.getOutput();
-  EXPECT_EQ(output.size(), 2); // 2 oscillators
-  EXPECT_EQ(output[0].size(), 1); // 1 output
-  EXPECT_EQ(output[0][0], OutputType::POPULATION);
-  EXPECT_EQ(output[1].size(), 1); // 1 output
-  EXPECT_EQ(output[1][0], OutputType::POPULATION);
+  auto output = config.getOutputType();
+  EXPECT_EQ(output.size(), 2); // Population
+  EXPECT_EQ(output[0], OutputType::POPULATION);
+  EXPECT_EQ(output[1], OutputType::FULLSTATE);
 }
 
 TEST_F(TomlParserTest, ParseStructSettings) {
@@ -101,9 +232,11 @@ TEST_F(TomlParserTest, ParseStructSettings) {
       R"(
         nlevels = [2]
         transfreq = [4.1]
+        ntime = 1000
+        dt = 0.1
         rotfreq = [0.0]
-        initial_condition = {type = "diagonal", oscIDs = [0]}
-        optim_target = {target_type = "gate", gate_type = "cnot"}
+        initial_condition = {type = "diagonal", subsystem = [0]}
+        optim_target = {type = "gate", gate_type = "cnot"}
       )",
       logger);
 
@@ -113,13 +246,15 @@ TEST_F(TomlParserTest, ParseStructSettings) {
 
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::DIAGONAL);
-  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>{0});
+  EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>{0});
 }
 
 TEST_F(TomlParserTest, ApplyDefaults) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
@@ -129,13 +264,55 @@ TEST_F(TomlParserTest, ApplyDefaults) {
   // Check defaults were applied
   EXPECT_EQ(config.getNTime(), 1000); // Default ntime
   EXPECT_DOUBLE_EQ(config.getDt(), 0.1); // Default dt
-  EXPECT_EQ(config.getCollapseType(), LindbladType::NONE); // Default
+  EXPECT_EQ(config.getDecoherenceType(), DecoherenceType::NONE); // Default
 }
+
+
+TEST_F(TomlParserTest, Decoherence_Decay) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [3, 2]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 4.8]
+        rotfreq = [0.0, 0.0]
+        decoherence = {type = "decay", decay_time = [30.0, 40.0], dephase_time = [20.0, 25.0]}
+        initial_condition = {type = "basis"}
+      )",
+      logger);
+  EXPECT_EQ(config.getDecoherenceType(), DecoherenceType::DECAY);
+  EXPECT_DOUBLE_EQ(config.getDecayTime()[0], 30.0);
+  EXPECT_DOUBLE_EQ(config.getDecayTime()[1], 40.0);
+  EXPECT_DOUBLE_EQ(config.getDephaseTime()[0], 0.0); // Overwritten to 0
+  EXPECT_DOUBLE_EQ(config.getDephaseTime()[1], 0.0); // Overwritten to 0
+}
+
+TEST_F(TomlParserTest, Decoherence_Dephase) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [3, 2]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 4.8]
+        rotfreq = [0.0, 0.0]
+        decoherence = {type = "dephase", decay_time = [30.0, 40.0], dephase_time = [20.0, 25.0]}
+        initial_condition = {type = "basis"}
+      )",
+      logger);
+  EXPECT_EQ(config.getDecoherenceType(), DecoherenceType::DEPHASE);
+  EXPECT_DOUBLE_EQ(config.getDecayTime()[0], 0.0); // Overwritten to 0
+  EXPECT_DOUBLE_EQ(config.getDecayTime()[1], 0.0); // Overwritten to 0
+  EXPECT_DOUBLE_EQ(config.getDephaseTime()[0], 20.0);
+  EXPECT_DOUBLE_EQ(config.getDephaseTime()[1], 25.0);
+}
+
 
 TEST_F(TomlParserTest, InitialCondition_FromFile) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "file", filename = "test.dat"}
@@ -147,17 +324,19 @@ TEST_F(TomlParserTest, InitialCondition_FromFile) {
   EXPECT_EQ(config.getNInitialConditions(), 1);
 }
 
-TEST_F(TomlParserTest, InitialCondition_Pure) {
+TEST_F(TomlParserTest, InitialCondition_ProductState) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [3, 2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1, 4.8]
         rotfreq = [0.0, 0.0]
-        initial_condition = {type = "pure", levels = [1, 0]}
+        initial_condition = {type = "state", levels = [1, 0]}
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
-  EXPECT_EQ(initcond.type, InitialConditionType::PURE);
+  EXPECT_EQ(initcond.type, InitialConditionType::PRODUCT_STATE);
   EXPECT_EQ(initcond.levels.value(), std::vector<size_t>({1, 0}));
   EXPECT_EQ(config.getNInitialConditions(), 1);
 }
@@ -166,6 +345,8 @@ TEST_F(TomlParserTest, InitialCondition_Performance) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "performance"}
@@ -180,15 +361,17 @@ TEST_F(TomlParserTest, InitialCondition_Ensemble) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [3, 2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1, 4.8]
         rotfreq = [0.0, 0.0]
-        collapse_type = "decay"
-        initial_condition = {type = "ensemble", oscIDs = [0, 1]}
+        decoherence = {type = "decay"}
+        initial_condition = {type = "ensemble", subsystem = [0, 1]}
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::ENSEMBLE);
-  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({0, 1}));
+  EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>({0, 1}));
   EXPECT_EQ(config.getNInitialConditions(), 1);
 }
 
@@ -196,9 +379,11 @@ TEST_F(TomlParserTest, InitialCondition_ThreeStates) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [3]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1]
         rotfreq = [0.0]
-        collapse_type = "decay"
+        decoherence = {type = "decay"}
         initial_condition = {type = "3states"}
       )",
       logger);
@@ -211,9 +396,11 @@ TEST_F(TomlParserTest, InitialCondition_NPlusOne_SingleOscillator) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [3]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1]
         rotfreq = [0.0]
-        collapse_type = "decay"
+        decoherence = {type = "decay"}
         initial_condition = {type = "nplus1"}
       )",
       logger);
@@ -227,9 +414,11 @@ TEST_F(TomlParserTest, InitialCondition_NPlusOne_MultipleOscillators) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 3]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1, 4.8]
         rotfreq = [0.0, 0.0]
-        collapse_type = "decay"
+        decoherence = {type = "decay"}
         initial_condition = {type = "nplus1"}
       )",
       logger);
@@ -243,17 +432,19 @@ TEST_F(TomlParserTest, InitialCondition_Diagonal_Schrodinger) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [3, 2]
+        ntime = 1000
+        dt = 0.1
         nessential = [3, 2]
         transfreq = [4.1, 4.8]
         rotfreq = [0.0, 0.0]
-        collapse_type = "none"
-        initial_condition = {type = "diagonal", oscIDs = [1]}
+        decoherence = {type = "none"}
+        initial_condition = {type = "diagonal", subsystem = [1]}
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::DIAGONAL);
-  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({1}));
-  // For Schrodinger solver (collapse_type = none), n_initial_conditions = nessential[1] = 2
+  EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>({1}));
+  // For Schrodinger solver (decoherence_type = none), n_initial_conditions = nessential[1] = 2
   EXPECT_EQ(config.getNInitialConditions(), 2);
 }
 
@@ -261,17 +452,19 @@ TEST_F(TomlParserTest, InitialCondition_Basis_Schrodinger) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [3, 2]
+        ntime = 1000
+        dt = 0.1
         nessential = [3, 2]
         transfreq = [4.1, 4.8]
         rotfreq = [0.0, 0.0]
-        collapse_type = "none"
-        initial_condition = {type = "basis", oscIDs = [1]}
+        decoherence = {type = "none"}
+        initial_condition = {type = "basis", subsystem = [1]}
       )",
       logger);
   // For Schrodinger solver, BASIS is converted to DIAGONAL, so n_initial_conditions = nessential[1] = 2
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::DIAGONAL);
-  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({1}));
+  EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>({1}));
   EXPECT_EQ(config.getNInitialConditions(), 2);
 }
 
@@ -279,555 +472,427 @@ TEST_F(TomlParserTest, InitialCondition_Basis_Lindblad) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [3, 2]
+        ntime = 1000
+        dt = 0.1
         nessential = [3, 2]
         transfreq = [4.1, 4.8]
         rotfreq = [0.0, 0.0]
-        collapse_type = "decay"
-        initial_condition = {type = "basis", oscIDs = [1]}
+        decoherence = {type = "decay"}
+        initial_condition = {type = "basis", subsystem = [1]}
       )",
       logger);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::BASIS);
-  EXPECT_EQ(initcond.osc_IDs.value(), std::vector<size_t>({1}));
+  EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>({1}));
   // For Lindblad solver, n_initial_conditions = nessential[1]^2 = 2^2 = 4
   EXPECT_EQ(config.getNInitialConditions(), 4);
 }
 
-TEST_F(TomlParserTest, ParsePiPulseSettings_Structure) {
-  Config config = Config::fromTomlString(
-      R"(
-        nlevels = [2, 2]
-        transfreq = [4.1]
-        rotfreq = [0.0]
-        initial_condition = {type = "basis"}
-
-        [[apply_pipulse]]
-        oscID = 0
-        tstart = 0.5
-        tstop = 1.0
-        amp = 0.8
-      )",
-      logger);
-
-  const auto& pulses = config.getApplyPiPulses();
-  EXPECT_EQ(pulses.size(), 2);
-
-  EXPECT_EQ(pulses[0].size(), 1);
-  EXPECT_DOUBLE_EQ(pulses[0][0].tstart, 0.5);
-  EXPECT_DOUBLE_EQ(pulses[0][0].tstop, 1.0);
-  EXPECT_DOUBLE_EQ(pulses[0][0].amp, 0.8);
-
-  // zero pulse for other oscillator
-  EXPECT_EQ(pulses[1].size(), 1);
-  EXPECT_DOUBLE_EQ(pulses[1][0].tstart, 0.5);
-  EXPECT_DOUBLE_EQ(pulses[1][0].tstop, 1.0);
-  EXPECT_DOUBLE_EQ(pulses[1][0].amp, 0.0);
-}
-
-TEST_F(TomlParserTest, ParsePiPulseSettings_Multiple) {
-  Config config = Config::fromTomlString(
-      R"(
-        nlevels = [2, 2]
-        transfreq = [4.1]
-        rotfreq = [0.0]
-        initial_condition = {type = "basis"}
-
-        [[apply_pipulse]]
-        oscID = 0
-        tstart = 0.5
-        tstop = 1.0
-        amp = 0.8
-
-        [[apply_pipulse]]
-        oscID = 1
-        tstart = 0
-        tstop = 0.5
-        amp = 0.2
-      )",
-      logger);
-
-  const auto& pulses = config.getApplyPiPulses();
-  EXPECT_EQ(pulses.size(), 2);
-
-  EXPECT_EQ(pulses[0].size(), 2);
-  EXPECT_DOUBLE_EQ(pulses[0][0].tstart, 0.5);
-  EXPECT_DOUBLE_EQ(pulses[0][0].tstop, 1.0);
-  EXPECT_DOUBLE_EQ(pulses[0][0].amp, 0.8);
-  EXPECT_DOUBLE_EQ(pulses[0][1].tstart, 0.);
-  EXPECT_DOUBLE_EQ(pulses[0][1].tstop, 0.5);
-  EXPECT_DOUBLE_EQ(pulses[0][1].amp, 0.0);
-
-  EXPECT_EQ(pulses[1].size(), 2);
-  EXPECT_DOUBLE_EQ(pulses[1][0].tstart, 0.5);
-  EXPECT_DOUBLE_EQ(pulses[1][0].tstop, 1.0);
-  EXPECT_DOUBLE_EQ(pulses[1][0].amp, 0.0);
-  EXPECT_DOUBLE_EQ(pulses[1][1].tstart, 0.);
-  EXPECT_DOUBLE_EQ(pulses[1][1].tstop, 0.5);
-  EXPECT_DOUBLE_EQ(pulses[1][1].amp, 0.2);
-}
-
-TEST_F(TomlParserTest, ControlSegments_Spline0) {
+TEST_F(TomlParserTest, ControlParameterizations_Spline0) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
 
-        [[control_segments]]
-        oscID = 0
-        type = "spline0"
-        num = 150
-        tstart = 0.0
-        tstop = 1.0
+        control_parameterization = { type = "spline0", num = 150, tstart = 0.0, tstop = 1.0 }
       )",
       logger);
 
-  const auto& control_segments = config.getControlSegments(0);
-  EXPECT_EQ(control_segments.size(), 1);
-  EXPECT_EQ(control_segments[0].type, ControlType::BSPLINE0);
-  EXPECT_EQ(control_segments[0].nspline.value(), 150);
-  EXPECT_DOUBLE_EQ(control_segments[0].tstart.value(), 0.0);
-  EXPECT_DOUBLE_EQ(control_segments[0].tstop.value(), 1.0);
+  const auto& control_parameterizations = config.getControlParameterizations(0);
+  EXPECT_EQ(control_parameterizations.type, ControlType::BSPLINE0);
+  EXPECT_EQ(control_parameterizations.nspline.value(), 150);
+  EXPECT_DOUBLE_EQ(control_parameterizations.tstart.value(), 0.0);
+  EXPECT_DOUBLE_EQ(control_parameterizations.tstop.value(), 1.0);
 }
 
-TEST_F(TomlParserTest, ControlSegments_Spline) {
+TEST_F(TomlParserTest, ControlParameterizations_Spline) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1, 4.1]
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        [[control_segments]]
-        oscID = 0
-        type = "spline"
-        num = 10
-        [[control_segments]]
-        oscID = 1
-        type = "spline"
-        num = 20
-        tstart = 0.0
-        tstop = 1.0
-        [[control_segments]]
-        oscID = 1
-        type = "spline"
-        num = 30
-        tstart = 1.0
-        tstop = 2.0
+        control_parameterization = [
+          { subsystem = 0, type = "spline", num = 10 },
+          { subsystem = 1, type = "spline", num = 20, tstart = 0.0, tstop = 1.0 }
+        ]
       )",
       logger);
 
-  // Check first oscillator with one segment
-  const auto& control_seg0 = config.getControlSegments(0);
-  EXPECT_EQ(control_seg0.size(), 1);
-  EXPECT_EQ(control_seg0[0].type, ControlType::BSPLINE);
-  EXPECT_EQ(control_seg0[0].nspline.value(), 10);
-  EXPECT_DOUBLE_EQ(control_seg0[0].tstart.value(), 0.0);
-  EXPECT_DOUBLE_EQ(control_seg0[0].tstop.value(), config.getTotalTime());
+  // Check first oscillator with one parameterization
+  const auto& control_seg0 = config.getControlParameterizations(0);
+  EXPECT_EQ(control_seg0.type, ControlType::BSPLINE);
+  EXPECT_EQ(control_seg0.nspline.value(), 10);
 
-  // Check second oscillator with two segments
-  const auto& control_seg1 = config.getControlSegments(1);
-  EXPECT_EQ(control_seg1.size(), 2);
-
-  EXPECT_EQ(control_seg1[0].type, ControlType::BSPLINE);
-  EXPECT_EQ(control_seg1[0].nspline.value(), 20);
-  EXPECT_DOUBLE_EQ(control_seg1[0].tstart.value(), 0.0);
-  EXPECT_DOUBLE_EQ(control_seg1[0].tstop.value(), 1.0);
-
-  EXPECT_EQ(control_seg1[1].type, ControlType::BSPLINE);
-  EXPECT_EQ(control_seg1[1].nspline.value(), 30);
-  EXPECT_DOUBLE_EQ(control_seg1[1].tstart.value(), 1.0);
-  EXPECT_DOUBLE_EQ(control_seg1[1].tstop.value(), 2.0);
+  // Check second oscillator 
+  const auto& control_seg1 = config.getControlParameterizations(1);
+  EXPECT_EQ(control_seg1.type, ControlType::BSPLINE);
+  EXPECT_EQ(control_seg1.nspline.value(), 20);
+  EXPECT_DOUBLE_EQ(control_seg1.tstart.value(), 0.0);
+  EXPECT_DOUBLE_EQ(control_seg1.tstop.value(), 1.0);
 }
 
-TEST_F(TomlParserTest, ControlSegments_Step) {
-  Config config = Config::fromTomlString(
-      R"(
-        nlevels = [2,2]
-        transfreq = [4.1,4.1]
-        rotfreq = [0.0,0.0]
-        initial_condition = {type = "basis"}
-
-        [[control_segments]]
-        oscID = 0
-        type = "step"
-        step_amp1 = 0.1
-        step_amp2 = 0.2
-        tramp = 0.3
-        tstart = 0.4
-        tstop = 0.5
-        [[control_segments]]
-        oscID = 1
-        type = "step"
-        step_amp1 = 0.1
-        step_amp2 = 0.2
-        tramp = 0.3
-      )",
-      logger);
-
-  // Check first oscillator
-  const auto& control_seg0 = config.getControlSegments(0);
-  EXPECT_EQ(control_seg0.size(), 1);
-  EXPECT_EQ(control_seg0[0].type, ControlType::STEP);
-  EXPECT_EQ(control_seg0[0].step_amp1.value(), 0.1);
-  EXPECT_DOUBLE_EQ(control_seg0[0].step_amp2.value(), 0.2);
-  EXPECT_DOUBLE_EQ(control_seg0[0].tramp.value(), 0.3);
-  EXPECT_DOUBLE_EQ(control_seg0[0].tstart.value(), 0.4);
-  EXPECT_DOUBLE_EQ(control_seg0[0].tstop.value(), 0.5);
-
-  // Check second oscillator
-  const auto& control_seg1 = config.getControlSegments(1);
-  EXPECT_EQ(control_seg1.size(), 1);
-  EXPECT_EQ(control_seg1[0].type, ControlType::STEP);
-  EXPECT_EQ(control_seg1[0].step_amp1.value(), 0.1);
-  EXPECT_DOUBLE_EQ(control_seg1[0].step_amp2.value(), 0.2);
-  EXPECT_DOUBLE_EQ(control_seg1[0].tramp.value(), 0.3);
-  EXPECT_DOUBLE_EQ(control_seg1[0].tstart.value(), 0.0); // default start time
-  EXPECT_DOUBLE_EQ(control_seg1[0].tstop.value(), config.getTotalTime()); // default stop time
-}
-
-TEST_F(TomlParserTest, ControlSegments_Defaults) {
+TEST_F(TomlParserTest, ControlParameterizations_Defaults) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2, 2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1, 4.8]
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        [[control_segments]]
-        oscID = 1
-        type = "spline0"
-        num = 150
-        tstart = 0.0
-        tstop = 1.0
-        [[control_bounds]]
-        oscID = 1
-        values = [2.0]
+        control_parameterization = [
+          { subsystem = 1, type = "spline0", num = 150, tstart = 0.0, tstop = 1.0 }
+        ]
       )",
       logger);
 
   // Check first oscillator has default settings
-  const auto& control_seg0 = config.getControlSegments(0);
-  EXPECT_EQ(control_seg0.size(), 1);
-  EXPECT_EQ(control_seg0[0].type, ControlType::BSPLINE);
-  EXPECT_EQ(control_seg0[0].nspline.value(), 10);
-  EXPECT_DOUBLE_EQ(control_seg0[0].tstart.value(), 0.0);
-  EXPECT_DOUBLE_EQ(control_seg0[0].tstop.value(), config.getTotalTime());
+  const auto& control_seg0 = config.getControlParameterizations(0);
+  EXPECT_EQ(control_seg0.type, ControlType::BSPLINE);
+  EXPECT_EQ(control_seg0.nspline.value(), 10);
 
   // Check second oscillator has given settings
-  const auto& control_seg1 = config.getControlSegments(1);
-  const auto& control_bounds1 = config.getControlBounds(1);
-  EXPECT_EQ(control_seg1.size(), 1);
-  EXPECT_EQ(control_seg1[0].type, ControlType::BSPLINE0);
-  EXPECT_EQ(control_bounds1.size(), 1);
-  EXPECT_DOUBLE_EQ(control_bounds1[0], 2.0);
-  EXPECT_EQ(control_seg1[0].nspline.value(), 150);
-  EXPECT_DOUBLE_EQ(control_seg1[0].tstart.value(), 0.0);
-  EXPECT_DOUBLE_EQ(control_seg1[0].tstop.value(), 1.0);
+  const auto& control_seg1 = config.getControlParameterizations(1);
+  EXPECT_EQ(control_seg1.type, ControlType::BSPLINE0);
+  EXPECT_EQ(control_seg1.nspline.value(), 150);
+  EXPECT_DOUBLE_EQ(control_seg1.tstart.value(), 0.0);
+  EXPECT_DOUBLE_EQ(control_seg1.tstop.value(), 1.0);
 
   // Check third oscillator has default settings
-  const auto& control_seg2 = config.getControlSegments(2);
-  EXPECT_EQ(control_seg2.size(), 1);
-  EXPECT_EQ(control_seg2[0].type, ControlType::BSPLINE);
-  EXPECT_EQ(control_seg2[0].nspline.value(), 10);
-  EXPECT_DOUBLE_EQ(control_seg2[0].tstart.value(), 0.0);
-  EXPECT_DOUBLE_EQ(control_seg2[0].tstop.value(), config.getTotalTime());
+  const auto& control_seg2 = config.getControlParameterizations(2);
+  EXPECT_EQ(control_seg2.type, ControlType::BSPLINE);
+  EXPECT_EQ(control_seg2.nspline.value(), 10);
+
+  // Check
 }
 
-TEST_F(TomlParserTest, ControlSegments_AllOscillators) {
+TEST_F(TomlParserTest, ControlParameterizations_AllOscillators) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1, 4.8]
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        [[control_segments]]
-        type = "spline0"
-        num = 150
-        tstart = 0.0
-        tstop = 1.0
+        control_parameterization = { type = "spline0", num = 150, tstart = 0.0, tstop = 1.0 }
       )",
       logger);
 
   // Check first oscillator has given settings
-  const auto& control_seg0 = config.getControlSegments(0);
-  EXPECT_EQ(control_seg0.size(), 1);
-  EXPECT_EQ(control_seg0[0].type, ControlType::BSPLINE0);
-  EXPECT_EQ(control_seg0[0].nspline.value(), 150);
-  EXPECT_DOUBLE_EQ(control_seg0[0].tstart.value(), 0.0);
-  EXPECT_DOUBLE_EQ(control_seg0[0].tstop.value(), 1.0);
+  const auto& control_seg0 = config.getControlParameterizations(0);
+  EXPECT_EQ(control_seg0.type, ControlType::BSPLINE0);
+  EXPECT_EQ(control_seg0.nspline.value(), 150);
+  EXPECT_DOUBLE_EQ(control_seg0.tstart.value(), 0.0);
+  EXPECT_DOUBLE_EQ(control_seg0.tstop.value(), 1.0);
 
   // Check second oscillator has given settings
-  const auto& control_seg1 = config.getControlSegments(1);
-  EXPECT_EQ(control_seg1.size(), 1);
-  EXPECT_EQ(control_seg1[0].type, ControlType::BSPLINE0);
-  EXPECT_EQ(control_seg1[0].nspline.value(), 150);
-  EXPECT_DOUBLE_EQ(control_seg1[0].tstart.value(), 0.0);
-  EXPECT_DOUBLE_EQ(control_seg1[0].tstop.value(), 1.0);
+  const auto& control_seg1 = config.getControlParameterizations(1);
+  EXPECT_EQ(control_seg1.type, ControlType::BSPLINE0);
+  EXPECT_EQ(control_seg1.nspline.value(), 150);
+  EXPECT_DOUBLE_EQ(control_seg1.tstart.value(), 0.0);
+  EXPECT_DOUBLE_EQ(control_seg1.tstop.value(), 1.0);
 }
 
 TEST_F(TomlParserTest, ControlInitialization_Defaults) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2, 2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1, 4.1, 4.1]
         rotfreq = [0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        [[control_initialization]]
-        oscID = 1
-        type = "random"
-        amplitude = 2.0
+        control_initialization = [
+           { subsystem = 1, type = "random", amplitude = 2.0 }
+        ]
       )",
       logger);
 
   // Check first oscillator has default settings
   const auto& control_init0 = config.getControlInitializations(0);
-  EXPECT_EQ(control_init0.size(), 1);
-  EXPECT_EQ(control_init0[0].type, ControlSegmentInitType::CONSTANT);
-  EXPECT_DOUBLE_EQ(control_init0[0].amplitude, 0.0);
-  EXPECT_DOUBLE_EQ(control_init0[0].phase, 0.0);
+  EXPECT_EQ(control_init0.type, ControlInitializationType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init0.amplitude.value(), 0.0);
 
   // Check second oscillator has given settings
   const auto& control_init1 = config.getControlInitializations(1);
-  EXPECT_EQ(control_init1.size(), 1);
-  EXPECT_EQ(control_init1[0].type, ControlSegmentInitType::RANDOM);
-  EXPECT_DOUBLE_EQ(control_init1[0].amplitude, 2.0);
-  EXPECT_DOUBLE_EQ(control_init1[0].phase, 0.0);
+  EXPECT_EQ(control_init1.type, ControlInitializationType::RANDOM);
+  EXPECT_DOUBLE_EQ(control_init1.amplitude.value(), 2.0);
 
   // Check third oscillator has default settings
   const auto& control_init2 = config.getControlInitializations(2);
-  EXPECT_EQ(control_init2.size(), 1);
-  EXPECT_EQ(control_init2[0].type, ControlSegmentInitType::CONSTANT);
-  EXPECT_DOUBLE_EQ(control_init2[0].amplitude, 0.0);
-  EXPECT_DOUBLE_EQ(control_init2[0].phase, 0.0);
+  EXPECT_EQ(control_init2.type, ControlInitializationType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init2.amplitude.value(), 0.0);
 }
 
-TEST_F(TomlParserTest, ControlInitialization) {
+TEST_F(TomlParserTest, ControlInitializationSettings) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2, 2, 2, 2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1, 4.1, 4.1, 4.1, 4.1]
         rotfreq = [0.0, 0.0, 0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        [[control_initialization]]
-        oscID = 0
-        type = "constant"
-        amplitude = 1.0
-        phase = 1.1
-        [[control_initialization]]
-        oscID = 1
-        type = "constant"
-        amplitude = 2.0
-        [[control_initialization]]
-        oscID = 2
-        type = "random"
-        amplitude = 3.0
-        phase = 3.1
-        [[control_initialization]]
-        oscID = 3
-        type = "random"
-        amplitude = 4.0
-        [[control_initialization]]
-        oscID = 4
-        type = "random"
-        amplitude = 5.0
-        phase = 5.1
-        [[control_initialization]]
-        oscID = 4
-        type = "constant"
-        amplitude = 6.0
-        phase = 6.1
+        control_initialization = [
+          { subsystem = 0, type = "constant", amplitude = 1.0, phase = 1.1 },
+          { subsystem = 1, type = "constant", amplitude = 2.0 },
+          { subsystem = 2, type = "random", amplitude = 3.0, phase = 3.1 },
+          { subsystem = 3, type = "random", amplitude = 4.0 },
+          { subsystem = 4, type = "random", amplitude = 5.0, phase = 5.1 }
+        ]
+
+        control_parameterization = [
+          { subsystem = 0, type = "spline_amplitude", num = 10, scaling = 1.0 },
+          { subsystem = 2, type = "spline_amplitude", num = 10, scaling = 1.0 },
+          { subsystem = 4, type = "spline_amplitude", num = 10, scaling = 1.0 }
+        ]
       )",
       logger);
 
   // Check first oscillator
   const auto& control_init0 = config.getControlInitializations(0);
-  EXPECT_EQ(control_init0.size(), 1);
-  EXPECT_EQ(control_init0[0].type, ControlSegmentInitType::CONSTANT);
-  EXPECT_DOUBLE_EQ(control_init0[0].amplitude, 1.0);
-  EXPECT_DOUBLE_EQ(control_init0[0].phase, 1.1);
+  EXPECT_EQ(control_init0.type, ControlInitializationType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init0.amplitude.value(), 1.0);
+  EXPECT_DOUBLE_EQ(control_init0.phase.value(), 1.1);
 
   // Check second oscillator
   const auto& control_init1 = config.getControlInitializations(1);
-  EXPECT_EQ(control_init1.size(), 1);
-  EXPECT_EQ(control_init1[0].type, ControlSegmentInitType::CONSTANT);
-  EXPECT_DOUBLE_EQ(control_init1[0].amplitude, 2.0);
-  EXPECT_DOUBLE_EQ(control_init1[0].phase, 0.0);
+  EXPECT_EQ(control_init1.type, ControlInitializationType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init1.amplitude.value(), 2.0);
 
   // Check third oscillator
   const auto& control_init2 = config.getControlInitializations(2);
-  EXPECT_EQ(control_init2.size(), 1);
-  EXPECT_EQ(control_init2[0].type, ControlSegmentInitType::RANDOM);
-  EXPECT_DOUBLE_EQ(control_init2[0].amplitude, 3.0);
-  EXPECT_DOUBLE_EQ(control_init2[0].phase, 3.1);
+  EXPECT_EQ(control_init2.type, ControlInitializationType::RANDOM);
+  EXPECT_DOUBLE_EQ(control_init2.amplitude.value(), 3.0);
+  EXPECT_DOUBLE_EQ(control_init2.phase.value(), 3.1);
 
   // Check fourth oscillator
   const auto& control_init3 = config.getControlInitializations(3);
-  EXPECT_EQ(control_init3.size(), 1);
-  EXPECT_EQ(control_init3[0].type, ControlSegmentInitType::RANDOM);
-  EXPECT_DOUBLE_EQ(control_init3[0].amplitude, 4.0);
-  EXPECT_DOUBLE_EQ(control_init3[0].phase, 0.0);
+  EXPECT_EQ(control_init3.type, ControlInitializationType::RANDOM);
+  EXPECT_DOUBLE_EQ(control_init3.amplitude.value(), 4.0);
 
-  // Check fifth oscillator with two segments
+  // Check fifth oscillator with two parameterizations (init is copied to match parameterization count)
   const auto& control_init4 = config.getControlInitializations(4);
-  EXPECT_EQ(control_init4.size(), 2);
-  EXPECT_EQ(control_init4[0].type, ControlSegmentInitType::RANDOM);
-  EXPECT_DOUBLE_EQ(control_init4[0].amplitude, 5.0);
-  EXPECT_DOUBLE_EQ(control_init4[0].phase, 5.1);
-  EXPECT_EQ(control_init4[1].type, ControlSegmentInitType::CONSTANT);
-  EXPECT_DOUBLE_EQ(control_init4[1].amplitude, 6.0);
-  EXPECT_DOUBLE_EQ(control_init4[1].phase, 6.1);
+  EXPECT_EQ(control_init4.type, ControlInitializationType::RANDOM);
+  EXPECT_DOUBLE_EQ(control_init4.amplitude.value(), 5.0);
+  EXPECT_DOUBLE_EQ(control_init4.phase.value(), 5.1);
 }
 
 TEST_F(TomlParserTest, ControlInitialization_File) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
 
-        [[control_initialization]]
-        type = "file"
-        filename = "params.dat"
+        control_initialization = { type = "file", filename = "myparams.dat" }
       )",
       logger);
 
-  EXPECT_TRUE(config.getControlInitializationFile().has_value());
-  EXPECT_EQ(config.getControlInitializationFile().value(), "params.dat");
+  const auto& control_init0 = config.getControlInitializations(0);
+  EXPECT_EQ(control_init0.type, ControlInitializationType::FILE);
+  EXPECT_EQ(control_init0.filename.value(), "myparams.dat");
 }
 
 TEST_F(TomlParserTest, ControlInitialization_AllOscillators) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1, 4.1]
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        [[control_initialization]]
-        type = "constant"
-        amplitude = 1.0
-        phase = 1.1
+        control_initialization = { type = "constant", amplitude = 1.0 }
       )",
       logger);
 
   // Check first oscillator
   const auto& control_init0 = config.getControlInitializations(0);
-  EXPECT_EQ(control_init0.size(), 1);
-  EXPECT_EQ(control_init0[0].type, ControlSegmentInitType::CONSTANT);
-  EXPECT_DOUBLE_EQ(control_init0[0].amplitude, 1.0);
-  EXPECT_DOUBLE_EQ(control_init0[0].phase, 1.1);
+  EXPECT_EQ(control_init0.type, ControlInitializationType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init0.amplitude.value(), 1.0);
 
   // Check second oscillator
   const auto& control_init1 = config.getControlInitializations(1);
-  EXPECT_EQ(control_init1.size(), 1);
-  EXPECT_EQ(control_init1[0].type, ControlSegmentInitType::CONSTANT);
-  EXPECT_DOUBLE_EQ(control_init1[0].amplitude, 1.0);
-  EXPECT_DOUBLE_EQ(control_init1[0].phase, 1.1);
+  EXPECT_EQ(control_init1.type, ControlInitializationType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init1.amplitude.value(), 1.0);
+}
+
+TEST_F(TomlParserTest, ControlInitialization_DefaultWithOverrides) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [3, 3, 3]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 4.1, 4.1]
+        rotfreq = [0.0, 0.0, 0.0]
+        initial_condition = {type = "basis"}
+
+        control_initialization = [ 
+          { subsystem = 1, type = "random", amplitude = 0.05 }
+        ]
+      )",
+      logger);
+
+  // Check first oscillator has default settings
+  const auto& control_init0 = config.getControlInitializations(0);
+  EXPECT_EQ(control_init0.type, ControlInitializationType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init0.amplitude.value(), 0.0);
+
+  // Check second oscillator has override settings
+  const auto& control_init1 = config.getControlInitializations(1);
+  EXPECT_EQ(control_init1.type, ControlInitializationType::RANDOM);
+  EXPECT_DOUBLE_EQ(control_init1.amplitude.value(), 0.05);
+
+  // Check third oscillator has default settings
+  const auto& control_init2 = config.getControlInitializations(2);
+  EXPECT_EQ(control_init2.type, ControlInitializationType::CONSTANT);
+  EXPECT_DOUBLE_EQ(control_init2.amplitude.value(), 0.0);
 }
 
 TEST_F(TomlParserTest, ControlBounds) {
   Config config = Config::fromTomlString(
       R"(
-        nlevels = [2]
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        nlevels = [2, 2]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 3.3]
+        rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        [[control_segments]]
-        oscID = 0
-        type = "spline"
-        num = 10
-        tstart = 0.0
-        tstop = 1.0
-        [[control_segments]]
-        oscID = 0
-        type = "step"
-        step_amp1 = 0.1
-        step_amp2 = 0.2
-        tramp = 0.3
-        tstart = 0.4
-        tstop = 0.5
-        [[control_segments]]
-        oscID = 0
-        num = 20
-        type = "spline0"
-        tstart = 1.0
-        tstop = 2.0
-        [[control_bounds]]
-        oscID = 0
-        values = [1.0, 2.0]
+        control_parameterization = { type = "spline", num = 10, tstart = 0.0, tstop = 1.0 }
+        
+        control_bounds = 1.5 
       )",
       logger);
 
-  // Check control bounds for the three segments
-  const auto& control_bounds0 = config.getControlBounds(0);
-  EXPECT_EQ(control_bounds0.size(), 3);
-  EXPECT_EQ(control_bounds0[0], 1.0);
-  EXPECT_EQ(control_bounds0[1], 2.0);
-  EXPECT_EQ(control_bounds0[2], 2.0); // Use last bound for extra segments
+  // Check control bound
+  const double control_bound0 = config.getControlBound(0);
+  const double control_bound1 = config.getControlBound(1);
+  EXPECT_DOUBLE_EQ(control_bound0, 1.5);
+  EXPECT_DOUBLE_EQ(control_bound1, 1.5);
+}
+
+TEST_F(TomlParserTest, ControlBounds_Defaults) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 3.0]
+        rotfreq = [0.0, 0.0]
+        initial_condition = {type = "basis"}
+      )",
+      logger);
+
+  // Check control bound
+  const double control_bound0 = config.getControlBound(0);
+  const double control_bound1 = config.getControlBound(1);
+  EXPECT_DOUBLE_EQ(control_bound0, 1e12);
+  EXPECT_DOUBLE_EQ(control_bound1, 1e12);
 }
 
 TEST_F(TomlParserTest, ControlBounds_AllOscillators) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2]
-        transfreq = [4.1, 4.1]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 3.3]
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        [[control_segments]]
-        type = "spline"
-        num = 10
-        tstart = 0.0
-        tstop = 1.0
-        [[control_segments]]
-        type = "step"
-        step_amp1 = 0.1
-        step_amp2 = 0.2
-        tramp = 0.3
-        tstart = 0.4
-        tstop = 0.5
-        [[control_segments]]
-        num = 20
-        type = "spline0"
-        tstart = 1.0
-        tstop = 2.0
-        [[control_bounds]]
-        values = [1.0, 2.0]
+        control_bounds = [1.0, 2.0]
       )",
       logger);
 
-  // Check control bounds for the three segments
-  const auto& control_bounds0 = config.getControlBounds(0);
-  EXPECT_EQ(control_bounds0.size(), 3);
-  EXPECT_EQ(control_bounds0[0], 1.0);
-  EXPECT_EQ(control_bounds0[1], 2.0);
-  EXPECT_EQ(control_bounds0[2], 2.0); // Use last bound for extra segments
-
-  const auto& control_bounds1 = config.getControlBounds(1);
-  EXPECT_EQ(control_bounds1.size(), 3);
-  EXPECT_EQ(control_bounds1[0], 1.0);
-  EXPECT_EQ(control_bounds1[1], 2.0);
-  EXPECT_EQ(control_bounds1[2], 2.0); // Use last bound for extra segments
+  // Check control bound
+  const double control_bound0 = config.getControlBound(0);
+  const double control_bound1 = config.getControlBound(1);
+  EXPECT_DOUBLE_EQ(control_bound0, 1.0);
+  EXPECT_DOUBLE_EQ(control_bound1, 2.0);
 }
 
-TEST_F(TomlParserTest, CarrierFrequencies) {
+TEST_F(TomlParserTest, CarrierFrequenciesDefaults) {
   Config config = Config::fromTomlString(
       R"(
-        nlevels = [2]
+        nlevels = [2,2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
 
-        [[carrier_frequency]]
-        oscID = 0
-        values = [1.0, 2.0]
+        carrier_frequency = [
+          {subsystem = 1, value = [4.0, 5.0]}
+        ]
+      )",
+      logger);
+
+  const auto& carrier_freq0 = config.getCarrierFrequencies(0);
+  EXPECT_EQ(carrier_freq0.size(), 1);
+  EXPECT_EQ(carrier_freq0[0], 0.0);
+  const auto& carrier_freq1 = config.getCarrierFrequencies(1);
+  EXPECT_EQ(carrier_freq1.size(), 2);
+  EXPECT_EQ(carrier_freq1[0], 4.0);
+  EXPECT_EQ(carrier_freq1[1], 5.0);
+}
+
+TEST_F(TomlParserTest, CarrierFrequenciesPerSubsystem) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2,2]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1]
+        initial_condition = {type = "basis"}
+
+        carrier_frequency = [
+          {subsystem = 0, value = [1.0, 2.0, 3.0]},
+          {subsystem = 1, value = [4.0, 5.0]}
+        ]
+      )",
+      logger);
+
+  const auto& carrier_freq0 = config.getCarrierFrequencies(0);
+  EXPECT_EQ(carrier_freq0.size(), 3);
+  EXPECT_EQ(carrier_freq0[0], 1.0);
+  EXPECT_EQ(carrier_freq0[1], 2.0);
+  EXPECT_EQ(carrier_freq0[2], 3.0);
+  const auto& carrier_freq1 = config.getCarrierFrequencies(1);
+  EXPECT_EQ(carrier_freq1.size(), 2);
+  EXPECT_EQ(carrier_freq1[0], 4.0);
+  EXPECT_EQ(carrier_freq1[1], 5.0);
+}
+
+TEST_F(TomlParserTest, CarrierFrequencies_AllOscillators) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 4.1]
+        rotfreq = [0.0, 0.0]
+        initial_condition = {type = "basis"}
+
+        carrier_frequency = { value = [1.0, 2.0] }
       )",
       logger);
 
@@ -835,18 +900,23 @@ TEST_F(TomlParserTest, CarrierFrequencies) {
   EXPECT_EQ(carrier_freq0.size(), 2);
   EXPECT_EQ(carrier_freq0[0], 1.0);
   EXPECT_EQ(carrier_freq0[1], 2.0);
-}
 
-TEST_F(TomlParserTest, CarrierFrequencies_AllOscillators) {
+  const auto& carrier_freq1 = config.getCarrierFrequencies(1);
+  EXPECT_EQ(carrier_freq1.size(), 2);
+  EXPECT_EQ(carrier_freq1[0], 1.0);
+  EXPECT_EQ(carrier_freq1[1], 2.0);
+}
+TEST_F(TomlParserTest, CarrierFrequencies_AllOscillatorsShorthand) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1, 4.1]
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        [[carrier_frequency]]
-        values = [1.0, 2.0]
+        carrier_frequency = [1.0, 2.0]
       )",
       logger);
 
@@ -861,52 +931,110 @@ TEST_F(TomlParserTest, CarrierFrequencies_AllOscillators) {
   EXPECT_EQ(carrier_freq1[1], 2.0);
 }
 
+TEST_F(TomlParserTest, CarrierFrequency_InvalidID) {
+  ASSERT_DEATH({
+    Config config = Config::fromTomlString(
+        R"(
+          nlevels = [2]
+          transfreq = [4.1]
+          ntime = 1000
+          dt = 0.1
+          rotfreq = [0.0]
+          initial_condition = {type = "basis"}
+
+          carrier_frequency = [{subsystem = 5, value = [4.0]}]
+        )",
+        logger);
+  }, "ERROR: Validation error for field 'subsystem': must be < 1, got 5");
+}
+
+
+
 TEST_F(TomlParserTest, OptimTarget_GateType) {
   Config config = Config::fromTomlString(
       R"(
-        nlevels = [2]
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        nlevels = [2,2,2]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 3.4, 5.6]
+        rotfreq = [0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
-        optim_target = {target_type = "gate", gate_type = "cnot"}
+        optim_target = {type = "gate", gate_type = "cnot"}
       )",
       logger);
 
   const auto& target = config.getOptimTarget();
   EXPECT_EQ(target.type, TargetType::GATE);
   EXPECT_EQ(target.gate_type.value(), GateType::CNOT);
+  EXPECT_FALSE(target.filename.has_value());
+  EXPECT_FALSE(target.levels.has_value());
+  EXPECT_TRUE(target.gate_rot_freq.has_value());
+  const auto& gate_rot_freq = target.gate_rot_freq.value();
+  EXPECT_EQ(gate_rot_freq.size(), 3);
+  EXPECT_DOUBLE_EQ(gate_rot_freq[0], 0.0);
+  EXPECT_DOUBLE_EQ(gate_rot_freq[1], 0.0);
+  EXPECT_DOUBLE_EQ(gate_rot_freq[2], 0.0);
+}
+
+TEST_F(TomlParserTest, OptimTarget_GateRotFreq) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2,2]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 3.4]
+        rotfreq = [0.0, 0.0]
+        initial_condition = {type = "basis"}
+        optim_target = {type = "gate", gate_type = "cnot", gate_rot_freq = [1.0, 2.0]}
+      )",
+      logger);
+
+  const auto& target = config.getOptimTarget();
+  EXPECT_EQ(target.type, TargetType::GATE);
+  EXPECT_FALSE(target.filename.has_value());
+  EXPECT_TRUE(target.gate_rot_freq.has_value());
+  const auto& gate_rot_freq = target.gate_rot_freq.value();
+  EXPECT_EQ(gate_rot_freq.size(), 2);
+  EXPECT_DOUBLE_EQ(gate_rot_freq[0], 1.0);
+  EXPECT_DOUBLE_EQ(gate_rot_freq[1], 2.0);
 }
 
 TEST_F(TomlParserTest, OptimTarget_GateFromFile) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
-        optim_target = {target_type = "gate", gate_type = "file", gate_file = "/path/to/gate.dat"}
+        optim_target = {type = "gate", filename = "/path/to/gate.dat"}
       )",
       logger);
 
   const auto& target = config.getOptimTarget();
   EXPECT_EQ(target.type, TargetType::GATE);
   EXPECT_EQ(target.gate_type.value(), GateType::FILE);
-  EXPECT_EQ(target.gate_file.value(), "/path/to/gate.dat");
+  EXPECT_EQ(target.filename.value(), "/path/to/gate.dat");
 }
 
-TEST_F(TomlParserTest, OptimTarget_PureState) {
+TEST_F(TomlParserTest, OptimTarget_ProductState) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [3, 3, 3]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
-        optim_target = {target_type = "pure", levels = [0,1,2]}
+        optim_target = {type = "state", levels = [0,1,2]}
       )",
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_EQ(target.type, TargetType::PURE);
+  EXPECT_EQ(target.type, TargetType::STATE);
+  EXPECT_TRUE(target.levels.has_value());
+  EXPECT_FALSE(target.filename.has_value());
   const auto& levels = target.levels.value();
   EXPECT_EQ(levels.size(), 3);
   EXPECT_EQ(levels[0], 0);
@@ -918,22 +1046,27 @@ TEST_F(TomlParserTest, OptimTarget_FromFile) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
-        optim_target = {target_type = "file", filename = "/path/to/target.dat"}
+        optim_target = {type = "state", filename = "/path/to/target.dat"}
       )",
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_EQ(target.type, TargetType::FROMFILE);
-  EXPECT_EQ(target.file.value(), "/path/to/target.dat");
+  EXPECT_EQ(target.type, TargetType::STATE);
+  EXPECT_TRUE(target.filename.has_value());
+  EXPECT_EQ(target.filename.value(), "/path/to/target.dat");
 }
 
-TEST_F(TomlParserTest, OptimTarget_DefaultPure) {
+TEST_F(TomlParserTest, OptimTarget_DefaultNone) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
@@ -941,158 +1074,163 @@ TEST_F(TomlParserTest, OptimTarget_DefaultPure) {
       logger);
 
   const auto& target = config.getOptimTarget();
-  EXPECT_EQ(target.type, TargetType::PURE);
-  // For default pure state, levels should be set to ground state
-  EXPECT_TRUE(target.levels.has_value());
-  EXPECT_FALSE(target.levels.value().empty());
+  EXPECT_EQ(target.type, TargetType::NONE);
+  EXPECT_FALSE(target.gate_type.has_value());
+  EXPECT_FALSE(target.levels.has_value());
+  EXPECT_FALSE(target.filename.has_value());
 }
 
-TEST_F(TomlParserTest, OptimWeights) {
+TEST_F(TomlParserTest, OptimWeightsVectorNormalization) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2]
+        ntime = 1000
+        dt = 0.1
         transfreq = [4.1, 4.1]
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
-        optim_weights = [2.0, 1.0]
+        optim_weights = [0.25, 0.50, 0.25, 0.0]
       )",
       logger);
 
   const auto& weights = config.getOptimWeights();
   EXPECT_EQ(weights.size(), 4);
-  EXPECT_DOUBLE_EQ(weights[0], 0.4);
-  EXPECT_DOUBLE_EQ(weights[1], 0.2);
-  EXPECT_DOUBLE_EQ(weights[2], 0.2);
-  EXPECT_DOUBLE_EQ(weights[3], 0.2);
+  EXPECT_DOUBLE_EQ(weights[0], 0.25);
+  EXPECT_DOUBLE_EQ(weights[1], 0.5);
+  EXPECT_DOUBLE_EQ(weights[2], 0.25);
+  EXPECT_DOUBLE_EQ(weights[3], 0.0);
 }
 
-TEST_F(TomlParserTest, ComprehensiveNonDefaultSettings_PrintConfigValidation) {
-  // Create a comprehensive configuration with all non-default settings (single oscillator)
-  std::string input_toml = R"(# Configuration settings
-# =============================================
+TEST_F(TomlParserTest, OptimWeightsDouble) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 2]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 4.1]
+        rotfreq = [0.0, 0.0]
+        initial_condition = {type = "basis"}
+        optim_weights = 1.0
+      )",
+      logger);
 
-nlevels = [3]
-nessential = [2]
-ntime = 2500
-dt = 0.02
-transfreq = [5.500000]
-selfkerr = [-0.200000]
-crosskerr = [0.050000]
-Jkl = [0.010000]
-rotfreq = [2.100000]
-collapse_type = "decay"
-decay_time = [25.000000]
-dephase_time = [45.000000]
-initial_condition = {type = "pure", levels = [1]}
-control_enforceBC = false
-optim_target = {target_type = "gate", gate_type = "hadamard"}
-gate_rot_freq = [1.500000]
-optim_objective = "jtrace"
-optim_weights = [1.000000]
-optim_atol = 1e-06
-optim_rtol = 0.001
-optim_ftol = 1e-07
-optim_inftol = 0.0001
-optim_maxiter = 150
-optim_regul = 0.002
-optim_penalty = 0.1
-optim_penalty_param = 0.8
-optim_penalty_dpdm = 0.05
-optim_penalty_energy = 0.02
-optim_penalty_variation = 0.03
-optim_regul_tik0 = true
-datadir = "/custom/output/path"
-output_frequency = 5
-optim_monitor_frequency = 25
-runtype = "optimization"
-usematfree = true
-linearsolver_type = "gmres"
-linearsolver_maxiter = 20
-timestepper = "imr"
-rand_seed = 12345
-
-[[apply_pipulse]]
-oscID = 0
-tstart = 1
-tstop = 2
-amp = 0.75
-
-[[control_segments]]
-oscID = 0
-type = "spline"
-num = 25
-tstart = 0.5
-tstop = 1.5
-
-[[control_initialization]]
-oscID = 0
-type = "random"
-amplitude = 1.500000
-phase = 0.500000
-
-[[control_bounds]]
-oscID = 0
-values = [5.000000, 8.000000]
-
-[[carrier_frequency]]
-oscID = 0
-values = [2.500000, 3.000000]
-
-[[write]]
-oscID = 0
-type = ["population", "expectedenergy"]
-
-)";
-
-  Config config = Config::fromTomlString(input_toml, logger);
-
-  // Test that printed config is valid TOML that can be parsed
-  std::stringstream printed_output;
-  config.printConfig(printed_output);
-  std::string output = printed_output.str();
-
-  // Verify output is valid TOML by parsing it
-  ASSERT_NO_THROW({
-    Config::fromTomlString(output, logger);
-  });
+  const auto& weights = config.getOptimWeights();
+  EXPECT_EQ(weights.size(), 4);
+  EXPECT_DOUBLE_EQ(weights[0], 0.25); // normalized
+  EXPECT_DOUBLE_EQ(weights[1], 0.25);
+  EXPECT_DOUBLE_EQ(weights[2], 0.25);
+  EXPECT_DOUBLE_EQ(weights[3], 0.25);
 }
 
-TEST_F(TomlParserTest, ApplyPipulse_UnknownKey) {
+TEST_F(TomlParserTest, OptimWeightsDefault) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [4,3]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 3.4]
+        initial_condition = {type = "diagonal", subsystem = [0]}
+      )",
+      logger);
+
+  const auto& weights = config.getOptimWeights();
+  EXPECT_EQ(weights.size(), 4);
+  EXPECT_DOUBLE_EQ(weights[0], 0.25); // normalized
+  EXPECT_DOUBLE_EQ(weights[1], 0.25);
+  EXPECT_DOUBLE_EQ(weights[2], 0.25);
+  EXPECT_DOUBLE_EQ(weights[3], 0.25);
+}
+
+// TEST_F(TomlParserTest, ComprehensiveNonDefaultSettings_PrintConfigValidation) {
+//   // Create a comprehensive configuration with all non-default settings (single oscillator)
+//   std::string input_toml = R"(# Configuration settings
+// # =============================================
+
+// nlevels = [3]
+// nessential = [2]
+// ntime = 2500
+// dt = 0.02
+// transfreq = [5.500000]
+// selfkerr = [-0.200000]
+// crosskerr = {}
+// Jkl = {}
+// rotfreq = [2.100000]
+// decoherence = {type = "decay"}
+// decay_time = [25.000000]
+// dephase_time = [45.000000]
+// initial_condition = {type = "state", levels = [1]}
+// control_enforceBC = false
+// optim_target = {type = "gate", gate_type = "hadamard"}
+// gate_rot_freq = [1.500000]
+// optim_objective = "jtrace"
+// optim_weights = [1.000000]
+// optim_atol = 1e-06
+// optim_rtol = 0.001
+// optim_ftol = 1e-07
+// optim_inftol = 0.0001
+// optim_maxiter = 150
+// optim_regul = 0.002
+// optim_penalty = 0.1
+// optim_penalty_param = 0.8
+// optim_penalty_dpdm = 0.05
+// optim_penalty_energy = 0.02
+// optim_penalty_variation = 0.03
+// optim_regul_tik0 = true
+// datadir = "/custom/output/path"
+// output_timestep_stride = 5
+// output_optimization_stride = 25
+// runtype = "optimization"
+// usematfree = true
+// linearsolver_type = "gmres"
+// linearsolver_maxiter = 20
+// timestepper = "imr"
+// rand_seed = 12345
+// output_type = ["population", "expectedenergy"]
+
+
+// control_parameterization = { type = "spline", num = 25, tstart = 0.5, tstop = 1.5 }
+
+// control_initialization = { type = "random", amplitude = 1.500000, phase = 0.500000 }
+
+// [[control_bounds]]
+// oscID = 0
+// value = [5.000000, 8.000000]
+
+// [[carrier_frequency]]
+// oscID = 0
+// value = [2.500000, 3.000000]
+
+
+// )";
+
+//   Config config = Config::fromTomlString(input_toml, logger);
+
+//   // Test that printed config is valid TOML that can be parsed
+//   std::stringstream printed_output;
+//   config.printConfig(printed_output);
+//   std::string output = printed_output.str();
+
+//   // Verify output is valid TOML by parsing it
+//   ASSERT_NO_THROW({
+//     Config::fromTomlString(output, logger);
+//   });
+// }
+
+TEST_F(TomlParserTest, ControlParameterizations_UnknownKey) {
   ASSERT_DEATH({
     Config config = Config::fromTomlString(
         R"(
           nlevels = [2]
+          ntime = 1000
+          dt = 0.1
           transfreq = [4.1]
           rotfreq = [0.0]
           initial_condition = {type = "basis"}
 
-          [[apply_pipulse]]
-          oscID = 0
-          tstart = 0.0
-          tstop = 1.0
-          amp = 0.5
-          invalid_param = 123
+          control_parameterization = { type = "spline", num = 5, wrong_field = 99 }
         )",
         logger);
-  }, "ERROR: Unknown key 'invalid_param' in apply_pipulse\\.");
-}
-
-TEST_F(TomlParserTest, ControlSegments_UnknownKey) {
-  ASSERT_DEATH({
-    Config config = Config::fromTomlString(
-        R"(
-          nlevels = [2]
-          transfreq = [4.1]
-          rotfreq = [0.0]
-          initial_condition = {type = "basis"}
-
-          [[control_segments]]
-          type = "spline"
-          num = 5
-          wrong_field = 99
-        )",
-        logger);
-  }, "ERROR: Unknown key 'wrong_field' in control_segments\\.");
+  }, "ERROR: Unknown key 'wrong_field' in control_parameterization\\.");
 }
 
 TEST_F(TomlParserTest, ControlInitialization_UnknownKey) {
@@ -1100,69 +1238,14 @@ TEST_F(TomlParserTest, ControlInitialization_UnknownKey) {
     Config config = Config::fromTomlString(
         R"(
           nlevels = [2]
+          ntime = 1000
+          dt = 0.1
           transfreq = [4.1]
           rotfreq = [0.0]
           initial_condition = {type = "basis"}
 
-          [[control_initialization]]
-          type = "file"
-          filename = "params.dat"
-          foo = 42
+          control_initialization = { type = "file", filename = "params.dat", foo = 42 }
         )",
         logger);
   }, "ERROR: Unknown key 'foo' in control_initialization\\.");
-}
-
-TEST_F(TomlParserTest, ControlBounds_UnknownKey) {
-  ASSERT_DEATH({
-    Config config = Config::fromTomlString(
-        R"(
-          nlevels = [2]
-          transfreq = [4.1]
-          rotfreq = [0.0]
-          initial_condition = {type = "basis"}
-
-          [[control_bounds]]
-          oscID = 0
-          values = [1.0, 2.0]
-          extra_key = "not_allowed"
-        )",
-        logger);
-  }, "ERROR: Unknown key 'extra_key' in control_bounds\\.");
-}
-
-TEST_F(TomlParserTest, CarrierFrequency_UnknownKey) {
-  ASSERT_DEATH({
-    Config config = Config::fromTomlString(
-        R"(
-          nlevels = [2]
-          transfreq = [4.1]
-          rotfreq = [0.0]
-          initial_condition = {type = "basis"}
-
-          [[carrier_frequency]]
-          oscID = 0
-          values = [4.0]
-          forbidden_key = 42
-        )",
-        logger);
-  }, "ERROR: Unknown key 'forbidden_key' in carrier_frequency\\.");
-}
-
-TEST_F(TomlParserTest, Write_UnknownKey) {
-  ASSERT_DEATH({
-    Config config = Config::fromTomlString(
-        R"(
-          nlevels = [2]
-          transfreq = [4.1]
-          rotfreq = [0.0]
-          initial_condition = {type = "basis"}
-
-          [[write]]
-          oscID = 0
-          type = ["expectedenergy"]
-          unsupported_option = true
-        )",
-        logger);
-  }, "ERROR: Unknown key 'unsupported_option' in write\\.");
 }

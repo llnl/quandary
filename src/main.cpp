@@ -111,15 +111,12 @@ int main(int argc,char **argv)
 
   /* --- Initialize the Oscillators --- */
   Oscillator** oscil_vec = new Oscillator*[num_osc];
+  int param_offset = 0;
   for (size_t i = 0; i < num_osc; i++){
-    oscil_vec[i] = new Oscillator(config, i, rand_engine);
+    oscil_vec[i] = new Oscillator(config, i, rand_engine, param_offset, quietmode);
+    param_offset += oscil_vec[i]->getNParams();
   }
 
-
-  // Get pi-pulses, if any
-  for (size_t i=0; i<num_osc; i++){
-    oscil_vec[i]->pipulse = config.getApplyPiPulse(i);
-  }
 
   /* --- Initialize the Master Equation  --- */
   // Sanity check for matrix free solver
@@ -163,7 +160,7 @@ int main(int argc,char **argv)
   /* My time stepper */
   bool storeFWD = false;
   RunType runtype = config.getRuntype();
-  if (mastereq->lindbladtype != LindbladType::NONE &&   
+  if (mastereq->decoherence_type != DecoherenceType::NONE &&   
      (runtype == RunType::GRADIENT || runtype == RunType::OPTIMIZATION) ) storeFWD = true;  // if NOT Schroedinger solver and running gradient optim: store forward states. Otherwise, they will be recomputed during gradient. 
 
   TimeStepperType timesteppertype = config.getTimestepperType();
@@ -263,7 +260,7 @@ int main(int argc,char **argv)
 
   /* Output */
   if (runtype != RunType::OPTIMIZATION) {
-    optimctx->output->writeOptimFile(0, optimctx->getObjective(), gnorm, 0.0, optimctx->getFidelity(), optimctx->getCostT(), optimctx->getRegul(), optimctx->getPenalty(), optimctx->getPenaltyDpDm(), optimctx->getPenaltyEnergy(), optimctx->getPenaltyVariation());
+    optimctx->output->writeOptimFile(0, optimctx->getObjective(), gnorm, 0.0, optimctx->getFidelity(), optimctx->getCostT(), optimctx->getRegul(), optimctx->getPenaltyLeakage(), optimctx->getPenaltyDpDm(), optimctx->getPenaltyEnergy(), optimctx->getPenaltyVariation(), optimctx->getPenaltyWeightedCost());
   }
 
   /* --- Finalize --- */

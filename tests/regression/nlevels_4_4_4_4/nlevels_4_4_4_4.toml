@@ -3,125 +3,34 @@ ntime = 500
 dt = 0.01
 transfreq = [4.1, 4.2, 4.3, 4.4]
 selfkerr = [0.2, 0.2, 0.2, 0.2]
-crosskerr = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
-Jkl = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
+crosskerr =  0.001000 
+Jkl = 0.001000
 rotfreq = [4.1, 4.2, 4.3, 4.4]
-collapse_type = "none"
-decay_time = [0.0, 0.0, 0.0, 0.0]
-dephase_time = [0.0, 0.0, 0.0, 0.0]
-initial_condition = {type = "pure", levels = [1, 0, 0, 0]}
+initial_condition = {type = "state", levels = [1, 0, 0, 0]}
 
 control_enforceBC = false
-optim_target = {target_type = "pure", levels = [0, 0, 0, 0]}
+optim_target = {type = "state", levels = [0, 0, 0, 0]}
 optim_objective = "Jtrace"
 optim_weights = 1.0
-optim_atol = 1e-07
-optim_rtol = 1e-08
-optim_ftol = 1e-05
-optim_inftol = 1e-05
+optim_tolerance = { grad_abs = 1e-07, grad_rel = 1e-08, final_cost = 1e-05, infidelity = 1e-05 }
 optim_maxiter = 200
-optim_regul = 1e-05
-optim_penalty = 0.0
-optim_penalty_param = 0.0
-optim_penalty_dpdm = 0.0
-optim_penalty_energy = 0.0
-optim_penalty_variation = 0.0
-optim_regul_tik0 = false
+optim_tikhonov = { coeff = 1e-05, use_x0 = false }
+optim_penalty = { leakage = 0.0, weightedcost = 0.0, weightedcost_width = 0.0, dpdm = 0.0, energy = 0.0, variation = 0.0 }
 
 datadir = "./data_out"
-output_frequency = 1
-optim_monitor_frequency = 1
+output_timestep_stride = 1
+output_type = ["expectedEnergy", "expectedEnergyComposite", "population", "populationComposite"]
+output_optimization_stride = 1
 runtype = "simulation"
 usematfree = false
-linearsolver_type = "gmres"
-linearsolver_maxiter = 20
+linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"
 rand_seed = 1234
+control_initialization = {
+  type = "constant", amplitude = 0.005
+}
 
-[[control_segments]]
-oscID = 0
-type = "spline"
-num = 15
+control_parameterization = { type = "spline", num = 15 }
 
-[[control_segments]]
-oscID = 1
-type = "spline"
-num = 15
-
-[[control_segments]]
-oscID = 2
-type = "spline"
-num = 15
-
-[[control_segments]]
-oscID = 3
-type = "spline"
-num = 15
-
-[[control_bounds]]
-oscID = 0
-values = [0.008]
-
-[[control_bounds]]
-oscID = 1
-values = [0.008]
-
-[[control_bounds]]
-oscID = 2
-values = [0.008]
-
-[[control_bounds]]
-oscID = 3
-values = [0.008]
-
-[[control_initialization]]
-oscID = 0
-type = "constant"
-amplitude = 0.005
-
-[[control_initialization]]
-oscID = 1
-type = "constant"
-amplitude = 0.005
-
-[[control_initialization]]
-oscID = 2
-type = "constant"
-amplitude = 0.005
-
-[[control_initialization]]
-oscID = 3
-type = "constant"
-amplitude = 0.005
-
-[[carrier_frequency]]
-oscID = 0
-values = [0.0, -0.2, -0.001]
-
-[[carrier_frequency]]
-oscID = 1
-values = [0.0, -0.2, -0.001]
-
-[[carrier_frequency]]
-oscID = 2
-values = [0.0, -0.2, -0.001]
-
-[[carrier_frequency]]
-oscID = 3
-values = [0.0, -0.2, -0.001]
-
-[[write]]
-oscID = 0
-type = ["expectedEnergy", "population", "expectedEnergyComposite", "populationComposite"]
-
-[[write]]
-oscID = 1
-type = ["expectedEnergy", "population"]
-
-[[write]]
-oscID = 2
-type = ["expectedEnergy", "population"]
-
-[[write]]
-oscID = 3
-type = ["expectedEnergy", "population"]
+carrier_frequency = [0.0, -0.2, -0.001]
+control_bounds = 0.008

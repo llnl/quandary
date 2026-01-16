@@ -5,56 +5,29 @@ dt = 0.15
 transfreq = [4.10595]
 rotfreq = [4.10595]
 selfkerr = [0.2198]
-crosskerr = [0.0]
-Jkl = [0.0]
-collapse_type = "none"
-initial_condition = {type = "pure", levels = [1]}
+initial_condition = {type = "state", levels = [1]}
 
 control_enforceBC = true
-optim_target = {target_type = "file", filename = "./targetstate.dat"}
+optim_target = {type = "state", filename = "./targetstate.dat"}
 optim_objective = "Jtrace"
-gate_rot_freq = [0.0]
 optim_weights = [1.0]
-optim_atol = 0.0001
-optim_rtol = 0.0001
-optim_ftol = 0.0001
-optim_inftol = 1e-05
+optim_tolerance = { grad_abs = 0.0001, grad_rel = 0.0001, final_cost = 0.0001, infidelity = 1e-05 }
 optim_maxiter = 100
-optim_regul = 0.0001
-optim_regul_tik0 = false
-optim_penalty = 0.1
-optim_penalty_param = 0.01
-optim_penalty_dpdm = 0.01
-optim_penalty_energy = 0.1
-optim_penalty_variation = 10.0
+optim_tikhonov = { coeff = 0.0001, use_x0 = false }
+optim_penalty = { leakage = 0.1, weightedcost = 0.1, weightedcost_width = 0.01, dpdm = 0.01, energy = 0.1, variation = 10.0 }
 
 datadir = "./data_out"
-output_frequency = 1
-optim_monitor_frequency = 1
+output_timestep_stride = 1
+output_type = ["fullstate"]
+output_optimization_stride = 1
 runtype = "optimization"
 usematfree = true
-linearsolver_type = "gmres"
-linearsolver_maxiter = 20
+linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"
 rand_seed = 1234
+control_initialization = { type = "file", filename = "./params.dat" }
 
-[[control_initialization]]
-type = "file"
-filename = "./params.dat"
+control_parameterization = { type = "spline0", num = 101 }
 
-[[control_segments]]
-oscID = 0
-type = "spline0"
-num = 101
-
-[[control_bounds]]
-oscID = 0
-values = [100.0]
-
-[[carrier_frequency]]
-oscID = 0
-values = [0.0]
-
-[[write]]
-oscID = 0
-type = ["fullstate"]
+carrier_frequency = [0.0]
+control_bounds = 100.0

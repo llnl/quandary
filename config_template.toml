@@ -9,256 +9,189 @@ nessential = [2, 2]
 ntime = 1000
 # Time step size (ns). Determines final time: T=ntime*dt
 dt = 0.1
-# Fundamental transition frequencies (|0> to |1> transition) for each oscillator ("\omega_k", multiplying a_k^d a_k, GHz)
+# Fundamental transition frequencies (|0> to |1> transition) for each subsystem ("\omega_k", multiplying a_k^d a_k, GHz)
 transfreq = [4.10595, 4.81526]
-# Self-kerr frequencies for each oscillator ("\xi_k", multiplying a_k^d a_k^d a_k a_k, GHz)
+# Self-kerr frequencies for each subsystem ("\xi_k", multiplying a_k^d a_k^d a_k a_k, GHz)
 selfkerr = [0.2198, 0.2252]
-# Cross-kerr coupling frequencies for each oscillator coupling k<->l ("\xi_kl", multiplying a_k^d a_k a_l^d a_l, GHz).
-# Format: xi_01, xi_02, xi03, ... ,xi_12, xi_13, ...
-crosskerr = [0.1]
-# Dipole-dipole coupling frequencies for each oscillator coupling k<->l ("J_kl", multiplying a_k^d a_l + a_k a_l^d, GHz).
-# Format Jkl = J_01, J_02, ..., J12, J13, ...
-Jkl = [0.0]
+# Cross-kerr coupling strength for subsystems k<->l ("\xi_kl", multiplying a_k^d a_k a_l^d a_l, GHz).
+# Option 1: All-to-all connectivity with single value
+crosskerr = 0.1
+# Option 2: Per-subsystem-pair coupling using array of tables
+# crosskerr = [ 
+#   { subsystem = [0,1], value = 0.1 }
+# ]
+# Dipole-dipole coupling strength for subsystems k<->l ("J_kl", multiplying a_k^d a_l + a_k a_l^d, GHz).
+# Option 1: All-to-all connectivity with single value
+Jkl = 0.0
+# Option 2: Per-subsystem-pair coupling using array of tables
+# Jkl = [ 
+#   {subsystem = [0,1], value = 0.0 }
+# ]
 # Rotational wave approximation frequencies for each subsystem ("\omega_rot", GHz).
-# Note: The target gate rotation can be specified separately with option "gate_rot_freq", see below.
 rotfreq = [4.10595, 4.81526]
-# Switch between Schroedinger and Lindblad solver. "none" solves Schroedinger solver (state vector dynamics),
-# all other options solve Lindblads master equation (density matrix dynamics)
-# Options: "none", "decay", "dephase", "both"
-collapse_type = "none"
-# collapse_type = "decay"
-# collapse_type = "dephase"
-# collapse_type = "both"
-# Time of decay collapse operation (T1) per oscillator (gamma_1 = 1/T_1) (for Lindblad solver)
-decay_time = [0.0, 0.0]
-# Time of dephase collapse operation (T2) per oscillator (gamma_2 = 1/T_2) (for Lindblad solver)
-dephase_time = [0.0, 0.0]
+
+# Decoherence setting: Switch between Schroedinger and Lindblad solver. Default is "none" which solves Schroedinger equation (state vector dynamics), all other types solve Lindblads master equation for the density matrix.
+decoherence = { type = "none",              # "none", "decay", "dephase", or "both"
+            #    decay_time = [0.0, 0.0],   # Decay times T1 for each subsystem (ns)
+            #    dephase_time = [0.0, 0.0]  # Dephasing times T2 for each subsystem (ns)
+              } 
 
 # Specify the initial conditions that are to be propagated
+# Avalable initial condition types:
+# "basis" - all basis states of the full composite system, or of specified subsystems (subsystem = [...])
+# "state" - single initial state specified as levels of a product state (levels = [...])
+# "file" - read one initial state from file (filename = "...")
+# "diagonal" - for Lindblad solver, all diagonal basis density matrices of the full system, or of specified subsystems (subsystem = [...])
+# "ensemble" - for Lindblad solver, ensemble state used for pure-state preparation, optionally over specified subsystems (subsystem = [...])
+# "3states" - for Lindblad solver, three initial states for gate optimization 
+# "nplus1" - for Lindblad solver, N+1 initial states for fidelity estimation 
 initial_condition = {type = "basis"}
-# initial_condition = {type = "basis", oscIDs = [0, 1]}
-# initial_condition = {type = "file", filename = "path/to/initial_condition.dat"}
-# initial_condition = {type = "pure", levels = [1, 0]}
-# initial_condition = {type = "diagonal", oscIDs = [0]}
-# initial_condition = {type = "ensemble", oscIDs = [0, 1]}
-# initial_condition = {type = "3states"}
-# initial_condition = {type = "nplus1"}
-# initial_condition = {type = "performance"}
+# initial_condition = {type = "state", levels = [1, 0]}
+# initial_condition = {type = "basis", subsystem = [0, 1]}
+# initial_condition = {type = "file", filename = "path/to/initial_state.dat"}
 
-# Optional: Read system Hamiltonian from file (default: none - use built-in analytical Hamiltonian)
+# Optional: Read system Hamiltonian from file (default: none - use built-in Hamiltonian)
 # hamiltonian_file_Hsys = "/path/to/system_hamiltonian.dat"
-# Optional: Read control Hamiltonian from file (default: none - use built-in analytical Hamiltonian)
+# Optional: Read control Hamiltonian from file (default: none - use built-in Hamiltonian)
 # hamiltonian_file_Hc = "/path/to/control_hamiltonian.dat"
+
+
+# ---------------------------------------------------------------
+# ------------------- Control pulse settings -------------------- 
+# ---------------------------------------------------------------
+# Control parameterization options: 
+# Available control types:
+# "spline" - 2nd order B-spline basis functions (recommended).
+# "spline0" - piecewise constant control parameterization (0th order B-splines)
+# "spline_amplitude" - amplitude-only parameterization
+# For each type, specify number of basis functions (num), and optionally start and stop times (tstart, tstop)
+# Option 1: Parameterization that applies to all subsystems
+control_parameterization = { type = "spline", num = 150}
+# control_parameterization = { type = "spline0", num = 300 , tstart = 0.0, tstop = 10.0 }
+
+# Option 2: Specify different parameterizations per-subsystem as array of tables
+# control_parameterization = [
+#   { subsystem = 0, type = "spline", num = 150, tstart = 0.0, tstop = 10.0 },
+#   { subsystem = 1, type = "spline0", num = 300 }
+# ]
+
+# Carrier wave frequencies (GHz).
+# Option 1: Specify different arrays of frequencies for each subsystem, as array of tables
+carrier_frequency = [
+  {subsystem = 0, value = [0.0, -0.2198, -0.1]},
+  {subsystem = 1, value = [0.0, -0.2252, -0.1]}
+]
+# Option 2: Same array of frequencies for all subsystems using a table
+# carrier_frequency = { values = [0.0, -0.2252, -0.1] }
+# Option 3: Same array of frequencies for all subsystems using shorthand
+# carrier_frequency = [0.0, -0.2252, -0.1]
+
+## Control parameter initialization: 
+# Available types: 
+# "random" - random initialization within amplitude bounds (amplitude = ...)
+# "constant" - constant amplitude initialization (amplitude = ...)
+# "file" - read initial parameters from file (filename = "...")
+## Option 1: Initialization that applies to all subsystems 
+control_initialization = { type = "random", amplitude = 0.005}
+# control_initialization = { type = "file", filename = "./params.dat"}
+## Option 2: Specify different initialization per subsystem as array of tables
+# control_initialization = [
+#   { subsystem = 0, type = "constant", amplitude = 0.003 },
+#   { subsystem = 1, type = "random", amplitude = 0.05 }
+# ]
+
+# Maximum amplitude bound for the control pulses (GHz).
+# Option 1: Single value applies to all subsystems
+control_bounds = 0.008
+# Option 2: Specify different bounds for each subsystem as array
+# control_bounds = [0.008, 0.010]
+
+## Decide whether control pulses should start and end at zero. 
+control_enforceBC = false
 
 # ---------------------------------------------------------------
 # ------------------- Optimization options ----------------------
 # ---------------------------------------------------------------
-# Decide whether control pulses should start and end at zero. Default: true.
-control_enforceBC = false
-
-# Optimization target_type options: "gate", "pure", or "file".
-# Gate types: "cnot", "cqnot", "swap", "swap0q", "qft", "xgate", "ygate", "zgate", "hadamard"
-optim_target = {target_type = "gate", gate_type = "cnot"}
-# optim_target = {target_type = "gate", gate_type = "file", gate_file = "/path/to/target_gate.dat"}
-# optim_target = {target_type = "pure", levels = [0, 0]}
-# optim_target = {target_type = "file", filename = "/path/to/target_state.dat"}
-
-# Frequency of rotation of the target gate, for each oscillator (GHz). Default: 0.0
-# gate_rot_freq = [0.0, 0.0]
+# Optimization target options: 
+# Available target types:
+# "none" - No optimization target
+# "gate" - Unitary gate transformation. The gate can be read from file (filename = "..."), or chosen from standard gates below (gate_type = "..."). Optionally, a gate rotation frequency can be specified (gate_rot_freq = [...])
+# "state" - Single target state. The state can be read from file (filename = "..."), or can be specified as levels of a product state (levels = [...])
+optim_target = {type = "gate", gate_type = "cnot"} # "cnot", "cqnot", "swap", "swap0q", "qft", "xgate", "ygate", "zgate", "hadamard"
+# optim_target = { type = "gate", gate_type = "cnot", gate_rot_freq = [0.0, 0.0] }
+# optim_target = {type = "gate", filename = "/path/to/target_gate.dat"}
+# optim_target = {type = "state", levels = [0, 0]}
+# optim_target = {type = "state", filename = "/path/to/target_state.dat"}
+#optim_target = {type = "none"}
 
 # Objective function measure options: "Jtrace", "Jfrobenius", "Jmeasure"
 optim_objective = "Jtrace"
 
-# Weights for summing up the objective function (beta_i).
-# If fewer numbers than oscillators are given, the last one will be propagated to the remaining ones.
-optim_weights = [1.0]
-# optim_weights = [0.5, 0.5]
+# Weights (beta_i) for summing up objective function terms from different initial conditons. Either a single value (same weight for all initial conditions), or a array of weights (one per initial condition)
+optim_weights = 1.0
 
-# Optimization stopping tolerance based on gradient norm (absolute: ||G|| < atol)
-optim_atol = 1e-7
-# Optimization stopping tolerance based on gradient norm (relative: ||G||/||G0|| < rtol)
-optim_rtol = 1e-8
-# Optimization stopping criterion based on the final time cost (absolute: J(T) < ftol)
-optim_ftol = 1e-5
-# Optimization stopping criterion based on the infidelity (absolute: 1-Favg < inf_tol)
-optim_inftol = 1e-5
+# Optimization tolerances (stopping criteria):
+optim_tolerance = { grad_abs = 1e-7,     # absolute gradient norm tolerance (||G|| < grad_abs)
+                    grad_rel = 1e-8,     # relative gradient norm tolerance (||G||/||G0|| < grad_rel)
+                    final_cost = 1e-5,   # final-time cost tolerance (J(T) < final_cost)
+                    infidelity = 1e-5    # infidelity tolerance (1 - F_avg < infidelity)
+                }
 # Maximum number of optimization iterations
 optim_maxiter = 200
-# Coefficient (gamma_1) of Tikhonov regularization for the design variables (gamma_1/2 || design ||^2)
-optim_regul = 0.00001
-# Coefficient (gamma_2) for adding first integral penalty term (gamma_1 ∫_0^T P(rho(t) dt )
-optim_penalty = 0.0
-# integral penalty parameter inside the weight in P(rho(t)) (gaussian variance a)
-optim_penalty_param = 0.0
-# Coefficient (gamma_3) for penalizing the integral of the second derivative of state populations
-# (gamma_3 \int_0^T d^2/dt^2(Pop(rho)) dt )
-optim_penalty_dpdm = 0.0
-# Coefficient (gamma_4) for penalizing the control pulse energy integral (gamma_4 \int_0^T p^2 + q^2 dt )
-optim_penalty_energy = 0.0
-# Coefficient (gamma_5) for penalizing variations in control amplitudes.
-# Only used for piece-wise constant control parameterizations (spline0)
-optim_penalty_variation = 0.0
-# Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
-optim_regul_tik0 = false
+
+# Tikhonov regularization for the optimization variables (gamma * ||x||^2)
+optim_tikhonov = { coeff = 0.00001,   # Coefficient (gamma) for Tikhonov regularization
+                   use_x0 = false     # use gamma * ||x - x_0||^2 instead (default: false)
+                 }
+
+# Coefficients for Penalty terms added to the optimization cost function
+optim_penalty = { leakage = 0.0,                # Penalize leakage into guard levels
+                  energy = 0.0,                 # Penalize integral over control pulse energy
+                  dpdm = 0.0,                   # Penalize 2nd derivative of state populations
+                  variation = 0.0,              # Penalize control pulse variation (for 0-th order Bsplines)
+                  weightedcost = 0.0,           # Penalize time-weighted cost function integral
+                  weightedcost_width = 0.0      # Width paramter for weighted cost function integral
+                }
 
 # ---------------------------------------------------------------
-# ------------------- Output and runtypes -----------------------
+# ------------------- Output options -----------------
 # ---------------------------------------------------------------
+
 # Directory for output files
 datadir = "./data_out"
-
+# Specify the desired output during time evolution. Format: list of any of the following options:
+# "expectedEnergy" - expected level occupation for each subsystem  
+# "expectedEnergyComposite" - expected level of the full-dimensional composite system
+# "population" - level occupation (probabilities) for each subsystem 
+# "populationComposite" - level occupation (probabilities) for the full-dimensional composite system
+# "fullstate" - full state of the composite system (full density matrix, or state vector). WARNING: This might result in very large output files - use with care.
+output_type = ["population", "expectedEnergy"]
 # Output frequency in the time domain: write output every <num> time-step
-output_frequency = 1
-# Frequency of writing output during optimization: write output every <num> optimization iterations
-optim_monitor_frequency = 1
+output_timestep_stride = 1
+# Output frequency for optimization history: write every <num> optimization iterations
+output_optimization_stride = 1
+
+
+# ---------------------------------------------------------------
+# ------------------- Solver options -----------------
+# ---------------------------------------------------------------
 # Runtype options:
 # "simulation" - a forward simulation only
 # "gradient" - forward simulation and backward simulation
 # "optimization" - a full optimization cycle
-# "evalControls" - Only evaluates the current control pulses (no simulation)
-# "none" - Don't run anything
+# "evalControls" - only evaluates the current control pulses (no simulation)
 runtype = "optimization"
-# Use matrix free solver, instead of sparse matrix implementation. Only available for 2,3,4, or 5 oscillators.
+# Use matrix free solver, instead of sparse matrix implementation. Only available for 2,3,4, or 5 subsystems.
 usematfree = true
-# Solver type for solving the linear system at each time step: "gmres", "neumann"
-linearsolver_type = "gmres"
-# Set maximum number of iterations for the linear solver
-linearsolver_maxiter = 20
+# Linear solver configuration: type can be "gmres" or "neumann", and maximum number of iteration (maxiter)
+linearsolver = { type = "gmres", maxiter = 20 }
 # Switch the time-stepping algorithm. Currently available:
 # "IMR" - Implicit Midpoint Rule (IMR) of 2nd order,
 # "IMR4" - Compositional IMR of order 2 using 3 stages,
 # "IMR8" - Compositional IMR of order 8 using 15 stages,
 # "EE" - Explicit Euler (EE) of 1st order, (for debugging only)
 timestepper = "IMR"
-# For reproducability, one can choose to set a fixed seed for the random number generator. Comment out, or set negative if seed should be random (non-reproducable)
+# Fixed seed for the random number generator. Comment out, or set negative if seed should be random (non-reproducable)
 rand_seed = 1234
 
-# ---------------------------------------------------------------
-# ------------------- Per oscillator settings -------------------
-# ---------------------------------------------------------------
-# NOTE: these are toml arrays of tables and so they must go after the above root table settings
 
-# Apply a pi-pulse to oscillator <oscID> from <tstart> to <tstop> using a control strength of <amp> rad/ns.
-# This ignores the codes control parameters inside [tstart,tstop], and instead applies the constant control
-# amplitude |p+iq|=<amp> to oscillator <oscID>, and zero control for all other oscillators.
-# For more than one pipulse, just repeat this block.
-# [[apply_pipulse]]
-# oscID = 0
-# tstart = 0.5
-# tstop = 0.604
-# amp = 15.10381
-
-# Define the controllable segments for each oscillator and the type of parameterization.
-# Multiple of these blocks can be defined.
-# Available control types:
-# "spline" - 2nd order B-spline basis functions (recommended)
-# "spline0" - piecewise constant control parameterization (0th order B-splines)
-# "spline_amplitude" - amplitude-only parameterization
-# "step" - step function control
-[[control_segments]]
-oscID = 0
-type = "spline"
-num = 150
-# tstart = 0.0  # optional, defaults to 0.0
-# tstop = 100.0  # optional, defaults to ntime * dt
-
-[[control_segments]]
-oscID = 1
-type = "spline"
-num = 150
-
-# [[control_segments]]
-# oscID = 0
-# type = "spline0"
-# num = 300
-
-# [[control_segments]]
-# oscID = 0
-# type = "spline_amplitude"
-# num = 150
-# scaling = 1.0
-
-# [[control_segments]]
-# oscID = 0
-# type = "step"
-# step_amp1 = 0.1
-# step_amp2 = 0.2
-# tramp = 0.3
-# tstart = 0.0  # optional
-# tstop = 100.0  # optional
-
-# Apply to all oscillators
-# [[control_segments]]
-# type = "spline0"
-# num = 300
-
-# Control initialization options:
-# Option 1: File initialization (applies to all oscillators)
-# [[control_initialization]]
-# type = "file"
-# filename = "params.dat"
-
-# Option 2: Per-oscillator initialization
-# Options: "constant" with amplitude and optional phase, "random" with amplitude and optional phase
-[[control_initialization]]
-oscID = 0
-type = "constant"
-amplitude = 0.005
-# phase = 0.0  # optional, defaults to 0.0
-
-[[control_initialization]]
-oscID = 1
-type = "constant"
-amplitude = 0.005
-
-# [[control_initialization]]
-# oscID = 0
-# type = "random"
-# amplitude = 0.005
-
-# Apply to all oscillators
-# [[control_initialization]]
-# type = "random"
-# amplitude = 0.005
-
-# Maximum amplitude bound for the control pulses for each oscillator (GHz). One entry for each segment.
-[[control_bounds]]
-oscID = 0
-values = [0.008]
-
-[[control_bounds]]
-oscID = 1
-values = [0.008]
-
-# Apply to all oscillators
-# [[control_bounds]]
-# values = [0.008]
-
-# Carrier wave frequencies for each oscillator 0..Q-1. (GHz)
-[[carrier_frequency]]
-oscID = 0
-values = [0.0, -0.2198, -0.1]
-
-[[carrier_frequency]]
-oscID = 1
-values = [0.0, -0.2252, -0.1]
-
-# Apply to all oscillators
-# [[carrier_frequency]]
-# values = [0.0, -0.2252, -0.1]
-
-# Specify the desired output for each oscillator. Format: list of either of the following options:
-# "expectedEnergy" - time evolution of the expected energy level for this oscillator (expected energy of the reduced density matrix)
-# "expectedEnergyComposite" - time evolution of expected energy level of the full-dimensional composite system
-# "population" - time evolution of the energy level populations (probabilities) for this oscillator (diagonals of the reduced density matrix)
-# "populationComposite" - time evolution of the energy level population (probabilities) for the full-dimensional composite system
-# "fullstate" - time-evolution of the full state of the composite system (full density matrix, or state vector)
-# (note: 'fullstate' can appear in *any* of the lines). WARNING: This might result in *huge* output files! Use with care.
-# Apply to all oscillators
-[[write]]
-type = ["population", "expectedEnergy"]
-
-# Apply to oscillator with ID = 1
-# [[write]]
-# oscID = 1
-# type = ["population", "expectedEnergy"]

@@ -6,13 +6,11 @@ Output::Output(){
   mpirank_world = -1;
   mpirank_petsc = -1;
   mpirank_init  = -1;
-  output_frequency = 0;
+  output_timestep_stride = 0;
   quietmode = false;
 }
 
 Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bool quietmode_) : Output() {
-
-  size_t noscillators = config.getNumOsc();
 
   /* Get communicator ranks */
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
@@ -23,6 +21,8 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
   /* Reduced output */
   quietmode = quietmode_;
 
+  /* Store number of oscillators */
+  noscillators = config.getNumOsc();
 
   /* Create Data directory */
   datadir = config.getDataDir();
@@ -32,8 +32,8 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
   MPI_Barrier(MPI_COMM_WORLD);
 
   /* Prepare output for optimizer */
-  optim_monitor_freq = config.getOptimMonitorFrequency();
-  output_frequency = config.getOutputFrequency();
+  output_optimization_stride = config.getOutputOptimizationStride();
+  output_timestep_stride = config.getOutputTimestepStride();
   if (mpirank_world == 0) {
     char filename[255];
     snprintf(filename, 254, "%s/optim_history.dat", datadir.c_str());
@@ -50,35 +50,33 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
   vfile = NULL;
   for (size_t i=0; i< noscillators; i++) expectedfile.push_back (NULL);
   for (size_t i=0; i< noscillators; i++) populationfile.push_back (NULL);
+
+  /* Check which output should be written to files (applies them to all oscillators) */
   expectedfile_comp=NULL;
   populationfile_comp=NULL;
   writeFullState = false;
   writeExpectedEnergy_comp = false;
   writePopulation_comp = false;
-  for (size_t i=0; i<noscillators; i++) writeExpectedEnergy.push_back(false);
-  for (size_t i=0; i<noscillators; i++) writePopulation.push_back(false);
-
-  /* Check the output strings for each oscillator to determine which files should be written */
-  output = config.getOutput();
-  for (size_t i=0; i<noscillators; i++) { // iterates over oscillators
-    for (auto output_type : output[i]) { // iterates over output types for this oscillator
-      switch (output_type) {
-        case OutputType::EXPECTED_ENERGY:
-          writeExpectedEnergy[i] = true;
-          break;
-        case OutputType::EXPECTED_ENERGY_COMPOSITE:
-          writeExpectedEnergy_comp = true;
-          break;
-        case OutputType::POPULATION:
-          writePopulation[i] = true;
-          break;
-        case OutputType::POPULATION_COMPOSITE:
-          writePopulation_comp = true;
-          break;
-        case OutputType::FULLSTATE:
-          writeFullState = true;
-          break;
-      }
+  writeExpectedEnergy = false;
+  writePopulation = false;
+  output_type = config.getOutputType();
+  for (auto type : output_type) { // iterates over output types
+    switch (type) {
+      case OutputType::EXPECTED_ENERGY:
+        writeExpectedEnergy = true;
+        break;
+      case OutputType::EXPECTED_ENERGY_COMPOSITE:
+        writeExpectedEnergy_comp = true;
+        break;
+      case OutputType::POPULATION:
+        writePopulation = true;
+        break;
+      case OutputType::POPULATION_COMPOSITE:
+        writePopulation_comp = true;
+        break;
+      case OutputType::FULLSTATE:
+        writeFullState = true;
+        break;
     }
   }
 }
@@ -87,15 +85,13 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
 Output::~Output(){
   if (mpirank_world == 0 && !quietmode) printf("Output directory: %s\n", datadir.c_str());
   if (mpirank_world == 0) fclose(optimfile);
-  writeExpectedEnergy.clear();
-  writePopulation.clear();
 }
 
 
-void Output::writeOptimFile(int optim_iter, double objective, double gnorm, double stepsize, double Favg, double costT, double tikh_regul, double penalty, double penalty_dpdm, double penalty_energy, double penalty_variation){
+void Output::writeOptimFile(int optim_iter, double objective, double gnorm, double stepsize, double Favg, double costT, double tikh_regul, double penalty_leakage, double penalty_dpdm, double penalty_energy, double penalty_variation, double penalty_weightedcost){
 
   if (mpirank_world == 0){
-    fprintf(optimfile, "%05d  %1.14e  %1.14e  %.8f  %1.14e  %1.14e  %1.14e  %1.14e  %1.14e  %1.14e  %1.14e\n", optim_iter, objective, gnorm, stepsize, Favg, costT, tikh_regul, penalty, penalty_dpdm, penalty_energy, penalty_variation);
+    fprintf(optimfile, "%05d  %1.14e  %1.14e  %.8f  %1.14e  %1.14e  %1.14e  %1.14e  %1.14e  %1.14e  %1.14e\n", optim_iter, objective, gnorm, stepsize, Favg, costT, tikh_regul, penalty_leakage + penalty_weightedcost, penalty_dpdm, penalty_energy, penalty_variation);
     fflush(optimfile);
   } 
 }
@@ -166,7 +162,7 @@ void Output::writeControls(Vec params, MasterEq* mastereq, int ntime, double dt)
       fprintf(file_c, "#\"time\"         \"p(t) (rotating)\"          \"q(t) (rotating)\"         \"f(t) (labframe)\"\n");
 
       /* Write every <num> timestep to file */
-      for (int i=0; i<=ntime; i+=output_frequency) {
+      for (int i=0; i<=ntime; i+=output_timestep_stride) {
         double time = i*dt; 
 
         double ReI, ImI, LabI;
@@ -189,9 +185,9 @@ void Output::openTrajectoryDataFiles(std::string prefix, int initid){
   // On the first petsc rank, open required files and print header information
   if (mpirank_petsc == 0) {
 
-    // Expected energy per oscillator  
-    for (size_t i=0; i<output.size(); i++) { // iterates over oscillators
-      if (writeExpectedEnergy[i]) {
+    // Open files for expected energy per oscillator  
+    if (writeExpectedEnergy) {
+      for (size_t i=0; i<noscillators; i++) { 
         snprintf(filename, 254, "%s/expected%zu.iinit%04d.dat", datadir.c_str(), i, initid);
         expectedfile[i] = fopen(filename, "w");
         if (expectedfile[i] == nullptr) {
@@ -201,7 +197,7 @@ void Output::openTrajectoryDataFiles(std::string prefix, int initid){
         fprintf(expectedfile[i], "#\"time\"      \"expected energy level\"\n");
       }
     }
-    // Expected energy for full composite system
+    // Open file for expected energy of the full composite system
     if (writeExpectedEnergy_comp) {
       snprintf(filename, 254, "%s/expected_composite.iinit%04d.dat", datadir.c_str(), initid);
       expectedfile_comp = fopen(filename, "w");
@@ -211,9 +207,9 @@ void Output::openTrajectoryDataFiles(std::string prefix, int initid){
       }
       fprintf(expectedfile_comp, "#\"time\"      \"expected energy level\"\n");
     }
-    // Populations per oscillator
-    for (size_t i=0; i<output.size(); i++) { // iterates over oscillators
-      if (writePopulation[i]) {
+    // Open files for populations per oscillator
+    if (writePopulation) {
+      for (size_t i=0; i<noscillators; i++) { 
         snprintf(filename, 254, "%s/population%zu.iinit%04d.dat", datadir.c_str(), i, initid);
         populationfile[i] = fopen(filename, "w");
         if (populationfile[i] == nullptr) {
@@ -223,7 +219,7 @@ void Output::openTrajectoryDataFiles(std::string prefix, int initid){
         fprintf(populationfile[i], "#\"time\"      \"diagonal of the density matrix\"\n");
       }
     }
-    // Population for full composite system 
+    // Open file for population for full composite system 
     if (writePopulation_comp) {
       snprintf(filename, 254, "%s/population_composite.iinit%04d.dat", datadir.c_str(), initid);
       populationfile_comp = fopen(filename, "w");
@@ -233,8 +229,8 @@ void Output::openTrajectoryDataFiles(std::string prefix, int initid){
       }
       fprintf(populationfile_comp, "#\"time\"      \"population\"\n");
     }
-    // Full vectorized state 
-    if (writeFullState ) {
+    // Open file for full vectorized state 
+    if (writeFullState) {
       snprintf(filename, 254, "%s/%s_Re.iinit%04d.dat", datadir.c_str(), prefix.c_str(), initid);
       ufile = fopen(filename, "w");
       if (ufile == nullptr) {
@@ -254,11 +250,11 @@ void Output::openTrajectoryDataFiles(std::string prefix, int initid){
 void Output::writeTrajectoryDataFiles(int timestep, double time, const Vec state, MasterEq* mastereq){
 
   /* Write output only every <num> time-steps */
-  if (timestep % output_frequency == 0) {
+  if (timestep % output_timestep_stride == 0) {
 
     /* Write expected energy levels to file */
-    for (size_t iosc = 0; iosc < expectedfile.size(); iosc++) {
-      if (writeExpectedEnergy[iosc]) {
+    if (writeExpectedEnergy) {
+      for (size_t iosc = 0; iosc < expectedfile.size(); iosc++) {
         double expected = mastereq->getOscillator(iosc)->expectedEnergy(state);
         if (mpirank_petsc==0) fprintf(expectedfile[iosc], "%.8f %1.14e\n", time, expected);
       }
@@ -269,8 +265,8 @@ void Output::writeTrajectoryDataFiles(int timestep, double time, const Vec state
     }
 
     /* Write population to file */
-    for (size_t iosc = 0; iosc < populationfile.size(); iosc++) {
-      if (writePopulation[iosc]) {
+    if (writePopulation) {
+      for (size_t iosc = 0; iosc < populationfile.size(); iosc++) {
         std::vector<double> pop (mastereq->getOscillator(iosc)->getNLevels(), 0.0);
         mastereq->getOscillator(iosc)->population(state, pop);
         if (mpirank_petsc == 0) {
