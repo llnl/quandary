@@ -825,8 +825,9 @@ std::string toString(const std::vector<double>& vec) {
 } // namespace
 
 void Config::printConfig(std::stringstream& log) const {
-  log << "# Configuration settings\n";
-  log << "# =============================================\n\n";
+  log << "# =============================================\n";
+  log << "# System settings \n";
+  log << "# =============================================\n";
 
   // Section 1: Root table settings
 
@@ -852,14 +853,23 @@ void Config::printConfig(std::stringstream& log) const {
   if (hamiltonian_file_Hc.has_value()) {
     log << "hamiltonian_file_Hc = \"" << hamiltonian_file_Hc.value() << "\"\n";
   }
-  // Control pulse settings
+
+  log << "\n";
+  log << "# =============================================\n";
+  log << "# Control pulse settings \n";
+  log << "# =============================================\n";
+
   log << "control_parameterization = " << toString(control_parameterizations) << "\n";
   log << "carrier_frequency = " << toString(carrier_frequencies) << "\n";
   log << "control_initialization = " << toString(control_initializations) << "\n";
   log << "control_bounds = " << toString(control_bounds) << "\n";
   log << "control_enforceBC = " << (control_enforceBC ? "true" : "false") << "\n";
 
-  // Optimization parameters
+  log << "\n";
+  log << "# =============================================\n";
+  log << "# Optimization settings \n";
+  log << "# =============================================\n";
+
   log << "optim_target = " << toString(optim_target) << "\n";
   log << "optim_objective = \"" << enumToString(optim_objective, OBJECTIVE_TYPE_MAP) << "\"\n";
   log << "optim_weights = " << toString(optim_weights) << "\n";
@@ -877,7 +887,11 @@ void Config::printConfig(std::stringstream& log) const {
       << ", weightedcost = " << optim_penalty_weightedcost
       << ", weightedcost_width = " << optim_penalty_weightedcost_width << " }\n";
 
-  // Output  options 
+  log << "\n";
+  log << "# =============================================\n";
+  log << "# Output settings \n";
+  log << "# =============================================\n";
+
   log << "datadir = \"" << datadir << "\"\n";
   log << "output_type = [";
   for (size_t j = 0; j < output_type.size(); ++j) {
@@ -888,7 +902,11 @@ void Config::printConfig(std::stringstream& log) const {
   log << "output_timestep_stride = " << output_timestep_stride << "\n";
   log << "output_optimization_stride = " << output_optimization_stride << "\n";
 
-  // Solver options
+  log << "\n";
+  log << "# =============================================\n";
+  log << "# Solver settings \n";
+  log << "# =============================================\n";
+
   log << "runtype = \"" << enumToString(runtype, RUN_TYPE_MAP) << "\"\n";
   log << "usematfree = " << (usematfree ? "true" : "false") << "\n";
   log << "linearsolver = { type = \"" << enumToString(linearsolver_type, LINEAR_SOLVER_TYPE_MAP) << "\", maxiter = " << linearsolver_maxiter << " }\n";
