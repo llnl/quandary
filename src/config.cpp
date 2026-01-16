@@ -549,14 +549,8 @@ std::string toStringCoupling(const std::vector<double>& couplings, size_t num_os
   if (couplings.empty()) return "[]";
 
   // If all couplings are the same, print single value
-  bool all_same = true;
-  for (size_t i = 1; i < couplings.size(); ++i) {
-    if (couplings[i] != couplings[0]) {
-      all_same = false;
-      break;
-    }
-  }
-  if (all_same) {
+  bool all_equal = std::adjacent_find(couplings.begin(), couplings.end(), std::not_equal_to<double>{}) == couplings.end();
+  if (all_equal) {
     std::ostringstream oss;
     oss << std::setprecision(std::numeric_limits<double>::max_digits10);
     oss << couplings[0];
@@ -690,17 +684,10 @@ std::string toStringWithOptionalPerSubsystem(const std::vector<T>& items, PrintF
   if (items.empty()) return "[]";
   
   // Check if all items are the same
-  bool all_same = true;
-  const auto& first = items[0];
-  for (size_t i = 1; i < items.size(); ++i) {
-    if (!areEqual(items[i], first)) {
-      all_same = false;
-      break;
-    }
-  }
+  bool all_equal = std::adjacent_find(items.begin(), items.end(), [&areEqual](const auto& a, const auto& b) { return !areEqual(a, b); }) == items.end();
   
-  if (all_same) {
-    std::string out = printItems(first);
+  if (all_equal) {
+    std::string out = printItems(items.front());
     // If items are not wrapped in either {...} or [...], add {} here.
     if (out.front() != '{' && out.front() != '[') {
       out = "{" + out + "}";
