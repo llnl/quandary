@@ -201,17 +201,6 @@ class Config {
    */
   OptimTargetSettings parseOptimTarget(const toml::table& table, size_t num_osc) const;
 
-  /**
-   * @brief Prints coupling parameters in table format
-   *
-   * Converts a flat coupling vector back to the table format with "i-j" keys.
-   * Only prints non-zero couplings.
-   *
-   * @param couplings Vector of coupling values indexed by pair
-   * @param num_osc Number of oscillators
-   * @return String in TOML table format
-   */
-  std::string printCouplingParameters(const std::vector<double>& couplings, size_t num_osc) const;
 
   // TODO cfg: delete these when .cfg format is removed.
   template <typename T>

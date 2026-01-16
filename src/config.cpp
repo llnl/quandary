@@ -578,7 +578,9 @@ Config Config::fromCfgString(const std::string& cfg_content, const MPILogger& lo
   return Config(logger, settings);
 }
 
-std::string Config::printCouplingParameters(const std::vector<double>& couplings, size_t num_osc) const {
+namespace {
+
+std::string toStringCoupling(const std::vector<double>& couplings, size_t num_osc) {
   if (couplings.empty()) return "[]";
 
   // If all couplings are the same, print single value
@@ -626,8 +628,6 @@ std::string Config::printCouplingParameters(const std::vector<double>& couplings
   result += "]";
   return result;
 }
-
-namespace {
 
 template <typename T>
 std::string printVector(const std::vector<T>& vec) {
@@ -844,8 +844,8 @@ void Config::printConfig(std::stringstream& log) const {
   log << "dt = " << dt << "\n";
   log << "transfreq = " << printVector(transfreq) << "\n";
   log << "selfkerr = " << printVector(selfkerr) << "\n";
-  log << "crosskerr = " << printCouplingParameters(crosskerr, nlevels.size()) << "\n";
-  log << "Jkl = " << printCouplingParameters(Jkl, nlevels.size()) << "\n";
+  log << "crosskerr = " << toStringCoupling(crosskerr, nlevels.size()) << "\n";
+  log << "Jkl = " << toStringCoupling(Jkl, nlevels.size()) << "\n";
   log << "rotfreq = " << printVector(rotfreq) << "\n";
   log << "decoherence = {\n";
   log << "  type = \"" << enumToString(decoherence_type, DECOHERENCE_TYPE_MAP) << "\",\n";
