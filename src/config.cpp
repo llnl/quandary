@@ -807,13 +807,7 @@ std::string toString(const std::vector<std::vector<double>>& carrier_frequencies
 std::string toString(const std::vector<double>& vec) {
   if (vec.empty()) return "[]";
 
-  bool all_equal = true;
-  for (size_t i = 1; i < vec.size(); ++i) {
-    if (vec[i] != vec[0]) {
-      all_equal = false;
-      break;
-    }
-  }
+  bool all_equal = std::adjacent_find(vec.begin(), vec.end(), std::not_equal_to<double>{}) == vec.end();
 
   if (all_equal) {
     return std::to_string(vec[0]);
