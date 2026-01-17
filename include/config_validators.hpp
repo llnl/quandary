@@ -481,23 +481,6 @@ inline const toml::table& getRequiredTable(const toml::table& config, const std:
 }
 
 /**
- * @brief Extracts an array of tables from a TOML configuration.
- *
- * Returns an empty array if the key doesn't exist or isn't an array of tables.
- *
- * @param config Parent TOML table
- * @param key Name of the array of tables field
- * @return The array of tables if it exists, otherwise an empty array
- */
-inline toml::array getArrayOfTables(const toml::table& config, const std::string& key) {
-  if (!config.contains(key) || !config[key].is_array_of_tables()) {
-    return toml::array{};
-  }
-
-  return *config[key].as_array();
-}
-
-/**
  * @brief Parses a field that can be either a scalar (applied to all) or an exact-size array.
  *
  * For per-oscillator settings, this allows users to specify either:
