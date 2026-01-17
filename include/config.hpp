@@ -102,7 +102,7 @@ class Config {
 
   // Output and runtypes
   std::string datadir; ///< Directory for output files
-  std::vector<OutputType> output_type; ///< Specify the desired output types. 
+  std::vector<OutputType> output_type; ///< Specify the desired output types.
   size_t output_timestep_stride; ///< Output frequency in the time domain: write output every <num> time-step
   size_t output_optimization_stride; ///< Frequency of writing output during optimization iterations
   RunType runtype; ///< Runtype options: simulation, gradient, or optimization
@@ -156,7 +156,7 @@ class Config {
   const ControlParameterizationSettings& getControlParameterizations(size_t i_osc) const { return control_parameterizations[i_osc]; }
   bool getControlEnforceBC() const { return control_enforceBC; }
   const ControlInitializationSettings& getControlInitializations(size_t i_osc) const {
-    return control_initializations[i_osc]; 
+    return control_initializations[i_osc];
   }
   double getControlBound(size_t i_osc) const { return control_bounds[i_osc]; }
   const std::vector<double>& getCarrierFrequencies(size_t i_osc) const { return carrier_frequencies[i_osc]; }
@@ -193,18 +193,18 @@ class Config {
   void validate() const;
 
   size_t computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, DecoherenceType decoherence_type) const;
-  
+
   void setRandSeed(int rand_seed_);
 
   // Helper function to parse a single control parameterization table
   ControlParameterizationSettings parseControlParameterizationSpecs(const toml::table& param_table) const;
 
-  // Helper function to parse a single control initialization table 
+  // Helper function to parse a single control initialization table
   ControlInitializationSettings parseControlInitializationSpecs(const toml::table& table) const;
-  
+
   /**
    * @brief Parses optimization target settings from TOML table
-   * 
+   *
    * @param table TOML table containing the configuration
    * @param num_osc Number of oscillators
    * @return Parsed optimization target settings

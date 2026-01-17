@@ -21,14 +21,14 @@ selfkerr = [0.2198, 0.2252]
 # Option 1: All-to-all connectivity with single value
 crosskerr = 0.1
 # Option 2: Per-subsystem-pair coupling using array of tables
-# crosskerr = [ 
+# crosskerr = [
 #   { subsystem = [0,1], value = 0.1 }
 # ]
 # Dipole-dipole coupling strength for subsystems k<->l ("J_kl", multiplying a_k^d a_l + a_k a_l^d, GHz).
 # Option 1: All-to-all connectivity with single value
 Jkl = 0.0
 # Option 2: Per-subsystem-pair coupling using array of tables
-# Jkl = [ 
+# Jkl = [
 #   {subsystem = [0,1], value = 0.0 }
 # ]
 # Rotational wave approximation frequencies for each subsystem ("\omega_rot", GHz).
@@ -40,7 +40,7 @@ rotfreq = [4.10595, 4.81526]
 decoherence = { type = "none",              # "none", "decay", "dephase", or "both"
             #    decay_time = [0.0, 0.0],   # Decay times T1: single value or one per subsystem (ns)
             #    dephase_time = [0.0, 0.0]  # Dephasing times T2: single value or one per subsystem (ns)
-              } 
+              }
 
 # Specify the initial conditions that are to be propagated
 # Avalable initial condition types:
@@ -49,8 +49,8 @@ decoherence = { type = "none",              # "none", "decay", "dephase", or "bo
 # "file" - read one initial state from file (filename = "...")
 # "diagonal" - for Lindblad solver, all diagonal basis density matrices of the full system, or of specified subsystems (subsystem = [...])
 # "ensemble" - for Lindblad solver, ensemble state used for pure-state preparation, optionally over specified subsystems (subsystem = [...])
-# "3states" - for Lindblad solver, three initial states for gate optimization 
-# "nplus1" - for Lindblad solver, N+1 initial states for fidelity estimation 
+# "3states" - for Lindblad solver, three initial states for gate optimization
+# "nplus1" - for Lindblad solver, N+1 initial states for fidelity estimation
 initial_condition = {type = "basis"}
 # initial_condition = {type = "state", levels = [1, 0]}
 # initial_condition = {type = "basis", subsystem = [0, 1]}
@@ -63,9 +63,9 @@ initial_condition = {type = "basis"}
 
 
 # ---------------------------------------------------------------
-# ------------------- Control pulse settings -------------------- 
+# ------------------- Control pulse settings --------------------
 # ---------------------------------------------------------------
-# Control parameterization options: 
+# Control parameterization options:
 # Available control types:
 # "spline" - 2nd order B-spline basis functions (recommended).
 # "spline0" - piecewise constant control parameterization (0th order B-splines)
@@ -92,12 +92,12 @@ carrier_frequency = [
 # Option 3: Same array of frequencies for all subsystems using shorthand
 # carrier_frequency = [0.0, -0.2252, -0.1]
 
-## Control parameter initialization: 
-# Available types: 
+## Control parameter initialization:
+# Available types:
 # "random" - random initialization within amplitude bounds (amplitude = ...)
 # "constant" - constant amplitude initialization (amplitude = ...)
 # "file" - read initial parameters from file (filename = "...")
-## Option 1: Initialization that applies to all subsystems 
+## Option 1: Initialization that applies to all subsystems
 control_initialization = { type = "random", amplitude = 0.005}
 # control_initialization = { type = "file", filename = "./params.dat"}
 ## Option 2: Specify different initialization per subsystem as array of tables
@@ -112,13 +112,13 @@ control_bounds = 0.008
 # Option 2: Specify different bounds for each subsystem as array
 # control_bounds = [0.008, 0.010]
 
-## Decide whether control pulses should start and end at zero. 
+## Decide whether control pulses should start and end at zero.
 control_enforceBC = false
 
 # ---------------------------------------------------------------
 # ------------------- Optimization options ----------------------
 # ---------------------------------------------------------------
-# Optimization target options: 
+# Optimization target options:
 # Available target types:
 # "none" - No optimization target
 # "gate" - Unitary gate transformation. The gate can be read from file (filename = "..."), or chosen from standard gates below (gate_type = "..."). Optionally, a gate rotation frequency can be specified (gate_rot_freq = single value or array)
@@ -167,9 +167,9 @@ optim_penalty = { leakage = 0.0,                # Penalize leakage into guard le
 # Directory for output files
 datadir = "./data_out"
 # Specify the desired output during time evolution. Format: list of any of the following options:
-# "expectedEnergy" - expected level occupation for each subsystem  
+# "expectedEnergy" - expected level occupation for each subsystem
 # "expectedEnergyComposite" - expected level of the full-dimensional composite system
-# "population" - level occupation (probabilities) for each subsystem 
+# "population" - level occupation (probabilities) for each subsystem
 # "populationComposite" - level occupation (probabilities) for the full-dimensional composite system
 # "fullstate" - full state of the composite system (full density matrix, or state vector). WARNING: This might result in very large output files - use with care.
 output_type = ["population", "expectedEnergy"]

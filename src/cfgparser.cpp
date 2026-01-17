@@ -344,7 +344,7 @@ OptimTargetSettings CfgParser::convertFromString<OptimTargetSettings>(const std:
     target_settings.levels = std::vector<size_t>{};
     for (size_t i = 1; i < parts.size(); ++i) {
       target_settings.levels->push_back(convertFromString<int>(parts[i]));
-    } 
+    }
     int noscillators = static_cast<int>(target_settings.levels->size());
     copyLast(target_settings.levels.value(), noscillators);
 
@@ -357,7 +357,7 @@ OptimTargetSettings CfgParser::convertFromString<OptimTargetSettings>(const std:
 
   } else if (type_str == "none") {
     target_settings.type = TargetType::NONE;
- 
+
   } else {
     logger.exitWithError("Unknown optim_target type: " + type_str);
   }

@@ -89,7 +89,7 @@ struct InitialConditionSettings {
 struct OptimTargetSettings {
   TargetType type = ConfigDefaults::OPTIM_TARGET; ///< Type of optimization target
   std::optional<GateType> gate_type = std::nullopt; ///< For GATE: Type of the gate
-  std::optional<std::vector<double>> gate_rot_freq = std::nullopt; ///< For GATE: Gate rotation frequencies for each oscillator 
+  std::optional<std::vector<double>> gate_rot_freq = std::nullopt; ///< For GATE: Gate rotation frequencies for each oscillator
   std::optional<std::vector<size_t>> levels = std::nullopt; ///< For STATE: Level occupations for each oscillator
   std::optional<std::string> filename = std::nullopt; ///< For GATE or STATE: File path to target gate or state
 };

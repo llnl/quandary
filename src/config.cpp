@@ -7,7 +7,7 @@ namespace {
  * Handles two formats:
  * 1. A single table that applies to all subsystems
  * 2. An array of tables with 'subsystem' field for per-subsystem specification
- * 
+ *
  * @tparam SettingsType The type of settings to parse (e.g., ControlParameterizationSettings)
  * @tparam ParseFunc The type of the parsing function
  * @param toml The TOML table containing the configuration
@@ -20,7 +20,7 @@ namespace {
  */
 template<typename SettingsType, typename ParseFunc>
 std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, const std::string& key, size_t num_subsystems, const SettingsType& default_settings, ParseFunc parse_func, const MPILogger& logger) {
-  
+
   // Case 1: Single table applies to all subsystems
   if (toml[key].is_table()) {
     auto* settings_table = toml[key].as_table();
@@ -36,7 +36,7 @@ std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, con
         logger.exitWithError(key + " array elements must be tables");
       }
       auto* elem_table = elem.as_table();
-      
+
       // Get the subsystem index, or pair of indices for coupling parameters
       const std::string subsystem_key = "subsystem";
       if (!elem_table->contains(subsystem_key)) {
@@ -187,7 +187,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
         auto parseFunc = [](const toml::table& t) { return validators::vectorField<double>(t, "value").value(); };
         carrier_frequencies = parsePerSubsystemSettings<std::vector<double>>(toml, "carrier_frequency", num_osc, default_carrier_freq, parseFunc, logger);
       }
-    } 
+    }
 
     // Parse optimization target:
     optim_target = parseOptimTarget(toml, num_osc);
@@ -198,10 +198,10 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     if (!toml.contains("optim_weights")) {
       optim_weights = std::vector<double>{ConfigDefaults::OPTIM_WEIGHT};
     } else {
-      if (toml["optim_weights"].as_array()) {        
+      if (toml["optim_weights"].as_array()) {
         // Get optim_weights from array
         optim_weights = validators::vectorField<double>(toml, "optim_weights").minLength(1).value();
-      } else if (toml["optim_weights"].is_value()) { 
+      } else if (toml["optim_weights"].is_value()) {
         // Get single value
         auto single_val = validators::field<double>(toml, "optim_weights").value();
         optim_weights = std::vector<double>{single_val};
@@ -459,7 +459,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
 
   // Output parameters
   datadir = settings.datadir.value_or(ConfigDefaults::DATADIR);
-  
+
   // Convert old per-oscillator output to global output_type (apply to all oscillators)
   auto indexed_output_vec = parseOscillatorSettingsCfg<OutputType>(settings.indexed_output, num_osc);
   output_type.clear();
@@ -472,7 +472,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   }
   // Convert set to vector
   output_type.assign(unique_types.begin(), unique_types.end());
-  
+
   output_timestep_stride = settings.output_timestep_stride.value_or(ConfigDefaults::OUTPUT_TIMESTEP_STRIDE);
   output_optimization_stride = settings.output_optimization_stride.value_or(ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE);
   runtype = settings.runtype.value_or(ConfigDefaults::RUNTYPE);
@@ -660,12 +660,12 @@ std::string toString(const OptimTargetSettings& optim_target) {
 // Template helper for toString functions that output either a single item or an array with per-item overrides
 template <typename T, typename PrintFunc, typename CompareFunc>
 std::string toStringWithOptionalPerSubsystem(const std::vector<T>& items, PrintFunc printItems, CompareFunc areEqual) {
-  
+
   if (items.empty()) return "[]";
-  
+
   // Check if all items are the same
   bool all_equal = std::adjacent_find(items.begin(), items.end(), [&areEqual](const auto& a, const auto& b) { return !areEqual(a, b); }) == items.end();
-  
+
   if (all_equal) {
     std::string out = printItems(items.front());
     // If items are not wrapped in either {...} or [...], add {} here.
@@ -698,12 +698,12 @@ std::string toString(const std::vector<ControlInitializationSettings>& control_i
     out += init.phase.has_value() ? ", phase = " + std::to_string(init.phase.value()) : "";
     return out;
   };
-  
+
   // Helper function to compare two ControlInitializationSettings items
   auto areEqual = [](const ControlInitializationSettings& a, const ControlInitializationSettings& b) {
     return a.type == b.type && a.amplitude == b.amplitude && a.phase == b.phase;
   };
-  
+
   return toStringWithOptionalPerSubsystem(control_initializations, printItems, areEqual);
 }
 
@@ -718,13 +718,13 @@ std::string toString(const std::vector<ControlParameterizationSettings>& control
     out += param.scaling.has_value() ? ", scaling = " + std::to_string(param.scaling.value()) : "";
     return out;
   };
-  
+
   // Helper function to compare two ControlParameterizationSettings items
   auto areEqual = [](const ControlParameterizationSettings& a, const ControlParameterizationSettings& b) {
-    return a.type == b.type && a.nspline == b.nspline && 
+    return a.type == b.type && a.nspline == b.nspline &&
            a.tstart == b.tstart && a.tstop == b.tstop && a.scaling == b.scaling;
   };
-  
+
   return toStringWithOptionalPerSubsystem(control_parameterizations, printItems, areEqual);
 }
 
@@ -733,12 +733,12 @@ std::string toString(const std::vector<std::vector<double>>& carrier_frequencies
   auto printItems = [](const std::vector<double>& freqs) {
     return "value = " + printVector(freqs);
   };
-  
+
   // Helper function to compare two vector<double> items
   auto areEqual = [](const std::vector<double>& a, const std::vector<double>& b) {
     return a == b;
   };
-  
+
   return toStringWithOptionalPerSubsystem(carrier_frequencies, printItems, areEqual);
 }
 
@@ -811,7 +811,7 @@ void Config::printConfig(std::stringstream& log) const {
       << ", final_cost = " << optim_tol_finalcost
       << ", infidelity = " << optim_tol_infidelity << " }\n";
   log << "optim_maxiter = " << optim_maxiter << "\n";
-  log << "optim_tikhonov = { coeff = " << optim_tikhonov_coeff   
+  log << "optim_tikhonov = { coeff = " << optim_tikhonov_coeff
       << ", use_x0 = " << (optim_tikhonov_use_x0 ? "true" : "false") << " }\n";
   log << "optim_penalty = { leakage = " << optim_penalty_leakage
       << ", energy = " << optim_penalty_energy
@@ -869,7 +869,7 @@ void Config::finalize() {
     initial_condition.type = InitialConditionType::DIAGONAL;
   }
 
-  // For BASIS, ENSEMBLE, and DIAGONAL, or default to all oscillators IDs 
+  // For BASIS, ENSEMBLE, and DIAGONAL, or default to all oscillators IDs
   if (initial_condition.type == InitialConditionType::BASIS || initial_condition.type == InitialConditionType::ENSEMBLE || initial_condition.type == InitialConditionType::DIAGONAL) {
     if (!initial_condition.subsystem.has_value()) {
       initial_condition.subsystem = std::vector<size_t>(nlevels.size());
@@ -910,8 +910,8 @@ void Config::finalize() {
   if (optim_penalty_weightedcost == 0.0) {
     optim_penalty_weightedcost_width = 0.0;
   }
-  
-  // Set control variation penalty to zero if not using 2nd order Bspline parameterization 
+
+  // Set control variation penalty to zero if not using 2nd order Bspline parameterization
   for (size_t i = 0; i < control_parameterizations.size(); i++) {
     if (control_parameterizations[i].type != ControlType::BSPLINE0) {
       optim_penalty_variation = 0.0;
@@ -960,7 +960,7 @@ void Config::validate() const {
   }
 
   // Validate initial condition settings
-  if (initial_condition.type == InitialConditionType::FROMFILE) { 
+  if (initial_condition.type == InitialConditionType::FROMFILE) {
     if (!initial_condition.filename.has_value()) {
       logger.exitWithError("initialcondition of type FROMFILE must have a filename");
     }
@@ -1121,7 +1121,7 @@ OptimTargetSettings Config::parseOptimTarget(const toml::table& toml, size_t num
 
     // Get the target type, or default to NONE
     auto type_str = validators::field<std::string>(*target_table, "type").valueOr("none");
-    auto type_opt = parseEnum(type_str, TARGET_TYPE_MAP);  
+    auto type_opt = parseEnum(type_str, TARGET_TYPE_MAP);
     if (!type_opt.has_value()) {
       logger.exitWithError("Unknown optim_target type: " + type_str);
     }
@@ -1228,7 +1228,7 @@ std::vector<ControlParameterizationSettings> Config::parseControlParameterizatio
         parameterization.scaling = static_cast<double>(params[1]);
         parameterization.tstart = params.size() > 2 ? std::optional<double>(params[2]) : std::nullopt;
         parameterization.tstop = params.size() > 3 ? std::optional<double>(params[3]) : std::nullopt;
-      } 
+      }
       parsed_parameterizations[i] = parameterization;
     }
   }
@@ -1249,6 +1249,6 @@ std::vector<ControlInitializationSettings> Config::parseControlInitializationsCf
       }
     }
   }
-  
+
   return control_initializations;
 }

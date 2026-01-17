@@ -11,8 +11,8 @@
  *
  * Provides a chainable API for type-safe TOML field extraction and validation. Chain validation
  * methods together, then extract the final value in one operation with clear error messages.
- * 
- * ## Basic Usage 
+ *
+ * ## Basic Usage
  *
  * 1. Create a validator for option "key" within toml_table using
  *      - `validators::field<T>(toml_table, "key")`: for scalar fields
@@ -27,12 +27,12 @@
  *      - `minLength(size)`: Vector must have at least size elements
  *      - `hasLength(size)`: Vector must have exactly size elements
  *      - `positive()`: All elements must be > 0
- * 3. Extract the value by appending 
+ * 3. Extract the value by appending
  *         .value()           - for required fields
  *         .valueOr(default)  - for optional fields with default
- * 
+ *
  * ## Examples
- * @code  
+ * @code
  * // Parse a required positive double with key "step_size".
  * double step_size = validators::field<double>(toml, "step_size").positive().value();
  *
@@ -41,7 +41,7 @@
  *
  * // Parse a required vector of positive doubles with key "frequencies", defaulting to {1.0, 2.0}
  * std::vector<double> frequencies = validators::vectorField<double>(toml, "frequencies").minLength(1).positive().valueOr(std::vector<double>{1.0, 2.0});
- * 
+ *
  * @endcode
  *
  * ## Supported Types
@@ -93,7 +93,7 @@ class ValidationError : public std::runtime_error {
  * - `greaterThanEqual(value)`: Field must be >= value
  * - `lessThan(value)`: Field must be < value
  * - `positive()`: Field must be > 0 (shorthand for greaterThan(0))
- * 
+ *
  *  ## Extraction Methods
  *
  * - `value()`: Extract scalar or throws an error if field is missing or invalid
