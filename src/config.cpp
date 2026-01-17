@@ -198,21 +198,8 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     optim_objective = parseEnum(toml["optim_objective"].value<std::string>(), OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
 
-    // Parse optional optim_weights: can be a single value or a vector
-    if (!toml.contains("optim_weights")) {
-      optim_weights = std::vector<double>{ConfigDefaults::OPTIM_WEIGHT};
-    } else {
-      if (toml["optim_weights"].as_array()) {
-        // Get optim_weights from array
-        optim_weights = validators::vectorField<double>(toml, "optim_weights").minLength(1).value();
-      } else if (toml["optim_weights"].is_value()) {
-        // Get single value
-        auto single_val = validators::field<double>(toml, "optim_weights").value();
-        optim_weights = std::vector<double>{single_val};
-      } else {
-        logger.exitWithError("optim_weights must be either a single value (applies to all initial conditions), or an array of values (one for each initial condition).");
-      }
-    }
+    // Parse optional optim_weights
+    optim_weights = validators::vectorField<double>(toml, "optim_weights").valueOr({ConfigDefaults::OPTIM_WEIGHT});
 
     // Parse optional optimization tolerances
     if (!toml.contains("optim_tolerance")) {
@@ -811,7 +798,10 @@ void Config::printConfig(std::stringstream& log) const {
 
   log << "optim_target = " << toString(optim_target) << "\n";
   log << "optim_objective = \"" << enumToString(optim_objective, OBJECTIVE_TYPE_MAP) << "\"\n";
-  log << "optim_weights = " << toString(optim_weights) << "\n";
+  bool uniform_weights = std::adjacent_find(optim_weights.begin(), optim_weights.end(), std::not_equal_to<double>{}) == optim_weights.end();
+  if (!uniform_weights) {
+    log << "optim_weights = " << printVector(optim_weights) << "\n";
+  }
   log << "optim_tolerance = { grad_abs = " << optim_tol_grad_abs
       << ", grad_rel = " << optim_tol_grad_rel
       << ", final_cost = " << optim_tol_finalcost
@@ -900,13 +890,12 @@ void Config::finalize() {
 
   // Scale optimization weights such that they sum up to one
   // If a single value was provided, replicate it for all initial conditions
-  // If a vector was provided, verify it has the correct length
   if (optim_weights.size() == 1) {
+    // TODO remove this when removing cfg format
     copyLast(optim_weights, n_initial_conditions);
   } else if (optim_weights.size() != n_initial_conditions) {
     logger.exitWithError("optim_weights vector has length " + std::to_string(optim_weights.size()) + " but must have length " + std::to_string(n_initial_conditions) + " (number of initial conditions)");
   }
-  optim_weights.resize(n_initial_conditions);
   // Scale the weights so that they sum up to 1
   double scaleweights = 0.0;
   for (size_t i = 0; i < optim_weights.size(); i++) scaleweights += optim_weights[i];

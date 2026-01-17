@@ -11,7 +11,6 @@ initial_condition = {type = "diagonal", subsystem = [0]}
 control_enforceBC = true
 optim_target = {type = "state", levels = [0, 0]}
 optim_objective = "Jmeasure"
-optim_weights = 1.0
 optim_tolerance = { grad_abs = 1e-07, grad_rel = 1e-08, final_cost = 1e-05, infidelity = 1e-05 }
 optim_maxiter = 200
 optim_tikhonov = { coeff = 1e-05, use_x0 = false }

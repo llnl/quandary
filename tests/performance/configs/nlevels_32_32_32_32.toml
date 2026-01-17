@@ -28,7 +28,6 @@ carrier_frequency = [
 
 optim_target = {type = "state", levels = [0, 0, 0, 0]}
 optim_objective = "Jtrace"
-optim_weights = 1.0
 optim_tolerance = { grad_abs = 1e-7, grad_rel = 1e-8, final_cost = 1e-5, infidelity = 1e-5 }
 optim_maxiter = 200
 optim_tikhonov = { coeff = 0.00001, use_x0 = false }

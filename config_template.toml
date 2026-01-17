@@ -134,8 +134,9 @@ optim_target = {type = "gate", gate_type = "cnot"} # "cnot", "cqnot", "swap", "s
 # Objective function measure options: "Jtrace", "Jfrobenius", "Jmeasure"
 optim_objective = "Jtrace"
 
-# Weights (beta_i) for summing up objective function terms from different initial conditons. Either a single value (same weight for all initial conditions), or a array of weights (one per initial condition)
-optim_weights = 1.0
+# Weights (beta_i) for summing up objective function terms from different initial conditions.
+# Must be an array of weights (one per initial condition). Default is uniform weighting.
+# optim_weights = [1.0, 0.1, 0.1, 0.1]
 
 # Optimization tolerances (stopping criteria):
 optim_tolerance = { grad_abs = 1e-7,     # absolute gradient norm tolerance (||G|| < grad_abs)

@@ -11,7 +11,6 @@ initial_condition = {type = "3states"}
 control_enforceBC = true
 optim_target = {type = "gate", gate_type = "xgate"}
 optim_objective = "Jfrobenius"
-optim_weights = 1.0
 optim_tolerance = { grad_abs = 0.0001, grad_rel = 1e-05, final_cost = 1e-05, infidelity = 1e-05 }
 optim_maxiter = 100
 optim_tikhonov = { coeff = 1e-05, use_x0 = false }

@@ -1100,25 +1100,21 @@ TEST_F(TomlParserTest, OptimWeightsVectorNormalization) {
   EXPECT_DOUBLE_EQ(weights[3], 0.0);
 }
 
-TEST_F(TomlParserTest, OptimWeightsDouble) {
-  Config config = Config::fromTomlString(
-      R"(
-        nlevels = [2, 2]
-        ntime = 1000
-        dt = 0.1
-        transfreq = [4.1, 4.1]
-        rotfreq = [0.0, 0.0]
-        initial_condition = {type = "basis"}
-        optim_weights = 1.0
-      )",
-      logger);
-
-  const auto& weights = config.getOptimWeights();
-  EXPECT_EQ(weights.size(), 4);
-  EXPECT_DOUBLE_EQ(weights[0], 0.25); // normalized
-  EXPECT_DOUBLE_EQ(weights[1], 0.25);
-  EXPECT_DOUBLE_EQ(weights[2], 0.25);
-  EXPECT_DOUBLE_EQ(weights[3], 0.25);
+TEST_F(TomlParserTest, OptimWeightsScalarNotAllowed) {
+  // Single value format is no longer allowed - must use array notation
+  EXPECT_DEATH(
+      Config::fromTomlString(
+          R"(
+            nlevels = [2, 2]
+            ntime = 1000
+            dt = 0.1
+            transfreq = [4.1, 4.1]
+            rotfreq = [0.0, 0.0]
+            initial_condition = {type = "basis"}
+            optim_weights = 1.0
+          )",
+          logger),
+      "wrong type");
 }
 
 TEST_F(TomlParserTest, OptimWeightsDefault) {
