@@ -25,9 +25,9 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
   noscillators = config.getNumOsc();
 
   /* Create Data directory */
-  datadir = config.getDataDir();
+  output_dir = config.getOutputDir();
   if (mpirank_world == 0) {
-    mkdir(datadir.c_str(), 0777);
+    mkdir(output_dir.c_str(), 0777);
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -36,7 +36,7 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
   output_timestep_stride = config.getOutputTimestepStride();
   if (mpirank_world == 0) {
     char filename[255];
-    snprintf(filename, 254, "%s/optim_history.dat", datadir.c_str());
+    snprintf(filename, 254, "%s/optim_history.dat", output_dir.c_str());
     optimfile = fopen(filename, "w");
     if (optimfile == nullptr) {
       printf("ERROR: Could not open file %s\n", filename);
@@ -83,7 +83,7 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
 
 
 Output::~Output(){
-  if (mpirank_world == 0 && !quietmode) printf("Output directory: %s\n", datadir.c_str());
+  if (mpirank_world == 0 && !quietmode) printf("Output directory: %s\n", output_dir.c_str());
   if (mpirank_world == 0) fclose(optimfile);
 }
 
@@ -104,8 +104,8 @@ void Output::writeGradient(Vec grad){
   if (mpirank_world == 0) {
     /* Print current gradients to file */
     FILE *file;
-    // sprintf(filename, "%s/grad_iter%04d.dat", datadir.c_str(), optim_iter);
-    snprintf(filename, 254, "%s/grad.dat", datadir.c_str());
+    // sprintf(filename, "%s/grad_iter%04d.dat", output_dir.c_str(), optim_iter);
+    snprintf(filename, 254, "%s/grad.dat", output_dir.c_str());
     file = fopen(filename, "w");
     if (file == nullptr) {
       printf("ERROR: Could not open file %s\n", filename);
@@ -134,7 +134,7 @@ void Output::writeControls(Vec params, MasterEq* mastereq, int ntime, double dt)
 
     /* Print current parameters to file */
     FILE *file, *file_c;
-    snprintf(filename, 254, "%s/params.dat", datadir.c_str());
+    snprintf(filename, 254, "%s/params.dat", output_dir.c_str());
     file = fopen(filename, "w");
     if (file == nullptr) {
       printf("ERROR: Could not open file %s\n", filename);
@@ -153,7 +153,7 @@ void Output::writeControls(Vec params, MasterEq* mastereq, int ntime, double dt)
     /* Print control to file for each oscillator */
     mastereq->setControlAmplitudes(params);
     for (size_t ioscil = 0; ioscil < mastereq->getNOscillators(); ioscil++) {
-      snprintf(filename, 254, "%s/control%zu.dat", datadir.c_str(), ioscil);
+      snprintf(filename, 254, "%s/control%zu.dat", output_dir.c_str(), ioscil);
       file_c = fopen(filename, "w");
       if (file_c == nullptr) {
         printf("ERROR: Could not open file %s\n", filename);
@@ -188,7 +188,7 @@ void Output::openTrajectoryDataFiles(std::string prefix, int initid){
     // Open files for expected energy per oscillator  
     if (writeExpectedEnergy) {
       for (size_t i=0; i<noscillators; i++) { 
-        snprintf(filename, 254, "%s/expected%zu.iinit%04d.dat", datadir.c_str(), i, initid);
+        snprintf(filename, 254, "%s/expected%zu.iinit%04d.dat", output_dir.c_str(), i, initid);
         expectedfile[i] = fopen(filename, "w");
         if (expectedfile[i] == nullptr) {
           printf("ERROR: Could not open file %s\n", filename);
@@ -199,7 +199,7 @@ void Output::openTrajectoryDataFiles(std::string prefix, int initid){
     }
     // Open file for expected energy of the full composite system
     if (writeExpectedEnergy_comp) {
-      snprintf(filename, 254, "%s/expected_composite.iinit%04d.dat", datadir.c_str(), initid);
+      snprintf(filename, 254, "%s/expected_composite.iinit%04d.dat", output_dir.c_str(), initid);
       expectedfile_comp = fopen(filename, "w");
       if (expectedfile_comp == nullptr) {
         printf("ERROR: Could not open file %s\n", filename);
@@ -210,7 +210,7 @@ void Output::openTrajectoryDataFiles(std::string prefix, int initid){
     // Open files for populations per oscillator
     if (writePopulation) {
       for (size_t i=0; i<noscillators; i++) { 
-        snprintf(filename, 254, "%s/population%zu.iinit%04d.dat", datadir.c_str(), i, initid);
+        snprintf(filename, 254, "%s/population%zu.iinit%04d.dat", output_dir.c_str(), i, initid);
         populationfile[i] = fopen(filename, "w");
         if (populationfile[i] == nullptr) {
           printf("ERROR: Could not open file %s\n", filename);
@@ -221,7 +221,7 @@ void Output::openTrajectoryDataFiles(std::string prefix, int initid){
     }
     // Open file for population for full composite system 
     if (writePopulation_comp) {
-      snprintf(filename, 254, "%s/population_composite.iinit%04d.dat", datadir.c_str(), initid);
+      snprintf(filename, 254, "%s/population_composite.iinit%04d.dat", output_dir.c_str(), initid);
       populationfile_comp = fopen(filename, "w");
       if (populationfile_comp == nullptr) {
         printf("ERROR: Could not open file %s\n", filename);
@@ -231,13 +231,13 @@ void Output::openTrajectoryDataFiles(std::string prefix, int initid){
     }
     // Open file for full vectorized state 
     if (writeFullState) {
-      snprintf(filename, 254, "%s/%s_Re.iinit%04d.dat", datadir.c_str(), prefix.c_str(), initid);
+      snprintf(filename, 254, "%s/%s_Re.iinit%04d.dat", output_dir.c_str(), prefix.c_str(), initid);
       ufile = fopen(filename, "w");
       if (ufile == nullptr) {
         printf("ERROR: Could not open file %s\n", filename);
         exit(1);
       }
-      snprintf(filename, 254, "%s/%s_Im.iinit%04d.dat", datadir.c_str(), prefix.c_str(), initid);
+      snprintf(filename, 254, "%s/%s_Im.iinit%04d.dat", output_dir.c_str(), prefix.c_str(), initid);
       vfile = fopen(filename, "w"); 
       if (vfile == nullptr) {
         printf("ERROR: Could not open file %s\n", filename);

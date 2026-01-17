@@ -17,7 +17,7 @@ Jkl = [ { subsystem = [0,1], value = 0.3183098861837907},
 
 initial_condition = {type = "state", levels = [1, 1, 1, 1, 0, 0, 0, 0]}
 
-datadir = "./data_out"
+output_dir = "./data_out"
 output_timestep_stride = 1
 output_type = ["population"]
 output_optimization_stride = 1

@@ -166,7 +166,7 @@ optim_penalty = { leakage = 0.0,                # Penalize leakage into guard le
 # ---------------------------------------------------------------
 
 # Directory for output files
-datadir = "./data_out"
+output_dir = "./data_out"
 # Specify the desired output during time evolution. Format: list of any of the following options:
 # "expectedEnergy" - expected level occupation for each subsystem
 # "expectedEnergyComposite" - expected level of the full-dimensional composite system

@@ -199,7 +199,7 @@ int main(int argc,char **argv)
   if (mpirank_world == 0)
   {
     /* Print parameters to file */
-    snprintf(filename, 254, "%s/config_log.toml", output->datadir.c_str());
+    snprintf(filename, 254, "%s/config_log.toml", output->output_dir.c_str());
     std::ofstream logfile(filename);
     if (logfile.is_open()){
       logfile << config_log.str();
@@ -297,7 +297,7 @@ int main(int argc,char **argv)
 
   /* Print timing to file */
   if (mpirank_world == 0) {
-    snprintf(filename, 254, "%s/timing.dat", output->datadir.c_str());
+    snprintf(filename, 254, "%s/timing.dat", output->output_dir.c_str());
     FILE* timefile = fopen(filename, "w");
     fprintf(timefile, "%d  %1.8e\n", mpisize_world, UsedTime);
     fclose(timefile);
@@ -451,7 +451,7 @@ int main(int argc,char **argv)
 
   /* --- Print Hessian to file */
   
-  snprintf(filename, 254, "%s/hessian.dat", output->datadir.c_str());
+  snprintf(filename, 254, "%s/hessian.dat", output->output_dir.c_str());
   printf("File written: %s.\n", filename);
   PetscViewer viewer;
   PetscViewerCreate(MPI_COMM_WORLD, &viewer);
@@ -464,7 +464,7 @@ int main(int argc,char **argv)
   PetscViewerDestroy(&viewer);
 
   // write again in binary
-  snprintf(filename, 254, "%s/hessian_bin.dat", output->datadir.c_str());
+  snprintf(filename, 254, "%s/hessian_bin.dat", output->output_dir.c_str());
   printf("File written: %s.\n", filename);
   PetscViewerBinaryOpen(MPI_COMM_WORLD, filename, FILE_MODE_WRITE, &viewer);
   MatView(Hess, viewer);
@@ -483,7 +483,7 @@ int main(int argc,char **argv)
   /* Load Hessian from file */
   Mat Hess;
   MatCreate(PETSC_COMM_SELF, &Hess);
-  snprintf(filename, 254, "%s/hessian_bin.dat", output->datadir.c_str());
+  snprintf(filename, 254, "%s/hessian_bin.dat", output->output_dir.c_str());
   printf("Reading file: %s\n", filename);
   PetscViewer viewer;
   PetscViewerCreate(MPI_COMM_WORLD, &viewer);
@@ -510,7 +510,7 @@ int main(int argc,char **argv)
 
   /* Print eigenvalues to file. */
   FILE *file;
-  snprintf(filename, 254, "%s/eigvals.dat", output->datadir.c_str());
+  snprintf(filename, 254, "%s/eigvals.dat", output->output_dir.c_str());
   file =fopen(filename,"w");
   for (int i=0; i<eigvals.size(); i++){
       fprintf(file, "% 1.8e\n", eigvals[i]);  
@@ -519,7 +519,7 @@ int main(int argc,char **argv)
   printf("File written: %s.\n", filename);
 
   /* Print eigenvectors to file. Columns wise */
-  snprintf(filename, 254, "%s/eigvecs.dat", output->datadir.c_str());
+  snprintf(filename, 254, "%s/eigvecs.dat", output->output_dir.c_str());
   file =fopen(filename,"w");
   for (PetscInt j=0; j<nrows; j++){  // rows
     for (PetscInt i=0; i<eigvals.size(); i++){

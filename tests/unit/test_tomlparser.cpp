@@ -1171,7 +1171,7 @@ TEST_F(TomlParserTest, OptimWeightsDefault) {
 // optim_penalty_energy = 0.02
 // optim_penalty_variation = 0.03
 // optim_regul_tik0 = true
-// datadir = "/custom/output/path"
+// output_dir = "/custom/output/path"
 // output_timestep_stride = 5
 // output_optimization_stride = 25
 // runtype = "optimization"

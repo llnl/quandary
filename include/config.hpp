@@ -101,7 +101,7 @@ class Config {
   double optim_penalty_variation; ///< Amplitude variation penalty coefficient
 
   // Output and runtypes
-  std::string datadir; ///< Directory for output files
+  std::string output_dir; ///< Directory for output files
   std::vector<OutputType> output_type; ///< Specify the desired output types.
   size_t output_timestep_stride; ///< Output frequency in the time domain: write output every <num> time-step
   size_t output_optimization_stride; ///< Frequency of writing output during optimization iterations
@@ -177,7 +177,7 @@ class Config {
   double getOptimPenaltyEnergy() const { return optim_penalty_energy; }
   double getOptimPenaltyVariation() const { return optim_penalty_variation; }
 
-  const std::string& getDataDir() const { return datadir; }
+  const std::string& getOutputDir() const { return output_dir; }
   const std::vector<OutputType>& getOutputType() const { return output_type; }
   size_t getOutputTimestepStride() const { return output_timestep_stride; }
   size_t getOutputOptimizationStride() const { return output_optimization_stride; }

@@ -257,7 +257,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       optim_penalty_variation = validators::field<double>(*penalty_table, "variation").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
     }
 
-    datadir = toml["datadir"].value_or(ConfigDefaults::DATADIR);
+    output_dir = toml["output_dir"].value_or(ConfigDefaults::OUTPUT_DIR);
 
     // Parse output_type as an array of strings (defaults to empty array)
     output_type.clear();
@@ -449,7 +449,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   optim_penalty_variation = settings.optim_penalty_variation.value_or(ConfigDefaults::OPTIM_PENALTY_VARIATION);
 
   // Output parameters
-  datadir = settings.datadir.value_or(ConfigDefaults::DATADIR);
+  output_dir = settings.datadir.value_or(ConfigDefaults::OUTPUT_DIR);
 
   // Convert old per-oscillator output to global output_type (apply to all oscillators)
   auto indexed_output_vec = parseOscillatorSettingsCfg<OutputType>(settings.indexed_output, num_osc);
@@ -821,7 +821,7 @@ void Config::printConfig(std::stringstream& log) const {
   log << "# Output settings \n";
   log << "# =============================================\n";
 
-  log << "datadir = \"" << datadir << "\"\n";
+  log << "output_dir = \"" << output_dir << "\"\n";
   log << "output_type = [";
   for (size_t j = 0; j < output_type.size(); ++j) {
     log << "\"" << enumToString(output_type[j], OUTPUT_TYPE_MAP) << "\"";

@@ -43,7 +43,7 @@ class Output{
   // Vec xseq; ///< Sequential vector for I/O operations
 
   public:
-    std::string datadir; ///< Directory path for output data files
+    std::string output_dir; ///< Directory path for output data files
     int output_optimization_stride; ///< Write output files every N optimization iterations
 
   public:
@@ -65,7 +65,7 @@ class Output{
      * @brief Writes optimization progress to history file.
      *
      * Called at every optimization iteration to log convergence data. 
-     * Optimization history will be written to `<datadir>/optim_history.dat`.
+     * Optimization history will be written to `<output_dir>/optim_history.dat`.
      *
      * @param optim_iter Current optimization iteration
      * @param objective Total objective function value
@@ -86,8 +86,8 @@ class Output{
      * @brief Writes current control pulses per oscillator and control parameters.
      *
      * Called every output_optimization_stride optimization iterations. 
-     * Control pulses are written to `<datadir>/control<ioscillator>.dat`
-     * Control parameters are written to `<datadir>/params.dat`
+     * Control pulses are written to `<output_dir>/control<ioscillator>.dat`
+     * Control parameters are written to `<output_dir>/params.dat`
      *
      * @param params Current parameter vector
      * @param mastereq Pointer to master equation solver
@@ -99,7 +99,7 @@ class Output{
     /**
      * @brief Writes gradient vector for debugging adjoint calculations.
      * 
-     * Gradient is written to `<datadir>/grad.dat`
+     * Gradient is written to `<output_dir>/grad.dat`
      *
      * @param grad Gradient vector to output
      */
