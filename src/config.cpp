@@ -24,6 +24,10 @@ std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, con
   // Case 1: Single table applies to all subsystems
   if (toml[key].is_table()) {
     auto* settings_table = toml[key].as_table();
+    // Warn if 'subsystem' is specified in a single table - it will be ignored
+    if (settings_table->contains("subsystem")) {
+      logger.log("# Warning: '" + key + "' is a single table, so 'subsystem' field is ignored. Use array of tables to specify per-subsystem settings.\n");
+    }
     SettingsType parsed_settings = parse_func(*settings_table);
     return std::vector<SettingsType>(num_subsystems, parsed_settings);
   }
