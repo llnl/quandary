@@ -529,16 +529,20 @@ Config Config::fromCfgString(const std::string& cfg_content, const MPILogger& lo
 
 namespace {
 
+std::string formatDouble(double value) {
+  std::ostringstream oss;
+  oss << std::setprecision(std::numeric_limits<double>::digits10);
+  oss << value;
+  return oss.str();
+}
+
 std::string toStringCoupling(const std::vector<double>& couplings, size_t num_osc) {
   if (couplings.empty()) return "[]";
 
   // If all couplings are the same, print single value
   bool all_equal = std::adjacent_find(couplings.begin(), couplings.end(), std::not_equal_to<double>{}) == couplings.end();
   if (all_equal) {
-    std::ostringstream oss;
-    oss << std::setprecision(std::numeric_limits<double>::max_digits10);
-    oss << couplings[0];
-    return oss.str();
+    return formatDouble(couplings[0]);
   }
 
   // Collect non-zero couplings with their pair indices
@@ -555,14 +559,10 @@ std::string toStringCoupling(const std::vector<double>& couplings, size_t num_os
 
   // Build TOML table format
   std::string result = "[\n";
-  std::ostringstream oss;
-  oss << std::setprecision(std::numeric_limits<double>::max_digits10);
   for (size_t i = 0; i < nonzero_couplings.size(); ++i) {
     auto [pair, value] = nonzero_couplings[i];
     auto [first, second] = pair;
-    oss.str("");  // Clear the stringstream for reuse
-    oss << value;
-    result += " { subsystem = [" + std::to_string(first) + "," + std::to_string(second) + "], value = " + oss.str() + "}";
+    result += " { subsystem = [" + std::to_string(first) + "," + std::to_string(second) + "], value = " + formatDouble(value) + "}";
     if (i < nonzero_couplings.size() - 1) {
       result += ", ";
     }
@@ -576,17 +576,20 @@ template <typename T>
 std::string printVector(const std::vector<T>& vec) {
   if (vec.empty()) return "[]";
 
-  std::ostringstream oss;
+  std::string result = "[";
   if constexpr (std::is_floating_point_v<T>) {
-    oss << std::setprecision(std::numeric_limits<T>::max_digits10);
+    result += formatDouble(vec[0]);
+    for (size_t i = 1; i < vec.size(); ++i) {
+      result += ", " + formatDouble(vec[i]);
+    }
+  } else {
+    result += std::to_string(vec[0]);
+    for (size_t i = 1; i < vec.size(); ++i) {
+      result += ", " + std::to_string(vec[i]);
+    }
   }
-
-  oss << "[" << vec[0];
-  for (size_t i = 1; i < vec.size(); ++i) {
-    oss << ", " << vec[i];
-  }
-  oss << "]";
-  return oss.str();
+  result += "]";
+  return result;
 }
 
 
@@ -698,8 +701,8 @@ std::string toString(const std::vector<ControlInitializationSettings>& control_i
     std::string out = "";
     out += "type = \"" + enumToString(init.type, CONTROL_INITIALIZATION_TYPE_MAP) + "\"";
     out += init.filename.has_value() ? ", filename = \"" + init.filename.value() + "\"" : "";
-    out += init.amplitude.has_value() ? ", amplitude = " + std::to_string(init.amplitude.value()) : "";
-    out += init.phase.has_value() ? ", phase = " + std::to_string(init.phase.value()) : "";
+    out += init.amplitude.has_value() ? ", amplitude = " + formatDouble(init.amplitude.value()) : "";
+    out += init.phase.has_value() ? ", phase = " + formatDouble(init.phase.value()) : "";
     return out;
   };
 
@@ -717,9 +720,9 @@ std::string toString(const std::vector<ControlParameterizationSettings>& control
     std::string out = "";
     out += "type = \"" + enumToString(param.type, CONTROL_TYPE_MAP) + "\"";
     out += param.nspline.has_value() ? ", num = " + std::to_string(param.nspline.value()) : "";
-    out += param.tstart.has_value() ? ", tstart = " + std::to_string(param.tstart.value()) : "";
-    out += param.tstop.has_value() ? ", tstop = " + std::to_string(param.tstop.value()) : "";
-    out += param.scaling.has_value() ? ", scaling = " + std::to_string(param.scaling.value()) : "";
+    out += param.tstart.has_value() ? ", tstart = " + formatDouble(param.tstart.value()) : "";
+    out += param.tstop.has_value() ? ", tstop = " + formatDouble(param.tstop.value()) : "";
+    out += param.scaling.has_value() ? ", scaling = " + formatDouble(param.scaling.value()) : "";
     return out;
   };
 
@@ -753,10 +756,9 @@ std::string toString(const std::vector<double>& vec) {
   bool all_equal = std::adjacent_find(vec.begin(), vec.end(), std::not_equal_to<double>{}) == vec.end();
 
   if (all_equal) {
-    return std::to_string(vec[0]);
-  } else {
-    return printVector(vec);
+    return formatDouble(vec[0]);
   }
+  return printVector(vec);
 }
 
 } // namespace
