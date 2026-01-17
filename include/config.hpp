@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <petsc.h>
 #include <cstddef>
 #include <optional>
