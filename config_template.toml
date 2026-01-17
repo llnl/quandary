@@ -3,16 +3,20 @@
 # ---------------------------------------------------------------
 # Number of levels per subsystem
 nlevels = [2, 2]
-# Number of essential levels per subsystem (Default: same as nlevels)
+# Number of essential levels per subsystem. Either a single value (same for all) or one per subsystem. (Default: same as nlevels)
 nessential = [2, 2]
 # Number of time steps used for time-integration
 ntime = 1000
 # Time step size (ns). Determines final time: T=ntime*dt
 dt = 0.1
-# Fundamental transition frequencies (|0> to |1> transition) for each subsystem ("\omega_k", multiplying a_k^d a_k, GHz)
+# Fundamental transition frequencies (|0> to |1> transition) for each subsystem ("\omega_k", multiplying a_k^d a_k, GHz).
+# Either a single value (same for all) or one per subsystem.
 transfreq = [4.10595, 4.81526]
-# Self-kerr frequencies for each subsystem ("\xi_k", multiplying a_k^d a_k^d a_k a_k, GHz)
+# transfreq = 4.1  # single value applies to all subsystems
+# Self-kerr frequencies for each subsystem ("\xi_k", multiplying a_k^d a_k^d a_k a_k, GHz).
+# Either a single value (same for all) or one per subsystem. (Default: 0.0)
 selfkerr = [0.2198, 0.2252]
+# selfkerr = 0.22  # single value applies to all subsystems
 # Cross-kerr coupling strength for subsystems k<->l ("\xi_kl", multiplying a_k^d a_k a_l^d a_l, GHz).
 # Option 1: All-to-all connectivity with single value
 crosskerr = 0.1
@@ -28,12 +32,14 @@ Jkl = 0.0
 #   {subsystem = [0,1], value = 0.0 }
 # ]
 # Rotational wave approximation frequencies for each subsystem ("\omega_rot", GHz).
+# Either a single value (same for all) or one per subsystem. (Default: 0.0)
 rotfreq = [4.10595, 4.81526]
+# rotfreq = 0.0  # single value applies to all subsystems
 
 # Decoherence setting: Switch between Schroedinger and Lindblad solver. Default is "none" which solves Schroedinger equation (state vector dynamics), all other types solve Lindblads master equation for the density matrix.
 decoherence = { type = "none",              # "none", "decay", "dephase", or "both"
-            #    decay_time = [0.0, 0.0],   # Decay times T1 for each subsystem (ns)
-            #    dephase_time = [0.0, 0.0]  # Dephasing times T2 for each subsystem (ns)
+            #    decay_time = [0.0, 0.0],   # Decay times T1: single value or one per subsystem (ns)
+            #    dephase_time = [0.0, 0.0]  # Dephasing times T2: single value or one per subsystem (ns)
               } 
 
 # Specify the initial conditions that are to be propagated
@@ -115,10 +121,11 @@ control_enforceBC = false
 # Optimization target options: 
 # Available target types:
 # "none" - No optimization target
-# "gate" - Unitary gate transformation. The gate can be read from file (filename = "..."), or chosen from standard gates below (gate_type = "..."). Optionally, a gate rotation frequency can be specified (gate_rot_freq = [...])
+# "gate" - Unitary gate transformation. The gate can be read from file (filename = "..."), or chosen from standard gates below (gate_type = "..."). Optionally, a gate rotation frequency can be specified (gate_rot_freq = single value or array)
 # "state" - Single target state. The state can be read from file (filename = "..."), or can be specified as levels of a product state (levels = [...])
 optim_target = {type = "gate", gate_type = "cnot"} # "cnot", "cqnot", "swap", "swap0q", "qft", "xgate", "ygate", "zgate", "hadamard"
-# optim_target = { type = "gate", gate_type = "cnot", gate_rot_freq = [0.0, 0.0] }
+# optim_target = { type = "gate", gate_type = "cnot", gate_rot_freq = 0.0 }           # single value for all
+# optim_target = { type = "gate", gate_type = "cnot", gate_rot_freq = [0.0, 0.0] }    # one per subsystem
 # optim_target = {type = "gate", filename = "/path/to/target_gate.dat"}
 # optim_target = {type = "state", levels = [0, 0]}
 # optim_target = {type = "state", filename = "/path/to/target_state.dat"}

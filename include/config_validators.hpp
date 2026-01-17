@@ -497,4 +497,73 @@ inline toml::array getArrayOfTables(const toml::table& config, const std::string
   return *config[key].as_array();
 }
 
+/**
+ * @brief Parses a field that can be either a scalar (applied to all) or an exact-size array.
+ *
+ * For per-oscillator settings, this allows users to specify either:
+ * - A single scalar value: `transfreq = 4.1` (applied to all oscillators)
+ * - An array of exact size: `transfreq = [4.1, 4.2, 4.3]` (one per oscillator)
+ *
+ * @tparam T Element type (int, double, etc.)
+ * @param config TOML table containing the field
+ * @param key Name of the field
+ * @param expected_size Expected array size (e.g., num_oscillators)
+ * @return Vector of expected_size elements
+ * @throws ValidationError if field is missing, wrong type, or array has wrong size
+ */
+template <typename T>
+std::vector<T> scalarOrVector(const toml::table& config, const std::string& key, size_t expected_size) {
+  if (!config.contains(key)) {
+    throw ValidationError(key, "field not found");
+  }
+
+  if (auto* arr = config[key].as_array()) {
+    // Array: must have exact expected size
+    if (arr->size() != expected_size) {
+      std::ostringstream oss;
+      oss << "array must have exactly " << expected_size << " elements, got " << arr->size();
+      throw ValidationError(key, oss.str());
+    }
+    std::vector<T> result;
+    for (size_t i = 0; i < arr->size(); ++i) {
+      auto val = arr->at(i).template value<T>();
+      if (!val) {
+        std::ostringstream oss;
+        oss << "element [" << i << "] wrong type (expected " << getTypeName<T>() << ")";
+        throw ValidationError(key, oss.str());
+      }
+      result.push_back(*val);
+    }
+    return result;
+  }
+
+  if (auto val = config[key].template value<T>()) {
+    // Scalar: fill vector with this value
+    return std::vector<T>(expected_size, *val);
+  }
+
+  throw ValidationError(key, "must be either a scalar value or an array of " + getTypeName<T>());
+}
+
+/**
+ * @brief Parses an optional field that can be either a scalar or an exact-size array.
+ *
+ * Same as scalarOrVector but returns default_value if field is missing.
+ *
+ * @tparam T Element type (int, double, etc.)
+ * @param config TOML table containing the field
+ * @param key Name of the field
+ * @param expected_size Expected array size (e.g., num_oscillators)
+ * @param default_value Default vector to return if field is missing
+ * @return Vector of expected_size elements
+ * @throws ValidationError if field has wrong type or array has wrong size
+ */
+template <typename T>
+std::vector<T> scalarOrVectorOr(const toml::table& config, const std::string& key, size_t expected_size, const std::vector<T>& default_value) {
+  if (!config.contains(key)) {
+    return default_value;
+  }
+  return scalarOrVector<T>(config, key, expected_size);
+}
+
 } // namespace validators

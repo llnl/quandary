@@ -84,18 +84,15 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     nlevels = validators::vectorField<size_t>(toml, "nlevels").minLength(1).positive().value();
     size_t num_osc = nlevels.size();
 
-    nessential = validators::vectorField<size_t>(toml, "nessential").minLength(1).positive().valueOr(nlevels);
-    copyLast(nessential, num_osc);
+    nessential = validators::scalarOrVectorOr<size_t>(toml, "nessential", num_osc, nlevels);
 
     ntime = validators::field<size_t>(toml, "ntime").positive().value();
 
     dt = validators::field<double>(toml, "dt").positive().value();
 
-    transfreq = validators::vectorField<double>(toml, "transfreq").minLength(1).value();
-    copyLast(transfreq, num_osc);
+    transfreq = validators::scalarOrVector<double>(toml, "transfreq", num_osc);
 
-    selfkerr = validators::vectorField<double>(toml, "selfkerr").minLength(1).valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
-    copyLast(selfkerr, num_osc);
+    selfkerr = validators::scalarOrVectorOr<double>(toml, "selfkerr", num_osc, std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
 
     // Parse crosskerr and Jkl coupling: either one value (all-to-all coupling) or array of tables with 'subsystem = [i,j]' field for i-j coupling)
     size_t num_pairs = (num_osc - 1) * num_osc / 2;
@@ -122,8 +119,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       }
     }
 
-    rotfreq = validators::vectorField<double>(toml, "rotfreq").minLength(1).valueOr(std::vector<double>(num_osc, ConfigDefaults::ROTFREQ));
-    copyLast(rotfreq, num_osc);
+    rotfreq = validators::scalarOrVectorOr<double>(toml, "rotfreq", num_osc, std::vector<double>(num_osc, ConfigDefaults::ROTFREQ));
 
     hamiltonian_file_Hsys = validators::getOptional<std::string>(toml["hamiltonian_file_Hsys"]);
     hamiltonian_file_Hc = validators::getOptional<std::string>(toml["hamiltonian_file_Hc"]);
@@ -139,10 +135,8 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       }
       auto type_str = validators::field<std::string>(*decoherence_table, "type").valueOr("none");
       decoherence_type = parseEnum(type_str, DECOHERENCE_TYPE_MAP, ConfigDefaults::DECOHERENCE_TYPE);
-      decay_time = validators::vectorField<double>(*decoherence_table, "decay_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
-      copyLast(decay_time, num_osc);
-      dephase_time = validators::vectorField<double>(*decoherence_table, "dephase_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
-      copyLast(dephase_time, num_osc);
+      decay_time = validators::scalarOrVectorOr<double>(*decoherence_table, "decay_time", num_osc, std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
+      dephase_time = validators::scalarOrVectorOr<double>(*decoherence_table, "dephase_time", num_osc, std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
     }
 
     // Parse initial condition table
@@ -176,21 +170,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     }
 
     // Parse optional control bounds: either single value or per-oscillator array
-    control_bounds.assign(num_osc, ConfigDefaults::CONTROL_BOUND);
-    if (toml.contains("control_bounds")) {
-      if (toml["control_bounds"].as_array()) {
-        // Get control_bounds from array
-        control_bounds = validators::vectorField<double>(toml, "control_bounds").minLength(1).value();
-        copyLast(control_bounds, num_osc);
-        control_bounds.resize(num_osc);
-      } else if (toml["control_bounds"].is_value()){
-        // Get single control_bounds value
-        auto single_val = validators::field<double>(toml, "control_bounds").value();
-        control_bounds = std::vector<double>(num_osc, single_val);
-      } else {
-        logger.exitWithError("control_bounds must be either a single value (applies to all oscillators), or an array of values (one per oscillator).");
-      }
-    }
+    control_bounds = validators::scalarOrVectorOr<double>(toml, "control_bounds", num_osc, std::vector<double>(num_osc, ConfigDefaults::CONTROL_BOUND));
 
     // Parse carrier frequencies: either one vector (applies to all oscillators) or per-oscillator array of tables
     std::vector<double> default_carrier_freq = {ConfigDefaults::CARRIER_FREQ};
@@ -1227,9 +1207,7 @@ OptimTargetSettings Config::parseOptimTarget(const toml::table& toml, size_t num
       }
 
       // For gate, check for optional gate rotation frequencies
-      auto gate_rot_freq_opt = validators::getOptionalVector<double>((*target_table)["gate_rot_freq"]);
-      optim_target.gate_rot_freq = gate_rot_freq_opt.value_or(std::vector<double>(num_osc, ConfigDefaults::GATE_ROT_FREQ));
-      copyLast(optim_target.gate_rot_freq.value(), num_osc);
+      optim_target.gate_rot_freq = validators::scalarOrVectorOr<double>(*target_table, "gate_rot_freq", num_osc, std::vector<double>(num_osc, ConfigDefaults::GATE_ROT_FREQ));
 
     } else if (optim_target.type == TargetType::STATE) {
       // State target: Either levels for product state or filename needs to be provided

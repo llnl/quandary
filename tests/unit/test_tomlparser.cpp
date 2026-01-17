@@ -33,7 +33,7 @@ TEST_F(TomlParserTest, ParseVectorSettings) {
         nlevels = [2, 3]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.8, 5.2]
+        transfreq = [4.1, 4.8]
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
       )",
@@ -45,17 +45,16 @@ TEST_F(TomlParserTest, ParseVectorSettings) {
   EXPECT_EQ(nlevels[1], 3);
 
   auto transfreq = config.getTransFreq();
-  EXPECT_EQ(transfreq.size(), 3);
+  EXPECT_EQ(transfreq.size(), 2);
   EXPECT_DOUBLE_EQ(transfreq[0], 4.1);
   EXPECT_DOUBLE_EQ(transfreq[1], 4.8);
-  EXPECT_DOUBLE_EQ(transfreq[2], 5.2);
 }
 
 TEST_F(TomlParserTest, ParseJklSettingsAllToAll) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2, 2, 2]
-        transfreq = [4.1, 4.8, 5.2]
+        transfreq = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
@@ -76,7 +75,7 @@ TEST_F(TomlParserTest, ParseJklSettingsOneCoupling) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2, 2, 2]
-        transfreq = [4.1, 4.8, 5.2]
+        transfreq = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
@@ -102,7 +101,7 @@ TEST_F(TomlParserTest, ParseJklSettingsPerPair) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2, 2, 2]
-        transfreq = [4.1, 4.8, 5.2]
+        transfreq = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
@@ -133,7 +132,7 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsAllToAll) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2, 2, 2]
-        transfreq = [4.1, 4.8, 5.2]
+        transfreq = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
@@ -154,7 +153,7 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsOneCoupling) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2, 2, 2]
-        transfreq = [4.1, 4.8, 5.2]
+        transfreq = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
@@ -180,7 +179,7 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsPerPair) {
   Config config = Config::fromTomlString(
       R"(
         nlevels = [2, 2, 2, 2]
-        transfreq = [4.1, 4.8, 5.2]
+        transfreq = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
@@ -545,8 +544,8 @@ TEST_F(TomlParserTest, ControlParameterizations_Defaults) {
         nlevels = [2, 2, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.8]
-        rotfreq = [0.0, 0.0]
+        transfreq = [4.1, 4.8, 5.2]
+        rotfreq = 0.0
         initial_condition = {type = "basis"}
 
         control_parameterization = [
@@ -836,8 +835,8 @@ TEST_F(TomlParserTest, CarrierFrequenciesDefaults) {
         nlevels = [2,2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        transfreq = 4.1
+        rotfreq = 0.0
         initial_condition = {type = "basis"}
 
         carrier_frequency = [
@@ -861,7 +860,7 @@ TEST_F(TomlParserTest, CarrierFrequenciesPerSubsystem) {
         nlevels = [2,2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1]
+        transfreq = 4.1
         initial_condition = {type = "basis"}
 
         carrier_frequency = [
@@ -1024,8 +1023,8 @@ TEST_F(TomlParserTest, OptimTarget_ProductState) {
         nlevels = [3, 3, 3]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        transfreq = 4.1
+        rotfreq = 0.0
         initial_condition = {type = "basis"}
         optim_target = {type = "state", levels = [0,1,2]}
       )",
@@ -1248,4 +1247,56 @@ TEST_F(TomlParserTest, ControlInitialization_UnknownKey) {
         )",
         logger);
   }, "ERROR: Unknown key 'foo' in control_initialization\\.");
+}
+
+TEST_F(TomlParserTest, Transfreq_ScalarValue) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 3, 4]
+        ntime = 1000
+        dt = 0.1
+        transfreq = 5.5
+        initial_condition = {type = "basis"}
+      )",
+      logger);
+
+  auto transfreq = config.getTransFreq();
+  EXPECT_EQ(transfreq.size(), 3);
+  EXPECT_DOUBLE_EQ(transfreq[0], 5.5);
+  EXPECT_DOUBLE_EQ(transfreq[1], 5.5);
+  EXPECT_DOUBLE_EQ(transfreq[2], 5.5);
+}
+
+TEST_F(TomlParserTest, Transfreq_ArrayValue) {
+  Config config = Config::fromTomlString(
+      R"(
+        nlevels = [2, 3, 4]
+        ntime = 1000
+        dt = 0.1
+        transfreq = [4.1, 4.8, 5.2]
+        initial_condition = {type = "basis"}
+      )",
+      logger);
+
+  auto transfreq = config.getTransFreq();
+  EXPECT_EQ(transfreq.size(), 3);
+  EXPECT_DOUBLE_EQ(transfreq[0], 4.1);
+  EXPECT_DOUBLE_EQ(transfreq[1], 4.8);
+  EXPECT_DOUBLE_EQ(transfreq[2], 5.2);
+}
+
+TEST_F(TomlParserTest, Transfreq_WrongSizeError) {
+  EXPECT_DEATH(
+      {
+        Config config = Config::fromTomlString(
+            R"(
+              nlevels = [2, 3, 4]
+              ntime = 1000
+              dt = 0.1
+              transfreq = [4.1, 4.8]
+              initial_condition = {type = "basis"}
+            )",
+            logger);
+      },
+      "array must have exactly 3 elements");
 }
