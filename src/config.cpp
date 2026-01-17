@@ -104,8 +104,8 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
         double single_val = validators::field<double>(toml, "crosskerr").value();
         crosskerr.assign(num_pairs, single_val);
       } else {
-      auto parseCouplingFunc = [this](const toml::table& t) { return parseCouplingParameterSpecs(t); };
-      crosskerr = parsePerSubsystemSettings<double>(toml, "crosskerr", num_osc, ConfigDefaults::CROSSKERR, parseCouplingFunc, logger);
+      auto parseFunc = [](const toml::table& t) { return validators::field<double>(t, "value").value(); };
+      crosskerr = parsePerSubsystemSettings<double>(toml, "crosskerr", num_osc, ConfigDefaults::CROSSKERR, parseFunc, logger);
       }
     }
     // Overwrite for Jkl
@@ -114,8 +114,8 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
         double single_val = validators::field<double>(toml, "Jkl").value();
         Jkl.assign(num_pairs, single_val);
       } else {
-      auto parseCouplingFunc = [this](const toml::table& t) { return parseCouplingParameterSpecs(t); };
-      Jkl = parsePerSubsystemSettings<double>(toml, "Jkl", num_osc, ConfigDefaults::JKL, parseCouplingFunc, logger);
+      auto parseFunc = [](const toml::table& t) { return validators::field<double>(t, "value").value(); };
+      Jkl = parsePerSubsystemSettings<double>(toml, "Jkl", num_osc, ConfigDefaults::JKL, parseFunc, logger);
       }
     }
 
@@ -184,8 +184,8 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
         carrier_frequencies.assign(num_osc, values);
       } else {
         // Table or array of tables format
-        auto parseCarrierFunc = [this](const toml::table& t) { return parseCarrierFrequencySpecs(t); };
-        carrier_frequencies = parsePerSubsystemSettings<std::vector<double>>(toml, "carrier_frequency", num_osc, default_carrier_freq, parseCarrierFunc, logger);
+        auto parseFunc = [](const toml::table& t) { return validators::vectorField<double>(t, "value").value(); };
+        carrier_frequencies = parsePerSubsystemSettings<std::vector<double>>(toml, "carrier_frequency", num_osc, default_carrier_freq, parseFunc, logger);
       }
     } 
 
@@ -1051,14 +1051,6 @@ void Config::setRandSeed(int rand_seed_) {
     std::random_device rd;
     rand_seed = rd(); // random non-reproducable seed
   }
-}
-
-double Config::parseCouplingParameterSpecs(const toml::table& table) const {
-  return validators::field<double>(table, "value").value();
-}
-
-std::vector<double> Config::parseCarrierFrequencySpecs(const toml::table& table) const {
-  return validators::vectorField<double>(table, "value").value();
 }
 
 ControlParameterizationSettings Config::parseControlParameterizationSpecs(const toml::table& param_table) const {

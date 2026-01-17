@@ -196,17 +196,11 @@ class Config {
   
   void setRandSeed(int rand_seed_);
 
-  // Helper function to parse coupling parameters from table
-  double parseCouplingParameterSpecs(const toml::table& table) const;
-
   // Helper function to parse a single control parameterization table
   ControlParameterizationSettings parseControlParameterizationSpecs(const toml::table& param_table) const;
 
   // Helper function to parse a single control initialization table 
   ControlInitializationSettings parseControlInitializationSpecs(const toml::table& table) const;
-  
-  // Helper function to parse a single carrier frequency table
-  std::vector<double> parseCarrierFrequencySpecs(const toml::table& table) const;
   
   /**
    * @brief Parses optimization target settings from TOML table
