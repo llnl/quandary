@@ -196,11 +196,8 @@ class Config {
   
   void setRandSeed(int rand_seed_);
 
-  // Table validation helper
-  void validateTableKeys(const toml::table& table, const std::set<std::string>& allowed_keys, const std::string& table_name) const;
-
   // Helper function to parse coupling parameters from table
-  double parseCouplingParameterSpecs(const toml::table& table, const std::string& key) const;
+  double parseCouplingParameterSpecs(const toml::table& table) const;
 
   // Helper function to parse a single control parameterization table
   ControlParameterizationSettings parseControlParameterizationSpecs(const toml::table& param_table) const;

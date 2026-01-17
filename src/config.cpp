@@ -104,7 +104,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
         double single_val = validators::field<double>(toml, "crosskerr").value();
         crosskerr.assign(num_pairs, single_val);
       } else {
-      auto parseCouplingFunc = [this](const toml::table& t) { return parseCouplingParameterSpecs(t, "crosskerr"); };
+      auto parseCouplingFunc = [this](const toml::table& t) { return parseCouplingParameterSpecs(t); };
       crosskerr = parsePerSubsystemSettings<double>(toml, "crosskerr", num_osc, ConfigDefaults::CROSSKERR, parseCouplingFunc, logger);
       }
     }
@@ -114,7 +114,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
         double single_val = validators::field<double>(toml, "Jkl").value();
         Jkl.assign(num_pairs, single_val);
       } else {
-      auto parseCouplingFunc = [this](const toml::table& t) { return parseCouplingParameterSpecs(t, "Jkl"); };
+      auto parseCouplingFunc = [this](const toml::table& t) { return parseCouplingParameterSpecs(t); };
       Jkl = parsePerSubsystemSettings<double>(toml, "Jkl", num_osc, ConfigDefaults::JKL, parseCouplingFunc, logger);
       }
     }
@@ -1053,48 +1053,16 @@ void Config::setRandSeed(int rand_seed_) {
   }
 }
 
-void Config::validateTableKeys(const toml::table& table, const std::set<std::string>& allowed_keys, const std::string& table_name) const {
-  for (const auto& [key, _] : table) {
-    if (allowed_keys.find(std::string(key.str())) == allowed_keys.end()) {
-      logger.exitWithError("Unknown key '" + std::string(key.str()) + "' in " + table_name + ".");
-    }
-  }
-}
-
-double Config::parseCouplingParameterSpecs(const toml::table& table, const std::string& key) const {
-  const std::string subsystem_key = "subsystem";
-  const std::string value_key = "value";
-  const std::set<std::string> allowed_keys = {subsystem_key, value_key};
-  
-  validateTableKeys(table, allowed_keys, key);
-  
-  return validators::field<double>(table, value_key).value();
+double Config::parseCouplingParameterSpecs(const toml::table& table) const {
+  return validators::field<double>(table, "value").value();
 }
 
 std::vector<double> Config::parseCarrierFrequencySpecs(const toml::table& table) const {
-  const std::string subsystem_key = "subsystem";
-  const std::string values_key = "value";
-  const std::set<std::string> allowed_keys = {subsystem_key, values_key};
-  
-  validateTableKeys(table, allowed_keys, "carrier_frequency");
-  
-  return validators::vectorField<double>(table, values_key).value();
+  return validators::vectorField<double>(table, "value").value();
 }
 
 ControlParameterizationSettings Config::parseControlParameterizationSpecs(const toml::table& param_table) const {
-  
-  const std::string subsystem_key = "subsystem";
-  const std::string type_key = "type";
-  const std::string num_key = "num";
-  const std::string scaling_key = "scaling";
-  const std::string tstart_key = "tstart";
-  const std::string tstop_key = "tstop";
-  const std::set<std::string> allowed_keys = {subsystem_key, type_key, num_key, scaling_key, tstart_key, tstop_key};
-
-  validateTableKeys(param_table, allowed_keys, "control_parameterization");
-  
-  // Parse type of parameterization
-  std::string type_str = validators::field<std::string>(param_table, type_key).value();
+  std::string type_str = validators::field<std::string>(param_table, "type").value();
   auto type_enum = parseEnum(type_str, CONTROL_TYPE_MAP);
   if (!type_enum.has_value()) {
     logger.exitWithError("Unknown control parameterization type: " + type_str);
@@ -1102,44 +1070,32 @@ ControlParameterizationSettings Config::parseControlParameterizationSpecs(const 
 
   ControlParameterizationSettings param;
   param.type = type_enum.value();
-  
-  // Parse other parameters based on type
+
   switch (param.type) {
     case ControlType::BSPLINE:
     case ControlType::BSPLINE0:
-      param.nspline = validators::field<size_t>(param_table, num_key).value();
-      param.tstart = validators::getOptional<double>(param_table[tstart_key]);
-      param.tstop = validators::getOptional<double>(param_table[tstop_key]);
+      param.nspline = validators::field<size_t>(param_table, "num").value();
+      param.tstart = validators::getOptional<double>(param_table["tstart"]);
+      param.tstop = validators::getOptional<double>(param_table["tstop"]);
       break;
-      
+
     case ControlType::BSPLINEAMP:
-      param.nspline = validators::field<size_t>(param_table, num_key).value();
-      param.scaling = validators::field<double>(param_table, scaling_key).value();
-      param.tstart = validators::getOptional<double>(param_table[tstart_key]);
-      param.tstop = validators::getOptional<double>(param_table[tstop_key]);
+      param.nspline = validators::field<size_t>(param_table, "num").value();
+      param.scaling = validators::field<double>(param_table, "scaling").value();
+      param.tstart = validators::getOptional<double>(param_table["tstart"]);
+      param.tstop = validators::getOptional<double>(param_table["tstop"]);
       break;
-      
+
     case ControlType::NONE:
       break;
   }
-  
+
   return param;
 }
 
 
 ControlInitializationSettings Config::parseControlInitializationSpecs(const toml::table& init_table) const {
-
-  const std::string subsystem_key = "subsystem";
-  const std::string type_key = "type";
-  const std::string filename_key = "filename";
-  const std::string amplitude_key = "amplitude";
-  const std::string phase_key = "phase";
-  const std::set<std::string> allowed_keys = {subsystem_key, type_key, filename_key, amplitude_key, phase_key};
-
-  validateTableKeys(init_table, allowed_keys, "control_initialization");
-  
-  // Parse type of initialization
-  std::string type = validators::field<std::string>(init_table, type_key).value();
+  std::string type = validators::field<std::string>(init_table, "type").value();
   auto type_enum = parseEnum(type, CONTROL_INITIALIZATION_TYPE_MAP);
   if (!type_enum.has_value()) {
     logger.exitWithError("Unknown control initialization type: " + type);
@@ -1148,15 +1104,14 @@ ControlInitializationSettings Config::parseControlInitializationSpecs(const toml
   ControlInitializationSettings init;
   init.type = type_enum.value();
 
-  // Parse other parameters based on type
   if (init.type == ControlInitializationType::FILE) {
-    init.filename = validators::field<std::string>(init_table, filename_key).value();
-    if (!init.filename.has_value()){
+    init.filename = validators::field<std::string>(init_table, "filename").value();
+    if (!init.filename.has_value()) {
       logger.exitWithError("control_initialization of type 'file' must have a 'filename' parameter");
     }
   } else {
-    init.amplitude = validators::field<double>(init_table, amplitude_key).valueOr(ConfigDefaults::CONTROL_INIT_AMPLITUDE);
-    init.phase = validators::field<double>(init_table, phase_key).greaterThanEqual(0.0).valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
+    init.amplitude = validators::field<double>(init_table, "amplitude").valueOr(ConfigDefaults::CONTROL_INIT_AMPLITUDE);
+    init.phase = validators::field<double>(init_table, "phase").greaterThanEqual(0.0).valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
   }
 
   return init;
@@ -1164,24 +1119,13 @@ ControlInitializationSettings Config::parseControlInitializationSpecs(const toml
 
 
 OptimTargetSettings Config::parseOptimTarget(const toml::table& toml, size_t num_osc) const {
-
-  const std::string type_key = "type";
-  const std::string gate_type_key = "gate_type";
-  const std::string filename_key = "filename";
-  const std::string gate_rot_freq_key = "gate_rot_freq";
-  const std::string levels_key = "levels";
-  const std::set<std::string> allowed_keys = {type_key, gate_type_key, filename_key, gate_rot_freq_key, levels_key};
-
-  // Initialize the result with defaults (no target)
   OptimTargetSettings optim_target;
 
-  // If optim_target is specified, parse the provided table
   if (toml.contains("optim_target")) {
     if (!toml["optim_target"].as_table()) {
       logger.exitWithError("optim_target must be a table");
     }
-    auto* target_table = toml["optim_target"].as_table();
-    validateTableKeys(*target_table, allowed_keys, "optim_target");
+    const auto* target_table = toml["optim_target"].as_table();
 
     // Get the target type, or default to NONE
     auto type_str = validators::field<std::string>(*target_table, "type").valueOr("none");

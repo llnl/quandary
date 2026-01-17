@@ -1214,41 +1214,6 @@ TEST_F(TomlParserTest, OptimWeightsDefault) {
 //     Config::fromTomlString(output, logger);
 //   });
 // }
-
-TEST_F(TomlParserTest, ControlParameterizations_UnknownKey) {
-  ASSERT_DEATH({
-    Config config = Config::fromTomlString(
-        R"(
-          nlevels = [2]
-          ntime = 1000
-          dt = 0.1
-          transfreq = [4.1]
-          rotfreq = [0.0]
-          initial_condition = {type = "basis"}
-
-          control_parameterization = { type = "spline", num = 5, wrong_field = 99 }
-        )",
-        logger);
-  }, "ERROR: Unknown key 'wrong_field' in control_parameterization\\.");
-}
-
-TEST_F(TomlParserTest, ControlInitialization_UnknownKey) {
-  ASSERT_DEATH({
-    Config config = Config::fromTomlString(
-        R"(
-          nlevels = [2]
-          ntime = 1000
-          dt = 0.1
-          transfreq = [4.1]
-          rotfreq = [0.0]
-          initial_condition = {type = "basis"}
-
-          control_initialization = { type = "file", filename = "params.dat", foo = 42 }
-        )",
-        logger);
-  }, "ERROR: Unknown key 'foo' in control_initialization\\.");
-}
-
 TEST_F(TomlParserTest, Transfreq_ScalarValue) {
   Config config = Config::fromTomlString(
       R"(
