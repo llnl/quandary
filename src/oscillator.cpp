@@ -8,7 +8,7 @@ Oscillator::Oscillator(){
   nlevels = 0;
   Tfinal = 0;
   ground_freq = 0.0;
-  control_enforceBC = true;
+  control_zero_boundary_condition = true;
 }
 
 Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine, int param_offset, bool quietmode){
@@ -62,7 +62,7 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   iupp = ilow + localsize_u;         
 
   /* Check if boundary conditions for controls should be enfored (default: yes). */
-  control_enforceBC = config.getControlEnforceBC();
+  control_zero_boundary_condition = config.getControlZeroBoundaryCondition();
 
   // Initialize the control parameterization basis functions. Note: Currently only one control parameterization is supported. nsegments <= 1!
   int nparams_per_seg = 0;
@@ -73,21 +73,21 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
  
   switch (controlparameterization.type) {
     case ControlType::BSPLINE: {
-      ControlBasis* mysplinebasis = new BSpline2nd(*controlparameterization.nspline, tstart, tstop, control_enforceBC);
+      ControlBasis* mysplinebasis = new BSpline2nd(*controlparameterization.nspline, tstart, tstop, control_zero_boundary_condition);
       mysplinebasis->setSkip(nparams_per_seg);
       nparams_per_seg += mysplinebasis->getNparams() * carrier_freq.size();
       basisfunctions.push_back(mysplinebasis);
       break;
     }
     case ControlType::BSPLINE0: {
-      ControlBasis* mysplinebasis = new BSpline0(*controlparameterization.nspline, tstart, tstop, control_enforceBC);
+      ControlBasis* mysplinebasis = new BSpline0(*controlparameterization.nspline, tstart, tstop, control_zero_boundary_condition);
       mysplinebasis->setSkip(nparams_per_seg);
       nparams_per_seg += mysplinebasis->getNparams() * carrier_freq.size();
       basisfunctions.push_back(mysplinebasis);
       break;
     }
     case ControlType::BSPLINEAMP: {
-      ControlBasis* mysplinebasis = new BSpline2ndAmplitude(*controlparameterization.nspline, *controlparameterization.scaling, tstart, tstop, control_enforceBC);
+      ControlBasis* mysplinebasis = new BSpline2ndAmplitude(*controlparameterization.nspline, *controlparameterization.scaling, tstart, tstop, control_zero_boundary_condition);
       mysplinebasis->setSkip(nparams_per_seg);
       nparams_per_seg += mysplinebasis->getNparams() * carrier_freq.size();
       basisfunctions.push_back(mysplinebasis);
@@ -149,7 +149,7 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   }
 
   /* Make sure the initial guess satisfies the boundary conditions, if needed */
-  if (params.size() > 0 && control_enforceBC){
+  if (params.size() > 0 && control_zero_boundary_condition){
     for (size_t bs = 0; bs < basisfunctions.size(); bs++){
       for (size_t f=0; f < carrier_freq.size(); f++) {
         basisfunctions[bs]->enforceBoundary(params.data(), f);

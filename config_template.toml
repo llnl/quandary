@@ -103,12 +103,12 @@ initialization = { type = "random", amplitude = 0.005}
 
 # Maximum amplitude bound for the control pulses (GHz).
 # Option 1: Single value applies to all subsystems
-bounds = 0.008
+amplitude_bound = 0.008
 # Option 2: Specify different bounds for each subsystem as array
-# bounds = [0.008, 0.010]
+# amplitude_bound = [0.008, 0.010]
 
 ## Decide whether control pulses should start and end at zero.
-enforceBC = false
+zero_boundary_condition = false
 
 [optimization]
 # Optimization target options:
@@ -156,14 +156,14 @@ penalty = { leakage = 0.0,                # Penalize leakage into guard levels
 
 [output]
 # Directory for output files
-dir = "./data_out"
-# Specify the desired output during time evolution. Format: list of any of the following options:
+directory = "./data_out"
+# Specify the desired observables during time evolution. Format: list of any of the following options:
 # "expectedEnergy" - expected level occupation for each subsystem
 # "expectedEnergyComposite" - expected level of the full-dimensional composite system
 # "population" - level occupation (probabilities) for each subsystem
 # "populationComposite" - level occupation (probabilities) for the full-dimensional composite system
 # "fullstate" - full state of the composite system (full density matrix, or state vector). WARNING: This might result in very large output files - use with care.
-type = ["population", "expectedEnergy"]
+observables = ["population", "expectedEnergy"]
 # Output frequency in the time domain: write output every <num> time-step
 timestep_stride = 1
 # Output frequency for optimization history: write every <num> optimization iterations

@@ -29,7 +29,7 @@ CfgParser::CfgParser(const MPILogger& logger) : logger(logger) {
   registerConfig("hamiltonian_file_Hc", settings.hamiltonian_file_Hc);
 
   // Optimization options
-  registerConfig("control_enforceBC", settings.control_enforceBC);
+  registerConfig("control_enforceBC", settings.control_zero_boundary_condition);
   registerConfig("optim_target", settings.optim_target);
   registerConfig("gate_rot_freq", settings.gate_rot_freq);
   registerConfig("optim_objective", settings.optim_objective);
@@ -38,7 +38,7 @@ CfgParser::CfgParser(const MPILogger& logger) : logger(logger) {
   // Indexed settings (per-oscillator)
   registerIndexedConfig("control_segments", settings.indexed_control_parameterizations);
   registerIndexedConfig("control_initialization", settings.indexed_control_init);
-  registerIndexedConfig("control_bounds", settings.indexed_control_bounds);
+  registerIndexedConfig("control_bounds", settings.indexed_control_amplitude_bounds);
   registerIndexedConfig("carrier_frequency", settings.indexed_carrier_frequencies);
   registerIndexedConfig("output", settings.indexed_output);
   registerConfig("optim_atol", settings.optim_tol_grad_abs);

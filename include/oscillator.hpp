@@ -58,7 +58,7 @@ class Oscillator {
     PetscInt ilow; ///< First index of the local sub vector u,v
     PetscInt iupp; ///< Last index (+1) of the local sub vector u,v
 
-    bool control_enforceBC; ///< Flag to enforce boundary conditions on controls
+    bool control_zero_boundary_condition; ///< Flag to enforce boundary conditions on controls
 
   public:
     PetscInt dim_preOsc; ///< Dimension of coupled subsystems preceding this oscillator

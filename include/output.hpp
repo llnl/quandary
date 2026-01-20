@@ -24,7 +24,7 @@ class Output{
   
   FILE* optimfile; ///< Output file for logging optimization progress
   int output_timestep_stride; ///< Time domain output frequency (write every N time steps)
-  std::vector<OutputType> output_type; ///< List of output types applied to all oscillators
+  std::vector<OutputType> output_observables; ///< List of output types applied to all oscillators
 
   size_t noscillators; ///< Number of oscillators in the system
   bool writeFullState; ///< Flag to determine if evolution of full state vector should be written to file

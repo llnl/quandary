@@ -24,14 +24,14 @@ const double DECAY_TIME = 0.0; ///< Default decay time
 const double DEPHASE_TIME = 0.0; ///< Default dephase time
 
 // Optimization options
-const bool CONTROL_ENFORCE_BC = true; ///< Default control pulse boundary conditions enforcement
+const bool CONTROL_ZERO_BOUNDARY_CONDITION = true; ///< Default control pulse boundary conditions enforcement
 const ControlType CONTROL_TYPE = ControlType::BSPLINE; ///< Default control parameterization type
 const size_t CONTROL_SPLINE_COUNT = 10; ///< Default number of B-spline basis functions
 const ControlInitializationType CONTROL_INIT_TYPE = ControlInitializationType::CONSTANT; ///< Default control initialization amplitude
 const double CONTROL_INIT_AMPLITUDE = 0.0; ///< Default control initialization amplitude
 const double CONTROL_INIT_PHASE = 0.0; ///< Default control initialization phase
 
-const double CONTROL_BOUND = 1e12; ///< Default amplitude bound for control pulses
+const double CONTROL_AMPLITUDE_BOUND = 1e12; ///< Default amplitude bound for control pulses
 const double CARRIER_FREQ = 0.0; ///< Default carrier frequency
 
 const TargetType OPTIM_TARGET = TargetType::NONE; ///< Default optimization target: NONE
@@ -55,7 +55,7 @@ const double OPTIM_PENALTY_DPDM = 0.0; ///< Default second derivative penalty co
 const double OPTIM_PENALTY_ENERGY = 0.0; ///< Default energy penalty coefficient
 const double OPTIM_PENALTY_VARIATION = 0.01; ///< Default amplitude variation penalty coefficient
 
-const std::string OUTPUT_DIR = "./data_out"; ///< Default output directory
+const std::string OUTPUT_DIRECTORY = "./data_out"; ///< Default output directory
 
 const size_t OUTPUT_TIMESTEP_STRIDE = 1; ///< Default output frequency
 const size_t OUTPUT_OPTIMIZATION_STRIDE = 10; ///< Default optimization monitoring frequency

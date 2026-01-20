@@ -25,7 +25,7 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
   noscillators = config.getNumOsc();
 
   /* Create Data directory */
-  output_dir = config.getOutputDir();
+  output_dir = config.getOutputDirectory();
   if (mpirank_world == 0) {
     mkdir(output_dir.c_str(), 0777);
   }
@@ -59,8 +59,8 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
   writePopulation_comp = false;
   writeExpectedEnergy = false;
   writePopulation = false;
-  output_type = config.getOutputType();
-  for (auto type : output_type) { // iterates over output types
+  output_observables = config.getOutputObservables();
+  for (auto type : output_observables) { // iterates over output types
     switch (type) {
       case OutputType::EXPECTED_ENERGY:
         writeExpectedEnergy = true;

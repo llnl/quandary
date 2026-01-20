@@ -66,7 +66,7 @@ TEST_F(CfgParserTest, ParseOutputSettings) {
       logger);
 
   // Verify output settings
-  auto output = config.getOutputType();
+  auto output = config.getOutputObservables();
   EXPECT_EQ(output.size(), 2); // 2: population, expectedEnergy 
   EXPECT_EQ(output[0], OutputType::EXPECTED_ENERGY);
   EXPECT_EQ(output[1], OutputType::POPULATION);
@@ -363,7 +363,7 @@ TEST_F(CfgParserTest, ControlParameterizations_Defaults) {
 
   // Check second oscillator has given settings
   const auto& control_seg1 = config.getControlParameterizations(1);
-  const double control_bound1 = config.getControlBound(1);
+  const double control_bound1 = config.getControlAmplitudeBound(1);
   EXPECT_EQ(control_seg1.type, ControlType::BSPLINE0);
   EXPECT_DOUBLE_EQ(control_bound1, 2.0);
   EXPECT_EQ(control_seg1.nspline.value(), 150);
@@ -491,7 +491,7 @@ TEST_F(CfgParserTest, ControlBounds) {
       logger);
 
   // Check control bound
-  const double control_bound0 = config.getControlBound(0);
+  const double control_bound0 = config.getControlAmplitudeBound(0);
   EXPECT_DOUBLE_EQ(control_bound0, 1.5);
   // Check that only the first parameterization is active
   const auto& control_seg0 = config.getControlParameterizations(0);

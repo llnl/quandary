@@ -78,10 +78,10 @@ class Config {
   std::optional<std::string> hamiltonian_file_Hc; ///< File to read the control Hamiltonian from
 
   // Optimization options
-  bool control_enforceBC; ///< Decide whether control pulses should start and end at zero
+  bool control_zero_boundary_condition; ///< Decide whether control pulses should start and end at zero
   std::vector<ControlParameterizationSettings> control_parameterizations; ///< Control parameterizations for each oscillator
   std::vector<ControlInitializationSettings> control_initializations; ///< Control initializations for each oscillator
-  std::vector<double> control_bounds; ///< Control bounds for each oscillator
+  std::vector<double> control_amplitude_bounds; ///< Control amplitude bounds for each oscillator
   std::vector<std::vector<double>> carrier_frequencies; ///< Carrier frequencies for each oscillator
   OptimTargetSettings optim_target; ///< Grouped optimization target configuration
   ObjectiveType optim_objective; ///< Objective function measure
@@ -101,8 +101,8 @@ class Config {
   double optim_penalty_variation; ///< Amplitude variation penalty coefficient
 
   // Output and runtypes
-  std::string output_dir; ///< Directory for output files
-  std::vector<OutputType> output_type; ///< Specify the desired output types.
+  std::string output_directory; ///< Directory for output files
+  std::vector<OutputType> output_observables; ///< Specify the desired observables.
   size_t output_timestep_stride; ///< Output frequency in the time domain: write output every <num> time-step
   size_t output_optimization_stride; ///< Frequency of writing output during optimization iterations
   RunType runtype; ///< Runtype options: simulation, gradient, or optimization
@@ -154,11 +154,11 @@ class Config {
   const std::optional<std::string>& getHamiltonianFileHc() const { return hamiltonian_file_Hc; }
 
   const ControlParameterizationSettings& getControlParameterizations(size_t i_osc) const { return control_parameterizations[i_osc]; }
-  bool getControlEnforceBC() const { return control_enforceBC; }
+  bool getControlZeroBoundaryCondition() const { return control_zero_boundary_condition; }
   const ControlInitializationSettings& getControlInitializations(size_t i_osc) const {
     return control_initializations[i_osc];
   }
-  double getControlBound(size_t i_osc) const { return control_bounds[i_osc]; }
+  double getControlAmplitudeBound(size_t i_osc) const { return control_amplitude_bounds[i_osc]; }
   const std::vector<double>& getCarrierFrequencies(size_t i_osc) const { return carrier_frequencies[i_osc]; }
   const OptimTargetSettings& getOptimTarget() const { return optim_target; }
   ObjectiveType getOptimObjective() const { return optim_objective; }
@@ -177,8 +177,8 @@ class Config {
   double getOptimPenaltyEnergy() const { return optim_penalty_energy; }
   double getOptimPenaltyVariation() const { return optim_penalty_variation; }
 
-  const std::string& getOutputDir() const { return output_dir; }
-  const std::vector<OutputType>& getOutputType() const { return output_type; }
+  const std::string& getOutputDirectory() const { return output_directory; }
+  const std::vector<OutputType>& getOutputObservables() const { return output_observables; }
   size_t getOutputTimestepStride() const { return output_timestep_stride; }
   size_t getOutputOptimizationStride() const { return output_optimization_stride; }
   RunType getRuntype() const { return runtype; }

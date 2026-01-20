@@ -167,7 +167,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     initial_condition.subsystem= validators::getOptionalVector<size_t>(init_cond_table["subsystem"]);
 
     // Parse control options from [control] table
-    control_enforceBC = control_table["enforceBC"].value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
+    control_zero_boundary_condition = control_table["zero_boundary_condition"].value_or(ConfigDefaults::CONTROL_ZERO_BOUNDARY_CONDITION);
 
     // Parse control parameterization, either table (applies to all) or array (per-oscillator)
     ControlParameterizationSettings default_param;
@@ -186,7 +186,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     }
 
     // Parse optional control bounds: either single value or per-oscillator array
-    control_bounds = validators::scalarOrVectorOr<double>(control_table, "bounds", num_osc, std::vector<double>(num_osc, ConfigDefaults::CONTROL_BOUND));
+    control_amplitude_bounds = validators::scalarOrVectorOr<double>(control_table, "amplitude_bound", num_osc, std::vector<double>(num_osc, ConfigDefaults::CONTROL_AMPLITUDE_BOUND));
 
     // Parse carrier frequencies: either one vector (applies to all oscillators) or per-oscillator array of tables
     std::vector<double> default_carrier_freq = {ConfigDefaults::CARRIER_FREQ};
@@ -270,18 +270,18 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     }
 
     // Parse output options from [output] table
-    output_dir = output_table["dir"].value_or(ConfigDefaults::OUTPUT_DIR);
+    output_directory = output_table["directory"].value_or(ConfigDefaults::OUTPUT_DIRECTORY);
 
-    // Parse type as an array of strings (defaults to empty array)
-    output_type.clear();
-    if (auto output_type_array = output_table["type"].as_array()) {
-      for (auto&& elem : *output_type_array) {
+    // Parse observables as an array of strings (defaults to empty array)
+    output_observables.clear();
+    if (auto output_observables_array = output_table["observables"].as_array()) {
+      for (auto&& elem : *output_observables_array) {
         if (auto str = elem.value<std::string>()) {
           auto enum_val = parseEnum(*str, OUTPUT_TYPE_MAP);
           if (!enum_val.has_value()) {
             logger.exitWithError("Unknown output type: " + *str);
           }
-          output_type.push_back(enum_val.value());
+          output_observables.push_back(enum_val.value());
         } else {
           logger.exitWithError("output type array must contain strings");
         }
@@ -392,7 +392,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   initial_condition.subsystem = settings.initialcondition.value().subsystem;
 
   // Control and optimization parameters
-  control_enforceBC = settings.control_enforceBC.value_or(ConfigDefaults::CONTROL_ENFORCE_BC);
+  control_zero_boundary_condition = settings.control_zero_boundary_condition.value_or(ConfigDefaults::CONTROL_ZERO_BOUNDARY_CONDITION);
 
   control_parameterizations = parseControlParameterizationsCfg(settings.indexed_control_parameterizations);
 
@@ -418,11 +418,11 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
     }
   }
 
-  // Parse control_bounds from CFG format (returns vector of vectors, but we need vector)
-  auto control_bounds_cfg = parseOscillatorSettingsCfg<double>(settings.indexed_control_bounds, control_parameterizations.size(), {ConfigDefaults::CONTROL_BOUND});
-  control_bounds.resize(control_bounds_cfg.size());
-  for (size_t i = 0; i < control_bounds_cfg.size(); ++i) {
-    control_bounds[i] = control_bounds_cfg[i].empty() ? ConfigDefaults::CONTROL_BOUND : control_bounds_cfg[i][0];
+  // Parse control_amplitude_bounds from CFG format (returns vector of vectors, but we need vector)
+  auto control_amplitude_bounds_cfg = parseOscillatorSettingsCfg<double>(settings.indexed_control_amplitude_bounds, control_parameterizations.size(), {ConfigDefaults::CONTROL_AMPLITUDE_BOUND});
+  control_amplitude_bounds.resize(control_amplitude_bounds_cfg.size());
+  for (size_t i = 0; i < control_amplitude_bounds_cfg.size(); ++i) {
+    control_amplitude_bounds[i] = control_amplitude_bounds_cfg[i].empty() ? ConfigDefaults::CONTROL_AMPLITUDE_BOUND : control_amplitude_bounds_cfg[i][0];
   }
 
   carrier_frequencies.resize(num_osc);
@@ -463,11 +463,11 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   optim_penalty_variation = settings.optim_penalty_variation.value_or(ConfigDefaults::OPTIM_PENALTY_VARIATION);
 
   // Output parameters
-  output_dir = settings.datadir.value_or(ConfigDefaults::OUTPUT_DIR);
+  output_directory = settings.datadir.value_or(ConfigDefaults::OUTPUT_DIRECTORY);
 
-  // Convert old per-oscillator output to global output_type (apply to all oscillators)
+  // Convert old per-oscillator output to global output_observables (apply to all oscillators)
   auto indexed_output_vec = parseOscillatorSettingsCfg<OutputType>(settings.indexed_output, num_osc);
-  output_type.clear();
+  output_observables.clear();
   // Collect unique output types from all oscillators
   std::set<OutputType> unique_types;
   for (const auto& osc_output : indexed_output_vec) {
@@ -476,7 +476,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
     }
   }
   // Convert set to vector
-  output_type.assign(unique_types.begin(), unique_types.end());
+  output_observables.assign(unique_types.begin(), unique_types.end());
 
   output_timestep_stride = settings.output_timestep_stride.value_or(ConfigDefaults::OUTPUT_TIMESTEP_STRIDE);
   output_optimization_stride = settings.output_optimization_stride.value_or(ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE);
@@ -803,8 +803,8 @@ void Config::printConfig(std::stringstream& log) const {
   log << "parameterization = " << toString(control_parameterizations) << "\n";
   log << "carrier_frequency = " << toString(carrier_frequencies) << "\n";
   log << "initialization = " << toString(control_initializations) << "\n";
-  log << "bounds = " << toString(control_bounds) << "\n";
-  log << "enforceBC = " << (control_enforceBC ? "true" : "false") << "\n";
+  log << "amplitude_bound = " << toString(control_amplitude_bounds) << "\n";
+  log << "zero_boundary_condition = " << (control_zero_boundary_condition ? "true" : "false") << "\n";
 
   log << "\n";
   log << "[optimization]\n";
@@ -832,11 +832,11 @@ void Config::printConfig(std::stringstream& log) const {
   log << "\n";
   log << "[output]\n";
 
-  log << "dir = \"" << output_dir << "\"\n";
-  log << "type = [";
-  for (size_t j = 0; j < output_type.size(); ++j) {
-    log << "\"" << enumToString(output_type[j], OUTPUT_TYPE_MAP) << "\"";
-    if (j < output_type.size() - 1) log << ", ";
+  log << "directory = \"" << output_directory << "\"\n";
+  log << "observables = [";
+  for (size_t j = 0; j < output_observables.size(); ++j) {
+    log << "\"" << enumToString(output_observables[j], OUTPUT_TYPE_MAP) << "\"";
+    if (j < output_observables.size() - 1) log << ", ";
   }
   log << "]\n";
   log << "timestep_stride = " << output_timestep_stride << "\n";
@@ -956,9 +956,9 @@ void Config::validate() const {
   }
 
   // Validate control bounds are positive
-  for (size_t i = 0; i < control_bounds.size(); i++) {
-    if (control_bounds[i] <= 0.0) {
-      logger.exitWithError("control_bounds[" + std::to_string(i) + "] must be positive");
+  for (size_t i = 0; i < control_amplitude_bounds.size(); i++) {
+    if (control_amplitude_bounds[i] <= 0.0) {
+      logger.exitWithError("control_amplitude_bounds[" + std::to_string(i) + "] must be positive");
     }
   }
 

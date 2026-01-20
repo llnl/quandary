@@ -220,7 +220,7 @@ TEST_F(TomlParserTest, ParseOutputSettings_AllOscillators) {
       logger);
 
   // Verify output settings
-  auto output = config.getOutputType();
+  auto output = config.getOutputObservables();
   EXPECT_EQ(output.size(), 2); // Population
   EXPECT_EQ(output[0], OutputType::POPULATION);
   EXPECT_EQ(output[1], OutputType::FULLSTATE);
@@ -783,8 +783,8 @@ TEST_F(TomlParserTest, ControlBounds) {
       logger);
 
   // Check control bound
-  const double control_bound0 = config.getControlBound(0);
-  const double control_bound1 = config.getControlBound(1);
+  const double control_bound0 = config.getControlAmplitudeBound(0);
+  const double control_bound1 = config.getControlAmplitudeBound(1);
   EXPECT_DOUBLE_EQ(control_bound0, 1.5);
   EXPECT_DOUBLE_EQ(control_bound1, 1.5);
 }
@@ -802,8 +802,8 @@ TEST_F(TomlParserTest, ControlBounds_Defaults) {
       logger);
 
   // Check control bound
-  const double control_bound0 = config.getControlBound(0);
-  const double control_bound1 = config.getControlBound(1);
+  const double control_bound0 = config.getControlAmplitudeBound(0);
+  const double control_bound1 = config.getControlAmplitudeBound(1);
   EXPECT_DOUBLE_EQ(control_bound0, 1e12);
   EXPECT_DOUBLE_EQ(control_bound1, 1e12);
 }
@@ -823,8 +823,8 @@ TEST_F(TomlParserTest, ControlBounds_AllOscillators) {
       logger);
 
   // Check control bound
-  const double control_bound0 = config.getControlBound(0);
-  const double control_bound1 = config.getControlBound(1);
+  const double control_bound0 = config.getControlAmplitudeBound(0);
+  const double control_bound1 = config.getControlAmplitudeBound(1);
   EXPECT_DOUBLE_EQ(control_bound0, 1.0);
   EXPECT_DOUBLE_EQ(control_bound1, 2.0);
 }

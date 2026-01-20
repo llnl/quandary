@@ -48,9 +48,9 @@ struct ParsedConfigData {
 
   // Control and optimization parameters
   std::optional<std::map<int, ControlParameterizationData>> indexed_control_parameterizations;
-  std::optional<bool> control_enforceBC;
+  std::optional<bool> control_zero_boundary_condition;
   std::optional<std::map<int, ControlInitializationSettings>> indexed_control_init;
-  std::optional<std::map<int, std::vector<double>>> indexed_control_bounds;
+  std::optional<std::map<int, std::vector<double>>> indexed_control_amplitude_bounds;
   std::optional<std::map<int, std::vector<double>>> indexed_carrier_frequencies;
   std::optional<OptimTargetSettings> optim_target;
   std::optional<std::vector<double>> gate_rot_freq;
