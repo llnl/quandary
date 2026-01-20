@@ -520,7 +520,12 @@ std::string formatDouble(double value) {
   std::ostringstream oss;
   oss << std::setprecision(std::numeric_limits<double>::digits10);
   oss << value;
-  return oss.str();
+  // Format e.g. 0 as 0.0
+  std::string str = oss.str();
+  if (str.find('.') == std::string::npos && str.find('e') == std::string::npos) {
+    str += ".0";
+  }
+  return str;
 }
 
 std::string toStringCoupling(const std::vector<double>& couplings, size_t num_osc) {
