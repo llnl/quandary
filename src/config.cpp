@@ -365,9 +365,11 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
   crosskerr = settings.crosskerr.value_or(std::vector<double>(num_pairs_osc, ConfigDefaults::CROSSKERR));
   copyLast(crosskerr, num_pairs_osc);
+  crosskerr.resize(num_pairs_osc);  // Truncate if larger than expected
 
   Jkl = settings.Jkl.value_or(std::vector<double>(num_pairs_osc, ConfigDefaults::JKL));
   copyLast(Jkl, num_pairs_osc);
+  Jkl.resize(num_pairs_osc);  // Truncate if larger than expected
 
   rotfreq = settings.rotfreq.value_or(std::vector<double>(num_osc, ConfigDefaults::ROTFREQ));
   copyLast(rotfreq, num_osc);
