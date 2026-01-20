@@ -332,6 +332,12 @@ class VectorValidator {
   }
 
   std::vector<T> validateVector(std::vector<T> result) {
+    if (exact_length && result.size() != *exact_length) {
+      std::ostringstream oss;
+      oss << "must have exactly " << *exact_length << " elements, got " << result.size();
+      throw ValidationError(key, oss.str());
+    }
+
     if (min_length && result.size() < *min_length) {
       std::ostringstream oss;
       oss << "must have at least " << *min_length << " elements, got " << result.size();

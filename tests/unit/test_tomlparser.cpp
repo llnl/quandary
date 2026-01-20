@@ -1329,3 +1329,45 @@ TEST_F(TomlParserTest, Transfreq_WrongSizeError) {
       },
       "array must have exactly 3 elements");
 }
+
+// Test that hasLength validator correctly rejects arrays with wrong number of elements.
+// The subsystem field for coupling parameters (Jkl, crosskerr) must have exactly 2 elements.
+TEST_F(TomlParserTest, CouplingSubsystem_HasLength_TooManyElements) {
+  EXPECT_DEATH(
+      {
+        Config config = Config::fromTomlString(
+            R"(
+              [system]
+              nlevels = [2, 2, 2, 2]
+              transfreq = [4.1, 4.8, 5.2, 5.5]
+              ntime = 1000
+              dt = 0.1
+              initial_condition = {type = "basis"}
+              Jkl = [
+                { subsystem = [0, 1, 2], value = 0.5 }
+              ]
+            )",
+            logger);
+      },
+      "must have exactly 2 elements");
+}
+
+TEST_F(TomlParserTest, CouplingSubsystem_HasLength_TooFewElements) {
+  EXPECT_DEATH(
+      {
+        Config config = Config::fromTomlString(
+            R"(
+              [system]
+              nlevels = [2, 2, 2, 2]
+              transfreq = [4.1, 4.8, 5.2, 5.5]
+              ntime = 1000
+              dt = 0.1
+              initial_condition = {type = "basis"}
+              crosskerr = [
+                { subsystem = [1], value = 0.5 }
+              ]
+            )",
+            logger);
+      },
+      "must have exactly 2 elements");
+}
