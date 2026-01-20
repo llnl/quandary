@@ -63,7 +63,7 @@ std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, con
         settings.resize(num_pairs, default_settings);
       } else if (elem_table->get(subsystem_key)->is_value()) {
         // Single subsystem index case
-        index = validators::field<size_t>(*elem_table, subsystem_key).greaterThanEqual(0).lessThan(num_subsystems).value();
+        index = validators::field<size_t>(*elem_table, subsystem_key).lessThan(num_subsystems).value();
         settings.resize(num_subsystems, default_settings);
       } else {
         logger.exitWithError("subsystem field must be an integer index or an array of two indices");
@@ -231,7 +231,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       optim_tol_infidelity = validators::field<double>(*tol_table, "infidelity").positive().valueOr(ConfigDefaults::OPTIM_TOL_INFIDELITY);
     }
 
-    optim_maxiter = validators::field<size_t>(optimization_table, "maxiter").greaterThanEqual(0).valueOr(ConfigDefaults::OPTIM_MAXITER);
+    optim_maxiter = validators::field<size_t>(optimization_table, "maxiter").valueOr(ConfigDefaults::OPTIM_MAXITER);
 
     // Parse tikhonov inline table
     if (!optimization_table.contains("tikhonov")) {
@@ -288,9 +288,9 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       }
     }
 
-    output_timestep_stride = validators::field<size_t>(output_table, "timestep_stride").greaterThanEqual(0).valueOr(ConfigDefaults::OUTPUT_TIMESTEP_STRIDE);
+    output_timestep_stride = validators::field<size_t>(output_table, "timestep_stride").valueOr(ConfigDefaults::OUTPUT_TIMESTEP_STRIDE);
 
-    output_optimization_stride = validators::field<size_t>(output_table, "optimization_stride").greaterThanEqual(0).valueOr(ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE);
+    output_optimization_stride = validators::field<size_t>(output_table, "optimization_stride").valueOr(ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE);
 
     // Parse solver options from [solver] table
     runtype = parseEnum(solver_table["runtype"].value<std::string>(), RUN_TYPE_MAP, ConfigDefaults::RUNTYPE);
