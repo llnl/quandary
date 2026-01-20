@@ -1,6 +1,4 @@
-# ---------------------------------------------------------------
-# -------------------------- System settings --------------------
-# ---------------------------------------------------------------
+[system]
 # Number of levels per subsystem
 nlevels = [2, 2]
 # Number of essential levels per subsystem. Either a single value (same for all) or one per subsystem. (Default: same as nlevels)
@@ -61,10 +59,7 @@ initial_condition = {type = "basis"}
 # Optional: Read control Hamiltonian from file (default: none - use built-in Hamiltonian)
 # hamiltonian_file_Hc = "/path/to/control_hamiltonian.dat"
 
-
-# ---------------------------------------------------------------
-# ------------------- Control pulse settings --------------------
-# ---------------------------------------------------------------
+[control]
 # Control parameterization options:
 # Available control types:
 # "spline" - 2nd order B-spline basis functions (recommended).
@@ -72,11 +67,11 @@ initial_condition = {type = "basis"}
 # "spline_amplitude" - amplitude-only parameterization
 # For each type, specify number of basis functions (num), and optionally start and stop times (tstart, tstop)
 # Option 1: Parameterization that applies to all subsystems
-control_parameterization = { type = "spline", num = 150}
-# control_parameterization = { type = "spline0", num = 300 , tstart = 0.0, tstop = 10.0 }
+parameterization = { type = "spline", num = 150}
+# parameterization = { type = "spline0", num = 300 , tstart = 0.0, tstop = 10.0 }
 
 # Option 2: Specify different parameterizations per-subsystem as array of tables
-# control_parameterization = [
+# parameterization = [
 #   { subsystem = 0, type = "spline", num = 150, tstart = 0.0, tstop = 10.0 },
 #   { subsystem = 1, type = "spline0", num = 300 }
 # ]
@@ -98,91 +93,83 @@ carrier_frequency = [
 # "constant" - constant amplitude initialization (amplitude = ...)
 # "file" - read initial parameters from file (filename = "...")
 ## Option 1: Initialization that applies to all subsystems
-control_initialization = { type = "random", amplitude = 0.005}
-# control_initialization = { type = "file", filename = "./params.dat"}
+initialization = { type = "random", amplitude = 0.005}
+# initialization = { type = "file", filename = "./params.dat"}
 ## Option 2: Specify different initialization per subsystem as array of tables
-# control_initialization = [
+# initialization = [
 #   { subsystem = 0, type = "constant", amplitude = 0.003 },
 #   { subsystem = 1, type = "random", amplitude = 0.05 }
 # ]
 
 # Maximum amplitude bound for the control pulses (GHz).
 # Option 1: Single value applies to all subsystems
-control_bounds = 0.008
+bounds = 0.008
 # Option 2: Specify different bounds for each subsystem as array
-# control_bounds = [0.008, 0.010]
+# bounds = [0.008, 0.010]
 
 ## Decide whether control pulses should start and end at zero.
-control_enforceBC = false
+enforceBC = false
 
-# ---------------------------------------------------------------
-# ------------------- Optimization options ----------------------
-# ---------------------------------------------------------------
+[optimization]
 # Optimization target options:
 # Available target types:
 # "none" - No optimization target
 # "gate" - Unitary gate transformation. The gate can be read from file (filename = "..."), or chosen from standard gates below (gate_type = "..."). Optionally, a gate rotation frequency can be specified (gate_rot_freq = single value or array)
 # "state" - Single target state. The state can be read from file (filename = "..."), or can be specified as levels of a product state (levels = [...])
-optim_target = {type = "gate", gate_type = "cnot"} # "cnot", "cqnot", "swap", "swap0q", "qft", "xgate", "ygate", "zgate", "hadamard"
-# optim_target = { type = "gate", gate_type = "cnot", gate_rot_freq = 0.0 }           # single value for all
-# optim_target = { type = "gate", gate_type = "cnot", gate_rot_freq = [0.0, 0.0] }    # one per subsystem
-# optim_target = {type = "gate", filename = "/path/to/target_gate.dat"}
-# optim_target = {type = "state", levels = [0, 0]}
-# optim_target = {type = "state", filename = "/path/to/target_state.dat"}
-#optim_target = {type = "none"}
+target = {type = "gate", gate_type = "cnot"} # "cnot", "cqnot", "swap", "swap0q", "qft", "xgate", "ygate", "zgate", "hadamard"
+# target = { type = "gate", gate_type = "cnot", gate_rot_freq = 0.0 }           # single value for all
+# target = { type = "gate", gate_type = "cnot", gate_rot_freq = [0.0, 0.0] }    # one per subsystem
+# target = {type = "gate", filename = "/path/to/target_gate.dat"}
+# target = {type = "state", levels = [0, 0]}
+# target = {type = "state", filename = "/path/to/target_state.dat"}
+#target = {type = "none"}
 
 # Objective function measure options: "Jtrace", "Jfrobenius", "Jmeasure"
-optim_objective = "Jtrace"
+objective = "Jtrace"
 
 # Weights (beta_i) for summing up objective function terms from different initial conditions.
 # Must be an array of weights (one per initial condition). Default is uniform weighting.
-# optim_weights = [1.0, 0.1, 0.1, 0.1]
+# weights = [1.0, 0.1, 0.1, 0.1]
 
 # Optimization tolerances (stopping criteria):
-optim_tolerance = { grad_abs = 1e-7,     # absolute gradient norm tolerance (||G|| < grad_abs)
-                    grad_rel = 1e-8,     # relative gradient norm tolerance (||G||/||G0|| < grad_rel)
-                    final_cost = 1e-5,   # final-time cost tolerance (J(T) < final_cost)
-                    infidelity = 1e-5    # infidelity tolerance (1 - F_avg < infidelity)
-                }
+tolerance = { grad_abs = 1e-7,     # absolute gradient norm tolerance (||G|| < grad_abs)
+              grad_rel = 1e-8,     # relative gradient norm tolerance (||G||/||G0|| < grad_rel)
+              final_cost = 1e-5,   # final-time cost tolerance (J(T) < final_cost)
+              infidelity = 1e-5    # infidelity tolerance (1 - F_avg < infidelity)
+            }
 # Maximum number of optimization iterations
-optim_maxiter = 200
+maxiter = 200
 
 # Tikhonov regularization for the optimization variables (gamma * ||x||^2)
-optim_tikhonov = { coeff = 0.00001,   # Coefficient (gamma) for Tikhonov regularization
-                   use_x0 = false     # use gamma * ||x - x_0||^2 instead (default: false)
-                 }
+tikhonov = { coeff = 0.00001,   # Coefficient (gamma) for Tikhonov regularization
+             use_x0 = false     # use gamma * ||x - x_0||^2 instead (default: false)
+           }
 
 # Coefficients for Penalty terms added to the optimization cost function
-optim_penalty = { leakage = 0.0,                # Penalize leakage into guard levels
-                  energy = 0.0,                 # Penalize integral over control pulse energy
-                  dpdm = 0.0,                   # Penalize 2nd derivative of state populations
-                  variation = 0.0,              # Penalize control pulse variation (for 0-th order Bsplines)
-                  weightedcost = 0.0,           # Penalize time-weighted cost function integral
-                  weightedcost_width = 0.0      # Width paramter for weighted cost function integral
-                }
+penalty = { leakage = 0.0,                # Penalize leakage into guard levels
+            energy = 0.0,                 # Penalize integral over control pulse energy
+            dpdm = 0.0,                   # Penalize 2nd derivative of state populations
+            variation = 0.0,              # Penalize control pulse variation (for 0-th order Bsplines)
+            weightedcost = 0.0,           # Penalize time-weighted cost function integral
+            weightedcost_width = 0.0      # Width paramter for weighted cost function integral
+          }
 
-# ---------------------------------------------------------------
-# ------------------- Output options -----------------
-# ---------------------------------------------------------------
-
+[output]
 # Directory for output files
-output_dir = "./data_out"
+dir = "./data_out"
 # Specify the desired output during time evolution. Format: list of any of the following options:
 # "expectedEnergy" - expected level occupation for each subsystem
 # "expectedEnergyComposite" - expected level of the full-dimensional composite system
 # "population" - level occupation (probabilities) for each subsystem
 # "populationComposite" - level occupation (probabilities) for the full-dimensional composite system
 # "fullstate" - full state of the composite system (full density matrix, or state vector). WARNING: This might result in very large output files - use with care.
-output_type = ["population", "expectedEnergy"]
+type = ["population", "expectedEnergy"]
 # Output frequency in the time domain: write output every <num> time-step
-output_timestep_stride = 1
+timestep_stride = 1
 # Output frequency for optimization history: write every <num> optimization iterations
-output_optimization_stride = 1
+optimization_stride = 1
 
-
-# ---------------------------------------------------------------
-# ------------------- Solver options -----------------
-# ---------------------------------------------------------------
+[solver]
 # Runtype options:
 # "simulation" - a forward simulation only
 # "gradient" - forward simulation and backward simulation
@@ -201,5 +188,3 @@ linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"
 # Fixed seed for the random number generator. Comment out, or set negative if seed should be random (non-reproducable)
 rand_seed = 1234
-
-
