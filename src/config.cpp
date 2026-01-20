@@ -1103,6 +1103,8 @@ ControlInitializationSettings Config::parseControlInitializationSpecs(const toml
 
   if (init.type == ControlInitializationType::FILE) {
     init.filename = validators::field<std::string>(init_table, "filename").value();
+    init.amplitude = std::nullopt;
+    init.phase = std::nullopt;
     if (!init.filename.has_value()) {
       logger.exitWithError("control_initialization of type 'file' must have a 'filename' parameter");
     }
