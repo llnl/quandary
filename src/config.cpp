@@ -750,6 +750,8 @@ std::string toString(const std::vector<double>& vec) {
 
 } // namespace
 
+// Print config as toml
+// Decided to do this manually instead of with the tomlplusplus library so we could control the ordering and comments.
 void Config::printConfig(std::stringstream& log) const {
   log << "# =============================================\n";
   log << "# System settings \n";
