@@ -51,7 +51,7 @@ std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, con
       if (elem_table->get(subsystem_key)->is_array()) {
         // Coupling parameter case: subsystem is an array of two indices
         auto subsys_array = validators::vectorField<size_t>(*elem_table, subsystem_key).hasLength(2).value();
-        size_t i = subsys_array[0];;
+        size_t i = subsys_array[0];
         size_t j = subsys_array[1];
         if (i >= num_subsystems || j >= num_subsystems) {
           throw validators::ValidationError(key, "subsystem index out of range for key '" + key + "'");
