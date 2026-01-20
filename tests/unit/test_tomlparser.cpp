@@ -1218,80 +1218,63 @@ TEST_F(TomlParserTest, OptimWeightsDefault) {
   EXPECT_DOUBLE_EQ(weights[3], 0.25);
 }
 
-// TEST_F(TomlParserTest, ComprehensiveNonDefaultSettings_PrintConfigValidation) {
-//   // Create a comprehensive configuration with all non-default settings (single oscillator)
-//   std::string input_toml = R"(# Configuration settings
-// # =============================================
+TEST_F(TomlParserTest, ComprehensiveNonDefaultSettings_PrintConfigValidation) {
+  // Create a comprehensive configuration with non-default settings
+  std::string input_toml = R"(
+[system]
+nlevels = [3]
+nessential = [2]
+ntime = 2500
+dt = 0.02
+transfreq = [5.5]
+selfkerr = [-0.2]
+rotfreq = [2.1]
+decoherence = {type = "decay", decay_time = [25.0], dephase_time = [0.0]}
+initial_condition = {type = "state", levels = [1]}
 
-// nlevels = [3]
-// nessential = [2]
-// ntime = 2500
-// dt = 0.02
-// transfreq = [5.500000]
-// selfkerr = [-0.200000]
-// crosskerr = {}
-// Jkl = {}
-// rotfreq = [2.100000]
-// decoherence = {type = "decay"}
-// decay_time = [25.000000]
-// dephase_time = [45.000000]
-// initial_condition = {type = "state", levels = [1]}
-// control_enforceBC = false
-// optim_target = {type = "gate", gate_type = "hadamard"}
-// gate_rot_freq = [1.500000]
-// optim_objective = "jtrace"
-// optim_weights = [1.000000]
-// optim_atol = 1e-06
-// optim_rtol = 0.001
-// optim_ftol = 1e-07
-// optim_inftol = 0.0001
-// optim_maxiter = 150
-// optim_regul = 0.002
-// optim_penalty = 0.1
-// optim_penalty_param = 0.8
-// optim_penalty_dpdm = 0.05
-// optim_penalty_energy = 0.02
-// optim_penalty_variation = 0.03
-// optim_regul_tik0 = true
-// output_dir = "/custom/output/path"
-// output_timestep_stride = 5
-// output_optimization_stride = 25
-// runtype = "optimization"
-// usematfree = true
-// linearsolver_type = "gmres"
-// linearsolver_maxiter = 20
-// timestepper = "imr"
-// rand_seed = 12345
-// output_type = ["population", "expectedenergy"]
+[control]
+parameterization = { type = "spline", num = 25, tstart = 0.5, tstop = 1.5 }
+carrier_frequency = [2.5, 3.0]
+initialization = { type = "random", amplitude = 1.5, phase = 0.5 }
+amplitude_bound = 5.0
+zero_boundary_condition = false
 
+[optimization]
+target = {type = "gate", gate_type = "hadamard", gate_rot_freq = [1.5]}
+objective = "jtrace"
+weights = [1.0]
+tolerance = { grad_abs = 1e-06, grad_rel = 0.001, final_cost = 1e-07, infidelity = 0.0001 }
+maxiter = 150
+tikhonov = { coeff = 0.002, use_x0 = true }
+penalty = { leakage = 0.1, weightedcost = 0.8, weightedcost_width = 0.5, dpdm = 0.05, energy = 0.02, variation = 0.03 }
 
-// control_parameterization = { type = "spline", num = 25, tstart = 0.5, tstop = 1.5 }
+[output]
+directory = "/custom/output/path"
+observables = ["population", "expectedenergy"]
+timestep_stride = 5
+optimization_stride = 25
 
-// control_initialization = { type = "random", amplitude = 1.500000, phase = 0.500000 }
+[solver]
+runtype = "optimization"
+usematfree = true
+linearsolver = { type = "gmres", maxiter = 20 }
+timestepper = "imr"
+rand_seed = 12345
+)";
 
-// [[control_bounds]]
-// oscID = 0
-// value = [5.000000, 8.000000]
+  Config config = Config::fromTomlString(input_toml, logger);
 
-// [[carrier_frequency]]
-// oscID = 0
-// value = [2.500000, 3.000000]
+  // Test that printed config is valid TOML that can be parsed
+  std::stringstream printed_output;
+  config.printConfig(printed_output);
+  std::string output = printed_output.str();
 
+  // Verify output is valid TOML by parsing it
+  ASSERT_NO_THROW({
+    Config::fromTomlString(output, logger);
+  });
+}
 
-// )";
-
-//   Config config = Config::fromTomlString(input_toml, logger);
-
-//   // Test that printed config is valid TOML that can be parsed
-//   std::stringstream printed_output;
-//   config.printConfig(printed_output);
-//   std::string output = printed_output.str();
-
-//   // Verify output is valid TOML by parsing it
-//   ASSERT_NO_THROW({
-//     Config::fromTomlString(output, logger);
-//   });
-// }
 TEST_F(TomlParserTest, Transfreq_ScalarValue) {
   Config config = Config::fromTomlString(
       R"(
