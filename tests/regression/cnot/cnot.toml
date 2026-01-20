@@ -1,41 +1,45 @@
+[system]
 nlevels = [2, 2]
+nessential = [2, 2]
 ntime = 1000
 dt = 0.1
-nessential = [2, 2]
-initial_condition = {type = "basis"}
 transfreq = [4.10595, 4.81526]
-rotfreq = [4.10595, 4.81526]
 selfkerr = [0.2198, 0.2252]
-crosskerr = 0.100000 
-control_enforceBC = false
-optim_target = {type = "gate", 
-                gate_type = "cnot",
-                gate_rot_freq = [4.10595, 4.81526]
-                }
-optim_objective = "Jtrace"
-optim_weights = [1.0]
-optim_tolerance = { grad_abs = 1e-07, grad_rel = 1e-08, final_cost = 1e-05, infidelity = 1e-05 }
-optim_maxiter = 200
-optim_tikhonov = { coeff = 1e-05, use_x0 = false }
-optim_penalty = { leakage = 0.0, weightedcost = 0.0, weightedcost_width = 0.0, dpdm = 0.0, energy = 0.0, variation = 0.0 }
+crosskerr = 0.100000
+rotfreq = [4.10595, 4.81526]
+initial_condition = {type = "basis"}
 
-runtype = "optimization"
-usematfree = true
-output_dir = "./data_out"
-output_timestep_stride = 1
-output_type = ["population", "expectedEnergy"]
-output_optimization_stride = 1
-linearsolver = { type = "gmres", maxiter = 20 }
-timestepper = "IMR"
-rand_seed = 1234
-control_initialization = {
-  type = "constant", amplitude = 0.005
-}
-
-control_parameterization = { type = "spline", num = 150 }
-
+[control]
+parameterization = { type = "spline", num = 150 }
 carrier_frequency = [
   { subsystem = 0, value = [0.0, -0.2198, -0.1] },
   { subsystem = 1, value = [0.0, -0.2252, -0.1] }
 ]
-control_bounds = 0.008
+initialization = { type = "constant", amplitude = 0.005 }
+amplitude_bound = 0.008
+zero_boundary_condition = false
+
+[optimization]
+target = {type = "gate",
+          gate_type = "cnot",
+          gate_rot_freq = [4.10595, 4.81526]
+         }
+objective = "Jtrace"
+weights = [1.0]
+tolerance = { grad_abs = 1e-07, grad_rel = 1e-08, final_cost = 1e-05, infidelity = 1e-05 }
+maxiter = 200
+tikhonov = { coeff = 1e-05, use_x0 = false }
+penalty = { leakage = 0.0, weightedcost = 0.0, weightedcost_width = 0.0, dpdm = 0.0, energy = 0.0, variation = 0.0 }
+
+[output]
+directory = "./data_out"
+observables = ["expectedEnergy", "population"]
+timestep_stride = 1
+optimization_stride = 1
+
+[solver]
+runtype = "optimization"
+usematfree = true
+linearsolver = { type = "gmres", maxiter = 20 }
+timestepper = "IMR"
+rand_seed = 1234

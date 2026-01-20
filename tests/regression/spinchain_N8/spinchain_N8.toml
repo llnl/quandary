@@ -1,3 +1,4 @@
+[system]
 nlevels = [2, 2, 2, 2, 2, 2, 2, 2]
 nessential = [2, 2, 2, 2, 2, 2, 2, 2]
 ntime = 1000
@@ -5,22 +6,38 @@ dt = 0.01
 transfreq = [0.2676797443720237, -0.015629849901717438, 0.1459611334938404, 0.1944500354748219, -0.06349206375770339, -0.3096811297032389, -0.11637775015444579, -0.03832806182101765]
 rotfreq = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 selfkerr = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-
-Jkl = [ { subsystem = [0,1], value = 0.3183098861837907}, 
-        { subsystem = [1,2], value = 0.3183098861837907}, 
-        { subsystem = [2,3], value = 0.3183098861837907}, 
-        { subsystem = [3,4], value = 0.3183098861837907}, 
-        { subsystem = [4,5], value = 0.3183098861837907}, 
-        { subsystem = [5,6], value = 0.3183098861837907}, 
+Jkl = [ { subsystem = [0,1], value = 0.3183098861837907},
+        { subsystem = [1,2], value = 0.3183098861837907},
+        { subsystem = [2,3], value = 0.3183098861837907},
+        { subsystem = [3,4], value = 0.3183098861837907},
+        { subsystem = [4,5], value = 0.3183098861837907},
+        { subsystem = [5,6], value = 0.3183098861837907},
         { subsystem = [6,7], value = 0.3183098861837907}
       ]
-
 initial_condition = {type = "state", levels = [1, 1, 1, 1, 0, 0, 0, 0]}
 
-output_dir = "./data_out"
-output_timestep_stride = 1
-output_type = ["population"]
-output_optimization_stride = 1
+[control]
+parameterization = {type = "spline", num = 6}
+carrier_frequency = [0.0]
+initialization = {type = "random", amplitude = 0.0}
+amplitude_bound = 1e12
+zero_boundary_condition = false
+
+[optimization]
+target = {type = "gate", gate_type = "none", gate_rot_freq = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]}
+objective = "Jtrace"
+tolerance = { grad_abs = 0.0001, grad_rel = 0.0001, final_cost = 0.0001, infidelity = 1e-05 }
+maxiter = 200
+tikhonov = { coeff = 0.0001, use_x0 = false }
+penalty = { leakage = 0.1, energy = 0.1, dpdm = 0.01, variation = 0, weightedcost = 0.1, weightedcost_width = 0 }
+
+[output]
+directory = "./data_out"
+observables = ["population"]
+timestep_stride = 1
+optimization_stride = 1
+
+[solver]
 runtype = "simulation"
 usematfree = false
 linearsolver = { type = "gmres", maxiter = 20 }

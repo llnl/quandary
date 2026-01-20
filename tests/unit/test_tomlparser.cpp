@@ -12,6 +12,7 @@ class TomlParserTest : public ::testing::Test {
 TEST_F(TomlParserTest, ParseBasicSettings) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2]
         transfreq = [4.1]
         rotfreq = [0.0]
@@ -30,6 +31,7 @@ TEST_F(TomlParserTest, ParseBasicSettings) {
 TEST_F(TomlParserTest, ParseVectorSettings) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 3]
         ntime = 1000
         dt = 0.1
@@ -53,6 +55,7 @@ TEST_F(TomlParserTest, ParseVectorSettings) {
 TEST_F(TomlParserTest, ParseJklSettingsAllToAll) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2, 2, 2]
         transfreq = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
@@ -74,6 +77,7 @@ TEST_F(TomlParserTest, ParseJklSettingsAllToAll) {
 TEST_F(TomlParserTest, ParseJklSettingsOneCoupling) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2, 2, 2]
         transfreq = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
@@ -100,6 +104,7 @@ TEST_F(TomlParserTest, ParseJklSettingsOneCoupling) {
 TEST_F(TomlParserTest, ParseJklSettingsPerPair) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2, 2, 2]
         transfreq = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
@@ -131,6 +136,7 @@ TEST_F(TomlParserTest, ParseJklSettingsPerPair) {
 TEST_F(TomlParserTest, ParseCrosskerrSettingsAllToAll) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2, 2, 2]
         transfreq = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
@@ -152,6 +158,7 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsAllToAll) {
 TEST_F(TomlParserTest, ParseCrosskerrSettingsOneCoupling) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2, 2, 2]
         transfreq = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
@@ -178,6 +185,7 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsOneCoupling) {
 TEST_F(TomlParserTest, ParseCrosskerrSettingsPerPair) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2, 2, 2]
         transfreq = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
@@ -209,13 +217,16 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsPerPair) {
 TEST_F(TomlParserTest, ParseOutputSettings_AllOscillators) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2]
         transfreq = [4.1, 4.8]
         ntime = 1000
         dt = 0.1
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
-        output_type = ["population", "fullstate"]
+
+        [output]
+        observables = ["population", "fullstate"]
       )",
       logger);
 
@@ -229,13 +240,16 @@ TEST_F(TomlParserTest, ParseOutputSettings_AllOscillators) {
 TEST_F(TomlParserTest, ParseStructSettings) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2]
         transfreq = [4.1]
         ntime = 1000
         dt = 0.1
         rotfreq = [0.0]
         initial_condition = {type = "diagonal", subsystem = [0]}
-        optim_target = {type = "gate", gate_type = "cnot"}
+
+        [optimization]
+        target = {type = "gate", gate_type = "cnot"}
       )",
       logger);
 
@@ -251,6 +265,7 @@ TEST_F(TomlParserTest, ParseStructSettings) {
 TEST_F(TomlParserTest, ApplyDefaults) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2]
         ntime = 1000
         dt = 0.1
@@ -270,6 +285,7 @@ TEST_F(TomlParserTest, ApplyDefaults) {
 TEST_F(TomlParserTest, Decoherence_Decay) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [3, 2]
         ntime = 1000
         dt = 0.1
@@ -289,6 +305,7 @@ TEST_F(TomlParserTest, Decoherence_Decay) {
 TEST_F(TomlParserTest, Decoherence_Dephase) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [3, 2]
         ntime = 1000
         dt = 0.1
@@ -309,6 +326,7 @@ TEST_F(TomlParserTest, Decoherence_Dephase) {
 TEST_F(TomlParserTest, InitialCondition_FromFile) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2]
         ntime = 1000
         dt = 0.1
@@ -326,6 +344,7 @@ TEST_F(TomlParserTest, InitialCondition_FromFile) {
 TEST_F(TomlParserTest, InitialCondition_ProductState) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [3, 2]
         ntime = 1000
         dt = 0.1
@@ -343,6 +362,7 @@ TEST_F(TomlParserTest, InitialCondition_ProductState) {
 TEST_F(TomlParserTest, InitialCondition_Performance) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2]
         ntime = 1000
         dt = 0.1
@@ -359,6 +379,7 @@ TEST_F(TomlParserTest, InitialCondition_Performance) {
 TEST_F(TomlParserTest, InitialCondition_Ensemble) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [3, 2]
         ntime = 1000
         dt = 0.1
@@ -377,6 +398,7 @@ TEST_F(TomlParserTest, InitialCondition_Ensemble) {
 TEST_F(TomlParserTest, InitialCondition_ThreeStates) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [3]
         ntime = 1000
         dt = 0.1
@@ -394,6 +416,7 @@ TEST_F(TomlParserTest, InitialCondition_ThreeStates) {
 TEST_F(TomlParserTest, InitialCondition_NPlusOne_SingleOscillator) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [3]
         ntime = 1000
         dt = 0.1
@@ -412,6 +435,7 @@ TEST_F(TomlParserTest, InitialCondition_NPlusOne_SingleOscillator) {
 TEST_F(TomlParserTest, InitialCondition_NPlusOne_MultipleOscillators) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 3]
         ntime = 1000
         dt = 0.1
@@ -430,6 +454,7 @@ TEST_F(TomlParserTest, InitialCondition_NPlusOne_MultipleOscillators) {
 TEST_F(TomlParserTest, InitialCondition_Diagonal_Schrodinger) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [3, 2]
         ntime = 1000
         dt = 0.1
@@ -450,6 +475,7 @@ TEST_F(TomlParserTest, InitialCondition_Diagonal_Schrodinger) {
 TEST_F(TomlParserTest, InitialCondition_Basis_Schrodinger) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [3, 2]
         ntime = 1000
         dt = 0.1
@@ -470,6 +496,7 @@ TEST_F(TomlParserTest, InitialCondition_Basis_Schrodinger) {
 TEST_F(TomlParserTest, InitialCondition_Basis_Lindblad) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [3, 2]
         ntime = 1000
         dt = 0.1
@@ -490,6 +517,7 @@ TEST_F(TomlParserTest, InitialCondition_Basis_Lindblad) {
 TEST_F(TomlParserTest, ControlParameterizations_Spline0) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2]
         ntime = 1000
         dt = 0.1
@@ -497,7 +525,8 @@ TEST_F(TomlParserTest, ControlParameterizations_Spline0) {
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
 
-        control_parameterization = { type = "spline0", num = 150, tstart = 0.0, tstop = 1.0 }
+        [control]
+        parameterization = { type = "spline0", num = 150, tstart = 0.0, tstop = 1.0 }
       )",
       logger);
 
@@ -511,6 +540,7 @@ TEST_F(TomlParserTest, ControlParameterizations_Spline0) {
 TEST_F(TomlParserTest, ControlParameterizations_Spline) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
@@ -518,7 +548,8 @@ TEST_F(TomlParserTest, ControlParameterizations_Spline) {
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        control_parameterization = [
+        [control]
+        parameterization = [
           { subsystem = 0, type = "spline", num = 10 },
           { subsystem = 1, type = "spline", num = 20, tstart = 0.0, tstop = 1.0 }
         ]
@@ -530,7 +561,7 @@ TEST_F(TomlParserTest, ControlParameterizations_Spline) {
   EXPECT_EQ(control_seg0.type, ControlType::BSPLINE);
   EXPECT_EQ(control_seg0.nspline.value(), 10);
 
-  // Check second oscillator 
+  // Check second oscillator
   const auto& control_seg1 = config.getControlParameterizations(1);
   EXPECT_EQ(control_seg1.type, ControlType::BSPLINE);
   EXPECT_EQ(control_seg1.nspline.value(), 20);
@@ -541,6 +572,7 @@ TEST_F(TomlParserTest, ControlParameterizations_Spline) {
 TEST_F(TomlParserTest, ControlParameterizations_Defaults) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2, 2]
         ntime = 1000
         dt = 0.1
@@ -548,7 +580,8 @@ TEST_F(TomlParserTest, ControlParameterizations_Defaults) {
         rotfreq = 0.0
         initial_condition = {type = "basis"}
 
-        control_parameterization = [
+        [control]
+        parameterization = [
           { subsystem = 1, type = "spline0", num = 150, tstart = 0.0, tstop = 1.0 }
         ]
       )",
@@ -577,6 +610,7 @@ TEST_F(TomlParserTest, ControlParameterizations_Defaults) {
 TEST_F(TomlParserTest, ControlParameterizations_AllOscillators) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
@@ -584,7 +618,8 @@ TEST_F(TomlParserTest, ControlParameterizations_AllOscillators) {
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        control_parameterization = { type = "spline0", num = 150, tstart = 0.0, tstop = 1.0 }
+        [control]
+        parameterization = { type = "spline0", num = 150, tstart = 0.0, tstop = 1.0 }
       )",
       logger);
 
@@ -606,6 +641,7 @@ TEST_F(TomlParserTest, ControlParameterizations_AllOscillators) {
 TEST_F(TomlParserTest, ControlInitialization_Defaults) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2, 2]
         ntime = 1000
         dt = 0.1
@@ -613,7 +649,8 @@ TEST_F(TomlParserTest, ControlInitialization_Defaults) {
         rotfreq = [0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        control_initialization = [
+        [control]
+        initialization = [
            { subsystem = 1, type = "random", amplitude = 2.0 }
         ]
       )",
@@ -638,6 +675,7 @@ TEST_F(TomlParserTest, ControlInitialization_Defaults) {
 TEST_F(TomlParserTest, ControlInitializationSettings) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2, 2, 2, 2]
         ntime = 1000
         dt = 0.1
@@ -645,7 +683,8 @@ TEST_F(TomlParserTest, ControlInitializationSettings) {
         rotfreq = [0.0, 0.0, 0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        control_initialization = [
+        [control]
+        initialization = [
           { subsystem = 0, type = "constant", amplitude = 1.0, phase = 1.1 },
           { subsystem = 1, type = "constant", amplitude = 2.0 },
           { subsystem = 2, type = "random", amplitude = 3.0, phase = 3.1 },
@@ -653,7 +692,7 @@ TEST_F(TomlParserTest, ControlInitializationSettings) {
           { subsystem = 4, type = "random", amplitude = 5.0, phase = 5.1 }
         ]
 
-        control_parameterization = [
+        parameterization = [
           { subsystem = 0, type = "spline_amplitude", num = 10, scaling = 1.0 },
           { subsystem = 2, type = "spline_amplitude", num = 10, scaling = 1.0 },
           { subsystem = 4, type = "spline_amplitude", num = 10, scaling = 1.0 }
@@ -693,6 +732,7 @@ TEST_F(TomlParserTest, ControlInitializationSettings) {
 TEST_F(TomlParserTest, ControlInitialization_File) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2]
         ntime = 1000
         dt = 0.1
@@ -700,7 +740,8 @@ TEST_F(TomlParserTest, ControlInitialization_File) {
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
 
-        control_initialization = { type = "file", filename = "myparams.dat" }
+        [control]
+        initialization = { type = "file", filename = "myparams.dat" }
       )",
       logger);
 
@@ -712,6 +753,7 @@ TEST_F(TomlParserTest, ControlInitialization_File) {
 TEST_F(TomlParserTest, ControlInitialization_AllOscillators) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
@@ -719,7 +761,8 @@ TEST_F(TomlParserTest, ControlInitialization_AllOscillators) {
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        control_initialization = { type = "constant", amplitude = 1.0 }
+        [control]
+        initialization = { type = "constant", amplitude = 1.0 }
       )",
       logger);
 
@@ -737,6 +780,7 @@ TEST_F(TomlParserTest, ControlInitialization_AllOscillators) {
 TEST_F(TomlParserTest, ControlInitialization_DefaultWithOverrides) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [3, 3, 3]
         ntime = 1000
         dt = 0.1
@@ -744,7 +788,8 @@ TEST_F(TomlParserTest, ControlInitialization_DefaultWithOverrides) {
         rotfreq = [0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        control_initialization = [ 
+        [control]
+        initialization = [
           { subsystem = 1, type = "random", amplitude = 0.05 }
         ]
       )",
@@ -769,6 +814,7 @@ TEST_F(TomlParserTest, ControlInitialization_DefaultWithOverrides) {
 TEST_F(TomlParserTest, ControlBounds) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
@@ -776,9 +822,9 @@ TEST_F(TomlParserTest, ControlBounds) {
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        control_parameterization = { type = "spline", num = 10, tstart = 0.0, tstop = 1.0 }
-        
-        control_bounds = 1.5 
+        [control]
+        parameterization = { type = "spline", num = 10, tstart = 0.0, tstop = 1.0 }
+        amplitude_bound = 1.5
       )",
       logger);
 
@@ -792,6 +838,7 @@ TEST_F(TomlParserTest, ControlBounds) {
 TEST_F(TomlParserTest, ControlBounds_Defaults) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
@@ -811,6 +858,7 @@ TEST_F(TomlParserTest, ControlBounds_Defaults) {
 TEST_F(TomlParserTest, ControlBounds_AllOscillators) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
@@ -818,7 +866,8 @@ TEST_F(TomlParserTest, ControlBounds_AllOscillators) {
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
-        control_bounds = [1.0, 2.0]
+        [control]
+        amplitude_bound = [1.0, 2.0]
       )",
       logger);
 
@@ -832,6 +881,7 @@ TEST_F(TomlParserTest, ControlBounds_AllOscillators) {
 TEST_F(TomlParserTest, CarrierFrequenciesDefaults) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2,2]
         ntime = 1000
         dt = 0.1
@@ -839,6 +889,7 @@ TEST_F(TomlParserTest, CarrierFrequenciesDefaults) {
         rotfreq = 0.0
         initial_condition = {type = "basis"}
 
+        [control]
         carrier_frequency = [
           {subsystem = 1, value = [4.0, 5.0]}
         ]
@@ -857,12 +908,14 @@ TEST_F(TomlParserTest, CarrierFrequenciesDefaults) {
 TEST_F(TomlParserTest, CarrierFrequenciesPerSubsystem) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2,2]
         ntime = 1000
         dt = 0.1
         transfreq = 4.1
         initial_condition = {type = "basis"}
 
+        [control]
         carrier_frequency = [
           {subsystem = 0, value = [1.0, 2.0, 3.0]},
           {subsystem = 1, value = [4.0, 5.0]}
@@ -884,6 +937,7 @@ TEST_F(TomlParserTest, CarrierFrequenciesPerSubsystem) {
 TEST_F(TomlParserTest, CarrierFrequencies_AllOscillators) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
@@ -891,6 +945,7 @@ TEST_F(TomlParserTest, CarrierFrequencies_AllOscillators) {
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
+        [control]
         carrier_frequency = { value = [1.0, 2.0] }
       )",
       logger);
@@ -908,6 +963,7 @@ TEST_F(TomlParserTest, CarrierFrequencies_AllOscillators) {
 TEST_F(TomlParserTest, CarrierFrequencies_AllOscillatorsShorthand) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
@@ -915,6 +971,7 @@ TEST_F(TomlParserTest, CarrierFrequencies_AllOscillatorsShorthand) {
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
+        [control]
         carrier_frequency = [1.0, 2.0]
       )",
       logger);
@@ -934,6 +991,7 @@ TEST_F(TomlParserTest, CarrierFrequency_InvalidID) {
   ASSERT_DEATH({
     Config config = Config::fromTomlString(
         R"(
+          [system]
           nlevels = [2]
           transfreq = [4.1]
           ntime = 1000
@@ -941,6 +999,7 @@ TEST_F(TomlParserTest, CarrierFrequency_InvalidID) {
           rotfreq = [0.0]
           initial_condition = {type = "basis"}
 
+          [control]
           carrier_frequency = [{subsystem = 5, value = [4.0]}]
         )",
         logger);
@@ -952,13 +1011,16 @@ TEST_F(TomlParserTest, CarrierFrequency_InvalidID) {
 TEST_F(TomlParserTest, OptimTarget_GateType) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2,2,2]
         ntime = 1000
         dt = 0.1
         transfreq = [4.1, 3.4, 5.6]
         rotfreq = [0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
-        optim_target = {type = "gate", gate_type = "cnot"}
+
+        [optimization]
+        target = {type = "gate", gate_type = "cnot"}
       )",
       logger);
 
@@ -978,13 +1040,16 @@ TEST_F(TomlParserTest, OptimTarget_GateType) {
 TEST_F(TomlParserTest, OptimTarget_GateRotFreq) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2,2]
         ntime = 1000
         dt = 0.1
         transfreq = [4.1, 3.4]
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
-        optim_target = {type = "gate", gate_type = "cnot", gate_rot_freq = [1.0, 2.0]}
+
+        [optimization]
+        target = {type = "gate", gate_type = "cnot", gate_rot_freq = [1.0, 2.0]}
       )",
       logger);
 
@@ -1001,13 +1066,16 @@ TEST_F(TomlParserTest, OptimTarget_GateRotFreq) {
 TEST_F(TomlParserTest, OptimTarget_GateFromFile) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2]
         ntime = 1000
         dt = 0.1
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
-        optim_target = {type = "gate", filename = "/path/to/gate.dat"}
+
+        [optimization]
+        target = {type = "gate", filename = "/path/to/gate.dat"}
       )",
       logger);
 
@@ -1020,13 +1088,16 @@ TEST_F(TomlParserTest, OptimTarget_GateFromFile) {
 TEST_F(TomlParserTest, OptimTarget_ProductState) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [3, 3, 3]
         ntime = 1000
         dt = 0.1
         transfreq = 4.1
         rotfreq = 0.0
         initial_condition = {type = "basis"}
-        optim_target = {type = "state", levels = [0,1,2]}
+
+        [optimization]
+        target = {type = "state", levels = [0,1,2]}
       )",
       logger);
 
@@ -1044,13 +1115,16 @@ TEST_F(TomlParserTest, OptimTarget_ProductState) {
 TEST_F(TomlParserTest, OptimTarget_FromFile) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2]
         ntime = 1000
         dt = 0.1
         transfreq = [4.1]
         rotfreq = [0.0]
         initial_condition = {type = "basis"}
-        optim_target = {type = "state", filename = "/path/to/target.dat"}
+
+        [optimization]
+        target = {type = "state", filename = "/path/to/target.dat"}
       )",
       logger);
 
@@ -1063,6 +1137,7 @@ TEST_F(TomlParserTest, OptimTarget_FromFile) {
 TEST_F(TomlParserTest, OptimTarget_DefaultNone) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2]
         ntime = 1000
         dt = 0.1
@@ -1082,13 +1157,16 @@ TEST_F(TomlParserTest, OptimTarget_DefaultNone) {
 TEST_F(TomlParserTest, OptimWeightsVectorNormalization) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
         transfreq = [4.1, 4.1]
         rotfreq = [0.0, 0.0]
         initial_condition = {type = "basis"}
-        optim_weights = [0.25, 0.50, 0.25, 0.0]
+
+        [optimization]
+        weights = [0.25, 0.50, 0.25, 0.0]
       )",
       logger);
 
@@ -1105,13 +1183,16 @@ TEST_F(TomlParserTest, OptimWeightsScalarNotAllowed) {
   EXPECT_DEATH(
       Config::fromTomlString(
           R"(
+            [system]
             nlevels = [2, 2]
             ntime = 1000
             dt = 0.1
             transfreq = [4.1, 4.1]
             rotfreq = [0.0, 0.0]
             initial_condition = {type = "basis"}
-            optim_weights = 1.0
+
+            [optimization]
+            weights = 1.0
           )",
           logger),
       "wrong type");
@@ -1120,6 +1201,7 @@ TEST_F(TomlParserTest, OptimWeightsScalarNotAllowed) {
 TEST_F(TomlParserTest, OptimWeightsDefault) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [4,3]
         ntime = 1000
         dt = 0.1
@@ -1213,6 +1295,7 @@ TEST_F(TomlParserTest, OptimWeightsDefault) {
 TEST_F(TomlParserTest, Transfreq_ScalarValue) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 3, 4]
         ntime = 1000
         dt = 0.1
@@ -1231,6 +1314,7 @@ TEST_F(TomlParserTest, Transfreq_ScalarValue) {
 TEST_F(TomlParserTest, Transfreq_ArrayValue) {
   Config config = Config::fromTomlString(
       R"(
+        [system]
         nlevels = [2, 3, 4]
         ntime = 1000
         dt = 0.1
@@ -1251,6 +1335,7 @@ TEST_F(TomlParserTest, Transfreq_WrongSizeError) {
       {
         Config config = Config::fromTomlString(
             R"(
+              [system]
               nlevels = [2, 3, 4]
               ntime = 1000
               dt = 0.1
