@@ -909,6 +909,9 @@ void Config::finalize() {
   // Scale the weights so that they sum up to 1
   double scaleweights = 0.0;
   for (size_t i = 0; i < optim_weights.size(); i++) scaleweights += optim_weights[i];
+  if (scaleweights == 0.0) {
+    logger.exitWithError("optim_weights sum to zero; at least one weight must be positive");
+  }
   for (size_t i = 0; i < optim_weights.size(); i++) optim_weights[i] = optim_weights[i] / scaleweights;
 
   // Set weightedcost width to zero if weightedcost penalty is zero
