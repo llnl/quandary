@@ -2,6 +2,153 @@
 
 namespace {
 
+// TOML extraction helpers
+
+/**
+ * @brief Helper to get readable type names for error messages
+ */
+template <typename T>
+std::string getTypeName() {
+  if constexpr (std::is_same_v<T, int> || std::is_same_v<T, int64_t> || std::is_same_v<T, size_t>) {
+    return "integer";
+  } else if constexpr (std::is_same_v<T, double> || std::is_same_v<T, float>) {
+    return "number";
+  } else if constexpr (std::is_same_v<T, std::string>) {
+    return "string";
+  } else if constexpr (std::is_same_v<T, bool>) {
+    return "boolean";
+  } else {
+    return "unknown type";
+  }
+}
+
+/**
+ * @brief Extracts a scalar from TOML and returns a Validator for chaining.
+ */
+template <typename T>
+validators::Validator<T> tomlField(const toml::table& config, const std::string& key) {
+  if (!config.contains(key)) {
+    return validators::field<T>(std::nullopt, key);
+  }
+  auto val = config[key].template value<T>();
+  if (!val) {
+    throw validators::ValidationError(key, "wrong type (expected " + getTypeName<T>() + ")");
+  }
+  return validators::field<T>(val, key);
+}
+
+/**
+ * @brief Extracts a vector from TOML and returns a VectorValidator for chaining.
+ */
+template <typename T>
+validators::VectorValidator<T> tomlVectorField(const toml::table& config, const std::string& key) {
+  if (!config.contains(key)) {
+    return validators::vectorField<T>(std::nullopt, key);
+  }
+  auto* arr = config[key].as_array();
+  if (!arr) {
+    throw validators::ValidationError(key, "wrong type (expected array)");
+  }
+  std::vector<T> result;
+  for (size_t i = 0; i < arr->size(); ++i) {
+    auto val = arr->at(i).template value<T>();
+    if (!val) {
+      std::ostringstream oss;
+      oss << "element [" << i << "] wrong type (expected " << getTypeName<T>() << ")";
+      throw validators::ValidationError(key, oss.str());
+    }
+    result.push_back(*val);
+  }
+  return validators::vectorField<T>(result, key);
+}
+
+/**
+ * @brief Extracts an optional scalar value from a TOML node.
+ */
+template <typename T, typename NodeType>
+std::optional<T> getOptional(const toml::node_view<NodeType>& node) {
+  return node.template value<T>();
+}
+
+/**
+ * @brief Extracts an optional vector from a TOML node.
+ */
+template <typename T, typename NodeType>
+std::optional<std::vector<T>> getOptionalVector(const toml::node_view<NodeType>& node) {
+  auto* arr = node.as_array();
+  if (!arr) {
+    return std::nullopt;
+  }
+  std::vector<T> result;
+  for (size_t i = 0; i < arr->size(); ++i) {
+    auto val = arr->at(i).template value<T>();
+    if (!val) {
+      return std::nullopt;
+    }
+    result.push_back(*val);
+  }
+  return result;
+}
+
+/**
+ * @brief Extracts a required table from a TOML configuration.
+ */
+inline const toml::table& getRequiredTable(const toml::table& config, const std::string& key) {
+  if (!config.contains(key)) {
+    throw validators::ValidationError(key, "table is required");
+  }
+  auto* table = config[key].as_table();
+  if (!table) {
+    throw validators::ValidationError(key, "must be a table");
+  }
+  return *table;
+}
+
+/**
+ * @brief Parses a field that can be either a scalar (applied to all) or an exact-size array.
+ */
+template <typename T>
+std::vector<T> scalarOrVector(const toml::table& config, const std::string& key, size_t expected_size) {
+  if (!config.contains(key)) {
+    throw validators::ValidationError(key, "field not found");
+  }
+  if (auto* arr = config[key].as_array()) {
+    if (arr->size() != expected_size) {
+      std::ostringstream oss;
+      oss << "array must have exactly " << expected_size << " elements, got " << arr->size();
+      throw validators::ValidationError(key, oss.str());
+    }
+    std::vector<T> result;
+    for (size_t i = 0; i < arr->size(); ++i) {
+      auto val = arr->at(i).template value<T>();
+      if (!val) {
+        std::ostringstream oss;
+        oss << "element [" << i << "] wrong type (expected " << getTypeName<T>() << ")";
+        throw validators::ValidationError(key, oss.str());
+      }
+      result.push_back(*val);
+    }
+    return result;
+  }
+  if (auto val = config[key].template value<T>()) {
+    return std::vector<T>(expected_size, *val);
+  }
+  throw validators::ValidationError(key, "must be either a scalar value or an array of " + getTypeName<T>());
+}
+
+/**
+ * @brief Parses an optional field that can be either a scalar or an exact-size array.
+ */
+template <typename T>
+std::vector<T> scalarOrVectorOr(const toml::table& config, const std::string& key, size_t expected_size, const std::vector<T>& default_value) {
+  if (!config.contains(key)) {
+    return default_value;
+  }
+  return scalarOrVector<T>(config, key, expected_size);
+}
+
+// Parsing helpers
+
 /**
  * Generic template function for parsing per-subsystem settings.
  * Handles two formats:
@@ -50,7 +197,7 @@ std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, con
       size_t index;
       if (elem_table->get(subsystem_key)->is_array()) {
         // Coupling parameter case: subsystem is an array of two indices
-        auto subsys_array = validators::vectorField<size_t>(*elem_table, subsystem_key).hasLength(2).value();
+        auto subsys_array = tomlVectorField<size_t>(*elem_table, subsystem_key).hasLength(2).value();
         size_t i = subsys_array[0];
         size_t j = subsys_array[1];
         if (i >= num_subsystems || j >= num_subsystems) {
@@ -63,7 +210,7 @@ std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, con
         settings.resize(num_pairs, default_settings);
       } else if (elem_table->get(subsystem_key)->is_value()) {
         // Single subsystem index case
-        index = validators::field<size_t>(*elem_table, subsystem_key).lessThan(num_subsystems).value();
+        index = tomlField<size_t>(*elem_table, subsystem_key).lessThan(num_subsystems).value();
         settings.resize(num_subsystems, default_settings);
       } else {
         logger.exitWithError("subsystem field must be an integer index or an array of two indices");
@@ -97,18 +244,18 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     // Parse system options from [system] table
 
-    nlevels = validators::vectorField<size_t>(*system_table, "nlevels").minLength(1).positive().value();
+    nlevels = tomlVectorField<size_t>(*system_table, "nlevels").minLength(1).positive().value();
     size_t num_osc = nlevels.size();
 
-    nessential = validators::scalarOrVectorOr<size_t>(*system_table, "nessential", num_osc, nlevels);
+    nessential = scalarOrVectorOr<size_t>(*system_table, "nessential", num_osc, nlevels);
 
-    ntime = validators::field<size_t>(*system_table, "ntime").positive().value();
+    ntime = tomlField<size_t>(*system_table, "ntime").positive().value();
 
-    dt = validators::field<double>(*system_table, "dt").positive().value();
+    dt = tomlField<double>(*system_table, "dt").positive().value();
 
-    transfreq = validators::scalarOrVector<double>(*system_table, "transfreq", num_osc);
+    transfreq = scalarOrVector<double>(*system_table, "transfreq", num_osc);
 
-    selfkerr = validators::scalarOrVectorOr<double>(*system_table, "selfkerr", num_osc, std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
+    selfkerr = scalarOrVectorOr<double>(*system_table, "selfkerr", num_osc, std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
 
     // Parse crosskerr and Jkl coupling: either one value (all-to-all coupling) or array of tables with 'subsystem = [i,j]' field for i-j coupling)
     size_t num_pairs = (num_osc - 1) * num_osc / 2;
@@ -117,28 +264,28 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     // Overwrite for crosskerr
     if (system_table->contains("crosskerr")) {
       if ((*system_table)["crosskerr"].is_value()) {
-        double single_val = validators::field<double>(*system_table, "crosskerr").value();
+        double single_val = tomlField<double>(*system_table, "crosskerr").value();
         crosskerr.assign(num_pairs, single_val);
       } else {
-      auto parseFunc = [](const toml::table& t) { return validators::field<double>(t, "value").value(); };
+      auto parseFunc = [](const toml::table& t) { return tomlField<double>(t, "value").value(); };
       crosskerr = parsePerSubsystemSettings<double>(*system_table, "crosskerr", num_osc, ConfigDefaults::CROSSKERR, parseFunc, logger);
       }
     }
     // Overwrite for Jkl
     if (system_table->contains("Jkl")) {
       if ((*system_table)["Jkl"].is_value()) {
-        double single_val = validators::field<double>(*system_table, "Jkl").value();
+        double single_val = tomlField<double>(*system_table, "Jkl").value();
         Jkl.assign(num_pairs, single_val);
       } else {
-      auto parseFunc = [](const toml::table& t) { return validators::field<double>(t, "value").value(); };
+      auto parseFunc = [](const toml::table& t) { return tomlField<double>(t, "value").value(); };
       Jkl = parsePerSubsystemSettings<double>(*system_table, "Jkl", num_osc, ConfigDefaults::JKL, parseFunc, logger);
       }
     }
 
-    rotfreq = validators::scalarOrVectorOr<double>(*system_table, "rotfreq", num_osc, std::vector<double>(num_osc, ConfigDefaults::ROTFREQ));
+    rotfreq = scalarOrVectorOr<double>(*system_table, "rotfreq", num_osc, std::vector<double>(num_osc, ConfigDefaults::ROTFREQ));
 
-    hamiltonian_file_Hsys = validators::getOptional<std::string>((*system_table)["hamiltonian_file_Hsys"]);
-    hamiltonian_file_Hc = validators::getOptional<std::string>((*system_table)["hamiltonian_file_Hc"]);
+    hamiltonian_file_Hsys = getOptional<std::string>((*system_table)["hamiltonian_file_Hsys"]);
+    hamiltonian_file_Hc = getOptional<std::string>((*system_table)["hamiltonian_file_Hc"]);
 
     // Parse decoherence setting
     decoherence_type = ConfigDefaults::DECOHERENCE_TYPE;
@@ -149,22 +296,22 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       if (!decoherence_table) {
         logger.exitWithError("decoherence must be a table");
       }
-      auto type_str = validators::field<std::string>(*decoherence_table, "type").valueOr("none");
+      auto type_str = tomlField<std::string>(*decoherence_table, "type").valueOr("none");
       decoherence_type = parseEnum(type_str, DECOHERENCE_TYPE_MAP, ConfigDefaults::DECOHERENCE_TYPE);
-      decay_time = validators::scalarOrVectorOr<double>(*decoherence_table, "decay_time", num_osc, std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
-      dephase_time = validators::scalarOrVectorOr<double>(*decoherence_table, "dephase_time", num_osc, std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
+      decay_time = scalarOrVectorOr<double>(*decoherence_table, "decay_time", num_osc, std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
+      dephase_time = scalarOrVectorOr<double>(*decoherence_table, "dephase_time", num_osc, std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
     }
 
     // Parse initial condition table
-    auto init_cond_table = validators::getRequiredTable(*system_table, "initial_condition");
-    auto type_opt = parseEnum(validators::field<std::string>(init_cond_table, "type").value(), INITCOND_TYPE_MAP);
+    auto init_cond_table = getRequiredTable(*system_table, "initial_condition");
+    auto type_opt = parseEnum(tomlField<std::string>(init_cond_table, "type").value(), INITCOND_TYPE_MAP);
     if (!type_opt.has_value()) {
       logger.exitWithError("initial condition type not found.");
     }
     initial_condition.type = type_opt.value();
-    initial_condition.levels = validators::getOptionalVector<size_t>(init_cond_table["levels"]);
-    initial_condition.filename = validators::getOptional<std::string>(init_cond_table["filename"]);
-    initial_condition.subsystem= validators::getOptionalVector<size_t>(init_cond_table["subsystem"]);
+    initial_condition.levels = getOptionalVector<size_t>(init_cond_table["levels"]);
+    initial_condition.filename = getOptional<std::string>(init_cond_table["filename"]);
+    initial_condition.subsystem= getOptionalVector<size_t>(init_cond_table["subsystem"]);
 
     // Parse control options from [control] table
     control_zero_boundary_condition = control_table["zero_boundary_condition"].value_or(ConfigDefaults::CONTROL_ZERO_BOUNDARY_CONDITION);
@@ -186,7 +333,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     }
 
     // Parse optional control bounds: either single value or per-oscillator array
-    control_amplitude_bounds = validators::scalarOrVectorOr<double>(control_table, "amplitude_bound", num_osc, std::vector<double>(num_osc, ConfigDefaults::CONTROL_AMPLITUDE_BOUND));
+    control_amplitude_bounds = scalarOrVectorOr<double>(control_table, "amplitude_bound", num_osc, std::vector<double>(num_osc, ConfigDefaults::CONTROL_AMPLITUDE_BOUND));
 
     // Parse carrier frequencies: either one vector (applies to all oscillators) or per-oscillator array of tables
     std::vector<double> default_carrier_freq = {ConfigDefaults::CARRIER_FREQ};
@@ -196,11 +343,11 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       auto* carrier_freq_array = control_table["carrier_frequency"].as_array();
       if (carrier_freq_array && !carrier_freq_array->empty() && !carrier_freq_array->front().is_table()) {
         // Direct array format: carrier_frequency = [1.0, 2.0]
-        auto values = validators::vectorField<double>(control_table, "carrier_frequency").value();
+        auto values = tomlVectorField<double>(control_table, "carrier_frequency").value();
         carrier_frequencies.assign(num_osc, values);
       } else {
         // Table or array of tables format
-        auto parseFunc = [](const toml::table& t) { return validators::vectorField<double>(t, "value").value(); };
+        auto parseFunc = [](const toml::table& t) { return tomlVectorField<double>(t, "value").value(); };
         carrier_frequencies = parsePerSubsystemSettings<std::vector<double>>(control_table, "carrier_frequency", num_osc, default_carrier_freq, parseFunc, logger);
       }
     }
@@ -211,7 +358,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     optim_objective = parseEnum(optimization_table["objective"].value<std::string>(), OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
 
     // Parse optional weights
-    optim_weights = validators::vectorField<double>(optimization_table, "weights").valueOr({ConfigDefaults::OPTIM_WEIGHT});
+    optim_weights = tomlVectorField<double>(optimization_table, "weights").valueOr({ConfigDefaults::OPTIM_WEIGHT});
 
     // Parse optional optimization tolerances
     if (!optimization_table.contains("tolerance")) {
@@ -225,13 +372,13 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       if (!tol_table) {
         logger.exitWithError("tolerance must be a table");
       }
-      optim_tol_grad_abs = validators::field<double>(*tol_table, "grad_abs").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_ABS);
-      optim_tol_grad_rel = validators::field<double>(*tol_table, "grad_rel").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_REL);
-      optim_tol_finalcost = validators::field<double>(*tol_table, "final_cost").positive().valueOr(ConfigDefaults::OPTIM_TOL_FINALCOST);
-      optim_tol_infidelity = validators::field<double>(*tol_table, "infidelity").positive().valueOr(ConfigDefaults::OPTIM_TOL_INFIDELITY);
+      optim_tol_grad_abs = tomlField<double>(*tol_table, "grad_abs").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_ABS);
+      optim_tol_grad_rel = tomlField<double>(*tol_table, "grad_rel").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_REL);
+      optim_tol_finalcost = tomlField<double>(*tol_table, "final_cost").positive().valueOr(ConfigDefaults::OPTIM_TOL_FINALCOST);
+      optim_tol_infidelity = tomlField<double>(*tol_table, "infidelity").positive().valueOr(ConfigDefaults::OPTIM_TOL_INFIDELITY);
     }
 
-    optim_maxiter = validators::field<size_t>(optimization_table, "maxiter").valueOr(ConfigDefaults::OPTIM_MAXITER);
+    optim_maxiter = tomlField<size_t>(optimization_table, "maxiter").valueOr(ConfigDefaults::OPTIM_MAXITER);
 
     // Parse tikhonov inline table
     if (!optimization_table.contains("tikhonov")) {
@@ -242,8 +389,8 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       if (!regul_table) {
         logger.exitWithError("tikhonov must be a table");
       }
-      optim_tikhonov_coeff= validators::field<double>(*regul_table, "coeff").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_TIKHONOV_COEFF);
-      optim_tikhonov_use_x0 = validators::field<bool>(*regul_table, "use_x0").valueOr(ConfigDefaults::OPTIM_TIKHONOV_USE_X0);
+      optim_tikhonov_coeff= tomlField<double>(*regul_table, "coeff").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_TIKHONOV_COEFF);
+      optim_tikhonov_use_x0 = tomlField<bool>(*regul_table, "use_x0").valueOr(ConfigDefaults::OPTIM_TIKHONOV_USE_X0);
     }
 
     // Parse penalty table
@@ -261,12 +408,12 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       if (!penalty_table) {
         logger.exitWithError("penalty must be a table");
       }
-      optim_penalty_leakage = validators::field<double>(*penalty_table, "leakage").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
-      optim_penalty_weightedcost = validators::field<double>(*penalty_table, "weightedcost").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
-      optim_penalty_weightedcost_width = validators::field<double>(*penalty_table, "weightedcost_width").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH);
-      optim_penalty_dpdm = validators::field<double>(*penalty_table, "dpdm").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
-      optim_penalty_energy = validators::field<double>(*penalty_table, "energy").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
-      optim_penalty_variation = validators::field<double>(*penalty_table, "variation").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
+      optim_penalty_leakage = tomlField<double>(*penalty_table, "leakage").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
+      optim_penalty_weightedcost = tomlField<double>(*penalty_table, "weightedcost").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
+      optim_penalty_weightedcost_width = tomlField<double>(*penalty_table, "weightedcost_width").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH);
+      optim_penalty_dpdm = tomlField<double>(*penalty_table, "dpdm").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
+      optim_penalty_energy = tomlField<double>(*penalty_table, "energy").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
+      optim_penalty_variation = tomlField<double>(*penalty_table, "variation").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
     }
 
     // Parse output options from [output] table
@@ -288,9 +435,9 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       }
     }
 
-    output_timestep_stride = validators::field<size_t>(output_table, "timestep_stride").valueOr(ConfigDefaults::OUTPUT_TIMESTEP_STRIDE);
+    output_timestep_stride = tomlField<size_t>(output_table, "timestep_stride").valueOr(ConfigDefaults::OUTPUT_TIMESTEP_STRIDE);
 
-    output_optimization_stride = validators::field<size_t>(output_table, "optimization_stride").valueOr(ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE);
+    output_optimization_stride = tomlField<size_t>(output_table, "optimization_stride").valueOr(ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE);
 
     // Parse solver options from [solver] table
     runtype = parseEnum(solver_table["runtype"].value<std::string>(), RUN_TYPE_MAP, ConfigDefaults::RUNTYPE);
@@ -307,8 +454,8 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       if (!linearsolver_table_inner) {
         logger.exitWithError("linearsolver must be a table");
       }
-      linearsolver_type = parseEnum(validators::field<std::string>(*linearsolver_table_inner, "type").value(), LINEAR_SOLVER_TYPE_MAP, ConfigDefaults::LINEARSOLVER_TYPE);
-      linearsolver_maxiter = validators::field<size_t>(*linearsolver_table_inner, "maxiter").positive().valueOr(ConfigDefaults::LINEARSOLVER_MAXITER);
+      linearsolver_type = parseEnum(tomlField<std::string>(*linearsolver_table_inner, "type").value(), LINEAR_SOLVER_TYPE_MAP, ConfigDefaults::LINEARSOLVER_TYPE);
+      linearsolver_maxiter = tomlField<size_t>(*linearsolver_table_inner, "maxiter").positive().valueOr(ConfigDefaults::LINEARSOLVER_MAXITER);
     }
 
     timestepper_type = parseEnum(solver_table["timestepper"].value<std::string>(), TIME_STEPPER_TYPE_MAP, ConfigDefaults::TIMESTEPPER_TYPE);
@@ -1060,7 +1207,7 @@ void Config::setRandSeed(int rand_seed_) {
 }
 
 ControlParameterizationSettings Config::parseControlParameterizationSpecs(const toml::table& param_table) const {
-  std::string type_str = validators::field<std::string>(param_table, "type").value();
+  std::string type_str = tomlField<std::string>(param_table, "type").value();
   auto type_enum = parseEnum(type_str, CONTROL_TYPE_MAP);
   if (!type_enum.has_value()) {
     logger.exitWithError("Unknown control parameterization type: " + type_str);
@@ -1072,16 +1219,16 @@ ControlParameterizationSettings Config::parseControlParameterizationSpecs(const 
   switch (param.type) {
     case ControlType::BSPLINE:
     case ControlType::BSPLINE0:
-      param.nspline = validators::field<size_t>(param_table, "num").value();
-      param.tstart = validators::getOptional<double>(param_table["tstart"]);
-      param.tstop = validators::getOptional<double>(param_table["tstop"]);
+      param.nspline = tomlField<size_t>(param_table, "num").value();
+      param.tstart = getOptional<double>(param_table["tstart"]);
+      param.tstop = getOptional<double>(param_table["tstop"]);
       break;
 
     case ControlType::BSPLINEAMP:
-      param.nspline = validators::field<size_t>(param_table, "num").value();
-      param.scaling = validators::field<double>(param_table, "scaling").value();
-      param.tstart = validators::getOptional<double>(param_table["tstart"]);
-      param.tstop = validators::getOptional<double>(param_table["tstop"]);
+      param.nspline = tomlField<size_t>(param_table, "num").value();
+      param.scaling = tomlField<double>(param_table, "scaling").value();
+      param.tstart = getOptional<double>(param_table["tstart"]);
+      param.tstop = getOptional<double>(param_table["tstop"]);
       break;
 
     case ControlType::NONE:
@@ -1093,7 +1240,7 @@ ControlParameterizationSettings Config::parseControlParameterizationSpecs(const 
 
 
 ControlInitializationSettings Config::parseControlInitializationSpecs(const toml::table& init_table) const {
-  std::string type = validators::field<std::string>(init_table, "type").value();
+  std::string type = tomlField<std::string>(init_table, "type").value();
   auto type_enum = parseEnum(type, CONTROL_INITIALIZATION_TYPE_MAP);
   if (!type_enum.has_value()) {
     logger.exitWithError("Unknown control initialization type: " + type);
@@ -1103,15 +1250,15 @@ ControlInitializationSettings Config::parseControlInitializationSpecs(const toml
   init.type = type_enum.value();
 
   if (init.type == ControlInitializationType::FILE) {
-    init.filename = validators::field<std::string>(init_table, "filename").value();
+    init.filename = tomlField<std::string>(init_table, "filename").value();
     init.amplitude = std::nullopt;
     init.phase = std::nullopt;
     if (!init.filename.has_value()) {
       logger.exitWithError("control_initialization of type 'file' must have a 'filename' parameter");
     }
   } else {
-    init.amplitude = validators::field<double>(init_table, "amplitude").valueOr(ConfigDefaults::CONTROL_INIT_AMPLITUDE);
-    init.phase = validators::field<double>(init_table, "phase").greaterThanEqual(0.0).valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
+    init.amplitude = tomlField<double>(init_table, "amplitude").valueOr(ConfigDefaults::CONTROL_INIT_AMPLITUDE);
+    init.phase = tomlField<double>(init_table, "phase").greaterThanEqual(0.0).valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
   }
 
   return init;
@@ -1128,7 +1275,7 @@ OptimTargetSettings Config::parseOptimTarget(const toml::table& toml, size_t num
     const auto* target_table = toml["target"].as_table();
 
     // Get the target type, or default to NONE
-    auto type_str = validators::field<std::string>(*target_table, "type").valueOr("none");
+    auto type_str = tomlField<std::string>(*target_table, "type").valueOr("none");
     auto type_opt = parseEnum(type_str, TARGET_TYPE_MAP);
     if (!type_opt.has_value()) {
       logger.exitWithError("Unknown optim_target type: " + type_str);
@@ -1138,9 +1285,9 @@ OptimTargetSettings Config::parseOptimTarget(const toml::table& toml, size_t num
     // Parse other settings based on type
     if (optim_target.type == TargetType::GATE) {
       // For Gate target: Either gate_type or filename needs to be provided
-      auto gate_type_str = validators::field<std::string>(*target_table, "gate_type").valueOr("none");
+      auto gate_type_str = tomlField<std::string>(*target_table, "gate_type").valueOr("none");
       optim_target.gate_type = parseEnum(gate_type_str, GATE_TYPE_MAP);
-      optim_target.filename = validators::getOptional<std::string>((*target_table)["filename"]);
+      optim_target.filename = getOptional<std::string>((*target_table)["filename"]);
       // Make sure either gate_type or filename is provided
       if (!optim_target.gate_type.has_value() && !optim_target.filename.has_value()) {
         logger.exitWithError("For optim_target of type 'gate', either gate_type or filename must be specified");
@@ -1151,12 +1298,12 @@ OptimTargetSettings Config::parseOptimTarget(const toml::table& toml, size_t num
       }
 
       // For gate, check for optional gate rotation frequencies
-      optim_target.gate_rot_freq = validators::scalarOrVectorOr<double>(*target_table, "gate_rot_freq", num_osc, std::vector<double>(num_osc, ConfigDefaults::GATE_ROT_FREQ));
+      optim_target.gate_rot_freq = scalarOrVectorOr<double>(*target_table, "gate_rot_freq", num_osc, std::vector<double>(num_osc, ConfigDefaults::GATE_ROT_FREQ));
 
     } else if (optim_target.type == TargetType::STATE) {
       // State target: Either levels for product state or filename needs to be provided
-      optim_target.filename = validators::getOptional<std::string>((*target_table)["filename"]);
-      optim_target.levels = validators::getOptionalVector<size_t>((*target_table)["levels"]);
+      optim_target.filename = getOptional<std::string>((*target_table)["filename"]);
+      optim_target.levels = getOptionalVector<size_t>((*target_table)["levels"]);
       // Validate levels, if provided
       if (optim_target.levels.has_value()) {
         if (optim_target.levels->size() != num_osc) {
