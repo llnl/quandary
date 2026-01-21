@@ -118,7 +118,7 @@ class Config {
   // TODO cfg: delete this when .cfg format is removed.
   Config(const MPILogger& logger, const ParsedConfigData& settings);
 
-  ~Config();
+  ~Config() = default;
 
   static Config fromFile(const std::string& filename, const MPILogger& logger);
   static Config fromToml(const std::string& toml_filename, const MPILogger& logger);

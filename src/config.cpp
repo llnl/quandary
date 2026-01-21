@@ -494,8 +494,6 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   validate();
 }
 
-Config::~Config() {}
-
 Config Config::fromFile(const std::string& filename, const MPILogger& logger) {
   if (hasSuffix(filename, ".toml")) {
     return Config::fromToml(filename, logger);
