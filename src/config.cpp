@@ -1161,10 +1161,10 @@ OptimTargetSettings Config::parseOptimTarget(const toml::table& toml, size_t num
       optim_target.levels = validators::getOptionalVector<size_t>((*target_table)["levels"]);
       // Validate levels, if provided
       if (optim_target.levels.has_value()) {
-        if (optim_target.levels->size() != nlevels.size()) {
+        if (optim_target.levels->size() != num_osc) {
           logger.exitWithError("optim_target levels size does not match number of oscillators");
         }
-        for (size_t i = 0; i < nlevels.size(); i++) {
+        for (size_t i = 0; i < num_osc; i++) {
           if (optim_target.levels->at(i) >= nlevels[i]) {
             logger.exitWithError("ERROR in config setting. The requested product state target |" + std::to_string(optim_target.levels->at(i)) +"> exceeds the number of modeled levels for that oscillator (" + std::to_string(nlevels[i]) + ").\n");
           }
