@@ -1055,6 +1055,9 @@ void OptimTarget::RiemannianDistance_diff(const Mat U_final_re, const Mat U_fina
   MatDestroy(&tmp1);
   MatDestroy(&tmp2);
 
+  MatDestroy(&logUdagV_re);
+  MatDestroy(&logUdagV_im);
+
   // If phase invariant, add (tr log(U^† V))/d * U_final to the gradient
   if (phase_invariant) {
     double trace = 0.0;
