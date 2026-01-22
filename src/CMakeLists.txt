@@ -15,10 +15,11 @@ blt_add_library(
 )
 
 blt_add_executable(
-    NAME quandary
+    NAME quandary_bin
     SOURCES ${SRC_DIR}/main.cpp
     DEPENDS_ON quandary_lib
 )
+set_target_properties(quandary_bin PROPERTIES OUTPUT_NAME quandary)
 
 # Toml settings
 target_compile_definitions(quandary_lib PUBLIC TOML_ENABLE_UNRELEASED_FEATURES=1)
@@ -30,7 +31,7 @@ target_link_libraries(quandary_lib PUBLIC PkgConfig::PETSC)
 
 # Put executable in root directory
 set_target_properties(
-    quandary
+    quandary_bin
     PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}
 )
@@ -51,6 +52,6 @@ if(WITH_SLEPC)
 endif()
 
 install(
-    TARGETS quandary
+    TARGETS quandary_bin
     RUNTIME DESTINATION bin
 )
