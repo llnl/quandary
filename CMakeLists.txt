@@ -11,6 +11,7 @@ set(QUANDARY_GIT_SHA "")
 
 option(BUILD_QUANDARY "Build Quandary targets" ON)
 option(ENABLE_TESTS "Run unit tests" ON)
+option(BUILD_PYTHON_BINDINGS "Build Python bindings via nanobind" ON)
 
 # Set default build type to Release if not specified
 if(NOT CMAKE_BUILD_TYPE)
@@ -70,9 +71,21 @@ configure_file(
 # Add tomlplusplus
 add_subdirectory(third_party/tomlplusplus)
 
+# Python bindings (nanobind)
+if(BUILD_PYTHON_BINDINGS)
+  find_package(Python 3.9
+    REQUIRED COMPONENTS Interpreter Development.Module
+    OPTIONAL_COMPONENTS Development.SABIModule)
+  add_subdirectory(third_party/nanobind)
+endif()
+
 if(BUILD_QUANDARY)
   add_subdirectory(src)
   add_subdirectory(tests/unit)
+endif()
+
+if(BUILD_PYTHON_BINDINGS)
+  add_subdirectory(python)
 endif()
 
 add_subdirectory(docs)
