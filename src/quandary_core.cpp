@@ -1,3 +1,4 @@
+#include "quandary_core.hpp"
 #include "timestepper.hpp"
 #include "defs.hpp"
 #include <string>
@@ -21,7 +22,7 @@
 #define HESSIAN_DECOMPOSITION 0 // Run eigenvalue analysis for Hessian
 #define EPS 1e-5          // Epsilon for Finite Differences
 
-int main(int argc,char **argv)
+int runQuandary(int argc, char** argv)
 {
   /* Parse command line arguments */
   ParsedArgs args = parseArguments(argc, argv);
