@@ -21,6 +21,101 @@
 #include "config_defaults.hpp"
 #include "config_validators.hpp"
 
+/**
+ * @brief Identity type wrapper - passes through the type unchanged.
+ *
+ * Used with ConfigDataT to create ConfigData where all fields are concrete types.
+ */
+template <typename T>
+using Identity = T;
+
+/**
+ * @brief Templated configuration data struct for field definitions.
+ *
+ * This template allows the same field definitions to be instantiated as:
+ * - ConfigData (Wrapper = Identity): All fields are concrete types (validated config)
+ * - ConfigInput (Wrapper = std::optional): All fields are optional (for input from TOML/Python)
+ *
+ * Fields that are inherently optional (like hamiltonian files) don't use the Wrapper
+ * and remain std::optional in both instantiations.
+ *
+ * @tparam Wrapper Type wrapper template - either Identity or std::optional
+ */
+template <template <typename> class Wrapper>
+struct ConfigDataT {
+  // System parameters
+  Wrapper<std::vector<size_t>> nlevels;
+  Wrapper<std::vector<size_t>> nessential;
+  Wrapper<size_t> ntime;
+  Wrapper<double> dt;
+  Wrapper<std::vector<double>> transfreq;
+  Wrapper<std::vector<double>> selfkerr;
+  Wrapper<std::vector<double>> crosskerr;
+  Wrapper<std::vector<double>> Jkl;
+  Wrapper<std::vector<double>> rotfreq;
+  Wrapper<DecoherenceType> decoherence_type;
+  Wrapper<std::vector<double>> decay_time;
+  Wrapper<std::vector<double>> dephase_time;
+  Wrapper<InitialConditionSettings> initial_condition;
+
+  // Inherently optional - no Wrapper
+  std::optional<std::string> hamiltonian_file_Hsys;
+  std::optional<std::string> hamiltonian_file_Hc;
+
+  // Control parameters
+  Wrapper<bool> control_zero_boundary_condition;
+  Wrapper<std::vector<ControlParameterizationSettings>> control_parameterizations;
+  Wrapper<std::vector<ControlInitializationSettings>> control_initializations;
+  Wrapper<std::vector<double>> control_amplitude_bounds;
+  Wrapper<std::vector<std::vector<double>>> carrier_frequencies;
+
+  // Optimization parameters
+  Wrapper<OptimTargetSettings> optim_target;
+  Wrapper<ObjectiveType> optim_objective;
+  Wrapper<std::vector<double>> optim_weights;
+  Wrapper<double> optim_tol_grad_abs;
+  Wrapper<double> optim_tol_grad_rel;
+  Wrapper<double> optim_tol_finalcost;
+  Wrapper<double> optim_tol_infidelity;
+  Wrapper<size_t> optim_maxiter;
+  Wrapper<double> optim_tikhonov_coeff;
+  Wrapper<bool> optim_tikhonov_use_x0;
+  Wrapper<double> optim_penalty_leakage;
+  Wrapper<double> optim_penalty_weightedcost;
+  Wrapper<double> optim_penalty_weightedcost_width;
+  Wrapper<double> optim_penalty_dpdm;
+  Wrapper<double> optim_penalty_energy;
+  Wrapper<double> optim_penalty_variation;
+
+  // Output parameters
+  Wrapper<std::string> output_directory;
+  Wrapper<std::vector<OutputType>> output_observables;
+  Wrapper<size_t> output_timestep_stride;
+  Wrapper<size_t> output_optimization_stride;
+
+  // Solver parameters
+  Wrapper<RunType> runtype;
+  Wrapper<bool> usematfree;
+  Wrapper<LinearSolverType> linearsolver_type;
+  Wrapper<size_t> linearsolver_maxiter;
+  Wrapper<TimeStepperType> timestepper_type;
+  Wrapper<int> rand_seed;
+};
+
+/**
+ * @brief Validated configuration data with concrete types.
+ *
+ * All fields have been validated and contain final values.
+ */
+using ConfigData = ConfigDataT<Identity>;
+
+/**
+ * @brief Input configuration data with optional fields.
+ *
+ * Used for receiving configuration from TOML parsing or Python bindings.
+ * All fields are optional to allow partial specification with defaults.
+ */
+using ConfigInput = ConfigDataT<std::optional>;
 
 /**
  * @brief Configuration class containing all validated settings.
