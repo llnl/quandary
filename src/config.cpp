@@ -1259,17 +1259,6 @@ void Config::finalize() {
     }
   }
 
-  // Apply defaults for control parameterization nspline
-  for (size_t i = 0; i < data.control_parameterizations.size(); i++) {
-    if (data.control_parameterizations[i].type == ControlType::BSPLINE ||
-        data.control_parameterizations[i].type == ControlType::BSPLINE0 ||
-        data.control_parameterizations[i].type == ControlType::BSPLINEAMP) {
-      if (!data.control_parameterizations[i].nspline.has_value()) {
-        data.control_parameterizations[i].nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
-      }
-    }
-  }
-
   // Apply defaults for control initialization amplitude
   for (size_t i = 0; i < data.control_initializations.size(); i++) {
     if (data.control_initializations[i].type != ControlInitializationType::FILE) {
@@ -1312,6 +1301,13 @@ void Config::validate() const {
   // Validate control parameterization settings
   for (size_t i = 0; i < data.control_parameterizations.size(); i++) {
     const auto& param = data.control_parameterizations[i];
+    if (param.type == ControlType::BSPLINE ||
+        param.type == ControlType::BSPLINE0 ||
+        param.type == ControlType::BSPLINEAMP) {
+      if (!param.nspline.has_value()) {
+        logger.exitWithError("control parameterization[" + std::to_string(i) + "] of type BSPLINE/BSPLINE0/BSPLINEAMP requires 'num'");
+      }
+    }
     if (param.type == ControlType::BSPLINEAMP) {
       if (!param.scaling.has_value()) {
         logger.exitWithError("control parameterization[" + std::to_string(i) + "] of type BSPLINEAMP requires 'scaling'");
