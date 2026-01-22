@@ -266,6 +266,127 @@ std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, con
 } // namespace
 
 
+Config::Config(const MPILogger& logger, const ConfigInput& input) : logger(logger) {
+  try {
+    size_t num_osc = 0;
+
+    // System parameters
+    nlevels = validators::vectorField<size_t>(input.nlevels, "nlevels").minLength(1).positive().value();
+    num_osc = nlevels.size();
+
+    nessential = validators::vectorField<size_t>(input.nessential, "nessential").valueOr(nlevels);
+
+    ntime = validators::field<size_t>(input.ntime, "ntime").positive().value();
+
+    dt = validators::field<double>(input.dt, "dt").positive().value();
+
+    transfreq = validators::vectorField<double>(input.transfreq, "transfreq").hasLength(num_osc).value();
+
+    selfkerr = validators::vectorField<double>(input.selfkerr, "selfkerr").valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
+
+    size_t num_pairs = (num_osc - 1) * num_osc / 2;
+    crosskerr = validators::vectorField<double>(input.crosskerr, "crosskerr").valueOr(std::vector<double>(num_pairs, ConfigDefaults::CROSSKERR));
+
+    Jkl = validators::vectorField<double>(input.Jkl, "Jkl").valueOr(std::vector<double>(num_pairs, ConfigDefaults::JKL));
+
+    rotfreq = validators::vectorField<double>(input.rotfreq, "rotfreq").valueOr(std::vector<double>(num_osc, ConfigDefaults::ROTFREQ));
+
+    decoherence_type = input.decoherence_type.value_or(ConfigDefaults::DECOHERENCE_TYPE);
+
+    decay_time = validators::vectorField<double>(input.decay_time, "decay_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
+
+    dephase_time = validators::vectorField<double>(input.dephase_time, "dephase_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
+
+    if (!input.initial_condition.has_value()) {
+      throw validators::ValidationError("initial_condition", "field not found");
+    }
+    initial_condition = input.initial_condition.value();
+
+    // Inherently optional fields
+    hamiltonian_file_Hsys = input.hamiltonian_file_Hsys;
+    hamiltonian_file_Hc = input.hamiltonian_file_Hc;
+
+    // Control parameters
+    control_zero_boundary_condition = input.control_zero_boundary_condition.value_or(ConfigDefaults::CONTROL_ZERO_BOUNDARY_CONDITION);
+
+    ControlParameterizationSettings default_param;
+    control_parameterizations = input.control_parameterizations.value_or(std::vector<ControlParameterizationSettings>(num_osc, default_param));
+
+    ControlInitializationSettings default_init;
+    control_initializations = input.control_initializations.value_or(std::vector<ControlInitializationSettings>(num_osc, default_init));
+
+    control_amplitude_bounds = validators::vectorField<double>(input.control_amplitude_bounds, "control_amplitude_bounds").valueOr(std::vector<double>(num_osc, ConfigDefaults::CONTROL_AMPLITUDE_BOUND));
+
+    std::vector<double> default_carrier_freq = {ConfigDefaults::CARRIER_FREQ};
+    carrier_frequencies = input.carrier_frequencies.value_or(std::vector<std::vector<double>>(num_osc, default_carrier_freq));
+
+    // Optimization parameters
+    OptimTargetSettings default_target;
+    optim_target = input.optim_target.value_or(default_target);
+
+    optim_objective = input.optim_objective.value_or(ConfigDefaults::OPTIM_OBJECTIVE);
+
+    optim_weights = validators::vectorField<double>(input.optim_weights, "optim_weights").valueOr(std::vector<double>{ConfigDefaults::OPTIM_WEIGHT});
+
+    optim_tol_grad_abs = validators::field<double>(input.optim_tol_grad_abs, "optim_tol_grad_abs").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_ABS);
+
+    optim_tol_grad_rel = validators::field<double>(input.optim_tol_grad_rel, "optim_tol_grad_rel").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_REL);
+
+    optim_tol_finalcost = validators::field<double>(input.optim_tol_finalcost, "optim_tol_finalcost").positive().valueOr(ConfigDefaults::OPTIM_TOL_FINALCOST);
+
+    optim_tol_infidelity = validators::field<double>(input.optim_tol_infidelity, "optim_tol_infidelity").positive().valueOr(ConfigDefaults::OPTIM_TOL_INFIDELITY);
+
+    optim_maxiter = input.optim_maxiter.value_or(ConfigDefaults::OPTIM_MAXITER);
+
+    optim_tikhonov_coeff = validators::field<double>(input.optim_tikhonov_coeff, "optim_tikhonov_coeff").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_TIKHONOV_COEFF);
+
+    optim_tikhonov_use_x0 = input.optim_tikhonov_use_x0.value_or(ConfigDefaults::OPTIM_TIKHONOV_USE_X0);
+
+    optim_penalty_leakage = validators::field<double>(input.optim_penalty_leakage, "optim_penalty_leakage").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
+
+    optim_penalty_weightedcost = validators::field<double>(input.optim_penalty_weightedcost, "optim_penalty_weightedcost").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
+
+    optim_penalty_weightedcost_width = validators::field<double>(input.optim_penalty_weightedcost_width, "optim_penalty_weightedcost_width").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH);
+
+    optim_penalty_dpdm = validators::field<double>(input.optim_penalty_dpdm, "optim_penalty_dpdm").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
+
+    optim_penalty_energy = validators::field<double>(input.optim_penalty_energy, "optim_penalty_energy").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
+
+    optim_penalty_variation = validators::field<double>(input.optim_penalty_variation, "optim_penalty_variation").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
+
+    // Output parameters
+    output_directory = input.output_directory.value_or(ConfigDefaults::OUTPUT_DIRECTORY);
+
+    output_observables = input.output_observables.value_or(std::vector<OutputType>{});
+
+    output_timestep_stride = input.output_timestep_stride.value_or(ConfigDefaults::OUTPUT_TIMESTEP_STRIDE);
+
+    output_optimization_stride = input.output_optimization_stride.value_or(ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE);
+
+    // Solver parameters
+    runtype = input.runtype.value_or(ConfigDefaults::RUNTYPE);
+
+    usematfree = input.usematfree.value_or(ConfigDefaults::USEMATFREE);
+
+    linearsolver_type = input.linearsolver_type.value_or(ConfigDefaults::LINEARSOLVER_TYPE);
+
+    linearsolver_maxiter = validators::field<size_t>(input.linearsolver_maxiter, "linearsolver_maxiter").positive().valueOr(ConfigDefaults::LINEARSOLVER_MAXITER);
+
+    timestepper_type = input.timestepper_type.value_or(ConfigDefaults::TIMESTEPPER_TYPE);
+
+    int rand_seed_ = input.rand_seed.value_or(ConfigDefaults::RAND_SEED);
+    setRandSeed(rand_seed_);
+
+  } catch (const validators::ValidationError& e) {
+    logger.exitWithError(std::string(e.what()));
+  }
+
+  // Finalize interdependent settings, then validate
+  finalize();
+  validate();
+}
+
+
 Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger) {
   try {
     // Get section tables - only [system] is required

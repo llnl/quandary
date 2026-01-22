@@ -208,6 +208,7 @@ class Config {
   int rand_seed; ///< Fixed seed for the random number generator for reproducibility
 
  public:
+  Config(const MPILogger& logger, const ConfigInput& input);
   Config(const MPILogger& logger, const toml::table& table);
 
   // TODO cfg: delete this when .cfg format is removed.
