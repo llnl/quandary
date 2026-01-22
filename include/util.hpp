@@ -3,6 +3,7 @@
 #include <vector>
 #ifdef WITH_SLEPC
 #include <slepceps.h>
+#include <memory>
 #endif
 
 #pragma once
