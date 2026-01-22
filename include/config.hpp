@@ -156,21 +156,21 @@ class Config {
   size_t n_initial_conditions; ///< Number of initial conditions (computed, not in ConfigData)
 
  public:
-  Config(const MPILogger& logger, const ConfigInput& input);
-  Config(const MPILogger& logger, const toml::table& table);
+  Config(const ConfigInput& input, bool quiet_mode = false);
+  Config(const toml::table& table, bool quiet_mode = false);
 
   // TODO cfg: delete this when .cfg format is removed.
-  Config(const MPILogger& logger, const ParsedConfigData& settings);
+  Config(const ParsedConfigData& settings, bool quiet_mode = false);
 
   ~Config() = default;
 
-  static Config fromFile(const std::string& filename, const MPILogger& logger);
-  static Config fromToml(const std::string& toml_filename, const MPILogger& logger);
-  static Config fromTomlString(const std::string& toml_content, const MPILogger& logger);
+  static Config fromFile(const std::string& filename, bool quiet_mode = false);
+  static Config fromToml(const std::string& toml_filename, bool quiet_mode = false);
+  static Config fromTomlString(const std::string& toml_content, bool quiet_mode = false);
 
   // TODO cfg: delete these when .cfg format is removed.
-  static Config fromCfg(const std::string& cfg_filename, const MPILogger& logger);
-  static Config fromCfgString(const std::string& cfg_content, const MPILogger& logger);
+  static Config fromCfg(const std::string& cfg_filename, bool quiet_mode = false);
+  static Config fromCfgString(const std::string& cfg_content, bool quiet_mode = false);
 
   void printConfig(std::stringstream& log) const;
 

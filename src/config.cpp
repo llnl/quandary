@@ -529,10 +529,10 @@ ConfigInput extractConfigInput(const toml::table& toml, const MPILogger& logger)
 
 } // namespace
 
-Config::Config(const MPILogger& logger, const toml::table& toml)
-    : Config(logger, extractConfigInput(toml, logger)) {}
+Config::Config(const toml::table& toml, bool quiet_mode)
+    : Config(extractConfigInput(toml, MPILogger(quiet_mode)), quiet_mode) {}
 
-Config::Config(const MPILogger& logger, const ConfigInput& input) : logger(logger) {
+Config::Config(const ConfigInput& input, bool quiet_mode) : logger(MPILogger(quiet_mode)) {
   try {
     size_t num_osc = 0;
 
@@ -652,7 +652,7 @@ Config::Config(const MPILogger& logger, const ConfigInput& input) : logger(logge
   validate();
 }
 
-Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logger(logger) {
+Config::Config(const ParsedConfigData& settings, bool quiet_mode) : logger(MPILogger(quiet_mode)) {
 
   if (!settings.nlevels.has_value()) {
     logger.exitWithError("nlevels cannot be empty");
@@ -821,38 +821,41 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   validate();
 }
 
-Config Config::fromFile(const std::string& filename, const MPILogger& logger) {
+Config Config::fromFile(const std::string& filename, bool quiet_mode) {
   if (hasSuffix(filename, ".toml")) {
-    return Config::fromToml(filename, logger);
+    return Config::fromToml(filename, quiet_mode);
   } else {
     // TODO cfg: delete this when .cfg format is removed.
+    MPILogger logger = MPILogger(quiet_mode);
     logger.log(
         "# Warning: Config file does not have .toml extension. "
         "The deprecated .cfg format will be removed in future versions.\n");
-    return Config::fromCfg(filename, logger);
+    return Config::fromCfg(filename, quiet_mode);
   }
 }
 
-Config Config::fromToml(const std::string& filename, const MPILogger& logger) {
+Config Config::fromToml(const std::string& filename, bool quiet_mode) {
   toml::table toml = toml::parse_file(filename);
-  return Config(logger, toml);
+  return Config(toml, quiet_mode);
 }
 
-Config Config::fromTomlString(const std::string& toml_content, const MPILogger& logger) {
+Config Config::fromTomlString(const std::string& toml_content, bool quiet_mode) {
   toml::table toml = toml::parse(toml_content);
-  return Config(logger, toml);
+  return Config(toml, quiet_mode);
 }
 
-Config Config::fromCfg(const std::string& filename, const MPILogger& logger) {
+Config Config::fromCfg(const std::string& filename, bool quiet_mode) {
+  MPILogger logger = MPILogger(quiet_mode);
   CfgParser parser(logger);
   ParsedConfigData settings = parser.parseFile(filename);
-  return Config(logger, settings);
+  return Config(settings, quiet_mode);
 }
 
-Config Config::fromCfgString(const std::string& cfg_content, const MPILogger& logger) {
+Config Config::fromCfgString(const std::string& cfg_content, bool quiet_mode) {
+  MPILogger logger = MPILogger(quiet_mode);
   CfgParser parser(logger);
   ParsedConfigData settings = parser.parseString(cfg_content);
-  return Config(logger, settings);
+  return Config(settings, quiet_mode);
 }
 
 namespace {
