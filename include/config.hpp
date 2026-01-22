@@ -292,22 +292,6 @@ class Config {
 
   void setRandSeed(int rand_seed_);
 
-  // Helper function to parse a single control parameterization table
-  ControlParameterizationSettings parseControlParameterizationSpecs(const toml::table& param_table) const;
-
-  // Helper function to parse a single control initialization table
-  ControlInitializationSettings parseControlInitializationSpecs(const toml::table& table) const;
-
-  /**
-   * @brief Parses optimization target settings from TOML table
-   *
-   * @param table TOML table containing the configuration
-   * @param num_osc Number of oscillators
-   * @return Parsed optimization target settings
-   */
-  OptimTargetSettings parseOptimTarget(const toml::table& table, size_t num_osc) const;
-
-
   // TODO cfg: delete these when .cfg format is removed.
   template <typename T>
   std::vector<std::vector<T>> parseOscillatorSettingsCfg(const std::optional<std::map<int, std::vector<T>>>& indexed, size_t num_entries, const std::vector<T>& default_values = {}) const;
