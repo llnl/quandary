@@ -151,61 +151,9 @@ using ConfigInput = ConfigDataT<std::optional>;
  */
 class Config {
  private:
-  // Logging
   MPILogger logger; ///< MPI-aware logger for output messages.
-
-  // General options
-  std::vector<size_t> nlevels; ///< Number of levels per subsystem
-  std::vector<size_t> nessential; ///< Number of essential levels per subsystem (Default: same as nlevels)
-  size_t ntime; ///< Number of time steps used for time-integration
-  double dt; ///< Time step size (ns). Determines final time: T=ntime*dt
-  std::vector<double> transfreq; ///< Fundamental transition frequencies for each oscillator (GHz)
-  std::vector<double> selfkerr; ///< Self-kerr frequencies for each oscillator (GHz)
-  std::vector<double> crosskerr; ///< Cross-kerr coupling frequencies for each oscillator coupling (GHz)
-  std::vector<double> Jkl; ///< Dipole-dipole coupling frequencies for each oscillator coupling (GHz)
-  std::vector<double> rotfreq; ///< Rotational wave approximation frequencies for each subsystem (GHz)
-  DecoherenceType decoherence_type; ///< Switch between Schroedinger and Lindblad solver
-  std::vector<double> decay_time; ///< Time of decay operation (T1) per oscillator (for Lindblad solver)
-  std::vector<double> dephase_time; ///< Time of dephase operation (T2) per oscillator (for Lindblad solver)
-  size_t n_initial_conditions; ///< Number of initial conditions
-  InitialConditionSettings initial_condition; ///< Initial condition configuration
-  std::optional<std::string> hamiltonian_file_Hsys; ///< File to read the system Hamiltonian from
-  std::optional<std::string> hamiltonian_file_Hc; ///< File to read the control Hamiltonian from
-
-  // Optimization options
-  bool control_zero_boundary_condition; ///< Decide whether control pulses should start and end at zero
-  std::vector<ControlParameterizationSettings> control_parameterizations; ///< Control parameterizations for each oscillator
-  std::vector<ControlInitializationSettings> control_initializations; ///< Control initializations for each oscillator
-  std::vector<double> control_amplitude_bounds; ///< Control amplitude bounds for each oscillator
-  std::vector<std::vector<double>> carrier_frequencies; ///< Carrier frequencies for each oscillator
-  OptimTargetSettings optim_target; ///< Grouped optimization target configuration
-  ObjectiveType optim_objective; ///< Objective function measure
-  std::vector<double> optim_weights; ///< Weights for summing up the objective function
-  double optim_tol_grad_abs; ///< Absolute gradient tolerance
-  double optim_tol_grad_rel; ///< Relative gradient tolerance
-  double optim_tol_finalcost; ///< Final time cost tolerance
-  double optim_tol_infidelity; ///< Infidelity tolerance
-  size_t optim_maxiter; ///< Maximum iterations
-  double optim_tikhonov_coeff; ///< Coefficient of Tikhonov regularization for the design variables
-  bool optim_tikhonov_use_x0; ///< Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
-  double optim_penalty_leakage; ///< Leakage penalty coefficient
-  double optim_penalty_weightedcost; ///< Weighted cost penalty coefficient
-  double optim_penalty_weightedcost_width; ///< Width parameter for weighted cost penalty
-  double optim_penalty_dpdm; ///< Second derivative penalty coefficient
-  double optim_penalty_energy; ///< Energy penalty coefficient
-  double optim_penalty_variation; ///< Amplitude variation penalty coefficient
-
-  // Output and runtypes
-  std::string output_directory; ///< Directory for output files
-  std::vector<OutputType> output_observables; ///< Specify the desired observables.
-  size_t output_timestep_stride; ///< Output frequency in the time domain: write output every <num> time-step
-  size_t output_optimization_stride; ///< Frequency of writing output during optimization iterations
-  RunType runtype; ///< Runtype options: simulation, gradient, or optimization
-  bool usematfree; ///< Use matrix free solver, instead of sparse matrix implementation
-  LinearSolverType linearsolver_type; ///< Solver type for solving the linear system at each time step
-  size_t linearsolver_maxiter; ///< Set maximum number of iterations for the linear solver
-  TimeStepperType timestepper_type; ///< The time-stepping algorithm
-  int rand_seed; ///< Fixed seed for the random number generator for reproducibility
+  ConfigData data; ///< All validated configuration fields.
+  size_t n_initial_conditions; ///< Number of initial conditions (computed, not in ConfigData)
 
  public:
   Config(const MPILogger& logger, const ConfigInput& input);
@@ -227,62 +175,62 @@ class Config {
   void printConfig(std::stringstream& log) const;
 
   // getters
-  const std::vector<size_t>& getNLevels() const { return nlevels; }
-  size_t getNLevels(size_t i_osc) const { return nlevels[i_osc]; }
-  size_t getNumOsc() const { return nlevels.size(); }
-  const std::vector<size_t>& getNEssential() const { return nessential; }
-  size_t getNEssential(size_t i_osc) const { return nessential[i_osc]; }
-  size_t getNTime() const { return ntime; }
-  double getDt() const { return dt; }
-  double getTotalTime() const { return ntime * dt; }
+  const std::vector<size_t>& getNLevels() const { return data.nlevels; }
+  size_t getNLevels(size_t i_osc) const { return data.nlevels[i_osc]; }
+  size_t getNumOsc() const { return data.nlevels.size(); }
+  const std::vector<size_t>& getNEssential() const { return data.nessential; }
+  size_t getNEssential(size_t i_osc) const { return data.nessential[i_osc]; }
+  size_t getNTime() const { return data.ntime; }
+  double getDt() const { return data.dt; }
+  double getTotalTime() const { return data.ntime * data.dt; }
 
-  const std::vector<double>& getTransFreq() const { return transfreq; }
-  const std::vector<double>& getSelfKerr() const { return selfkerr; }
-  const std::vector<double>& getCrossKerr() const { return crosskerr; }
-  const std::vector<double>& getJkl() const { return Jkl; }
-  const std::vector<double>& getRotFreq() const { return rotfreq; }
-  DecoherenceType getDecoherenceType() const { return decoherence_type; }
-  const std::vector<double>& getDecayTime() const { return decay_time; }
-  const std::vector<double>& getDephaseTime() const { return dephase_time; }
+  const std::vector<double>& getTransFreq() const { return data.transfreq; }
+  const std::vector<double>& getSelfKerr() const { return data.selfkerr; }
+  const std::vector<double>& getCrossKerr() const { return data.crosskerr; }
+  const std::vector<double>& getJkl() const { return data.Jkl; }
+  const std::vector<double>& getRotFreq() const { return data.rotfreq; }
+  DecoherenceType getDecoherenceType() const { return data.decoherence_type; }
+  const std::vector<double>& getDecayTime() const { return data.decay_time; }
+  const std::vector<double>& getDephaseTime() const { return data.dephase_time; }
   size_t getNInitialConditions() const { return n_initial_conditions; }
-  const InitialConditionSettings& getInitialCondition() const { return initial_condition; }
-  const std::optional<std::string>& getHamiltonianFileHsys() const { return hamiltonian_file_Hsys; }
-  const std::optional<std::string>& getHamiltonianFileHc() const { return hamiltonian_file_Hc; }
+  const InitialConditionSettings& getInitialCondition() const { return data.initial_condition; }
+  const std::optional<std::string>& getHamiltonianFileHsys() const { return data.hamiltonian_file_Hsys; }
+  const std::optional<std::string>& getHamiltonianFileHc() const { return data.hamiltonian_file_Hc; }
 
-  const ControlParameterizationSettings& getControlParameterizations(size_t i_osc) const { return control_parameterizations[i_osc]; }
-  bool getControlZeroBoundaryCondition() const { return control_zero_boundary_condition; }
+  const ControlParameterizationSettings& getControlParameterizations(size_t i_osc) const { return data.control_parameterizations[i_osc]; }
+  bool getControlZeroBoundaryCondition() const { return data.control_zero_boundary_condition; }
   const ControlInitializationSettings& getControlInitializations(size_t i_osc) const {
-    return control_initializations[i_osc];
+    return data.control_initializations[i_osc];
   }
-  double getControlAmplitudeBound(size_t i_osc) const { return control_amplitude_bounds[i_osc]; }
-  const std::vector<double>& getCarrierFrequencies(size_t i_osc) const { return carrier_frequencies[i_osc]; }
-  const OptimTargetSettings& getOptimTarget() const { return optim_target; }
-  ObjectiveType getOptimObjective() const { return optim_objective; }
-  const std::vector<double>& getOptimWeights() const { return optim_weights; }
-  double getOptimTolGradAbs() const { return optim_tol_grad_abs; }
-  double getOptimTolGradRel() const { return optim_tol_grad_rel; }
-  double getOptimTolFinalCost() const { return optim_tol_finalcost; }
-  double getOptimTolInfidelity() const { return optim_tol_infidelity; }
-  size_t getOptimMaxiter() const { return optim_maxiter; }
-  double getOptimTikhonovCoeff() const { return optim_tikhonov_coeff; }
-  bool getOptimTikhonovUseX0() const { return optim_tikhonov_use_x0; }
-  double getOptimPenaltyLeakage() const { return optim_penalty_leakage; }
-  double getOptimPenaltyWeightedCost() const { return optim_penalty_weightedcost; }
-  double getOptimPenaltyWeightedCostWidth() const { return optim_penalty_weightedcost_width; }
-  double getOptimPenaltyDpdm() const { return optim_penalty_dpdm; }
-  double getOptimPenaltyEnergy() const { return optim_penalty_energy; }
-  double getOptimPenaltyVariation() const { return optim_penalty_variation; }
+  double getControlAmplitudeBound(size_t i_osc) const { return data.control_amplitude_bounds[i_osc]; }
+  const std::vector<double>& getCarrierFrequencies(size_t i_osc) const { return data.carrier_frequencies[i_osc]; }
+  const OptimTargetSettings& getOptimTarget() const { return data.optim_target; }
+  ObjectiveType getOptimObjective() const { return data.optim_objective; }
+  const std::vector<double>& getOptimWeights() const { return data.optim_weights; }
+  double getOptimTolGradAbs() const { return data.optim_tol_grad_abs; }
+  double getOptimTolGradRel() const { return data.optim_tol_grad_rel; }
+  double getOptimTolFinalCost() const { return data.optim_tol_finalcost; }
+  double getOptimTolInfidelity() const { return data.optim_tol_infidelity; }
+  size_t getOptimMaxiter() const { return data.optim_maxiter; }
+  double getOptimTikhonovCoeff() const { return data.optim_tikhonov_coeff; }
+  bool getOptimTikhonovUseX0() const { return data.optim_tikhonov_use_x0; }
+  double getOptimPenaltyLeakage() const { return data.optim_penalty_leakage; }
+  double getOptimPenaltyWeightedCost() const { return data.optim_penalty_weightedcost; }
+  double getOptimPenaltyWeightedCostWidth() const { return data.optim_penalty_weightedcost_width; }
+  double getOptimPenaltyDpdm() const { return data.optim_penalty_dpdm; }
+  double getOptimPenaltyEnergy() const { return data.optim_penalty_energy; }
+  double getOptimPenaltyVariation() const { return data.optim_penalty_variation; }
 
-  const std::string& getOutputDirectory() const { return output_directory; }
-  const std::vector<OutputType>& getOutputObservables() const { return output_observables; }
-  size_t getOutputTimestepStride() const { return output_timestep_stride; }
-  size_t getOutputOptimizationStride() const { return output_optimization_stride; }
-  RunType getRuntype() const { return runtype; }
-  bool getUseMatFree() const { return usematfree; }
-  LinearSolverType getLinearSolverType() const { return linearsolver_type; }
-  size_t getLinearSolverMaxiter() const { return linearsolver_maxiter; }
-  TimeStepperType getTimestepperType() const { return timestepper_type; }
-  int getRandSeed() const { return rand_seed; }
+  const std::string& getOutputDirectory() const { return data.output_directory; }
+  const std::vector<OutputType>& getOutputObservables() const { return data.output_observables; }
+  size_t getOutputTimestepStride() const { return data.output_timestep_stride; }
+  size_t getOutputOptimizationStride() const { return data.output_optimization_stride; }
+  RunType getRuntype() const { return data.runtype; }
+  bool getUseMatFree() const { return data.usematfree; }
+  LinearSolverType getLinearSolverType() const { return data.linearsolver_type; }
+  size_t getLinearSolverMaxiter() const { return data.linearsolver_maxiter; }
+  TimeStepperType getTimestepperType() const { return data.timestepper_type; }
+  int getRandSeed() const { return data.rand_seed; }
 
  private:
   void finalize();
