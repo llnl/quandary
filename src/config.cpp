@@ -23,27 +23,29 @@ std::string getTypeName() {
 }
 
 /**
- * @brief Extracts a scalar from TOML and returns a Validator for chaining.
+ * @brief Extracts a scalar from TOML, returning nullopt if not present.
+ * @throws ValidationError if the field exists but has the wrong type.
  */
 template <typename T>
-validators::Validator<T> tomlField(const toml::table& config, const std::string& key) {
+std::optional<T> extractToml(const toml::table& config, const std::string& key) {
   if (!config.contains(key)) {
-    return validators::field<T>(std::nullopt, key);
+    return std::nullopt;
   }
   auto val = config[key].template value<T>();
   if (!val) {
     throw validators::ValidationError(key, "wrong type (expected " + getTypeName<T>() + ")");
   }
-  return validators::field<T>(val, key);
+  return val;
 }
 
 /**
- * @brief Extracts a vector from TOML and returns a VectorValidator for chaining.
+ * @brief Extracts a vector from TOML, returning nullopt if not present.
+ * @throws ValidationError if the field exists but is not an array or has wrong element types.
  */
 template <typename T>
-validators::VectorValidator<T> tomlVectorField(const toml::table& config, const std::string& key) {
+std::optional<std::vector<T>> extractTomlVector(const toml::table& config, const std::string& key) {
   if (!config.contains(key)) {
-    return validators::vectorField<T>(std::nullopt, key);
+    return std::nullopt;
   }
   auto* arr = config[key].as_array();
   if (!arr) {
@@ -59,7 +61,41 @@ validators::VectorValidator<T> tomlVectorField(const toml::table& config, const 
     }
     result.push_back(*val);
   }
-  return validators::vectorField<T>(result, key);
+  return result;
+}
+
+/**
+ * @brief Extracts a field that can be scalar (broadcasts to vector) or array.
+ * Returns nullopt if not present. Expands scalar to vector of expected_size.
+ * @throws ValidationError if the field has wrong type or array has wrong size.
+ */
+template <typename T>
+std::optional<std::vector<T>> extractScalarOrVector(const toml::table& config, const std::string& key, size_t expected_size) {
+  if (!config.contains(key)) {
+    return std::nullopt;
+  }
+  if (auto* arr = config[key].as_array()) {
+    if (arr->size() != expected_size) {
+      std::ostringstream oss;
+      oss << "array must have exactly " << expected_size << " elements, got " << arr->size();
+      throw validators::ValidationError(key, oss.str());
+    }
+    std::vector<T> result;
+    for (size_t i = 0; i < arr->size(); ++i) {
+      auto val = arr->at(i).template value<T>();
+      if (!val) {
+        std::ostringstream oss;
+        oss << "element [" << i << "] wrong type (expected " << getTypeName<T>() << ")";
+        throw validators::ValidationError(key, oss.str());
+      }
+      result.push_back(*val);
+    }
+    return result;
+  }
+  if (auto val = config[key].template value<T>()) {
+    return std::vector<T>(expected_size, *val);
+  }
+  throw validators::ValidationError(key, "must be either a scalar value or an array of " + getTypeName<T>());
 }
 
 /**
@@ -197,7 +233,8 @@ std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, con
       size_t index;
       if (elem_table->get(subsystem_key)->is_array()) {
         // Coupling parameter case: subsystem is an array of two indices
-        auto subsys_array = tomlVectorField<size_t>(*elem_table, subsystem_key).hasLength(2).value();
+        auto subsys_array_opt = extractTomlVector<size_t>(*elem_table, subsystem_key);
+        auto subsys_array = validators::vectorField<size_t>(subsys_array_opt, subsystem_key).hasLength(2).value();
         size_t i = subsys_array[0];
         size_t j = subsys_array[1];
         if (i >= num_subsystems || j >= num_subsystems) {
@@ -210,7 +247,8 @@ std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, con
         settings.resize(num_pairs, default_settings);
       } else if (elem_table->get(subsystem_key)->is_value()) {
         // Single subsystem index case
-        index = tomlField<size_t>(*elem_table, subsystem_key).lessThan(num_subsystems).value();
+        auto index_opt = extractToml<size_t>(*elem_table, subsystem_key);
+        index = validators::field<size_t>(index_opt, subsystem_key).lessThan(num_subsystems).value();
         settings.resize(num_subsystems, default_settings);
       } else {
         logger.exitWithError("subsystem field must be an integer index or an array of two indices");
@@ -243,19 +281,25 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     const auto solver_table = toml["solver"].is_table() ? *toml["solver"].as_table() : toml::table{};
 
     // Parse system options from [system] table
+    auto nlevels_opt = extractTomlVector<size_t>(*system_table, "nlevels");
+    auto ntime_opt = extractToml<size_t>(*system_table, "ntime");
+    auto dt_opt = extractToml<double>(*system_table, "dt");
 
-    nlevels = tomlVectorField<size_t>(*system_table, "nlevels").minLength(1).positive().value();
+    nlevels = validators::vectorField<size_t>(nlevels_opt, "nlevels").minLength(1).positive().value();
     size_t num_osc = nlevels.size();
 
-    nessential = scalarOrVectorOr<size_t>(*system_table, "nessential", num_osc, nlevels);
+    auto nessential_opt = extractScalarOrVector<size_t>(*system_table, "nessential", num_osc);
+    nessential = validators::vectorField<size_t>(nessential_opt, "nessential").valueOr(nlevels);
 
-    ntime = tomlField<size_t>(*system_table, "ntime").positive().value();
+    ntime = validators::field<size_t>(ntime_opt, "ntime").positive().value();
 
-    dt = tomlField<double>(*system_table, "dt").positive().value();
+    dt = validators::field<double>(dt_opt, "dt").positive().value();
 
-    transfreq = scalarOrVector<double>(*system_table, "transfreq", num_osc);
+    auto transfreq_opt = extractScalarOrVector<double>(*system_table, "transfreq", num_osc);
+    transfreq = validators::vectorField<double>(transfreq_opt, "transfreq").value();
 
-    selfkerr = scalarOrVectorOr<double>(*system_table, "selfkerr", num_osc, std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
+    auto selfkerr_opt = extractScalarOrVector<double>(*system_table, "selfkerr", num_osc);
+    selfkerr = validators::vectorField<double>(selfkerr_opt, "selfkerr").valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
 
     // Parse crosskerr and Jkl coupling: either one value (all-to-all coupling) or array of tables with 'subsystem = [i,j]' field for i-j coupling)
     size_t num_pairs = (num_osc - 1) * num_osc / 2;
@@ -264,25 +308,34 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     // Overwrite for crosskerr
     if (system_table->contains("crosskerr")) {
       if ((*system_table)["crosskerr"].is_value()) {
-        double single_val = tomlField<double>(*system_table, "crosskerr").value();
+        auto single_val_opt = extractToml<double>(*system_table, "crosskerr");
+        double single_val = validators::field<double>(single_val_opt, "crosskerr").value();
         crosskerr.assign(num_pairs, single_val);
       } else {
-      auto parseFunc = [](const toml::table& t) { return tomlField<double>(t, "value").value(); };
-      crosskerr = parsePerSubsystemSettings<double>(*system_table, "crosskerr", num_osc, ConfigDefaults::CROSSKERR, parseFunc, logger);
+        auto parseFunc = [](const toml::table& t) {
+          auto val_opt = extractToml<double>(t, "value");
+          return validators::field<double>(val_opt, "value").value();
+        };
+        crosskerr = parsePerSubsystemSettings<double>(*system_table, "crosskerr", num_osc, ConfigDefaults::CROSSKERR, parseFunc, logger);
       }
     }
     // Overwrite for Jkl
     if (system_table->contains("Jkl")) {
       if ((*system_table)["Jkl"].is_value()) {
-        double single_val = tomlField<double>(*system_table, "Jkl").value();
+        auto single_val_opt = extractToml<double>(*system_table, "Jkl");
+        double single_val = validators::field<double>(single_val_opt, "Jkl").value();
         Jkl.assign(num_pairs, single_val);
       } else {
-      auto parseFunc = [](const toml::table& t) { return tomlField<double>(t, "value").value(); };
-      Jkl = parsePerSubsystemSettings<double>(*system_table, "Jkl", num_osc, ConfigDefaults::JKL, parseFunc, logger);
+        auto parseFunc = [](const toml::table& t) {
+          auto val_opt = extractToml<double>(t, "value");
+          return validators::field<double>(val_opt, "value").value();
+        };
+        Jkl = parsePerSubsystemSettings<double>(*system_table, "Jkl", num_osc, ConfigDefaults::JKL, parseFunc, logger);
       }
     }
 
-    rotfreq = scalarOrVectorOr<double>(*system_table, "rotfreq", num_osc, std::vector<double>(num_osc, ConfigDefaults::ROTFREQ));
+    auto rotfreq_opt = extractScalarOrVector<double>(*system_table, "rotfreq", num_osc);
+    rotfreq = validators::vectorField<double>(rotfreq_opt, "rotfreq").valueOr(std::vector<double>(num_osc, ConfigDefaults::ROTFREQ));
 
     hamiltonian_file_Hsys = getOptional<std::string>((*system_table)["hamiltonian_file_Hsys"]);
     hamiltonian_file_Hc = getOptional<std::string>((*system_table)["hamiltonian_file_Hc"]);
@@ -296,7 +349,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       if (!decoherence_table) {
         logger.exitWithError("decoherence must be a table");
       }
-      auto type_str = tomlField<std::string>(*decoherence_table, "type").valueOr("none");
+      auto type_str = extractToml<std::string>(*decoherence_table, "type").value_or("none");
       decoherence_type = parseEnum(type_str, DECOHERENCE_TYPE_MAP, ConfigDefaults::DECOHERENCE_TYPE);
       decay_time = scalarOrVectorOr<double>(*decoherence_table, "decay_time", num_osc, std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
       dephase_time = scalarOrVectorOr<double>(*decoherence_table, "dephase_time", num_osc, std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
@@ -304,7 +357,9 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     // Parse initial condition table
     auto init_cond_table = getRequiredTable(*system_table, "initial_condition");
-    auto type_opt = parseEnum(tomlField<std::string>(init_cond_table, "type").value(), INITCOND_TYPE_MAP);
+    auto init_type_str_opt = extractToml<std::string>(init_cond_table, "type");
+    auto init_type_str = validators::field<std::string>(init_type_str_opt, "initial_condition.type").value();
+    auto type_opt = parseEnum(init_type_str, INITCOND_TYPE_MAP);
     if (!type_opt.has_value()) {
       logger.exitWithError("initial condition type not found.");
     }
@@ -343,11 +398,15 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       auto* carrier_freq_array = control_table["carrier_frequency"].as_array();
       if (carrier_freq_array && !carrier_freq_array->empty() && !carrier_freq_array->front().is_table()) {
         // Direct array format: carrier_frequency = [1.0, 2.0]
-        auto values = tomlVectorField<double>(control_table, "carrier_frequency").value();
+        auto values_opt = extractTomlVector<double>(control_table, "carrier_frequency");
+        auto values = validators::vectorField<double>(values_opt, "carrier_frequency").value();
         carrier_frequencies.assign(num_osc, values);
       } else {
         // Table or array of tables format
-        auto parseFunc = [](const toml::table& t) { return tomlVectorField<double>(t, "value").value(); };
+        auto parseFunc = [](const toml::table& t) {
+          auto val_opt = extractTomlVector<double>(t, "value");
+          return validators::vectorField<double>(val_opt, "value").value();
+        };
         carrier_frequencies = parsePerSubsystemSettings<std::vector<double>>(control_table, "carrier_frequency", num_osc, default_carrier_freq, parseFunc, logger);
       }
     }
@@ -358,7 +417,8 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     optim_objective = parseEnum(optimization_table["objective"].value<std::string>(), OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
 
     // Parse optional weights
-    optim_weights = tomlVectorField<double>(optimization_table, "weights").valueOr({ConfigDefaults::OPTIM_WEIGHT});
+    auto weights_opt = extractTomlVector<double>(optimization_table, "weights");
+    optim_weights = weights_opt.value_or(std::vector<double>{ConfigDefaults::OPTIM_WEIGHT});
 
     // Parse optional optimization tolerances
     if (!optimization_table.contains("tolerance")) {
@@ -368,29 +428,39 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       optim_tol_infidelity = ConfigDefaults::OPTIM_TOL_INFIDELITY;
     } else {
       // Parse tolerance table
-      auto* tol_table = optimization_table["tolerance"].as_table();
-      if (!tol_table) {
+      const auto* tol_table = optimization_table["tolerance"].as_table();
+      if (tol_table == nullptr) {
         logger.exitWithError("tolerance must be a table");
       }
-      optim_tol_grad_abs = tomlField<double>(*tol_table, "grad_abs").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_ABS);
-      optim_tol_grad_rel = tomlField<double>(*tol_table, "grad_rel").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_REL);
-      optim_tol_finalcost = tomlField<double>(*tol_table, "final_cost").positive().valueOr(ConfigDefaults::OPTIM_TOL_FINALCOST);
-      optim_tol_infidelity = tomlField<double>(*tol_table, "infidelity").positive().valueOr(ConfigDefaults::OPTIM_TOL_INFIDELITY);
+      // Extract from TOML
+      auto grad_abs_opt = extractToml<double>(*tol_table, "grad_abs");
+      auto grad_rel_opt = extractToml<double>(*tol_table, "grad_rel");
+      auto final_cost_opt = extractToml<double>(*tol_table, "final_cost");
+      auto infidelity_opt = extractToml<double>(*tol_table, "infidelity");
+      // Validate
+      optim_tol_grad_abs = validators::field<double>(grad_abs_opt, "tolerance.grad_abs").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_ABS);
+      optim_tol_grad_rel = validators::field<double>(grad_rel_opt, "tolerance.grad_rel").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_REL);
+      optim_tol_finalcost = validators::field<double>(final_cost_opt, "tolerance.final_cost").positive().valueOr(ConfigDefaults::OPTIM_TOL_FINALCOST);
+      optim_tol_infidelity = validators::field<double>(infidelity_opt, "tolerance.infidelity").positive().valueOr(ConfigDefaults::OPTIM_TOL_INFIDELITY);
     }
 
-    optim_maxiter = tomlField<size_t>(optimization_table, "maxiter").valueOr(ConfigDefaults::OPTIM_MAXITER);
+    optim_maxiter = extractToml<size_t>(optimization_table, "maxiter").value_or(ConfigDefaults::OPTIM_MAXITER);
 
     // Parse tikhonov inline table
     if (!optimization_table.contains("tikhonov")) {
       optim_tikhonov_coeff = ConfigDefaults::OPTIM_TIKHONOV_COEFF;
       optim_tikhonov_use_x0 = ConfigDefaults::OPTIM_TIKHONOV_USE_X0;
     } else {
-      auto regul_table = optimization_table["tikhonov"].as_table();
-      if (!regul_table) {
+      const auto* regul_table = optimization_table["tikhonov"].as_table();
+      if (regul_table == nullptr) {
         logger.exitWithError("tikhonov must be a table");
       }
-      optim_tikhonov_coeff= tomlField<double>(*regul_table, "coeff").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_TIKHONOV_COEFF);
-      optim_tikhonov_use_x0 = tomlField<bool>(*regul_table, "use_x0").valueOr(ConfigDefaults::OPTIM_TIKHONOV_USE_X0);
+      // Extract from TOML
+      auto coeff_opt = extractToml<double>(*regul_table, "coeff");
+      auto use_x0_opt = extractToml<bool>(*regul_table, "use_x0");
+      // Validate
+      optim_tikhonov_coeff = validators::field<double>(coeff_opt, "tikhonov.coeff").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_TIKHONOV_COEFF);
+      optim_tikhonov_use_x0 = validators::field<bool>(use_x0_opt, "tikhonov.use_x0").valueOr(ConfigDefaults::OPTIM_TIKHONOV_USE_X0);
     }
 
     // Parse penalty table
@@ -404,16 +474,24 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       optim_penalty_variation = ConfigDefaults::OPTIM_PENALTY_VARIATION;
     } else {
       // Parse penalty table
-      auto penalty_table = optimization_table["penalty"].as_table();
-      if (!penalty_table) {
+      const auto* penalty_table = optimization_table["penalty"].as_table();
+      if (penalty_table == nullptr) {
         logger.exitWithError("penalty must be a table");
       }
-      optim_penalty_leakage = tomlField<double>(*penalty_table, "leakage").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
-      optim_penalty_weightedcost = tomlField<double>(*penalty_table, "weightedcost").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
-      optim_penalty_weightedcost_width = tomlField<double>(*penalty_table, "weightedcost_width").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH);
-      optim_penalty_dpdm = tomlField<double>(*penalty_table, "dpdm").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
-      optim_penalty_energy = tomlField<double>(*penalty_table, "energy").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
-      optim_penalty_variation = tomlField<double>(*penalty_table, "variation").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
+      // Extract from TOML
+      auto leakage_opt = extractToml<double>(*penalty_table, "leakage");
+      auto weightedcost_opt = extractToml<double>(*penalty_table, "weightedcost");
+      auto weightedcost_width_opt = extractToml<double>(*penalty_table, "weightedcost_width");
+      auto dpdm_opt = extractToml<double>(*penalty_table, "dpdm");
+      auto energy_opt = extractToml<double>(*penalty_table, "energy");
+      auto variation_opt = extractToml<double>(*penalty_table, "variation");
+      // Validate
+      optim_penalty_leakage = validators::field<double>(leakage_opt, "penalty.leakage").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
+      optim_penalty_weightedcost = validators::field<double>(weightedcost_opt, "penalty.weightedcost").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
+      optim_penalty_weightedcost_width = validators::field<double>(weightedcost_width_opt, "penalty.weightedcost_width").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH);
+      optim_penalty_dpdm = validators::field<double>(dpdm_opt, "penalty.dpdm").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
+      optim_penalty_energy = validators::field<double>(energy_opt, "penalty.energy").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
+      optim_penalty_variation = validators::field<double>(variation_opt, "penalty.variation").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
     }
 
     // Parse output options from [output] table
@@ -435,9 +513,9 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       }
     }
 
-    output_timestep_stride = tomlField<size_t>(output_table, "timestep_stride").valueOr(ConfigDefaults::OUTPUT_TIMESTEP_STRIDE);
+    output_timestep_stride = extractToml<size_t>(output_table, "timestep_stride").value_or(ConfigDefaults::OUTPUT_TIMESTEP_STRIDE);
 
-    output_optimization_stride = tomlField<size_t>(output_table, "optimization_stride").valueOr(ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE);
+    output_optimization_stride = extractToml<size_t>(output_table, "optimization_stride").value_or(ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE);
 
     // Parse solver options from [solver] table
     runtype = parseEnum(solver_table["runtype"].value<std::string>(), RUN_TYPE_MAP, ConfigDefaults::RUNTYPE);
@@ -450,12 +528,16 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       linearsolver_type = ConfigDefaults::LINEARSOLVER_TYPE;
       linearsolver_maxiter = ConfigDefaults::LINEARSOLVER_MAXITER;
     } else {
-      auto* linearsolver_table_inner = solver_table["linearsolver"].as_table();
-      if (!linearsolver_table_inner) {
+      const auto* linearsolver_table_inner = solver_table["linearsolver"].as_table();
+      if (linearsolver_table_inner == nullptr) {
         logger.exitWithError("linearsolver must be a table");
       }
-      linearsolver_type = parseEnum(tomlField<std::string>(*linearsolver_table_inner, "type").value(), LINEAR_SOLVER_TYPE_MAP, ConfigDefaults::LINEARSOLVER_TYPE);
-      linearsolver_maxiter = tomlField<size_t>(*linearsolver_table_inner, "maxiter").positive().valueOr(ConfigDefaults::LINEARSOLVER_MAXITER);
+      // Extract from TOML
+      auto type_opt = extractToml<std::string>(*linearsolver_table_inner, "type");
+      auto maxiter_opt = extractToml<size_t>(*linearsolver_table_inner, "maxiter");
+      // Validate
+      linearsolver_type = parseEnum(validators::field<std::string>(type_opt, "linearsolver.type").valueOr(""), LINEAR_SOLVER_TYPE_MAP, ConfigDefaults::LINEARSOLVER_TYPE);
+      linearsolver_maxiter = validators::field<size_t>(maxiter_opt, "linearsolver.maxiter").positive().valueOr(ConfigDefaults::LINEARSOLVER_MAXITER);
     }
 
     timestepper_type = parseEnum(solver_table["timestepper"].value<std::string>(), TIME_STEPPER_TYPE_MAP, ConfigDefaults::TIMESTEPPER_TYPE);
@@ -1078,6 +1160,43 @@ void Config::finalize() {
       control_initializations[i].phase = std::nullopt;
     }
   }
+
+  // Apply defaults for control parameterization nspline
+  for (size_t i = 0; i < control_parameterizations.size(); i++) {
+    if (control_parameterizations[i].type == ControlType::BSPLINE ||
+        control_parameterizations[i].type == ControlType::BSPLINE0 ||
+        control_parameterizations[i].type == ControlType::BSPLINEAMP) {
+      if (!control_parameterizations[i].nspline.has_value()) {
+        control_parameterizations[i].nspline = ConfigDefaults::CONTROL_SPLINE_COUNT;
+      }
+    }
+  }
+
+  // Apply defaults for control initialization amplitude
+  for (size_t i = 0; i < control_initializations.size(); i++) {
+    if (control_initializations[i].type != ControlInitializationType::FILE) {
+      if (!control_initializations[i].amplitude.has_value()) {
+        control_initializations[i].amplitude = ConfigDefaults::CONTROL_INIT_AMPLITUDE;
+      }
+    }
+  }
+
+  // Apply defaults and transformations for optimization target
+  if (optim_target.type == TargetType::GATE) {
+    // Prioritize gate from file: if filename is set, use FILE gate type
+    if (optim_target.filename.has_value()) {
+      optim_target.gate_type = GateType::FILE;
+    }
+    // Apply default gate_rot_freq if not set
+    if (!optim_target.gate_rot_freq.has_value()) {
+      optim_target.gate_rot_freq = std::vector<double>(nlevels.size(), ConfigDefaults::GATE_ROT_FREQ);
+    }
+  } else if (optim_target.type == TargetType::STATE) {
+    // Prioritize state from file: if filename is set, clear levels
+    if (optim_target.filename.has_value()) {
+      optim_target.levels = std::nullopt;
+    }
+  }
 }
 
 void Config::validate() const {
@@ -1089,6 +1208,48 @@ void Config::validate() const {
   for (size_t i = 0; i < nlevels.size(); i++) {
     if (nessential[i] > nlevels[i]) {
       logger.exitWithError("nessential[" + std::to_string(i) + "] = " + std::to_string(nessential[i]) + " cannot exceed nlevels[" + std::to_string(i) + "] = " + std::to_string(nlevels[i]));
+    }
+  }
+
+  // Validate control parameterization settings
+  for (size_t i = 0; i < control_parameterizations.size(); i++) {
+    const auto& param = control_parameterizations[i];
+    if (param.type == ControlType::BSPLINEAMP) {
+      if (!param.scaling.has_value()) {
+        logger.exitWithError("control parameterization[" + std::to_string(i) + "] of type BSPLINEAMP requires 'scaling'");
+      }
+    }
+  }
+
+  // Validate control initialization settings
+  for (size_t i = 0; i < control_initializations.size(); i++) {
+    const auto& init = control_initializations[i];
+    if (init.type == ControlInitializationType::FILE) {
+      if (!init.filename.has_value()) {
+        logger.exitWithError("control initialization[" + std::to_string(i) + "] of type FILE requires 'filename'");
+      }
+    }
+  }
+
+  // Validate optimization target settings
+  if (optim_target.type == TargetType::GATE) {
+    if (!optim_target.gate_type.has_value() && !optim_target.filename.has_value()) {
+      logger.exitWithError("optimization target of type GATE requires 'gate_type' or 'filename'");
+    }
+  } else if (optim_target.type == TargetType::STATE) {
+    if (!optim_target.levels.has_value() && !optim_target.filename.has_value()) {
+      logger.exitWithError("optimization target of type STATE requires 'levels' or 'filename'");
+    }
+    // Validate levels size and values if provided
+    if (optim_target.levels.has_value()) {
+      if (optim_target.levels->size() != nlevels.size()) {
+        logger.exitWithError("optimization target levels size (" + std::to_string(optim_target.levels->size()) + ") must match number of oscillators (" + std::to_string(nlevels.size()) + ")");
+      }
+      for (size_t i = 0; i < optim_target.levels->size(); i++) {
+        if (optim_target.levels->at(i) >= nlevels[i]) {
+          logger.exitWithError("optimization target levels[" + std::to_string(i) + "] = " + std::to_string(optim_target.levels->at(i)) + " exceeds number of modeled levels (" + std::to_string(nlevels[i]) + ")");
+        }
+      }
     }
   }
 
@@ -1207,59 +1368,47 @@ void Config::setRandSeed(int rand_seed_) {
 }
 
 ControlParameterizationSettings Config::parseControlParameterizationSpecs(const toml::table& param_table) const {
-  std::string type_str = tomlField<std::string>(param_table, "type").value();
+  // Extract from TOML
+  auto type_str_opt = extractToml<std::string>(param_table, "type");
+  auto type_str = validators::field<std::string>(type_str_opt, "parameterization.type").value();
+
+  // Validate enum (TOML-specific: string to enum conversion)
   auto type_enum = parseEnum(type_str, CONTROL_TYPE_MAP);
   if (!type_enum.has_value()) {
-    logger.exitWithError("Unknown control parameterization type: " + type_str);
+    throw validators::ValidationError("parameterization.type", "unknown control parameterization type: " + type_str);
   }
 
   ControlParameterizationSettings param;
   param.type = type_enum.value();
 
-  switch (param.type) {
-    case ControlType::BSPLINE:
-    case ControlType::BSPLINE0:
-      param.nspline = tomlField<size_t>(param_table, "num").value();
-      param.tstart = getOptional<double>(param_table["tstart"]);
-      param.tstop = getOptional<double>(param_table["tstop"]);
-      break;
-
-    case ControlType::BSPLINEAMP:
-      param.nspline = tomlField<size_t>(param_table, "num").value();
-      param.scaling = tomlField<double>(param_table, "scaling").value();
-      param.tstart = getOptional<double>(param_table["tstart"]);
-      param.tstop = getOptional<double>(param_table["tstop"]);
-      break;
-
-    case ControlType::NONE:
-      break;
-  }
+  // Extract all optional fields (validation of required fields happens in validate())
+  param.nspline = extractToml<size_t>(param_table, "num");
+  param.scaling = extractToml<double>(param_table, "scaling");
+  param.tstart = extractToml<double>(param_table, "tstart");
+  param.tstop = extractToml<double>(param_table, "tstop");
 
   return param;
 }
 
 
 ControlInitializationSettings Config::parseControlInitializationSpecs(const toml::table& init_table) const {
-  std::string type = tomlField<std::string>(init_table, "type").value();
-  auto type_enum = parseEnum(type, CONTROL_INITIALIZATION_TYPE_MAP);
+  // Extract from TOML
+  auto type_str_opt = extractToml<std::string>(init_table, "type");
+  auto type_str = validators::field<std::string>(type_str_opt, "initialization.type").value();
+
+  // Validate enum (TOML-specific: string to enum conversion)
+  auto type_enum = parseEnum(type_str, CONTROL_INITIALIZATION_TYPE_MAP);
   if (!type_enum.has_value()) {
-    logger.exitWithError("Unknown control initialization type: " + type);
+    throw validators::ValidationError("initialization.type", "unknown control initialization type: " + type_str);
   }
 
   ControlInitializationSettings init;
   init.type = type_enum.value();
 
-  if (init.type == ControlInitializationType::FILE) {
-    init.filename = tomlField<std::string>(init_table, "filename").value();
-    init.amplitude = std::nullopt;
-    init.phase = std::nullopt;
-    if (!init.filename.has_value()) {
-      logger.exitWithError("control_initialization of type 'file' must have a 'filename' parameter");
-    }
-  } else {
-    init.amplitude = tomlField<double>(init_table, "amplitude").valueOr(ConfigDefaults::CONTROL_INIT_AMPLITUDE);
-    init.phase = tomlField<double>(init_table, "phase").greaterThanEqual(0.0).valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
-  }
+  // Extract all optional fields (validation of required fields happens in validate())
+  init.filename = extractToml<std::string>(init_table, "filename");
+  init.amplitude = extractToml<double>(init_table, "amplitude");
+  init.phase = extractToml<double>(init_table, "phase");
 
   return init;
 }
@@ -1269,61 +1418,35 @@ OptimTargetSettings Config::parseOptimTarget(const toml::table& toml, size_t num
   OptimTargetSettings optim_target;
 
   if (toml.contains("target")) {
-    if (!toml["target"].as_table()) {
-      logger.exitWithError("target must be a table");
+    if (toml["target"].as_table() == nullptr) {
+      throw validators::ValidationError("target", "must be a table");
     }
     const auto* target_table = toml["target"].as_table();
 
-    // Get the target type, or default to NONE
-    auto type_str = tomlField<std::string>(*target_table, "type").valueOr("none");
+    // Extract type from TOML
+    auto type_str_opt = extractToml<std::string>(*target_table, "type");
+    auto type_str = validators::field<std::string>(type_str_opt, "target.type").valueOr("none");
+
+    // Validate enum (TOML-specific: string to enum conversion)
     auto type_opt = parseEnum(type_str, TARGET_TYPE_MAP);
     if (!type_opt.has_value()) {
-      logger.exitWithError("Unknown optim_target type: " + type_str);
+      throw validators::ValidationError("target.type", "unknown optim_target type: " + type_str);
     }
     optim_target.type = type_opt.value();
 
-    // Parse other settings based on type
-    if (optim_target.type == TargetType::GATE) {
-      // For Gate target: Either gate_type or filename needs to be provided
-      auto gate_type_str = tomlField<std::string>(*target_table, "gate_type").valueOr("none");
-      optim_target.gate_type = parseEnum(gate_type_str, GATE_TYPE_MAP);
-      optim_target.filename = getOptional<std::string>((*target_table)["filename"]);
-      // Make sure either gate_type or filename is provided
-      if (!optim_target.gate_type.has_value() && !optim_target.filename.has_value()) {
-        logger.exitWithError("For optim_target of type 'gate', either gate_type or filename must be specified");
-      }
-      // Prioritize gate from file.
-      if (optim_target.filename.has_value()) {
-        optim_target.gate_type = GateType::FILE;
-      }
-
-      // For gate, check for optional gate rotation frequencies
-      optim_target.gate_rot_freq = scalarOrVectorOr<double>(*target_table, "gate_rot_freq", num_osc, std::vector<double>(num_osc, ConfigDefaults::GATE_ROT_FREQ));
-
-    } else if (optim_target.type == TargetType::STATE) {
-      // State target: Either levels for product state or filename needs to be provided
-      optim_target.filename = getOptional<std::string>((*target_table)["filename"]);
-      optim_target.levels = getOptionalVector<size_t>((*target_table)["levels"]);
-      // Validate levels, if provided
-      if (optim_target.levels.has_value()) {
-        if (optim_target.levels->size() != num_osc) {
-          logger.exitWithError("optim_target levels size does not match number of oscillators");
-        }
-        for (size_t i = 0; i < num_osc; i++) {
-          if (optim_target.levels->at(i) >= nlevels[i]) {
-            logger.exitWithError("ERROR in config setting. The requested product state target |" + std::to_string(optim_target.levels->at(i)) +"> exceeds the number of modeled levels for that oscillator (" + std::to_string(nlevels[i]) + ").\n");
-          }
-        }
-      }
-      // Make sure either levels or filename is provided
-      if (!optim_target.levels.has_value() && !optim_target.filename.has_value()) {
-        logger.exitWithError("For optim_target of type 'state', either levels or filename must be specified");
-      }
-      // Prioritize state from file.
-      if (optim_target.filename.has_value()) {
-        optim_target.levels = std::nullopt;
+    // Extract gate_type if present (TOML-specific: string to enum conversion)
+    auto gate_type_str_opt = extractToml<std::string>(*target_table, "gate_type");
+    if (gate_type_str_opt.has_value()) {
+      optim_target.gate_type = parseEnum(*gate_type_str_opt, GATE_TYPE_MAP);
+      if (!optim_target.gate_type.has_value()) {
+        throw validators::ValidationError("target.gate_type", "unknown gate type: " + *gate_type_str_opt);
       }
     }
+
+    // Extract all optional fields (validation of required fields happens in validate())
+    optim_target.filename = extractToml<std::string>(*target_table, "filename");
+    optim_target.levels = getOptionalVector<size_t>((*target_table)["levels"]);
+    optim_target.gate_rot_freq = extractScalarOrVector<double>(*target_table, "gate_rot_freq", num_osc);
   }
 
   return optim_target;
