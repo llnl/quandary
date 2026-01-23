@@ -1,13 +1,22 @@
 #pragma once
 
+#include "config.hpp"
+
 /**
- * @brief Main entry point for Quandary simulations and optimizations.
+ * @brief Run a Quandary simulation or optimization.
  *
- * This function handles MPI/PETSc initialization, config loading, and runs
- * the simulation, optimization, or gradient evaluation based on config settings.
+ * This function handles MPI/PETSc initialization (if not already done),
+ * and runs the simulation, optimization, or gradient evaluation based on
+ * the config settings.
  *
- * @param argc Argument count (same as main)
- * @param argv Argument vector (same as main)
+ * @param config The loaded configuration
+ * @param quiet_mode If true, suppress most console output
+ * @param argc Argument count for MPI_Init (0 for defaults)
+ * @param argv Argument vector for MPI_Init (nullptr for defaults)
+ * @param petsc_argc Number of PETSc command-line arguments (0 for defaults)
+ * @param petsc_argv PETSc command-line arguments (nullptr for defaults)
  * @return 0 on success, non-zero on error
  */
-int runQuandary(int argc, char** argv);
+int runQuandary(const Config& config, bool quiet_mode = false,
+                int argc = 0, char** argv = nullptr,
+                int petsc_argc = 0, char** petsc_argv = nullptr);

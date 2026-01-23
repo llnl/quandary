@@ -22,26 +22,27 @@
 #define HESSIAN_DECOMPOSITION 0 // Run eigenvalue analysis for Hessian
 #define EPS 1e-5          // Epsilon for Finite Differences
 
-int runQuandary(int argc, char** argv)
+int runQuandary(const Config& config, bool quietmode, int argc, char** argv, int petsc_argc, char** petsc_argv)
 {
-  /* Parse command line arguments */
-  ParsedArgs args = parseArguments(argc, argv);
-
   char filename[255];
   PetscErrorCode ierr;
 
-  /* Initialize MPI */
+  /* Initialize MPI if not already done */
+  bool mpi_initialized_by_us = false;
+  int mpi_already_initialized = 0;
+  MPI_Initialized(&mpi_already_initialized);
+  if (!mpi_already_initialized) {
+    MPI_Init(&argc, &argv);
+    mpi_initialized_by_us = true;
+  }
+
   int mpisize_world, mpirank_world;
-  MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
   MPI_Comm_size(MPI_COMM_WORLD, &mpisize_world);
 
-  bool quietmode = args.quietmode;
   if (mpirank_world == 0 && !quietmode) printf("Running on %d cores.\n", mpisize_world);
 
   MPILogger logger(mpirank_world, quietmode);
-  std::string config_file = args.config_filename;
-  Config config = Config::fromFile(config_file, logger);
   std::stringstream config_log;
   config.printConfig(config_log);
 
@@ -100,11 +101,10 @@ int runQuandary(int argc, char** argv)
 
   if (mpirank_world == 0 && !quietmode)  std::cout<< "Parallel distribution: " << mpisize_init << " np_init  X  " << mpisize_petsc<< " np_petsc  " << std::endl;
 
-  char** petsc_argv = args.petsc_argv.data();
 #ifdef WITH_SLEPC
-  ierr = SlepcInitialize(&args.petsc_argc, &petsc_argv, (char*)0, NULL);if (ierr) return ierr;
+  ierr = SlepcInitialize(&petsc_argc, &petsc_argv, (char*)0, NULL);if (ierr) return ierr;
 #else
-  ierr = PetscInitialize(&args.petsc_argc, &petsc_argv, (char*)0, NULL);if (ierr) return ierr;
+  ierr = PetscInitialize(&petsc_argc, &petsc_argv, (char*)0, NULL);if (ierr) return ierr;
 #endif
   PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, 	PETSC_VIEWER_ASCII_MATLAB );
 
@@ -563,6 +563,8 @@ int runQuandary(int argc, char** argv)
 #endif
 
 
-  MPI_Finalize();
+  if (mpi_initialized_by_us) {
+    MPI_Finalize();
+  }
   return ierr;
 }
