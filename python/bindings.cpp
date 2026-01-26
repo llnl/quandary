@@ -174,6 +174,26 @@ NB_MODULE(quandary_ext, m) {
     .def_rw("timestepper_type", &ConfigInput::timestepper_type)
     .def_rw("rand_seed", &ConfigInput::rand_seed);
 
+  // Config - validated configuration with computed values
+  nb::class_<Config>(m, "Config")
+    .def(nb::init<const ConfigInput&, bool>(),
+      nb::arg("input"), nb::arg("quiet") = false,
+      "Create a validated Config from ConfigInput")
+    .def_prop_ro("n_initial_conditions", &Config::getNInitialConditions,
+      "Number of initial conditions")
+    .def_prop_ro("output_directory", &Config::getOutputDirectory,
+      "Output directory path")
+    .def_prop_ro("lindblad", [](const Config& c) {
+        return c.getDecoherenceType() != DecoherenceType::NONE;
+      }, "Whether Lindblad solver is used (decoherence enabled)");
+
+  // Run function - accepts Config
+  m.def("run", [](const Config& config, bool quiet) {
+      return runQuandary(config, quiet);
+    },
+    nb::arg("config"), nb::arg("quiet") = false,
+    "Run a Quandary simulation or optimization from a Config");
+
   // Run function - accepts ConfigInput, creates Config internally
   m.def("run", [](const ConfigInput& input, bool quiet) {
       Config config(input, quiet);
