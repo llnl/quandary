@@ -87,19 +87,106 @@ NB_MODULE(quandary_ext, m) {
     .value("POPULATION_COMPOSITE", OutputType::POPULATION_COMPOSITE)
     .value("FULLSTATE", OutputType::FULLSTATE);
 
-  // Config class
-  nb::class_<Config>(m, "Config")
-    // fromFile static method
-    .def_static("from_file", &Config::fromFile,
-      // Arguments
-      nb::arg("filename"), nb::arg("quiet") = true,
-      // Docstring
-      "Load configuration from a TOML file");
+  // Structs
+  nb::class_<InitialConditionSettings>(m, "InitialConditionSettings")
+    .def(nb::init<>())
+    .def_rw("type", &InitialConditionSettings::type)
+    .def_rw("filename", &InitialConditionSettings::filename)
+    .def_rw("levels", &InitialConditionSettings::levels)
+    .def_rw("subsystem", &InitialConditionSettings::subsystem);
 
-  // Run function
-  m.def("run", [](const Config& config, bool quiet) { return runQuandary(config, quiet); },
-    // Arguments
-    nb::arg("config"), nb::arg("quiet") = false,
-    // Docstring
-    "Run a Quandary simulation or optimization");
+  nb::class_<OptimTargetSettings>(m, "OptimTargetSettings")
+    .def(nb::init<>())
+    .def_rw("type", &OptimTargetSettings::type)
+    .def_rw("gate_type", &OptimTargetSettings::gate_type)
+    .def_rw("gate_rot_freq", &OptimTargetSettings::gate_rot_freq)
+    .def_rw("levels", &OptimTargetSettings::levels)
+    .def_rw("filename", &OptimTargetSettings::filename);
+
+  nb::class_<ControlParameterizationSettings>(m, "ControlParameterizationSettings")
+    .def(nb::init<>())
+    .def_rw("type", &ControlParameterizationSettings::type)
+    .def_rw("nspline", &ControlParameterizationSettings::nspline)
+    .def_rw("tstart", &ControlParameterizationSettings::tstart)
+    .def_rw("tstop", &ControlParameterizationSettings::tstop)
+    .def_rw("scaling", &ControlParameterizationSettings::scaling);
+
+  nb::class_<ControlInitializationSettings>(m, "ControlInitializationSettings")
+    .def(nb::init<>())
+    .def_rw("type", &ControlInitializationSettings::type)
+    .def_rw("amplitude", &ControlInitializationSettings::amplitude)
+    .def_rw("phase", &ControlInitializationSettings::phase)
+    .def_rw("filename", &ControlInitializationSettings::filename);
+
+  // ConfigInput - all fields are optional for partial specification
+  nb::class_<ConfigInput>(m, "ConfigInput")
+    .def(nb::init<>())
+    // System parameters
+    .def_rw("nlevels", &ConfigInput::nlevels)
+    .def_rw("nessential", &ConfigInput::nessential)
+    .def_rw("ntime", &ConfigInput::ntime)
+    .def_rw("dt", &ConfigInput::dt)
+    .def_rw("transfreq", &ConfigInput::transfreq)
+    .def_rw("selfkerr", &ConfigInput::selfkerr)
+    .def_rw("crosskerr", &ConfigInput::crosskerr)
+    .def_rw("Jkl", &ConfigInput::Jkl)
+    .def_rw("rotfreq", &ConfigInput::rotfreq)
+    .def_rw("decoherence_type", &ConfigInput::decoherence_type)
+    .def_rw("decay_time", &ConfigInput::decay_time)
+    .def_rw("dephase_time", &ConfigInput::dephase_time)
+    .def_rw("initial_condition", &ConfigInput::initial_condition)
+    // Inherently optional
+    .def_rw("hamiltonian_file_Hsys", &ConfigInput::hamiltonian_file_Hsys)
+    .def_rw("hamiltonian_file_Hc", &ConfigInput::hamiltonian_file_Hc)
+    // Control parameters
+    .def_rw("control_zero_boundary_condition", &ConfigInput::control_zero_boundary_condition)
+    .def_rw("control_parameterizations", &ConfigInput::control_parameterizations)
+    .def_rw("control_initializations", &ConfigInput::control_initializations)
+    .def_rw("control_amplitude_bounds", &ConfigInput::control_amplitude_bounds)
+    .def_rw("carrier_frequencies", &ConfigInput::carrier_frequencies)
+    // Optimization parameters
+    .def_rw("optim_target", &ConfigInput::optim_target)
+    .def_rw("optim_objective", &ConfigInput::optim_objective)
+    .def_rw("optim_weights", &ConfigInput::optim_weights)
+    .def_rw("optim_tol_grad_abs", &ConfigInput::optim_tol_grad_abs)
+    .def_rw("optim_tol_grad_rel", &ConfigInput::optim_tol_grad_rel)
+    .def_rw("optim_tol_finalcost", &ConfigInput::optim_tol_finalcost)
+    .def_rw("optim_tol_infidelity", &ConfigInput::optim_tol_infidelity)
+    .def_rw("optim_maxiter", &ConfigInput::optim_maxiter)
+    .def_rw("optim_tikhonov_coeff", &ConfigInput::optim_tikhonov_coeff)
+    .def_rw("optim_tikhonov_use_x0", &ConfigInput::optim_tikhonov_use_x0)
+    .def_rw("optim_penalty_leakage", &ConfigInput::optim_penalty_leakage)
+    .def_rw("optim_penalty_weightedcost", &ConfigInput::optim_penalty_weightedcost)
+    .def_rw("optim_penalty_weightedcost_width", &ConfigInput::optim_penalty_weightedcost_width)
+    .def_rw("optim_penalty_dpdm", &ConfigInput::optim_penalty_dpdm)
+    .def_rw("optim_penalty_energy", &ConfigInput::optim_penalty_energy)
+    .def_rw("optim_penalty_variation", &ConfigInput::optim_penalty_variation)
+    // Output parameters
+    .def_rw("output_directory", &ConfigInput::output_directory)
+    .def_rw("output_observables", &ConfigInput::output_observables)
+    .def_rw("output_timestep_stride", &ConfigInput::output_timestep_stride)
+    .def_rw("output_optimization_stride", &ConfigInput::output_optimization_stride)
+    // Solver parameters
+    .def_rw("runtype", &ConfigInput::runtype)
+    .def_rw("usematfree", &ConfigInput::usematfree)
+    .def_rw("linearsolver_type", &ConfigInput::linearsolver_type)
+    .def_rw("linearsolver_maxiter", &ConfigInput::linearsolver_maxiter)
+    .def_rw("timestepper_type", &ConfigInput::timestepper_type)
+    .def_rw("rand_seed", &ConfigInput::rand_seed);
+
+  // Run function - accepts ConfigInput, creates Config internally
+  m.def("run", [](const ConfigInput& input, bool quiet) {
+      Config config(input, quiet);
+      return runQuandary(config, quiet);
+    },
+    nb::arg("input"), nb::arg("quiet") = false,
+    "Run a Quandary simulation or optimization from a ConfigInput");
+
+  // Run from file - loads TOML and runs directly
+  m.def("run_from_file", [](const std::string& filename, bool quiet) {
+      Config config = Config::fromFile(filename, quiet);
+      return runQuandary(config, quiet);
+    },
+    nb::arg("filename"), nb::arg("quiet") = false,
+    "Run a Quandary simulation or optimization from a TOML file");
 }
