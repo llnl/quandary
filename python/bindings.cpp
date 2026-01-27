@@ -3,6 +3,8 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
 
+#include <sstream>
+
 #include "config.hpp"
 #include "quandary_core.hpp"
 
@@ -185,7 +187,12 @@ NB_MODULE(quandary_ext, m) {
       "Output directory path")
     .def_prop_ro("lindblad", [](const Config& c) {
         return c.getDecoherenceType() != DecoherenceType::NONE;
-      }, "Whether Lindblad solver is used (decoherence enabled)");
+      }, "Whether Lindblad solver is used (decoherence enabled)")
+    .def("to_toml", [](const Config& c) {
+        std::stringstream ss;
+        c.printConfig(ss);
+        return ss.str();
+      }, "Serialize the configuration to TOML format");
 
   // Run function - accepts Config
   m.def("run", [](const Config& config, bool quiet) {
