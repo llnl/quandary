@@ -1,8 +1,9 @@
 """Quandary Python interface for quantum optimal control."""
 
 from .quandary_ext import (
-  # Core types
-  Config,
+  # Configuration
+  QuandaryConfig,
+  # Run functions
   run,
   run_from_file,
   # Enums
@@ -28,8 +29,8 @@ from .results import QuandaryResults, get_results
 
 __all__ = [
   # Main API
+  "QuandaryConfig",
   "Quandary",
-  "Config",
   "QuandaryResults",
   "run",
   "run_from_file",

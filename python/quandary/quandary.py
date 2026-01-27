@@ -1,4 +1,4 @@
-"""Quandary configuration and main interface class."""
+"""Quandary runner class."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import os
 import subprocess
 from typing import TYPE_CHECKING, Optional
 
-from .quandary_ext import ConfigInput as _ConfigInput, Config
+from .quandary_ext import QuandaryConfig, Config
 
 if TYPE_CHECKING:
   from .results import QuandaryResults
@@ -15,67 +15,60 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class Quandary(_ConfigInput):
-  """Configuration for a Quandary simulation or optimization.
+class Quandary:
+  """Runner for Quandary simulations and optimizations.
 
-  Accepts all configuration fields as keyword arguments. The configuration
-  is validated immediately at construction. Computed properties
-  (n_initial_conditions, lindblad, output_directory, etc.) are available
-  after construction via automatic forwarding to the validated Config.
+  Takes a QuandaryConfig, validates it, and provides methods to run
+  simulations and retrieve results.
 
-  The object is immutable after construction - attempting to change fields
-  will raise an error.
+  The configuration is validated at construction time. After construction,
+  the Quandary object is immutable.
 
   Example:
-    config = Quandary(
-      nlevels=[2],
-      ntime=1000,
-      dt=0.01,
-      transfreq=[4.1],
-      runtype=RunType.SIMULATION,
-    )
-    print(config.n_initial_conditions)  # Computed value available
-    run(config)
+    config = QuandaryConfig()
+    config.nlevels = [2]
+    config.ntime = 1000
+    config.dt = 0.01
+    config.transfreq = [4.1]
+    config.runtype = RunType.SIMULATION
+
+    quandary = Quandary(config)
+    quandary.run()
+    results = quandary.get_results()
   """
 
-  def __init__(self, quiet: bool = False, **kwargs):
-    # Use object.__setattr__ to bypass our __setattr__ during init
-    object.__setattr__(self, '_frozen', False)
+  def __init__(self, config: QuandaryConfig, quiet: bool = False):
+    """Create a Quandary runner from a configuration.
 
-    super().__init__()
+    Args:
+      config: A QuandaryConfig object with all required fields set.
+      quiet: If True, suppress console output during validation.
 
-    for key, value in kwargs.items():
-      if not hasattr(self, key):
-        raise AttributeError(f"Quandary has no field '{key}'")
-      setattr(self, key, value)
-
-    # Eagerly create and validate Config
-    object.__setattr__(self, '_config', Config(self, quiet))
-
-    # Freeze the object - no more changes allowed
-    object.__setattr__(self, '_frozen', True)
+    Raises:
+      RuntimeError: If the configuration is invalid.
+    """
+    self._input = config
+    self._config = Config(config, quiet)
 
   @property
   def config(self) -> Config:
-    """Get validated Config with computed values."""
+    """Get the validated Config object."""
     return self._config
 
-  def __setattr__(self, name: str, value):
-    """Prevent modification after construction."""
-    if getattr(self, '_frozen', False) and not name.startswith('_'):
-      raise AttributeError(
-        f"Quandary is immutable after construction. "
-        f"Cannot modify '{name}'. Create a new Quandary instead."
-      )
-    super().__setattr__(name, value)
+  @property
+  def n_initial_conditions(self) -> int:
+    """Number of initial conditions."""
+    return self._config.n_initial_conditions
 
-  def __getattr__(self, name: str):
-    """Forward unknown attributes to the validated Config."""
-    # Avoid infinite recursion for private attributes
-    if name.startswith('_'):
-      raise AttributeError(f"'{type(self).__name__}' has no attribute '{name}'")
-    # Forward to Config
-    return getattr(self._config, name)
+  @property
+  def output_directory(self) -> str:
+    """Output directory path."""
+    return self._config.output_directory
+
+  @property
+  def decoherence_type(self):
+    """Decoherence type (NONE, DECAY, DEPHASE, or BOTH)."""
+    return self._config.decoherence_type
 
   def to_toml(self) -> str:
     """Serialize the configuration to TOML format.
@@ -126,15 +119,15 @@ class Quandary(_ConfigInput):
       subprocess.CalledProcessError: If the Quandary process fails.
 
     Example:
-      >>> config = Quandary(nlevels=[2], ntime=100, dt=0.01, ...)
-      >>> results = config.run_mpi(n_procs=4)
+      >>> quandary = Quandary(config)
+      >>> results = quandary.run_mpi(n_procs=4)
       >>> print(f"Infidelity: {results.infidelity}")
     """
     import sys
 
     # Use output_directory as working directory if not specified
     if working_dir is None:
-      working_dir = str(self.output_directory)
+      working_dir = self.output_directory
 
     # Use current Python interpreter if not specified
     if python_exec is None:
@@ -180,14 +173,15 @@ class Quandary(_ConfigInput):
       QuandaryResults containing all parsed output data.
 
     Example:
-      >>> config = Quandary(nlevels=[2], ntime=100, dt=0.01, ...)
-      >>> run(config)
-      >>> results = config.get_results()
+      >>> quandary = Quandary(config)
+      >>> quandary.run()
+      >>> results = quandary.get_results()
       >>> print(f"Infidelity: {results.infidelity}")
     """
     from .results import get_results as _get_results
+    from .quandary_ext import DecoherenceType
     return _get_results(
       datadir=self.output_directory,
-      lindblad=self.lindblad,
+      lindblad=self.decoherence_type != DecoherenceType.NONE,
       n_init=self.n_initial_conditions,
     )

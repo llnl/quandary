@@ -120,8 +120,8 @@ NB_MODULE(quandary_ext, m) {
     .def_rw("phase", &ControlInitializationSettings::phase)
     .def_rw("filename", &ControlInitializationSettings::filename);
 
-  // ConfigInput - all fields are optional for partial specification
-  nb::class_<ConfigInput>(m, "ConfigInput")
+  // QuandaryConfig - mutable configuration with all fields optional
+  nb::class_<ConfigInput>(m, "QuandaryConfig")
     .def(nb::init<>())
     // System parameters
     .def_rw("nlevels", &ConfigInput::nlevels)
@@ -185,9 +185,8 @@ NB_MODULE(quandary_ext, m) {
       "Number of initial conditions")
     .def_prop_ro("output_directory", &Config::getOutputDirectory,
       "Output directory path")
-    .def_prop_ro("lindblad", [](const Config& c) {
-        return c.getDecoherenceType() != DecoherenceType::NONE;
-      }, "Whether Lindblad solver is used (decoherence enabled)")
+    .def_prop_ro("decoherence_type", &Config::getDecoherenceType,
+      "Decoherence type (NONE, DECAY, DEPHASE, or BOTH)")
     .def("to_toml", [](const Config& c) {
         std::stringstream ss;
         c.printConfig(ss);
@@ -201,13 +200,13 @@ NB_MODULE(quandary_ext, m) {
     nb::arg("config"), nb::arg("quiet") = false,
     "Run a Quandary simulation or optimization from a Config");
 
-  // Run function - accepts ConfigInput, creates Config internally
+  // Run function - accepts QuandaryConfig, creates Config internally
   m.def("run", [](const ConfigInput& input, bool quiet) {
       Config config(input, quiet);
       return runQuandary(config, quiet);
     },
-    nb::arg("input"), nb::arg("quiet") = false,
-    "Run a Quandary simulation or optimization from a ConfigInput");
+    nb::arg("config"), nb::arg("quiet") = false,
+    "Run a Quandary simulation or optimization from a QuandaryConfig");
 
   // Run from file - loads TOML and runs directly
   m.def("run_from_file", [](const std::string& filename, bool quiet) {
