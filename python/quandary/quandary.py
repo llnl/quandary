@@ -7,7 +7,7 @@ import os
 import subprocess
 from typing import TYPE_CHECKING, Optional
 
-from .quandary_ext import QuandaryConfig, Config
+from ._quandary_impl import QuandaryConfig, Config
 
 if TYPE_CHECKING:
   from .results import QuandaryResults
@@ -87,7 +87,7 @@ class Quandary:
     Returns:
       0 on success, non-zero on error.
     """
-    from .quandary_ext import run as _run
+    from ._quandary_impl import run as _run
     return _run(self._config, quiet)
 
   def run_mpi(
@@ -179,7 +179,7 @@ class Quandary:
       >>> print(f"Infidelity: {results.infidelity}")
     """
     from .results import get_results as _get_results
-    from .quandary_ext import DecoherenceType
+    from ._quandary_impl import DecoherenceType
     return _get_results(
       datadir=self.output_directory,
       lindblad=self.decoherence_type != DecoherenceType.NONE,

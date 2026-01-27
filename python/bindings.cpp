@@ -10,8 +10,8 @@
 
 namespace nb = nanobind;
 
-// Declare extension module "quandary_ext" (must match name given in CMake)
-NB_MODULE(quandary_ext, m) {
+// Declare extension module "_quandary_impl" (must match name given in CMake)
+NB_MODULE(_quandary_impl, m) {
   m.doc() = "Quandary Python bindings";
 
   // Enums

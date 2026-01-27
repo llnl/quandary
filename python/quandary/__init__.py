@@ -1,6 +1,6 @@
 """Quandary Python interface for quantum optimal control."""
 
-from .quandary_ext import (
+from ._quandary_impl import (
   # Configuration
   QuandaryConfig,
   # Run functions
