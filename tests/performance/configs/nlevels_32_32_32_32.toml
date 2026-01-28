@@ -2,11 +2,11 @@
 nlevels = [32, 32, 32, 32]
 ntime = 50
 dt = 0.01
-transfreq = [4.1, 4.2, 4.3, 4.4]
+transition_frequency = [4.1, 4.2, 4.3, 4.4]
 selfkerr = [0.2, 0.2, 0.2, 0.2]
 crosskerr = 0.001
-Jkl = 0.001
-rotfreq = [4.1, 4.2, 4.3, 4.4]
+dipole_coupling = 0.001
+rotation_frequency = [4.1, 4.2, 4.3, 4.4]
 decoherence = { type = "none" }
 initial_condition = {type = "state", levels = [1, 0, 0, 0]}
 

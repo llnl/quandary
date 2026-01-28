@@ -64,11 +64,11 @@ class Config {
   std::vector<size_t> nessential; ///< Number of essential levels per subsystem (Default: same as nlevels)
   size_t ntime; ///< Number of time steps used for time-integration
   double dt; ///< Time step size (ns). Determines final time: T=ntime*dt
-  std::vector<double> transfreq; ///< Fundamental transition frequencies for each oscillator (GHz)
+  std::vector<double> transition_frequency; ///< Fundamental transition frequencies for each oscillator (GHz)
   std::vector<double> selfkerr; ///< Self-kerr frequencies for each oscillator (GHz)
   std::vector<double> crosskerr; ///< Cross-kerr coupling frequencies for each oscillator coupling (GHz)
-  std::vector<double> Jkl; ///< Dipole-dipole coupling frequencies for each oscillator coupling (GHz)
-  std::vector<double> rotfreq; ///< Rotational wave approximation frequencies for each subsystem (GHz)
+  std::vector<double> dipole_coupling; ///< Dipole-dipole coupling frequencies for each oscillator coupling (GHz)
+  std::vector<double> rotation_frequency; ///< Rotational wave approximation frequencies for each subsystem (GHz)
   DecoherenceType decoherence_type; ///< Switch between Schroedinger and Lindblad solver
   std::vector<double> decay_time; ///< Time of decay operation (T1) per oscillator (for Lindblad solver)
   std::vector<double> dephase_time; ///< Time of dephase operation (T2) per oscillator (for Lindblad solver)
@@ -140,11 +140,11 @@ class Config {
   double getDt() const { return dt; }
   double getTotalTime() const { return ntime * dt; }
 
-  const std::vector<double>& getTransFreq() const { return transfreq; }
+  const std::vector<double>& getTransitionFrequency() const { return transition_frequency; }
   const std::vector<double>& getSelfKerr() const { return selfkerr; }
   const std::vector<double>& getCrossKerr() const { return crosskerr; }
-  const std::vector<double>& getJkl() const { return Jkl; }
-  const std::vector<double>& getRotFreq() const { return rotfreq; }
+  const std::vector<double>& getDipoleCoupling() const { return dipole_coupling; }
+  const std::vector<double>& getRotationFrequency() const { return rotation_frequency; }
   DecoherenceType getDecoherenceType() const { return decoherence_type; }
   const std::vector<double>& getDecayTime() const { return decay_time; }
   const std::vector<double>& getDephaseTime() const { return dephase_time; }

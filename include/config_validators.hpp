@@ -490,8 +490,8 @@ inline const toml::table& getRequiredTable(const toml::table& config, const std:
  * @brief Parses a field that can be either a scalar (applied to all) or an exact-size array.
  *
  * For per-oscillator settings, this allows users to specify either:
- * - A single scalar value: `transfreq = 4.1` (applied to all oscillators)
- * - An array of exact size: `transfreq = [4.1, 4.2, 4.3]` (one per oscillator)
+ * - A single scalar value: `transition_frequency = 4.1` (applied to all oscillators)
+ * - An array of exact size: `transition_frequency = [4.1, 4.2, 4.3]` (one per oscillator)
  *
  * @tparam T Element type (int, double, etc.)
  * @param config TOML table containing the field

@@ -3,8 +3,8 @@ nlevels = [4]
 nessential = [3]
 ntime = 667
 dt = 0.15
-transfreq = [4.10595]
-rotfreq = [4.10595]
+transition_frequency = [4.10595]
+rotation_frequency = [4.10595]
 selfkerr = [0.2198]
 initial_condition = {type = "state", levels = [1]}
 

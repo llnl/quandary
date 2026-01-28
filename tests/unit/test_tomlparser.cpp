@@ -14,8 +14,8 @@ TEST_F(TomlParserTest, ParseBasicSettings) {
       R"(
         [system]
         nlevels = [2]
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        transition_frequency = [4.1]
+        rotation_frequency = [0.0]
         ntime = 500
         dt = 0.05
         decoherence = {type = "none"}
@@ -35,8 +35,8 @@ TEST_F(TomlParserTest, ParseVectorSettings) {
         nlevels = [2, 3]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.8]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 4.8]
+        rotation_frequency = [0.0, 0.0]
         initial_condition = {type = "basis"}
       )",
       logger);
@@ -46,7 +46,7 @@ TEST_F(TomlParserTest, ParseVectorSettings) {
   EXPECT_EQ(nlevels[0], 2);
   EXPECT_EQ(nlevels[1], 3);
 
-  auto transfreq = config.getTransFreq();
+  auto transfreq = config.getTransitionFrequency();
   EXPECT_EQ(transfreq.size(), 2);
   EXPECT_DOUBLE_EQ(transfreq[0], 4.1);
   EXPECT_DOUBLE_EQ(transfreq[1], 4.8);
@@ -57,15 +57,15 @@ TEST_F(TomlParserTest, ParseJklSettingsAllToAll) {
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
-        transfreq = [4.1, 4.8, 5.2, 5.5]
+        transition_frequency = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
-        Jkl = 0.5
+        dipole_coupling = 0.5
       )",
       logger);
 
-  auto Jkl = config.getJkl();
+  auto Jkl = config.getDipoleCoupling();
   size_t num_osc = config.getNumOsc();
   size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
   EXPECT_EQ(Jkl.size(), num_pairs_osc);
@@ -79,17 +79,17 @@ TEST_F(TomlParserTest, ParseJklSettingsOneCoupling) {
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
-        transfreq = [4.1, 4.8, 5.2, 5.5]
+        transition_frequency = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
-        Jkl = [
+        dipole_coupling = [
         { subsystem=[1,2], value=0.4 },
         ]
       )",
       logger);
 
-  auto Jkl = config.getJkl();
+  auto Jkl = config.getDipoleCoupling();
   size_t num_osc = config.getNumOsc();
   size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
   EXPECT_EQ(Jkl.size(), num_pairs_osc);
@@ -106,11 +106,11 @@ TEST_F(TomlParserTest, ParseJklSettingsPerPair) {
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
-        transfreq = [4.1, 4.8, 5.2, 5.5]
+        transition_frequency = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
-        Jkl = [
+        dipole_coupling = [
         { subsystem=[0,1], value=0.1 },
         { subsystem=[0,2], value=0.2 },
         { subsystem=[0,3], value=0.3 },
@@ -121,7 +121,7 @@ TEST_F(TomlParserTest, ParseJklSettingsPerPair) {
       )",
       logger);
 
-  auto Jkl = config.getJkl();
+  auto Jkl = config.getDipoleCoupling();
   size_t num_osc = config.getNumOsc();
   size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
   EXPECT_EQ(Jkl.size(), num_pairs_osc);
@@ -138,7 +138,7 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsAllToAll) {
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
-        transfreq = [4.1, 4.8, 5.2, 5.5]
+        transition_frequency = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
@@ -160,7 +160,7 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsOneCoupling) {
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
-        transfreq = [4.1, 4.8, 5.2, 5.5]
+        transition_frequency = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
@@ -187,7 +187,7 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsPerPair) {
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
-        transfreq = [4.1, 4.8, 5.2, 5.5]
+        transition_frequency = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
@@ -219,10 +219,10 @@ TEST_F(TomlParserTest, ParseOutputSettings_AllOscillators) {
       R"(
         [system]
         nlevels = [2, 2]
-        transfreq = [4.1, 4.8]
+        transition_frequency = [4.1, 4.8]
         ntime = 1000
         dt = 0.1
-        rotfreq = [0.0, 0.0]
+        rotation_frequency = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
         [output]
@@ -242,10 +242,10 @@ TEST_F(TomlParserTest, ParseStructSettings) {
       R"(
         [system]
         nlevels = [2]
-        transfreq = [4.1]
+        transition_frequency = [4.1]
         ntime = 1000
         dt = 0.1
-        rotfreq = [0.0]
+        rotation_frequency = [0.0]
         initial_condition = {type = "diagonal", subsystem = [0]}
 
         [optimization]
@@ -269,8 +269,8 @@ TEST_F(TomlParserTest, ApplyDefaults) {
         nlevels = [2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        transition_frequency = [4.1]
+        rotation_frequency = [0.0]
         initial_condition = {type = "basis"}
       )",
       logger);
@@ -289,8 +289,8 @@ TEST_F(TomlParserTest, Decoherence_Decay) {
         nlevels = [3, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.8]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 4.8]
+        rotation_frequency = [0.0, 0.0]
         decoherence = {type = "decay", decay_time = [30.0, 40.0], dephase_time = [20.0, 25.0]}
         initial_condition = {type = "basis"}
       )",
@@ -309,8 +309,8 @@ TEST_F(TomlParserTest, Decoherence_Dephase) {
         nlevels = [3, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.8]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 4.8]
+        rotation_frequency = [0.0, 0.0]
         decoherence = {type = "dephase", decay_time = [30.0, 40.0], dephase_time = [20.0, 25.0]}
         initial_condition = {type = "basis"}
       )",
@@ -330,8 +330,8 @@ TEST_F(TomlParserTest, InitialCondition_FromFile) {
         nlevels = [2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        transition_frequency = [4.1]
+        rotation_frequency = [0.0]
         initial_condition = {type = "file", filename = "test.dat"}
       )",
       logger);
@@ -348,8 +348,8 @@ TEST_F(TomlParserTest, InitialCondition_ProductState) {
         nlevels = [3, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.8]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 4.8]
+        rotation_frequency = [0.0, 0.0]
         initial_condition = {type = "state", levels = [1, 0]}
       )",
       logger);
@@ -366,8 +366,8 @@ TEST_F(TomlParserTest, InitialCondition_Performance) {
         nlevels = [2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        transition_frequency = [4.1]
+        rotation_frequency = [0.0]
         initial_condition = {type = "performance"}
       )",
       logger);
@@ -383,8 +383,8 @@ TEST_F(TomlParserTest, InitialCondition_Ensemble) {
         nlevels = [3, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.8]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 4.8]
+        rotation_frequency = [0.0, 0.0]
         decoherence = {type = "decay"}
         initial_condition = {type = "ensemble", subsystem = [0, 1]}
       )",
@@ -402,8 +402,8 @@ TEST_F(TomlParserTest, InitialCondition_ThreeStates) {
         nlevels = [3]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        transition_frequency = [4.1]
+        rotation_frequency = [0.0]
         decoherence = {type = "decay"}
         initial_condition = {type = "3states"}
       )",
@@ -420,8 +420,8 @@ TEST_F(TomlParserTest, InitialCondition_NPlusOne_SingleOscillator) {
         nlevels = [3]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        transition_frequency = [4.1]
+        rotation_frequency = [0.0]
         decoherence = {type = "decay"}
         initial_condition = {type = "nplus1"}
       )",
@@ -439,8 +439,8 @@ TEST_F(TomlParserTest, InitialCondition_NPlusOne_MultipleOscillators) {
         nlevels = [2, 3]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.8]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 4.8]
+        rotation_frequency = [0.0, 0.0]
         decoherence = {type = "decay"}
         initial_condition = {type = "nplus1"}
       )",
@@ -459,8 +459,8 @@ TEST_F(TomlParserTest, InitialCondition_Diagonal_Schrodinger) {
         ntime = 1000
         dt = 0.1
         nessential = [3, 2]
-        transfreq = [4.1, 4.8]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 4.8]
+        rotation_frequency = [0.0, 0.0]
         decoherence = {type = "none"}
         initial_condition = {type = "diagonal", subsystem = [1]}
       )",
@@ -480,8 +480,8 @@ TEST_F(TomlParserTest, InitialCondition_Basis_Schrodinger) {
         ntime = 1000
         dt = 0.1
         nessential = [3, 2]
-        transfreq = [4.1, 4.8]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 4.8]
+        rotation_frequency = [0.0, 0.0]
         decoherence = {type = "none"}
         initial_condition = {type = "basis", subsystem = [1]}
       )",
@@ -501,8 +501,8 @@ TEST_F(TomlParserTest, InitialCondition_Basis_Lindblad) {
         ntime = 1000
         dt = 0.1
         nessential = [3, 2]
-        transfreq = [4.1, 4.8]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 4.8]
+        rotation_frequency = [0.0, 0.0]
         decoherence = {type = "decay"}
         initial_condition = {type = "basis", subsystem = [1]}
       )",
@@ -521,8 +521,8 @@ TEST_F(TomlParserTest, ControlParameterizations_Spline0) {
         nlevels = [2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        transition_frequency = [4.1]
+        rotation_frequency = [0.0]
         initial_condition = {type = "basis"}
 
         [control]
@@ -544,8 +544,8 @@ TEST_F(TomlParserTest, ControlParameterizations_Spline) {
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.1]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 4.1]
+        rotation_frequency = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
         [control]
@@ -576,8 +576,8 @@ TEST_F(TomlParserTest, ControlParameterizations_Defaults) {
         nlevels = [2, 2, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.8, 5.2]
-        rotfreq = 0.0
+        transition_frequency = [4.1, 4.8, 5.2]
+        rotation_frequency = 0.0
         initial_condition = {type = "basis"}
 
         [control]
@@ -614,8 +614,8 @@ TEST_F(TomlParserTest, ControlParameterizations_AllOscillators) {
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.8]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 4.8]
+        rotation_frequency = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
         [control]
@@ -645,8 +645,8 @@ TEST_F(TomlParserTest, ControlInitialization_Defaults) {
         nlevels = [2, 2, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.1, 4.1]
-        rotfreq = [0.0, 0.0, 0.0]
+        transition_frequency = [4.1, 4.1, 4.1]
+        rotation_frequency = [0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
 
         [control]
@@ -679,8 +679,8 @@ TEST_F(TomlParserTest, ControlInitializationSettings) {
         nlevels = [2, 2, 2, 2, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.1, 4.1, 4.1, 4.1]
-        rotfreq = [0.0, 0.0, 0.0, 0.0, 0.0]
+        transition_frequency = [4.1, 4.1, 4.1, 4.1, 4.1]
+        rotation_frequency = [0.0, 0.0, 0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
 
         [control]
@@ -736,8 +736,8 @@ TEST_F(TomlParserTest, ControlInitialization_File) {
         nlevels = [2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        transition_frequency = [4.1]
+        rotation_frequency = [0.0]
         initial_condition = {type = "basis"}
 
         [control]
@@ -757,8 +757,8 @@ TEST_F(TomlParserTest, ControlInitialization_AllOscillators) {
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.1]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 4.1]
+        rotation_frequency = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
         [control]
@@ -784,8 +784,8 @@ TEST_F(TomlParserTest, ControlInitialization_DefaultWithOverrides) {
         nlevels = [3, 3, 3]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.1, 4.1]
-        rotfreq = [0.0, 0.0, 0.0]
+        transition_frequency = [4.1, 4.1, 4.1]
+        rotation_frequency = [0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
 
         [control]
@@ -818,8 +818,8 @@ TEST_F(TomlParserTest, ControlBounds) {
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 3.3]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 3.3]
+        rotation_frequency = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
         [control]
@@ -842,8 +842,8 @@ TEST_F(TomlParserTest, ControlBounds_Defaults) {
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 3.0]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 3.0]
+        rotation_frequency = [0.0, 0.0]
         initial_condition = {type = "basis"}
       )",
       logger);
@@ -862,8 +862,8 @@ TEST_F(TomlParserTest, ControlBounds_AllOscillators) {
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 3.3]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 3.3]
+        rotation_frequency = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
         [control]
@@ -885,8 +885,8 @@ TEST_F(TomlParserTest, CarrierFrequenciesDefaults) {
         nlevels = [2,2]
         ntime = 1000
         dt = 0.1
-        transfreq = 4.1
-        rotfreq = 0.0
+        transition_frequency = 4.1
+        rotation_frequency = 0.0
         initial_condition = {type = "basis"}
 
         [control]
@@ -912,7 +912,7 @@ TEST_F(TomlParserTest, CarrierFrequenciesPerSubsystem) {
         nlevels = [2,2]
         ntime = 1000
         dt = 0.1
-        transfreq = 4.1
+        transition_frequency = 4.1
         initial_condition = {type = "basis"}
 
         [control]
@@ -941,8 +941,8 @@ TEST_F(TomlParserTest, CarrierFrequencies_AllOscillators) {
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.1]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 4.1]
+        rotation_frequency = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
         [control]
@@ -967,8 +967,8 @@ TEST_F(TomlParserTest, CarrierFrequencies_AllOscillatorsShorthand) {
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.1]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 4.1]
+        rotation_frequency = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
         [control]
@@ -993,10 +993,10 @@ TEST_F(TomlParserTest, CarrierFrequency_InvalidID) {
         R"(
           [system]
           nlevels = [2]
-          transfreq = [4.1]
+          transition_frequency = [4.1]
           ntime = 1000
           dt = 0.1
-          rotfreq = [0.0]
+          rotation_frequency = [0.0]
           initial_condition = {type = "basis"}
 
           [control]
@@ -1015,8 +1015,8 @@ TEST_F(TomlParserTest, OptimTarget_GateType) {
         nlevels = [2,2,2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 3.4, 5.6]
-        rotfreq = [0.0, 0.0, 0.0]
+        transition_frequency = [4.1, 3.4, 5.6]
+        rotation_frequency = [0.0, 0.0, 0.0]
         initial_condition = {type = "basis"}
 
         [optimization]
@@ -1044,8 +1044,8 @@ TEST_F(TomlParserTest, OptimTarget_GateRotFreq) {
         nlevels = [2,2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 3.4]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 3.4]
+        rotation_frequency = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
         [optimization]
@@ -1070,8 +1070,8 @@ TEST_F(TomlParserTest, OptimTarget_GateFromFile) {
         nlevels = [2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        transition_frequency = [4.1]
+        rotation_frequency = [0.0]
         initial_condition = {type = "basis"}
 
         [optimization]
@@ -1092,8 +1092,8 @@ TEST_F(TomlParserTest, OptimTarget_ProductState) {
         nlevels = [3, 3, 3]
         ntime = 1000
         dt = 0.1
-        transfreq = 4.1
-        rotfreq = 0.0
+        transition_frequency = 4.1
+        rotation_frequency = 0.0
         initial_condition = {type = "basis"}
 
         [optimization]
@@ -1119,8 +1119,8 @@ TEST_F(TomlParserTest, OptimTarget_FromFile) {
         nlevels = [2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        transition_frequency = [4.1]
+        rotation_frequency = [0.0]
         initial_condition = {type = "basis"}
 
         [optimization]
@@ -1141,8 +1141,8 @@ TEST_F(TomlParserTest, OptimTarget_DefaultNone) {
         nlevels = [2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1]
-        rotfreq = [0.0]
+        transition_frequency = [4.1]
+        rotation_frequency = [0.0]
         initial_condition = {type = "basis"}
       )",
       logger);
@@ -1161,8 +1161,8 @@ TEST_F(TomlParserTest, OptimWeightsVectorNormalization) {
         nlevels = [2, 2]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.1]
-        rotfreq = [0.0, 0.0]
+        transition_frequency = [4.1, 4.1]
+        rotation_frequency = [0.0, 0.0]
         initial_condition = {type = "basis"}
 
         [optimization]
@@ -1187,8 +1187,8 @@ TEST_F(TomlParserTest, OptimWeightsScalarNotAllowed) {
             nlevels = [2, 2]
             ntime = 1000
             dt = 0.1
-            transfreq = [4.1, 4.1]
-            rotfreq = [0.0, 0.0]
+            transition_frequency = [4.1, 4.1]
+            rotation_frequency = [0.0, 0.0]
             initial_condition = {type = "basis"}
 
             [optimization]
@@ -1205,7 +1205,7 @@ TEST_F(TomlParserTest, OptimWeightsDefault) {
         nlevels = [4,3]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 3.4]
+        transition_frequency = [4.1, 3.4]
         initial_condition = {type = "diagonal", subsystem = [0]}
       )",
       logger);
@@ -1226,9 +1226,9 @@ nlevels = [3]
 nessential = [2]
 ntime = 2500
 dt = 0.02
-transfreq = [5.5]
+transition_frequency = [5.5]
 selfkerr = [-0.2]
-rotfreq = [2.1]
+rotation_frequency = [2.1]
 decoherence = {type = "decay", decay_time = [25.0], dephase_time = [0.0]}
 initial_condition = {type = "state", levels = [1]}
 
@@ -1282,12 +1282,12 @@ TEST_F(TomlParserTest, Transfreq_ScalarValue) {
         nlevels = [2, 3, 4]
         ntime = 1000
         dt = 0.1
-        transfreq = 5.5
+        transition_frequency = 5.5
         initial_condition = {type = "basis"}
       )",
       logger);
 
-  auto transfreq = config.getTransFreq();
+  auto transfreq = config.getTransitionFrequency();
   EXPECT_EQ(transfreq.size(), 3);
   EXPECT_DOUBLE_EQ(transfreq[0], 5.5);
   EXPECT_DOUBLE_EQ(transfreq[1], 5.5);
@@ -1301,12 +1301,12 @@ TEST_F(TomlParserTest, Transfreq_ArrayValue) {
         nlevels = [2, 3, 4]
         ntime = 1000
         dt = 0.1
-        transfreq = [4.1, 4.8, 5.2]
+        transition_frequency = [4.1, 4.8, 5.2]
         initial_condition = {type = "basis"}
       )",
       logger);
 
-  auto transfreq = config.getTransFreq();
+  auto transfreq = config.getTransitionFrequency();
   EXPECT_EQ(transfreq.size(), 3);
   EXPECT_DOUBLE_EQ(transfreq[0], 4.1);
   EXPECT_DOUBLE_EQ(transfreq[1], 4.8);
@@ -1322,7 +1322,7 @@ TEST_F(TomlParserTest, Transfreq_WrongSizeError) {
               nlevels = [2, 3, 4]
               ntime = 1000
               dt = 0.1
-              transfreq = [4.1, 4.8]
+              transition_frequency = [4.1, 4.8]
               initial_condition = {type = "basis"}
             )",
             logger);
@@ -1339,11 +1339,11 @@ TEST_F(TomlParserTest, CouplingSubsystem_HasLength_TooManyElements) {
             R"(
               [system]
               nlevels = [2, 2, 2, 2]
-              transfreq = [4.1, 4.8, 5.2, 5.5]
+              transition_frequency = [4.1, 4.8, 5.2, 5.5]
               ntime = 1000
               dt = 0.1
               initial_condition = {type = "basis"}
-              Jkl = [
+              dipole_coupling = [
                 { subsystem = [0, 1, 2], value = 0.5 }
               ]
             )",
@@ -1359,7 +1359,7 @@ TEST_F(TomlParserTest, CouplingSubsystem_HasLength_TooFewElements) {
             R"(
               [system]
               nlevels = [2, 2, 2, 2]
-              transfreq = [4.1, 4.8, 5.2, 5.5]
+              transition_frequency = [4.1, 4.8, 5.2, 5.5]
               ntime = 1000
               dt = 0.1
               initial_condition = {type = "basis"}

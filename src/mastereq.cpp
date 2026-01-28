@@ -19,10 +19,10 @@ MasterEq::MasterEq(const Config& config, Oscillator** oscil_vec_, bool quietmode
   oscil_vec = oscil_vec_;
 
   crosskerr = config.getCrossKerr();
-  Jkl = config.getJkl();
+  Jkl = config.getDipoleCoupling();
 
   // Compute eta from rotation frequencies (eta_ij = w^r_i - w^r_j)
-  const std::vector<double>& rot_freq = config.getRotFreq();
+  const std::vector<double>& rot_freq = config.getRotationFrequency();
   eta.resize(nlevels.size() * (nlevels.size() - 1) / 2);
   int idx = 0;
   for (size_t iosc = 0; iosc < nlevels.size(); iosc++) {

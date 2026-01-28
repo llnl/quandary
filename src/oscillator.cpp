@@ -23,8 +23,8 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   size_t ntime = config.getNTime();
   Tfinal = dt * ntime;
 
-  const std::vector<double>& trans_freq = config.getTransFreq();
-  const std::vector<double>& rot_freq = config.getRotFreq();
+  const std::vector<double>& trans_freq = config.getTransitionFrequency();
+  const std::vector<double>& rot_freq = config.getRotationFrequency();
   const std::vector<double>& selfkerr_config = config.getSelfKerr();
 
   ground_freq = trans_freq[id] * 2.0 * M_PI;

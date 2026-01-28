@@ -106,14 +106,14 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     dt = validators::field<double>(*system_table, "dt").positive().value();
 
-    transfreq = validators::scalarOrVector<double>(*system_table, "transfreq", num_osc);
+    transition_frequency = validators::scalarOrVector<double>(*system_table, "transition_frequency", num_osc);
 
     selfkerr = validators::scalarOrVectorOr<double>(*system_table, "selfkerr", num_osc, std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
 
-    // Parse crosskerr and Jkl coupling: either one value (all-to-all coupling) or array of tables with 'subsystem = [i,j]' field for i-j coupling)
+    // Parse crosskerr and dipole_coupling: either one value (all-to-all coupling) or array of tables with 'subsystem = [i,j]' field for i-j coupling)
     size_t num_pairs = (num_osc - 1) * num_osc / 2;
     crosskerr.assign(num_pairs, ConfigDefaults::CROSSKERR);
-    Jkl.assign(num_pairs, ConfigDefaults::JKL);
+    dipole_coupling.assign(num_pairs, ConfigDefaults::DIPOLE_COUPLING);
     // Overwrite for crosskerr
     if (system_table->contains("crosskerr")) {
       if ((*system_table)["crosskerr"].is_value()) {
@@ -124,18 +124,18 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       crosskerr = parsePerSubsystemSettings<double>(*system_table, "crosskerr", num_osc, ConfigDefaults::CROSSKERR, parseFunc, logger);
       }
     }
-    // Overwrite for Jkl
-    if (system_table->contains("Jkl")) {
-      if ((*system_table)["Jkl"].is_value()) {
-        double single_val = validators::field<double>(*system_table, "Jkl").value();
-        Jkl.assign(num_pairs, single_val);
+    // Overwrite for dipole_coupling
+    if (system_table->contains("dipole_coupling")) {
+      if ((*system_table)["dipole_coupling"].is_value()) {
+        double single_val = validators::field<double>(*system_table, "dipole_coupling").value();
+        dipole_coupling.assign(num_pairs, single_val);
       } else {
       auto parseFunc = [](const toml::table& t) { return validators::field<double>(t, "value").value(); };
-      Jkl = parsePerSubsystemSettings<double>(*system_table, "Jkl", num_osc, ConfigDefaults::JKL, parseFunc, logger);
+      dipole_coupling = parsePerSubsystemSettings<double>(*system_table, "dipole_coupling", num_osc, ConfigDefaults::DIPOLE_COUPLING, parseFunc, logger);
       }
     }
 
-    rotfreq = validators::scalarOrVectorOr<double>(*system_table, "rotfreq", num_osc, std::vector<double>(num_osc, ConfigDefaults::ROTFREQ));
+    rotation_frequency = validators::scalarOrVectorOr<double>(*system_table, "rotation_frequency", num_osc, std::vector<double>(num_osc, ConfigDefaults::ROTATION_FREQUENCY));
 
     hamiltonian_file_Hsys = validators::getOptional<std::string>((*system_table)["hamiltonian_file_Hsys"]);
     hamiltonian_file_Hc = validators::getOptional<std::string>((*system_table)["hamiltonian_file_Hc"]);
@@ -353,11 +353,11 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   }
 
   if (!settings.transfreq.has_value()) {
-    logger.exitWithError("transfreq cannot be empty");
+    logger.exitWithError("transition_frequency cannot be empty");
   }
 
-  transfreq = settings.transfreq.value();
-  copyLast(transfreq, num_osc);
+  transition_frequency = settings.transfreq.value();
+  copyLast(transition_frequency, num_osc);
 
   selfkerr = settings.selfkerr.value_or(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
   copyLast(selfkerr, num_osc);
@@ -367,12 +367,12 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   copyLast(crosskerr, num_pairs_osc);
   crosskerr.resize(num_pairs_osc);  // Truncate if larger than expected
 
-  Jkl = settings.Jkl.value_or(std::vector<double>(num_pairs_osc, ConfigDefaults::JKL));
-  copyLast(Jkl, num_pairs_osc);
-  Jkl.resize(num_pairs_osc);  // Truncate if larger than expected
+  dipole_coupling = settings.Jkl.value_or(std::vector<double>(num_pairs_osc, ConfigDefaults::DIPOLE_COUPLING));
+  copyLast(dipole_coupling, num_pairs_osc);
+  dipole_coupling.resize(num_pairs_osc);  // Truncate if larger than expected
 
-  rotfreq = settings.rotfreq.value_or(std::vector<double>(num_osc, ConfigDefaults::ROTFREQ));
-  copyLast(rotfreq, num_osc);
+  rotation_frequency = settings.rotfreq.value_or(std::vector<double>(num_osc, ConfigDefaults::ROTATION_FREQUENCY));
+  copyLast(rotation_frequency, num_osc);
 
   hamiltonian_file_Hsys = settings.hamiltonian_file_Hsys;
   hamiltonian_file_Hc = settings.hamiltonian_file_Hc;
@@ -779,11 +779,11 @@ void Config::printConfig(std::stringstream& log) const {
   log << "nessential = " << printVector(nessential) << "\n";
   log << "ntime = " << ntime << "\n";
   log << "dt = " << dt << "\n";
-  log << "transfreq = " << printVector(transfreq) << "\n";
+  log << "transition_frequency = " << printVector(transition_frequency) << "\n";
   log << "selfkerr = " << printVector(selfkerr) << "\n";
   log << "crosskerr = " << toStringCoupling(crosskerr, nlevels.size()) << "\n";
-  log << "Jkl = " << toStringCoupling(Jkl, nlevels.size()) << "\n";
-  log << "rotfreq = " << printVector(rotfreq) << "\n";
+  log << "dipole_coupling = " << toStringCoupling(dipole_coupling, nlevels.size()) << "\n";
+  log << "rotation_frequency = " << printVector(rotation_frequency) << "\n";
   log << "decoherence = {\n";
   log << "  type = \"" << enumToString(decoherence_type, DECOHERENCE_TYPE_MAP) << "\",\n";
   log << "  decay_time = " << printVector(decay_time) << ",\n";
