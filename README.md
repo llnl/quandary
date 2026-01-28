@@ -14,6 +14,21 @@ Feel free to reach out to Stefanie Guenther [guenther5@llnl.gov] for any questio
 # Documentation
 Both user and code documentation is available [here](https://software.llnl.gov/quandary/).
 
+## Building Doxygen Locally
+To build the Doxygen documentation locally:
+
+1. Install Doxygen and Graphviz (e.g., `brew install doxygen graphviz` on macOS or `apt install doxygen graphviz` on Ubuntu)
+2. Configure and build the docs:
+   ```
+   cd build
+   cmake ..
+   make quandary_doxygen
+   ```
+3. View the docs in your browser:
+   ```
+   open build/docs/doxygen/html/index.html
+   ```
+
 # Building
 Quandary uses CMake and [BLT](https://github.com/LLNL/blt) to handle builds. Since BLT is included as a
 submodule, first make sure you run:
