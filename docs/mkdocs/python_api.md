@@ -8,6 +8,10 @@ The python interface eases the use of the C++ Quandary code, and adds additional
 
 All interface functions are defined in `./quandary.py`, which defines the `Quandary` dataclass that gathers all configuration options and sets default values. Default values are overwritten by user input either through the constructor call through `Quandary(<membervar>=<value>)` directly, or by accessing the member variables after construction and calling `update()` afterwards. A good place to get started is to look at the example `example_swap02.py`, or jump start with the [Jupyter Notebook Tutorial](QuandaryWithPython_HowTo.ipynb)
 
+## Parameter Naming
+
+For historical reasons, some parameter names differ between the Python interface and TOML configuration. For a complete cross-reference of all parameters across interfaces, see the [Parameter Reference](../parameter_reference.md).
+
 Under the hood, the python interface dumps all configuration options to file and evokes (multiple) subprocesses that execute the C++ code on this configuration file. The C++ output files are loaded back into the python interpreter.
 It is therefore recommended to utilize the python interface only for smaller system sizes (fewer qubits), and switch to operate the C++ code directly when larger systems are considered (e.g. when parallel linear algebra is required.)
 
