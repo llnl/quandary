@@ -29,6 +29,24 @@ To build the Doxygen documentation locally:
    open build/docs/doxygen/html/index.html
    ```
 
+## Building User Guide Locally
+To build the user guide documentation locally:
+
+1. Install the required Python packages:
+   ```
+   pip install mkdocs pymdown-extensions mkdocs-bibtex mkdocs-macros-plugin mkdocs-jupyter
+   ```
+2. Build the MkDocs site:
+   ```
+   mkdocs build
+   ```
+3. To view the documentation in your browser while making changes (with live reload):
+   ```
+   mkdocs serve
+   ```
+   Then open http://127.0.0.1:8000/ in your browser.
+4. The built site will be in the `site` directory.
+
 # Building
 Quandary uses CMake and [BLT](https://github.com/LLNL/blt) to handle builds. Since BLT is included as a
 submodule, first make sure you run:
