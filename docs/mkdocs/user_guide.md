@@ -57,7 +57,7 @@ where the collapse operators $\Ell_{lk}$ model decay and dephasing in each subsy
 - Decay  ("$T_1$"): $\Ell_{1k} = \frac{1}{\sqrt{T_1^k}} a_k$
 - Dephasing  ("$T_2$"): $\Ell_{2k} = \frac{1}{\sqrt{T_2^k}} a_k^{\dagger}a_k$
 
-<!-- Note that the main choice here is which equation should be solved for and which representation of the quantum state will be used (either Schroedinger with a state vector $\psi \in \C^N$, or Lindblad's equation for a density matrix $\rho \in \C^{N\times N}$). In the C++ configuration file, this choice is determined through the option `collapse_type`, where `none` will result in Schroedinger's equation and any other choice will result in Lindblad's equation being solved for. Further note, that choosing `collapse_type` $\neq$ `none`, together with a collapse time $T_{l}^k = 0.0$ will omit the evaluation of the corresponding term in the Lindblad operator $\eqref{eq:collapseop}$ (but will still solve Lindblad's equation for the density matrix). In the python interface, Lindblad's solver is enabled by passing decay and decoherence times `T1` and `T2` per oscillator to the Quandary object. -->
+<!-- Note that the main choice here is which equation should be solved for and which representation of the quantum state will be used (either Schroedinger with a state vector $\psi \in \C^N$, or Lindblad's equation for a density matrix $\rho \in \C^{N\times N}$). In the C++ configuration file, this choice is determined through the `decoherence` setting in the `[system]` section, where `type = "none"` will result in Schroedinger's equation and any other choice will result in Lindblad's equation being solved for. Further note, that choosing `type` $\neq$ `"none"`, together with `decay_time` or `dephase_time` set to 0.0 will omit the evaluation of the corresponding term in the Lindblad operator $\eqref{eq:collapseop}$ (but will still solve Lindblad's equation for the density matrix). In the python interface, Lindblad's solver is enabled by passing decay and decoherence times `T1` and `T2` per oscillator to the Quandary object. -->
 
 ## Rotational frame 
 Quandary uses the rotating wave approximation to slow down the time scale of the quantum dynamics. The user can specify the rotation frequencies $\omega_k^r$ for each oscillator. Under the rotating frame wave approximation, the Hamiltonians are transformed to
@@ -131,7 +131,7 @@ where the (single or multiple) final-time states $\rho_i(T)$ solve either Lindbl
 The remaining terms are regularization and penalty terms that can be added to stabilize convergence, or prevent leakage, compare Section [Regularization, penalty terms, and leakage prevention](#sec:penalty)
 
 ## Objective function {#sec:objectivefunctionals}
-The following objective functions can be used for optimization in Quandary (config option `optim_objective`):
+The following objective functions can be used for optimization in Quandary (config option `objective` in the `[optimization]` section):
 
 \begin{align}
  J_{Frobenius} &= \sum_{i=1}^{n_{init}} \frac{\beta_i}{2} \left\| \rho^{target}_i - \rho_i(T)\right\|^2_F \\
@@ -167,7 +167,7 @@ Further note that this fidelity is averaged over the chosen initial conditions, 
 ### Gate optimization
 Quandary can be used to design control pulses that realize logical gate operations. Let $V\in \C^{N\times N}$ be the unitary matrix (gate), optimized control pulses drive any initial state $\rho(0)$ to the unitary transformation $\rho^{target} = V\rho(0)V^{\dagger}$ (Lindblad), or, in the Schroedinger case, drive any $\psi(0)$ to $\psi(T) =  V\psi(0)$.
 Some default target gates that are readily available, or can be specified from file or through the Python interface. (File format: column-wise vectorization, first all real parts then all imaginary parts.)
-Optionally, the user can specify frequencies to rotate the target gate, using the configuration option `gate_rot_freq`.
+Optionally, the user can specify frequencies to rotate the target gate, using the `gate_rot_freq` field within the `target` setting (e.g., `target = { type = "gate", gate_type = "cnot", gate_rot_freq = [0.0, 0.0] }`).
 
 Since *any* initial quantum state should be transformed by the control pulses, the corresponding initial conditions must span a basis with $n_{init} = N$ for Schroedinger solver, and $n_{init}=N^2$ for Lindblad solver, see Section [Initial conditions](#sec:initcond). 
 
@@ -180,7 +180,7 @@ Quandary can be used to optimize for pulses that drive (one or multiple) initial
 A desired target state can either be read from file (format vectorized target state in the essential dimensions, first all real parts, then all imaginary parts), or it can be set to a pure product state of the form $\psi_{target} = |i_0, i_1, i_2, ...\rangle$, or $\rho_{target} = \psi_{target}\psi_{target}^\dagger$.
 
 ## Initial conditions {#sec:initcond}
-The initial states $\rho_i(0)$ which are accounted for in the objective function eq. $\eqref{eq:minproblem}$ can be specified with the configuration option `initialcondition`. 
+The initial states $\rho_i(0)$ which are accounted for in the objective function eq. $\eqref{eq:minproblem}$ can be specified with the configuration option `initial_condition` in the `[system]` section. 
 
 
 * **Basis states for gate optimization**: $n_{init}=N$ (Schroedinger case), or $n_{init}=N^2$ Lindblad case. For the Schroedinger case, the basis states are the unit vectors $\psi_i(0)=\boldsymbol{e}_i \in \R^N, i=0,\dots N-1$. For the Lindblad's case, the $N^2$ basis density matrices defined in [@guenther2021quantum] are used as initial states. 
@@ -432,10 +432,10 @@ It is further required that the system dimension is an integer multiple of the n
   state.
 
 # Output and plotting the results
-Quandary generates various output files for system evolution of the current (optimized) controls as well as the optimization progress. All data files will be dumped into a user-specified folder through the config option `datadir`.
+Quandary generates various output files for system evolution of the current (optimized) controls as well as the optimization progress. All data files will be dumped into a user-specified folder through the config option `directory` in the `[output]` section.
 
 ### Output options with regard to state evolution
-For each subsystem $k$, the user can specify the desired state evolution output through the config option `output<k>`:
+The user can specify the desired state evolution output through the config option `observables` in the `[output]` section. This is an array of observable types to output:
 
 - `expectedEnergy`: This option prints the time evolution of the expected energy level of subsystem $k$ into files with naming convention `expected<k>.iinit<i>.dat`, where $i=1,\dots,n_{init}$ denotes the unique identifier for each initial condition $\rho_i(0)$ that was propagated through (see Section [Initial conditions](#sec:initcond)). This file contains two columns, the first row being the time values, the second one being the expectation value of the energy level of subsystem $k$ at that time point, computed from
 
@@ -449,14 +449,14 @@ For each subsystem $k$, the user can specify the desired state evolution output 
 - `populationComposite`: Prints the time evolution of the state populations of the entire (full-dimensional) system into files (one for each initial condition, as above).
 - `fullstate`: For smaller systems, one can choose to print out the full state $\rho(t)$ or $\psi(t)$ for each time point into the files `rho_Re.iinit<m>.dat` and `rho_Im.iinit<m>.dat`, for the real and imaginary parts. These files contain $N^2+1$ (Lindblad) or $N+1$ (Schroedinger) columns the first one being the time point value and the remaining ones contain the vectorized density matrix or the state vector for that time point. Note that these file become very big very quickly -- use with care!
 
-The user can change the frequency of output in time (printing only every $j$-th time point) through the option `output_frequency`. This is particularly important when doing performance tests, as computing the reduced states for output requires extra computation and communication that might skew performance tests.
+The user can change the frequency of output in time (printing only every $j$-th time point) through the option `timestep_stride` in the `[output]` section. This is particularly important when doing performance tests, as computing the reduced states for output requires extra computation and communication that might skew performance tests.
 
 ### Output with regard to simulation and optimization
 - `config_log.toml` contains all configuration options that had been used for the current run of the C++ code.
 - `params.dat` contains the control parameters $\bfa$ that had been used to determine the current control pulses. This file contains one column containing all parameters, ordered as stored, see Section [Control pulses](#sec:controlpulses).
 - `control<k>.dat` contain the resulting control pulses applied to subsystem $k$ over time. It contains four columns, the first one being the time, second and third being $p^k(t)$ and $q^k(t)$ (rotating frame controls), and the last one is the corresponding lab-frame pulse $f^k(t)$. Note that the units of the control pulses are in frequency domain (divided by $2\pi)$. The unit matches the unit specified with the system parameters such as the qubit ground frequencies $\omega_k$.
 - `optim_history.dat` contains information about the optimization progress in terms of the overall objective function and contribution from each term (cost at final time $T$ and contribution from the tikhonov regularization and the penalty term), as well the norm of the gradient and the fidelity, for each iteration of the optimization. If only a forward simulation is performed, this file still prints out the objective function and fidelity for the forward simulation.
-Quandary always prints the current parameters and control pulses at the beginning of a simulation or optimization, and in addition at every $l$-th optimization iteration determined from the `optim_monitor_frequency` configuration option.
+Quandary always prints the current parameters and control pulses at the beginning of a simulation or optimization, and in addition at every $l$-th optimization iteration determined from the `optimization_stride` configuration option in the `[output]` section.
 
 ### Plotting
 The format of all output files are very well suited for plotting with [Gnuplot](http://www.gnuplot.info), which is a command-line based plotting program that can output directly to screen, or into many other formats such as png, eps, or even tex. As an example, from within a Gnuplot session, you can plot e.g. the expected energy level of subsystem $k=0$ for initial condition $m=0$ by the simple command
