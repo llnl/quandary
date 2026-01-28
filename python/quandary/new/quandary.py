@@ -7,7 +7,8 @@ import os
 import subprocess
 from typing import TYPE_CHECKING, Optional
 
-from ._quandary_impl import QuandaryConfig, Config
+from .. import _quandary_impl
+from .._quandary_impl import QuandaryConfig, Config, DecoherenceType
 
 if TYPE_CHECKING:
   from .results import QuandaryResults
@@ -87,8 +88,7 @@ class Quandary:
     Returns:
       0 on success, non-zero on error.
     """
-    from ._quandary_impl import run as _run
-    return _run(self._config, quiet)
+    return _quandary_impl.run(self._config, quiet)
 
   def run_mpi(
       self,
@@ -143,7 +143,7 @@ class Quandary:
       f.write(toml_content)
 
     # Python code to run Quandary from the TOML file
-    python_code = f'from quandary import run_from_file; run_from_file("{config_file}", quiet={quiet})'
+    python_code = f'from quandary.new import run_from_file; run_from_file("{config_file}", quiet={quiet})'
 
     # Build the command
     cmd = [mpi_exec, "-n", str(n_procs), python_exec, "-c", python_code]
@@ -179,7 +179,6 @@ class Quandary:
       >>> print(f"Infidelity: {results.infidelity}")
     """
     from .results import get_results as _get_results
-    from ._quandary_impl import DecoherenceType
     return _get_results(
       datadir=self.output_directory,
       lindblad=self.decoherence_type != DecoherenceType.NONE,
