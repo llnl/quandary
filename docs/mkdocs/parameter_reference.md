@@ -1,14 +1,14 @@
 # Quandary Parameter Reference
 
 This document provides a comprehensive mapping between parameters in different Quandary interfaces.
-Note that the CFG format is deprecated in favor of the TOML format and will be removed. See also [Config Options](../config.md).
+Note that the CFG format is deprecated in favor of the TOML format and will be removed. See also [Config Options](config.md).
 
 ## System Parameters
 
 | TOML Setting | Python Interface | CFG Format | Description |
 |-------------|----------------|------------|-------------|
 | `nlevels` | `Ne` + `Ng` | `nlevels` | Number of energy levels per oscillator |
-| `nessential` | `Ne` | N/A | Number of essential levels per subsystem |
+| `nessential` | `Ne` | `nessential` | Number of essential levels per subsystem |
 | `ntime` | Derived | `ntime` | Number of time steps used for time-integration |
 | `dt` | Derived from `T`/`nsteps` | `dt` | Time step size (ns) |
 | `transition_frequency` | `freq01` | `transfreq` | 01-transition frequencies [GHz] |
@@ -29,7 +29,7 @@ Note that the CFG format is deprecated in favor of the TOML format and will be r
 | `carrier_frequency` | `carrier_frequency` | `carrier_frequency` | Carrier frequencies |
 | `initialization` | `initctrl_MHz`, `randomize_init_ctrl` | `control_init_type` | Control initialization |
 | `amplitude_bound` | `maxctrl_MHz` | `control_bounds` | Control amplitude bounds |
-| `zero_boundary_condition` | `control_enforce_BC` | `control_zero_boundary_condition` | Control boundary condition |
+| `zero_boundary_condition` | `control_enforce_BC` | `control_enforceBC` | Control boundary condition |
 
 ## Optimization Parameters
 
@@ -47,10 +47,10 @@ Note that the CFG format is deprecated in favor of the TOML format and will be r
 
 | TOML Setting | Python Interface | CFG Format | Description |
 |-------------|----------------|------------|-------------|
-| `directory` | N/A | `datadir` | Output directory |
+| `directory` | `datadir` (method param) | `datadir` | Output directory |
 | `observables` | N/A | `output` | Observables to output |
-| `timestep_stride` | N/A | `output_timestep_stride` | Output frequency |
-| `optimization_stride` | `print_frequency_iter` | `output_optimization_stride` | Optimization output frequency |
+| `timestep_stride` | N/A | `output_frequency` | Output frequency |
+| `optimization_stride` | `print_frequency_iter` | `optim_monitor_frequency` | Optimization output frequency |
 
 ## Solver Parameters
 

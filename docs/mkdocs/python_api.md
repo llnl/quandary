@@ -10,7 +10,7 @@ All interface functions are defined in `./quandary.py`, which defines the `Quand
 
 ## Parameter Naming
 
-For historical reasons, some parameter names differ between the Python interface and TOML configuration. For a complete cross-reference of all parameters across interfaces, see the [Parameter Reference](../parameter_reference.md).
+For historical reasons, some parameter names differ between the Python interface and TOML configuration. For a complete cross-reference of all parameters across interfaces, see the [Parameter Reference](parameter_reference.md).
 
 Under the hood, the python interface dumps all configuration options to file and evokes (multiple) subprocesses that execute the C++ code on this configuration file. The C++ output files are loaded back into the python interpreter.
 It is therefore recommended to utilize the python interface only for smaller system sizes (fewer qubits), and switch to operate the C++ code directly when larger systems are considered (e.g. when parallel linear algebra is required.)

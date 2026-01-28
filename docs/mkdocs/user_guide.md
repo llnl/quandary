@@ -40,7 +40,7 @@ The **default Hamiltonian** in Quandary models superconducting (transmon) qubits
   H_c(t) &:= \sum_{k=0}^{Q-1} f^k(t) \left(a_k + a_k^\dagger \right)
 \end{align}
 
-where $\omega_k\geq 0$ denotes $0 \rightarrow 1$ transition frequencies for each oscillator $k$ (configured as `transition_frequency` in TOML or `freq01` in Python), $\xi_k\geq 0$ are the self-Kerr coefficients (`selfkerr`). Couplings can be specified through the cross resonance coefficients $J_{kl}\geq 0$ ("dipole-dipole interaction", configured as `dipole_coupling` in TOML or `Jkl` in Python) or through $\xi_{kl}\geq 0$ ("zz-coupling", configured as `crosskerr`). 
+where $\omega_k\geq 0$ denotes $0 \rightarrow 1$ transition frequencies for each oscillator $k$ (configured as `transition_frequency`), $\xi_k\geq 0$ are the self-Kerr coefficients (`selfkerr`). Couplings can be specified through the cross resonance coefficients $J_{kl}\geq 0$ ("dipole-dipole interaction", configured as `dipole_coupling`) or through $\xi_{kl}\geq 0$ ("zz-coupling", configured as `crosskerr`). 
 Here, $a_k\in \C^{N\times N}$ denotes the lowering operator acting on subsystem $k$.
 The control pulses $f^k(t)$ can be either specified or optimized for, compare section [Control pulse parameterization](#sec:controlpulses). **Custom system and control Hamiltonian operators** can be specified through Quandary's python interface.
 
@@ -60,7 +60,7 @@ where the collapse operators $\Ell_{lk}$ model decay and dephasing in each subsy
 <!-- Note that the main choice here is which equation should be solved for and which representation of the quantum state will be used (either Schroedinger with a state vector $\psi \in \C^N$, or Lindblad's equation for a density matrix $\rho \in \C^{N\times N}$). In the C++ configuration file, this choice is determined through the `decoherence` setting in the `[system]` section, where `type = "none"` will result in Schroedinger's equation and any other choice will result in Lindblad's equation being solved for. Further note, that choosing `type` $\neq$ `"none"`, together with `decay_time` or `dephase_time` set to 0.0 will omit the evaluation of the corresponding term in the Lindblad operator $\eqref{eq:collapseop}$ (but will still solve Lindblad's equation for the density matrix). In the python interface, Lindblad's solver is enabled by passing decay and decoherence times `T1` and `T2` per oscillator to the Quandary object. -->
 
 ## Rotational frame
-Quandary uses the rotating wave approximation to slow down the time scale of the quantum dynamics. The user can specify the rotation frequencies $\omega_k^r$ for each oscillator (configured as `rotation_frequency` in TOML or `rotfreq` in Python). Under the rotating frame wave approximation, the Hamiltonians are transformed to
+Quandary uses the rotating wave approximation to slow down the time scale of the quantum dynamics. The user can specify the rotation frequencies $\omega_k^r$ for each oscillator (configured as `rotation_frequency`). Under the rotating frame wave approximation, the Hamiltonians are transformed to
 
 \begin{align}
   \tilde{H}_d(t) &:= \sum_{k=0}^{Q-1} \left(\omega_k - \omega_k^{r}\right)a_k^{\dagger}a_k- \frac{\xi_k}{2}
@@ -247,7 +247,7 @@ $Var(\vec{\alpha}) = \sum_{k=1}^Q Var_k(\vec{\alpha})$ with $Var_k(\vec{\alpha})
 Note: All regularization and penalty coefficients $\gamma_i$ should be chosen small enough so that they do not dominate the final-time objective function $J$. This might require some fine-tuning. It is recommended to always add $\gamma_1>0$, e.g. $\gamma_1 = 10^{-4}$, and add other penalties only if needed.
 
 ## Optimization algorithm
-Quandary utilized Petsc's Toolkit for Advanced Optimization (TAO) package to solve the optimal control problem. In the current setup, Quasi-Newton updates are applied to the control parameters using L-BFGS Hessian approximations. A projected line-search is used to incorporate box constraints for control pulse amplitude bounds $|p^k(t)| \leq c^k_{max}$, $|q^k(t)| \leq c^k_{max}$ (configured as `amplitude_bound` in TOML or `maxctrl_MHz` in python) via
+Quandary utilized Petsc's Toolkit for Advanced Optimization (TAO) package to solve the optimal control problem. In the current setup, Quasi-Newton updates are applied to the control parameters using L-BFGS Hessian approximations. A projected line-search is used to incorporate box constraints for control pulse amplitude bounds $|p^k(t)| \leq c^k_{max}$, $|q^k(t)| \leq c^k_{max}$ (configured as `amplitude_bound`) via
 
 \begin{align}
   | \alpha_{s,f}^{k(1)}| \leq \frac{c^k_{max}}{\sqrt{2}N_f^k} \quad \text{and} \quad |
@@ -422,7 +422,7 @@ processes ($np_{total}$) is split as
   np_{init} * np_{petsc} = np_{total}.
 \end{align*}
 
-Since parallelization over different initial conditions is perfect, Quandary automatically sets $np_{init} = n_{init}$, i.e. the total number of cores for distributing initial conditions is the total number of initial conditions that are considered in this run, as specified by the configuration option `intialcondition`. The number of cores for distributed linear algebra with Petsc is then computed from above.
+Since parallelization over different initial conditions is perfect, Quandary automatically sets $np_{init} = n_{init}$, i.e. the total number of cores for distributing initial conditions is the total number of initial conditions that are considered in this run, as specified by the configuration option `initial_condition`. The number of cores for distributed linear algebra with Petsc is then computed from above.
 
 It is currently required that the number of total cores for executing quandary is an integer divisor of multiplier of the number of initial conditions, such that each processor group owns the same number of initial conditions.
 
