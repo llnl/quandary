@@ -19,6 +19,10 @@ markdown_extensions:
   - pymdownx.snippets:
       base_path: ['.', 'docs']
       check_paths: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      use_pygments: true
+      pygments_lang_class: true
 
 extra_javascript:
   - javascripts/mathjax.js
