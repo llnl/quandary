@@ -44,7 +44,7 @@ const double OPTIM_TIKHONOV_COEFF = 1e-4; ///< Default Tikhonov regularization c
 const bool OPTIM_TIKHONOV_USE_X0 = false; ///< Default Tikhonov regularization type
 const double OPTIM_TOL_GRAD_ABS = 1e-8; ///< Default absolute gradient tolerance
 const double OPTIM_TOL_GRAD_REL = 1e-4; ///< Default relative gradient tolerance
-const double OPTIM_TOL_FINALCOST = 1e-8; ///< Default final time cost tolerance
+const double OPTIM_TOL_FINAL_COST = 1e-8; ///< Default final time cost tolerance
 const double OPTIM_TOL_INFIDELITY = 1e-5; ///< Default infidelity tolerance
 const size_t OPTIM_MAXITER = 200; ///< Default maximum optimization iterations
 

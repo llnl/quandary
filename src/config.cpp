@@ -217,7 +217,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     if (!optimization_table.contains("tolerance")) {
       optim_tol_grad_abs = ConfigDefaults::OPTIM_TOL_GRAD_ABS;
       optim_tol_grad_rel = ConfigDefaults::OPTIM_TOL_GRAD_REL;
-      optim_tol_finalcost = ConfigDefaults::OPTIM_TOL_FINALCOST;
+      optim_tol_final_cost = ConfigDefaults::OPTIM_TOL_FINAL_COST;
       optim_tol_infidelity = ConfigDefaults::OPTIM_TOL_INFIDELITY;
     } else {
       // Parse tolerance table
@@ -227,7 +227,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       }
       optim_tol_grad_abs = validators::field<double>(*tol_table, "grad_abs").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_ABS);
       optim_tol_grad_rel = validators::field<double>(*tol_table, "grad_rel").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_REL);
-      optim_tol_finalcost = validators::field<double>(*tol_table, "final_cost").positive().valueOr(ConfigDefaults::OPTIM_TOL_FINALCOST);
+      optim_tol_final_cost = validators::field<double>(*tol_table, "final_cost").positive().valueOr(ConfigDefaults::OPTIM_TOL_FINAL_COST);
       optim_tol_infidelity = validators::field<double>(*tol_table, "infidelity").positive().valueOr(ConfigDefaults::OPTIM_TOL_INFIDELITY);
     }
 
@@ -445,7 +445,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
 
   optim_tol_grad_abs = settings.optim_tol_grad_abs.value_or(ConfigDefaults::OPTIM_TOL_GRAD_ABS);
   optim_tol_grad_rel = settings.optim_tol_grad_rel.value_or(ConfigDefaults::OPTIM_TOL_GRAD_REL);
-  optim_tol_finalcost = settings.optim_tol_finalcost.value_or(ConfigDefaults::OPTIM_TOL_FINALCOST);
+  optim_tol_final_cost = settings.optim_tol_final_cost.value_or(ConfigDefaults::OPTIM_TOL_FINAL_COST);
   optim_tol_infidelity = settings.optim_tol_infidelity.value_or(ConfigDefaults::OPTIM_TOL_INFIDELITY);
   optim_maxiter = settings.optim_maxiter.value_or(ConfigDefaults::OPTIM_MAXITER);
 
@@ -817,7 +817,7 @@ void Config::printConfig(std::stringstream& log) const {
   }
   log << "tolerance = { grad_abs = " << optim_tol_grad_abs
       << ", grad_rel = " << optim_tol_grad_rel
-      << ", final_cost = " << optim_tol_finalcost
+      << ", final_cost = " << optim_tol_final_cost
       << ", infidelity = " << optim_tol_infidelity << " }\n";
   log << "maxiter = " << optim_maxiter << "\n";
   log << "tikhonov = { coeff = " << optim_tikhonov_coeff

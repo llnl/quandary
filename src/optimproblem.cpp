@@ -70,7 +70,7 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
 
   // Get tolerance settings
   tol_grad_abs = config.getOptimTolGradAbs();
-  tol_finalcost = config.getOptimTolFinalCost();
+  tol_final_cost = config.getOptimTolFinalCost();
   tol_infidelity = config.getOptimTolInfidelity();
   tol_grad_rel = config.getOptimTolGradRel();
   maxiter = config.getOptimMaxiter();

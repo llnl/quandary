@@ -58,7 +58,7 @@ struct ParsedConfigData {
   std::optional<std::vector<double>> optim_weights;
   std::optional<double> optim_tol_grad_abs;
   std::optional<double> optim_tol_grad_rel;
-  std::optional<double> optim_tol_finalcost;
+  std::optional<double> optim_tol_final_cost;
   std::optional<double> optim_tol_infidelity;
   std::optional<size_t> optim_maxiter;
   std::optional<double> optim_regul;

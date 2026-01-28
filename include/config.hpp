@@ -88,7 +88,7 @@ class Config {
   std::vector<double> optim_weights; ///< Weights for summing up the objective function
   double optim_tol_grad_abs; ///< Absolute gradient tolerance
   double optim_tol_grad_rel; ///< Relative gradient tolerance
-  double optim_tol_finalcost; ///< Final time cost tolerance
+  double optim_tol_final_cost; ///< Final time cost tolerance
   double optim_tol_infidelity; ///< Infidelity tolerance
   size_t optim_maxiter; ///< Maximum iterations
   double optim_tikhonov_coeff; ///< Coefficient of Tikhonov regularization for the design variables
@@ -165,7 +165,7 @@ class Config {
   const std::vector<double>& getOptimWeights() const { return optim_weights; }
   double getOptimTolGradAbs() const { return optim_tol_grad_abs; }
   double getOptimTolGradRel() const { return optim_tol_grad_rel; }
-  double getOptimTolFinalCost() const { return optim_tol_finalcost; }
+  double getOptimTolFinalCost() const { return optim_tol_final_cost; }
   double getOptimTolInfidelity() const { return optim_tol_infidelity; }
   size_t getOptimMaxiter() const { return optim_maxiter; }
   double getOptimTikhonovCoeff() const { return optim_tikhonov_coeff; }

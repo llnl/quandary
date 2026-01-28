@@ -43,7 +43,7 @@ CfgParser::CfgParser(const MPILogger& logger) : logger(logger) {
   registerIndexedConfig("output", settings.indexed_output);
   registerConfig("optim_atol", settings.optim_tol_grad_abs);
   registerConfig("optim_rtol", settings.optim_tol_grad_rel);
-  registerConfig("optim_ftol", settings.optim_tol_finalcost);
+  registerConfig("optim_ftol", settings.optim_tol_final_cost);
   registerConfig("optim_inftol", settings.optim_tol_infidelity);
   registerConfig("optim_maxiter", settings.optim_maxiter);
   registerConfig("optim_regul", settings.optim_regul);
