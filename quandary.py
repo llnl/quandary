@@ -81,6 +81,7 @@ class Quandary:
     # General options
     rand_seed            # Set a fixed random number generator seed. Default: None (non-reproducable)
     print_frequency_iter # Output frequency for optimization iterations. (Print every <x> iterations). Default: 1
+    output_frequency     # Frequency (in number of timesteps) to store intermediate results during propagation. Default: 1 (write every time step)
     usematfree           # Switch to use matrix-free (rather than sparse-matrix) solver. Default: True
     verbose              # Switch to turn on more screen output for debugging. Default: False
 
@@ -159,6 +160,7 @@ class Quandary:
     # General options
     rand_seed              : int  = None
     print_frequency_iter   : int  = 1
+    output_frequency       : int  = 1
     usematfree             : bool = True 
     verbose                : bool = False
     # Internal configuration. Should not be changed by user.
@@ -579,6 +581,8 @@ class Quandary:
 
         # If given, write the initial state to file
         if self.initialcondition[0:4]=="file":
+            if self.verbose:
+                print("Writing initial state...")
             if self._lindblad_solver: # If Lindblad solver, make it a density matrix
                 state = np.outer(self._initialstate, np.array(self._initialstate).conj())
             else:
@@ -594,6 +598,8 @@ class Quandary:
 
         # If not standard Hamiltonian model, write provided Hamiltonians to a file
         if not self.standardmodel:
+            if self.verbose:
+                print("Writing Hamiltonian file...")
             # Write non-standard Hamiltonians to file  
             # Write system Hamiltonian (complex)
             self._hamiltonian_filename_Hsys= "hamiltonian_Hsys.dat"
@@ -733,7 +739,7 @@ class Quandary:
         mystring += "datadir= ./\n"
         for iosc in range(len(self.Ne)):
             mystring += "output" + str(iosc) + "=expectedEnergy, population, fullstate\n"
-        mystring += "output_frequency = 1\n"
+        mystring += "output_frequency = " + str(self.output_frequency) + "\n"
         mystring += "optim_monitor_frequency = " + str(self.print_frequency_iter) + "\n"
         mystring += "runtype = " + runtype + "\n"
         if len(self.Ne) < 6:

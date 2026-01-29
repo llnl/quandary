@@ -124,6 +124,14 @@ class MasterEq{
     std::string hamiltonian_file_Hsys; ///< Filename if a custom system Hamiltonian is read from file ('none' if standard Hamiltonian is used)
     std::string hamiltonian_file_Hc; ///< Filename if a custom control Hamiltonians are read from file ('none' if standard Hamiltonian is used)
 
+    bool transmon_resonator_system; ///< Flag for using transmon-resonator Hamiltonian
+    double charge_offset; ///< Charge offset for transmon qubits in charge basis
+    double Ec;  ///< Charging energy for transmon qubits
+    double Ej;  ///< Josephson energy for transmon qubits
+    double resonator_freq;  ///< Resonator frequency
+    double resonator_rot_freq;  ///< Resonator rotating frame frequency
+
+
   public:
     std::vector<size_t> nlevels; ///< Number of levels per oscillator
     std::vector<size_t> nessential; ///< Number of essential levels per oscillator
@@ -136,6 +144,7 @@ class MasterEq{
     /**
      * @brief Constructor with full system specification.
      *
+     * @param config Configuration parameters
      * @param nlevels Number of levels per oscillator
      * @param nessential Number of essential levels per oscillator
      * @param oscil_vec_ Array of pointers to oscillator objects
@@ -148,7 +157,7 @@ class MasterEq{
      * @param hamiltonian_file_Hc Filename for control Hamiltonian data
      * @param quietmode Flag for quiet operation (default: false)
      */
-    MasterEq(const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential, Oscillator** oscil_vec_, const std::vector<double>& crosskerr_, const std::vector<double>& Jkl_, const std::vector<double>& eta_, LindbladType lindbladtype_, bool usematfree_, const std::string& hamiltonian_file_Hsys, const std::string& hamiltonian_file_Hc, bool quietmode=false);
+    MasterEq(Config config, const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential, Oscillator** oscil_vec_, const std::vector<double>& crosskerr_, const std::vector<double>& Jkl_, const std::vector<double>& eta_, LindbladType lindbladtype_, bool usematfree_, const std::string& hamiltonian_file_Hsys, const std::string& hamiltonian_file_Hc, bool quietmode=false);
 
     ~MasterEq();
 
@@ -161,9 +170,19 @@ class MasterEq{
     void set_RHS_MatMult_operation();
 
     /**
-     * @brief Initializes matrices needed for the sparse matrix solver.
+     * @brief Allocates and initializes matrices needed for the sparse matrix solver.
      */
     void initSparseMatSolver();
+
+    void initStdHamiltonianMats();
+    void initStdControlMats(int osc_id, int nlevels_osc, int nlevels_postosc);
+    void initStdDecoherenceMats();
+
+
+    /*
+    * @brief Initializes sparse matrices for transmon-resonator system. 
+    */
+    void initTransmonResonatorSparseMats();
 
     /**
      * @brief Retrieves the i-th oscillator.

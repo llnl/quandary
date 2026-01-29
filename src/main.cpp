@@ -313,8 +313,7 @@ int main(int argc,char **argv)
     usematfree = false;
   }
   // Initialize Master equation
-  MasterEq* mastereq = new MasterEq(nlevels, nessential, oscil_vec, crosskerr, Jkl, eta, lindbladtype, usematfree, hamiltonian_file_Hsys, hamiltonian_file_Hc, quietmode);
-
+  MasterEq* mastereq = new MasterEq(config, nlevels, nessential, oscil_vec, crosskerr, Jkl, eta, lindbladtype, usematfree, hamiltonian_file_Hsys, hamiltonian_file_Hc, quietmode);
 
   /* Output */
   Output* output = new Output(config, comm_petsc, comm_init, nlevels.size(), quietmode);

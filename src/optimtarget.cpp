@@ -101,6 +101,7 @@ OptimTarget::OptimTarget(std::vector<std::string> target_str, const std::string&
     }
   }
   else if (initcond_type == InitialConditionType::FROMFILE) { 
+    if ( mpirank_world == 0 && !quietmode) printf("Reading initial condition from file...\n");
     /* Read initial condition from file */
     int nelems = 0;
     if (mastereq->lindbladtype != LindbladType::NONE) nelems = 2*dim_ess*dim_ess;
@@ -141,6 +142,7 @@ OptimTarget::OptimTarget(std::vector<std::string> target_str, const std::string&
       }
     }
     delete [] vec;
+    if ( mpirank_world == 0 && !quietmode) printf("Done reading initial condition. \n");
   } else if (initcond_type == InitialConditionType::ENSEMBLE) {
     // Sanity check for the list in initcond_IDs!
     assert(initcond_IDs.size() >= 1); // at least one element 
