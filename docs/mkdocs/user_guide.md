@@ -295,7 +295,7 @@ to derive the vectorized master equation for $q(t) := \text{vec}(\rho(t)) \in \C
 
 
 The real and imaginary parts of $q(t)$ are stored in blocked manner: For
-  $q = u+iv$ with $u,v\in\R^{M}$, a vector of size $2M$ as $q=\begin{bmatrix} u\\v \end{bmatrix}.
+  $q = u+iv$ with $u,v\in\R^{M}$, a vector of size $2M$ as $q=\begin{bmatrix} u\\v \end{bmatrix}$.
 
 ## Time-stepping
 To solve the resulting real-valued differential equation 
@@ -444,9 +444,13 @@ The user can specify the desired state evolution output through the config optio
     \end{align}
 
     where $N^{(n_k)} = \left(a^{(n_k)}\right)^\dagger \left(a^{(n_k)}\right)$ denotes the number operator in subsystem $k$ and $\rho^k$ denotes the reduced density matrix or state for subsystem $k$. 
+
 - `expectedEnergyComposite` Prints the time evolution of the expected energy level of the entire (full-dimensional) system state into files (one for each initial condition, as above): $mbox{Tr}\left(N \rho(t)\right)$ for the number operator $N$ in the full dimensions.
+
 - `population`: This option prints the time evolution of the state's occupation in each energy level into files named `population<k>.iinit<i>.dat`, for each initial condition $i=1,\dots, n_{init}$ and each subsystem $k$. The files contain $n_k+1$ columns, the first one being the time values, the remaining ones correspond to the population of each level $l=0,\dots,n_k-1$ of the reduced density matrix or state vector at that time point. For Lindblad's solver, these are the diagonal elements of the reduced density matrix ($\rho_{ll}^k(t), l=0,\dots n_k-1$), for Schroedinger's solver it's the absolute values of the reduced state vector elements $|\psi^k_l(t)|^2, l=0,\dots n_k-1$. 
+
 - `populationComposite`: Prints the time evolution of the state populations of the entire (full-dimensional) system into files (one for each initial condition, as above).
+
 - `fullstate`: For smaller systems, one can choose to print out the full state $\rho(t)$ or $\psi(t)$ for each time point into the files `rho_Re.iinit<m>.dat` and `rho_Im.iinit<m>.dat`, for the real and imaginary parts. These files contain $N^2+1$ (Lindblad) or $N+1$ (Schroedinger) columns the first one being the time point value and the remaining ones contain the vectorized density matrix or the state vector for that time point. Note that these file become very big very quickly -- use with care!
 
 The user can change the frequency of output in time (printing only every $j$-th time point) through the option `timestep_stride` in the `[output]` section. This is particularly important when doing performance tests, as computing the reduced states for output requires extra computation and communication that might skew performance tests.
