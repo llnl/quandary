@@ -86,20 +86,15 @@ void HamiltonianFileReader::receiveHsys(Mat& Ad, Mat& Bd){
       for (PetscInt k = 0; k < dim_rho; k++) {
         PetscInt rowk = row + dim_rho * k;
         PetscInt colk = col + dim_rho * k;
-        if (fabs(imag) > 1e-15 && ilow <= row && row < iupp) MatSetValue(Ad, rowk, colk, imag, ADD_VALUES);
-        if (fabs(real) > 1e-15 && ilow <= row && row < iupp) MatSetValue(Bd, rowk, colk, -real, ADD_VALUES);
+        if (fabs(imag) > 1e-15 && ilow <= rowk && rowk < iupp) MatSetValue(Ad, rowk, colk, imag, ADD_VALUES);
+        if (fabs(real) > 1e-15 && ilow <= rowk && rowk < iupp) MatSetValue(Bd, rowk, colk, -real, ADD_VALUES);
         rowk = col * dim_rho + k;
         colk = row * dim_rho + k;
-        if (fabs(imag) > 1e-15 && ilow <= row && row < iupp) MatSetValue(Ad, rowk, colk, -imag, ADD_VALUES);
-        if (fabs(real) > 1e-15 && ilow <= row && row < iupp) MatSetValue(Bd, rowk, colk, real, ADD_VALUES);
+        if (fabs(imag) > 1e-15 && ilow <= rowk && rowk < iupp) MatSetValue(Ad, rowk, colk, -imag, ADD_VALUES);
+        if (fabs(real) > 1e-15 && ilow <= rowk && rowk < iupp) MatSetValue(Bd, rowk, colk, real, ADD_VALUES);
       }
     }
   }
-
-  MatAssemblyBegin(Ad, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(Ad, MAT_FINAL_ASSEMBLY);
-  MatAssemblyBegin(Bd, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(Bd, MAT_FINAL_ASSEMBLY);
 }
 
 void HamiltonianFileReader::receiveHc(std::vector<Mat>& Ac_vec, std::vector<Mat>& Bc_vec){
@@ -179,22 +174,13 @@ void HamiltonianFileReader::receiveHc(std::vector<Mat>& Ac_vec, std::vector<Mat>
       for (PetscInt k = 0; k < dim_rho; k++) {
         PetscInt rowk = row + dim_rho * k;
         PetscInt colk = col + dim_rho * k;
-        if (fabs(imag) > 1e-15 && ilow <= row && row < iupp) MatSetValue(Ac_vec[osc], rowk, colk, imag, ADD_VALUES);
-        if (fabs(real) > 1e-15 && ilow <= row && row < iupp) MatSetValue(Bc_vec[osc], rowk, colk, -real, ADD_VALUES);
+        if (fabs(imag) > 1e-15 && ilow <= rowk && rowk < iupp) MatSetValue(Ac_vec[osc], rowk, colk, imag, ADD_VALUES);
+        if (fabs(real) > 1e-15 && ilow <= rowk && rowk < iupp) MatSetValue(Bc_vec[osc], rowk, colk, -real, ADD_VALUES);
         rowk = col * dim_rho + k;
         colk = row * dim_rho + k;
-        if (fabs(imag) > 1e-15 && ilow <= row && row < iupp) MatSetValue(Ac_vec[osc], rowk, colk, -imag, ADD_VALUES);
-        if (fabs(real) > 1e-15 && ilow <= row && row < iupp) MatSetValue(Bc_vec[osc], rowk, colk, real, ADD_VALUES);
+        if (fabs(imag) > 1e-15 && ilow <= rowk && rowk < iupp) MatSetValue(Ac_vec[osc], rowk, colk, -imag, ADD_VALUES);
+        if (fabs(real) > 1e-15 && ilow <= rowk && rowk < iupp) MatSetValue(Bc_vec[osc], rowk, colk, real, ADD_VALUES);
       }
     }
-  }
-
-  for (size_t i = 0; i < Ac_vec.size(); ++i) {
-      MatAssemblyBegin(Ac_vec[i], MAT_FINAL_ASSEMBLY);
-      MatAssemblyEnd(Ac_vec[i], MAT_FINAL_ASSEMBLY);
-  }
-  for (size_t i = 0; i < Bc_vec.size(); ++i) {
-      MatAssemblyBegin(Bc_vec[i], MAT_FINAL_ASSEMBLY);
-      MatAssemblyEnd(Bc_vec[i], MAT_FINAL_ASSEMBLY);
   }
 }
