@@ -121,66 +121,66 @@ NB_MODULE(_quandary_impl, m) {
     .def_rw("filename", &ControlInitializationSettings::filename);
 
   // QuandaryConfig - mutable configuration with all fields optional
-  nb::class_<ConfigInput>(m, "QuandaryConfig")
+  nb::class_<RawConfig>(m, "QuandaryConfig")
     .def(nb::init<>())
     // System parameters
-    .def_rw("nlevels", &ConfigInput::nlevels)
-    .def_rw("nessential", &ConfigInput::nessential)
-    .def_rw("ntime", &ConfigInput::ntime)
-    .def_rw("dt", &ConfigInput::dt)
-    .def_rw("transfreq", &ConfigInput::transfreq)
-    .def_rw("selfkerr", &ConfigInput::selfkerr)
-    .def_rw("crosskerr", &ConfigInput::crosskerr)
-    .def_rw("Jkl", &ConfigInput::Jkl)
-    .def_rw("rotfreq", &ConfigInput::rotfreq)
-    .def_rw("decoherence_type", &ConfigInput::decoherence_type)
-    .def_rw("decay_time", &ConfigInput::decay_time)
-    .def_rw("dephase_time", &ConfigInput::dephase_time)
-    .def_rw("initial_condition", &ConfigInput::initial_condition)
+    .def_rw("nlevels", &RawConfig::nlevels)
+    .def_rw("nessential", &RawConfig::nessential)
+    .def_rw("ntime", &RawConfig::ntime)
+    .def_rw("dt", &RawConfig::dt)
+    .def_rw("transfreq", &RawConfig::transfreq)
+    .def_rw("selfkerr", &RawConfig::selfkerr)
+    .def_rw("crosskerr", &RawConfig::crosskerr)
+    .def_rw("Jkl", &RawConfig::Jkl)
+    .def_rw("rotfreq", &RawConfig::rotfreq)
+    .def_rw("decoherence_type", &RawConfig::decoherence_type)
+    .def_rw("decay_time", &RawConfig::decay_time)
+    .def_rw("dephase_time", &RawConfig::dephase_time)
+    .def_rw("initial_condition", &RawConfig::initial_condition)
     // Inherently optional
-    .def_rw("hamiltonian_file_Hsys", &ConfigInput::hamiltonian_file_Hsys)
-    .def_rw("hamiltonian_file_Hc", &ConfigInput::hamiltonian_file_Hc)
+    .def_rw("hamiltonian_file_Hsys", &RawConfig::hamiltonian_file_Hsys)
+    .def_rw("hamiltonian_file_Hc", &RawConfig::hamiltonian_file_Hc)
     // Control parameters
-    .def_rw("control_zero_boundary_condition", &ConfigInput::control_zero_boundary_condition)
-    .def_rw("control_parameterizations", &ConfigInput::control_parameterizations)
-    .def_rw("control_initializations", &ConfigInput::control_initializations)
-    .def_rw("control_amplitude_bounds", &ConfigInput::control_amplitude_bounds)
-    .def_rw("carrier_frequencies", &ConfigInput::carrier_frequencies)
+    .def_rw("control_zero_boundary_condition", &RawConfig::control_zero_boundary_condition)
+    .def_rw("control_parameterizations", &RawConfig::control_parameterizations)
+    .def_rw("control_initializations", &RawConfig::control_initializations)
+    .def_rw("control_amplitude_bounds", &RawConfig::control_amplitude_bounds)
+    .def_rw("carrier_frequencies", &RawConfig::carrier_frequencies)
     // Optimization parameters
-    .def_rw("optim_target", &ConfigInput::optim_target)
-    .def_rw("optim_objective", &ConfigInput::optim_objective)
-    .def_rw("optim_weights", &ConfigInput::optim_weights)
-    .def_rw("optim_tol_grad_abs", &ConfigInput::optim_tol_grad_abs)
-    .def_rw("optim_tol_grad_rel", &ConfigInput::optim_tol_grad_rel)
-    .def_rw("optim_tol_finalcost", &ConfigInput::optim_tol_finalcost)
-    .def_rw("optim_tol_infidelity", &ConfigInput::optim_tol_infidelity)
-    .def_rw("optim_maxiter", &ConfigInput::optim_maxiter)
-    .def_rw("optim_tikhonov_coeff", &ConfigInput::optim_tikhonov_coeff)
-    .def_rw("optim_tikhonov_use_x0", &ConfigInput::optim_tikhonov_use_x0)
-    .def_rw("optim_penalty_leakage", &ConfigInput::optim_penalty_leakage)
-    .def_rw("optim_penalty_weightedcost", &ConfigInput::optim_penalty_weightedcost)
-    .def_rw("optim_penalty_weightedcost_width", &ConfigInput::optim_penalty_weightedcost_width)
-    .def_rw("optim_penalty_dpdm", &ConfigInput::optim_penalty_dpdm)
-    .def_rw("optim_penalty_energy", &ConfigInput::optim_penalty_energy)
-    .def_rw("optim_penalty_variation", &ConfigInput::optim_penalty_variation)
+    .def_rw("optim_target", &RawConfig::optim_target)
+    .def_rw("optim_objective", &RawConfig::optim_objective)
+    .def_rw("optim_weights", &RawConfig::optim_weights)
+    .def_rw("optim_tol_grad_abs", &RawConfig::optim_tol_grad_abs)
+    .def_rw("optim_tol_grad_rel", &RawConfig::optim_tol_grad_rel)
+    .def_rw("optim_tol_finalcost", &RawConfig::optim_tol_finalcost)
+    .def_rw("optim_tol_infidelity", &RawConfig::optim_tol_infidelity)
+    .def_rw("optim_maxiter", &RawConfig::optim_maxiter)
+    .def_rw("optim_tikhonov_coeff", &RawConfig::optim_tikhonov_coeff)
+    .def_rw("optim_tikhonov_use_x0", &RawConfig::optim_tikhonov_use_x0)
+    .def_rw("optim_penalty_leakage", &RawConfig::optim_penalty_leakage)
+    .def_rw("optim_penalty_weightedcost", &RawConfig::optim_penalty_weightedcost)
+    .def_rw("optim_penalty_weightedcost_width", &RawConfig::optim_penalty_weightedcost_width)
+    .def_rw("optim_penalty_dpdm", &RawConfig::optim_penalty_dpdm)
+    .def_rw("optim_penalty_energy", &RawConfig::optim_penalty_energy)
+    .def_rw("optim_penalty_variation", &RawConfig::optim_penalty_variation)
     // Output parameters
-    .def_rw("output_directory", &ConfigInput::output_directory)
-    .def_rw("output_observables", &ConfigInput::output_observables)
-    .def_rw("output_timestep_stride", &ConfigInput::output_timestep_stride)
-    .def_rw("output_optimization_stride", &ConfigInput::output_optimization_stride)
+    .def_rw("output_directory", &RawConfig::output_directory)
+    .def_rw("output_observables", &RawConfig::output_observables)
+    .def_rw("output_timestep_stride", &RawConfig::output_timestep_stride)
+    .def_rw("output_optimization_stride", &RawConfig::output_optimization_stride)
     // Solver parameters
-    .def_rw("runtype", &ConfigInput::runtype)
-    .def_rw("usematfree", &ConfigInput::usematfree)
-    .def_rw("linearsolver_type", &ConfigInput::linearsolver_type)
-    .def_rw("linearsolver_maxiter", &ConfigInput::linearsolver_maxiter)
-    .def_rw("timestepper_type", &ConfigInput::timestepper_type)
-    .def_rw("rand_seed", &ConfigInput::rand_seed);
+    .def_rw("runtype", &RawConfig::runtype)
+    .def_rw("usematfree", &RawConfig::usematfree)
+    .def_rw("linearsolver_type", &RawConfig::linearsolver_type)
+    .def_rw("linearsolver_maxiter", &RawConfig::linearsolver_maxiter)
+    .def_rw("timestepper_type", &RawConfig::timestepper_type)
+    .def_rw("rand_seed", &RawConfig::rand_seed);
 
   // Config - validated configuration with computed values
   nb::class_<Config>(m, "Config")
-    .def(nb::init<const ConfigInput&, bool>(),
+    .def(nb::init<const RawConfig&, bool>(),
       nb::arg("input"), nb::arg("quiet") = false,
-      "Create a validated Config from ConfigInput")
+      "Create a validated Config from RawConfig")
     .def_prop_ro("n_initial_conditions", &Config::getNInitialConditions,
       "Number of initial conditions")
     .def_prop_ro("output_directory", &Config::getOutputDirectory,
@@ -201,7 +201,7 @@ NB_MODULE(_quandary_impl, m) {
     "Run a Quandary simulation or optimization from a Config");
 
   // Run function - accepts QuandaryConfig, creates Config internally
-  m.def("run", [](const ConfigInput& input, bool quiet) {
+  m.def("run", [](const RawConfig& input, bool quiet) {
       Config config(input, quiet);
       return runQuandary(config, quiet);
     },

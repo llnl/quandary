@@ -24,7 +24,7 @@
 /**
  * @brief Identity type wrapper - passes through the type unchanged.
  *
- * Used with ConfigDataT to create ConfigData where all fields are concrete types.
+ * Used with ConfigFieldsT to create ValidatedConfig where all fields are concrete types.
  */
 template <typename T>
 using Identity = T;
@@ -33,8 +33,8 @@ using Identity = T;
  * @brief Templated configuration data struct for field definitions.
  *
  * This template allows the same field definitions to be instantiated as:
- * - ConfigData (Wrapper = Identity): All fields are concrete types (validated config)
- * - ConfigInput (Wrapper = std::optional): All fields are optional (for input from TOML/Python)
+ * - ValidatedConfig (Wrapper = Identity): All fields are concrete types (validated config)
+ * - RawConfig (Wrapper = std::optional): All fields are optional (for input from TOML/Python)
  *
  * Fields that are inherently optional (like hamiltonian files) don't use the Wrapper
  * and remain std::optional in both instantiations.
@@ -42,7 +42,7 @@ using Identity = T;
  * @tparam Wrapper Type wrapper template - either Identity or std::optional
  */
 template <template <typename> class Wrapper>
-struct ConfigDataT {
+struct ConfigFieldsT {
   // System parameters
   Wrapper<std::vector<size_t>> nlevels;
   Wrapper<std::vector<size_t>> nessential;
@@ -107,15 +107,15 @@ struct ConfigDataT {
  *
  * All fields have been validated and contain final values.
  */
-using ConfigData = ConfigDataT<Identity>;
+using ValidatedConfig = ConfigFieldsT<Identity>;
 
 /**
- * @brief Input configuration data with optional fields.
+ * @brief Raw input configuration data with optional fields.
  *
  * Used for receiving configuration from TOML parsing or Python bindings.
  * All fields are optional to allow partial specification with defaults.
  */
-using ConfigInput = ConfigDataT<std::optional>;
+using RawConfig = ConfigFieldsT<std::optional>;
 
 /**
  * @brief Configuration class containing all validated settings.
@@ -152,12 +152,12 @@ using ConfigInput = ConfigDataT<std::optional>;
 class Config {
  private:
   MPILogger logger; ///< MPI-aware logger for output messages.
-  ConfigData data; ///< All validated configuration fields.
-  size_t n_initial_conditions; ///< Number of initial conditions (computed, not in ConfigData)
+  ValidatedConfig data; ///< All validated configuration fields.
+  size_t n_initial_conditions; ///< Number of initial conditions (computed, not in ValidatedConfig)
 
  public:
   /**
-   * @brief Constructs a Config from a ConfigInput struct
+   * @brief Constructs a Config from a RawConfig struct
    *
    * This constructor performs the main validation and default value application for all
    * configuration parameters. It uses the validators framework to check constraints
@@ -166,7 +166,7 @@ class Config {
    * @param input The pre-parsed configuration input data
    * @param quiet_mode Whether to suppress logging output
    */
-  Config(const ConfigInput& input, bool quiet_mode = false);
+  Config(const RawConfig& input, bool quiet_mode = false);
   Config(const toml::table& table, bool quiet_mode = false);
 
   // TODO cfg: delete this when .cfg format is removed.
