@@ -438,7 +438,6 @@ ConfigInput extractConfigInput(const toml::table& toml, const MPILogger& logger)
     }
 
     input.optim_weights = extractTomlVector<double>(optimization_table, "weights");
-    input.optim_maxiter = extractToml<size_t>(optimization_table, "maxiter");
 
     // Tolerance table
     if (optimization_table.contains("tolerance")) {
@@ -450,6 +449,8 @@ ConfigInput extractConfigInput(const toml::table& toml, const MPILogger& logger)
         input.optim_tol_infidelity = extractToml<double>(*tol_table, "infidelity");
       }
     }
+
+    input.optim_maxiter = extractToml<size_t>(optimization_table, "maxiter");
 
     // Tikhonov table
     if (optimization_table.contains("tikhonov")) {
@@ -475,8 +476,6 @@ ConfigInput extractConfigInput(const toml::table& toml, const MPILogger& logger)
 
     // Output parameters
     input.output_directory = extractToml<std::string>(output_table, "directory");
-    input.output_timestep_stride = extractToml<size_t>(output_table, "timestep_stride");
-    input.output_optimization_stride = extractToml<size_t>(output_table, "optimization_stride");
 
     // Parse observables (string array to enum vector)
     if (auto observables_array = output_table["observables"].as_array()) {
@@ -494,6 +493,9 @@ ConfigInput extractConfigInput(const toml::table& toml, const MPILogger& logger)
       }
       input.output_observables = observables;
     }
+
+    input.output_timestep_stride = extractToml<size_t>(output_table, "timestep_stride");
+    input.output_optimization_stride = extractToml<size_t>(output_table, "optimization_stride");
 
     // Solver parameters
     auto runtype_str = solver_table["runtype"].value<std::string>();
