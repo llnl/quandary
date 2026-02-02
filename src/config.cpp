@@ -1261,15 +1261,6 @@ void Config::finalize() {
     }
   }
 
-  // Apply defaults for control initialization amplitude
-  for (size_t i = 0; i < data.control_initializations.size(); i++) {
-    if (data.control_initializations[i].type != ControlInitializationType::FILE) {
-      if (!data.control_initializations[i].amplitude.has_value()) {
-        data.control_initializations[i].amplitude = ConfigDefaults::CONTROL_INIT_AMPLITUDE;
-      }
-    }
-  }
-
   // Apply defaults and transformations for optimization target
   if (data.optim_target.type == TargetType::GATE) {
     // Prioritize gate from file: if filename is set, use FILE gate type
