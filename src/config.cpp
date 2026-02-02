@@ -318,7 +318,6 @@ ConfigInput extractConfigInput(const toml::table& toml, const MPILogger& logger)
     input.dt = extractToml<double>(*system_table, "dt");
     input.transfreq = extractScalarOrVector<double>(*system_table, "transfreq", num_osc);
     input.selfkerr = extractScalarOrVector<double>(*system_table, "selfkerr", num_osc);
-    input.rotfreq = extractScalarOrVector<double>(*system_table, "rotfreq", num_osc);
 
     // Parse crosskerr coupling
     if (system_table->contains("crosskerr")) {
@@ -352,9 +351,7 @@ ConfigInput extractConfigInput(const toml::table& toml, const MPILogger& logger)
       }
     }
 
-    // Hamiltonian files (inherently optional)
-    input.hamiltonian_file_Hsys = getOptional<std::string>((*system_table)["hamiltonian_file_Hsys"]);
-    input.hamiltonian_file_Hc = getOptional<std::string>((*system_table)["hamiltonian_file_Hc"]);
+    input.rotfreq = extractScalarOrVector<double>(*system_table, "rotfreq", num_osc);
 
     // Parse decoherence settings
     if (system_table->contains("decoherence")) {
@@ -389,6 +386,10 @@ ConfigInput extractConfigInput(const toml::table& toml, const MPILogger& logger)
       init_cond.subsystem = getOptionalVector<size_t>((*init_table)["subsystem"]);
       input.initial_condition = init_cond;
     }
+
+    // Hamiltonian files (inherently optional)
+    input.hamiltonian_file_Hsys = getOptional<std::string>((*system_table)["hamiltonian_file_Hsys"]);
+    input.hamiltonian_file_Hc = getOptional<std::string>((*system_table)["hamiltonian_file_Hc"]);
 
     // Control parameters
     input.control_zero_boundary_condition = extractToml<bool>(control_table, "zero_boundary_condition");
