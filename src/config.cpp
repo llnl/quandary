@@ -428,9 +428,7 @@ ConfigInput extractConfigInput(const toml::table& toml, const MPILogger& logger)
     }
 
     // Optimization parameters
-    if (optimization_table.contains("target")) {
-      input.optim_target = parseOptimTargetToml(optimization_table, num_osc);
-    }
+    input.optim_target = parseOptimTargetToml(optimization_table, num_osc);
 
     auto objective_str = optimization_table["objective"].value<std::string>();
     if (objective_str.has_value()) {
