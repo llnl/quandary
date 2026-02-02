@@ -156,6 +156,16 @@ class Config {
   size_t n_initial_conditions; ///< Number of initial conditions (computed, not in ConfigData)
 
  public:
+  /**
+   * @brief Constructs a Config from a ConfigInput struct
+   *
+   * This constructor performs the main validation and default value application for all
+   * configuration parameters. It uses the validators framework to check constraints
+   * and apply defaults in a consistent way.
+   *
+   * @param input The pre-parsed configuration input data
+   * @param quiet_mode Whether to suppress logging output
+   */
   Config(const ConfigInput& input, bool quiet_mode = false);
   Config(const toml::table& table, bool quiet_mode = false);
 
@@ -233,7 +243,22 @@ class Config {
   int getRandSeed() const { return data.rand_seed; }
 
  private:
+  /**
+   * @brief Finalizes configuration after initial validation
+   *
+   * This method is called after the constructor finishes basic validation
+   * and applies secondary transformations, dependencies between parameters,
+   * and final default value application that depends on other parameters.
+   */
   void finalize();
+
+  /**
+   * @brief Validates final configuration for consistency
+   *
+   * This method performs additional validation on the finalized configuration
+   * to ensure all parameters are consistent with each other and satisfy
+   * requirements for simulation. Called after finalize().
+   */
   void validate() const;
 
   size_t computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, DecoherenceType decoherence_type) const;
