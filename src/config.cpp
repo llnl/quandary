@@ -580,6 +580,13 @@ Config::Config(const ConfigInput& input, bool quiet_mode) : logger(MPILogger(qui
     ControlInitializationSettings default_init;
     data.control_initializations = input.control_initializations.value_or(std::vector<ControlInitializationSettings>(num_osc, default_init));
 
+    // Validate phase for each control initialization
+    for (auto& init : data.control_initializations) {
+      init.phase = validators::field<double>(init.phase, "phase")
+        .greaterThanEqual(0.0)
+        .valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
+    }
+
     data.control_amplitude_bounds = validators::vectorField<double>(input.control_amplitude_bounds, "control_amplitude_bounds").valueOr(std::vector<double>(num_osc, ConfigDefaults::CONTROL_AMPLITUDE_BOUND));
 
     std::vector<double> default_carrier_freq = {ConfigDefaults::CARRIER_FREQ};
