@@ -534,11 +534,9 @@ Config::Config(const toml::table& toml, bool quiet_mode)
 
 Config::Config(const ConfigInput& input, bool quiet_mode) : logger(MPILogger(quiet_mode)) {
   try {
-    size_t num_osc = 0;
-
     // System parameters
     data.nlevels = validators::vectorField<size_t>(input.nlevels, "nlevels").minLength(1).positive().value();
-    num_osc = data.nlevels.size();
+    size_t num_osc = data.nlevels.size();
 
     data.nessential = validators::vectorField<size_t>(input.nessential, "nessential").valueOr(data.nlevels);
 
