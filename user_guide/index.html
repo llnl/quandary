@@ -458,7 +458,7 @@ states <span class="arithmatex">\(u(t), v(t)\in \R^{M}\)</span> for <span class=
 &amp; \qquad \qquad\qquad\qquad\qquad\qquad\qquad\qquad\qquad\qquad\quad  B(t) = I_N\otimes Im(-i H(t)) - Im(-iH(t))^T \otimes I_N)  \notag 
 \end{align}\]</pre>
 <p>The real and imaginary parts of <span class="arithmatex">\(q(t)\)</span> are stored in blocked manner: For
-  <span class="arithmatex">\(q = u+iv\)</span> with <span class="arithmatex">\(u,v\in\R^{M}\)</span>, a vector of size <span class="arithmatex">\(2M\)</span> as $q=\begin{bmatrix} u\v \end{bmatrix}.</p>
+  <span class="arithmatex">\(q = u+iv\)</span> with <span class="arithmatex">\(u,v\in\R^{M}\)</span>, a vector of size <span class="arithmatex">\(2M\)</span> as <span class="arithmatex">\(q=\begin{bmatrix} u\\v \end{bmatrix}\)</span>.</p>
 <h2 id="time-stepping">Time-stepping</h2>
 <p>To solve the resulting real-valued differential equation </p>
 <pre class="arithmatex">\[\begin{align*}
@@ -572,11 +572,19 @@ processes (<span class="arithmatex">\(np_{total}\)</span>) is split as</p>
 <pre class="arithmatex">\[\begin{align}
   \langle N^{(n_k)}\rangle = \mbox{Tr}\left(N^{(n_k)} \rho^k(t)\right)
 \end{align}\]</pre>
-<p>where <span class="arithmatex">\(N^{(n_k)} = \left(a^{(n_k)}\right)^\dagger \left(a^{(n_k)}\right)\)</span> denotes the number operator in subsystem <span class="arithmatex">\(k\)</span> and <span class="arithmatex">\(\rho^k\)</span> denotes the reduced density matrix or state for subsystem <span class="arithmatex">\(k\)</span>. 
-- <code>expectedEnergyComposite</code> Prints the time evolution of the expected energy level of the entire (full-dimensional) system state into files (one for each initial condition, as above): <span class="arithmatex">\(mbox{Tr}\left(N \rho(t)\right)\)</span> for the number operator <span class="arithmatex">\(N\)</span> in the full dimensions.
-- <code>population</code>: This option prints the time evolution of the state's occupation in each energy level into files named <code>population&lt;k&gt;.iinit&lt;i&gt;.dat</code>, for each initial condition <span class="arithmatex">\(i=1,\dots, n_{init}\)</span> and each subsystem <span class="arithmatex">\(k\)</span>. The files contain <span class="arithmatex">\(n_k+1\)</span> columns, the first one being the time values, the remaining ones correspond to the population of each level <span class="arithmatex">\(l=0,\dots,n_k-1\)</span> of the reduced density matrix or state vector at that time point. For Lindblad's solver, these are the diagonal elements of the reduced density matrix (<span class="arithmatex">\(\rho_{ll}^k(t), l=0,\dots n_k-1\)</span>), for Schroedinger's solver it's the absolute values of the reduced state vector elements <span class="arithmatex">\(|\psi^k_l(t)|^2, l=0,\dots n_k-1\)</span>. 
-- <code>populationComposite</code>: Prints the time evolution of the state populations of the entire (full-dimensional) system into files (one for each initial condition, as above).
-- <code>fullstate</code>: For smaller systems, one can choose to print out the full state <span class="arithmatex">\(\rho(t)\)</span> or <span class="arithmatex">\(\psi(t)\)</span> for each time point into the files <code>rho_Re.iinit&lt;m&gt;.dat</code> and <code>rho_Im.iinit&lt;m&gt;.dat</code>, for the real and imaginary parts. These files contain <span class="arithmatex">\(N^2+1\)</span> (Lindblad) or <span class="arithmatex">\(N+1\)</span> (Schroedinger) columns the first one being the time point value and the remaining ones contain the vectorized density matrix or the state vector for that time point. Note that these file become very big very quickly -- use with care!</p>
+<p>where <span class="arithmatex">\(N^{(n_k)} = \left(a^{(n_k)}\right)^\dagger \left(a^{(n_k)}\right)\)</span> denotes the number operator in subsystem <span class="arithmatex">\(k\)</span> and <span class="arithmatex">\(\rho^k\)</span> denotes the reduced density matrix or state for subsystem <span class="arithmatex">\(k\)</span>. </p>
+</li>
+<li>
+<p><code>expectedEnergyComposite</code> Prints the time evolution of the expected energy level of the entire (full-dimensional) system state into files (one for each initial condition, as above): <span class="arithmatex">\(mbox{Tr}\left(N \rho(t)\right)\)</span> for the number operator <span class="arithmatex">\(N\)</span> in the full dimensions.</p>
+</li>
+<li>
+<p><code>population</code>: This option prints the time evolution of the state's occupation in each energy level into files named <code>population&lt;k&gt;.iinit&lt;i&gt;.dat</code>, for each initial condition <span class="arithmatex">\(i=1,\dots, n_{init}\)</span> and each subsystem <span class="arithmatex">\(k\)</span>. The files contain <span class="arithmatex">\(n_k+1\)</span> columns, the first one being the time values, the remaining ones correspond to the population of each level <span class="arithmatex">\(l=0,\dots,n_k-1\)</span> of the reduced density matrix or state vector at that time point. For Lindblad's solver, these are the diagonal elements of the reduced density matrix (<span class="arithmatex">\(\rho_{ll}^k(t), l=0,\dots n_k-1\)</span>), for Schroedinger's solver it's the absolute values of the reduced state vector elements <span class="arithmatex">\(|\psi^k_l(t)|^2, l=0,\dots n_k-1\)</span>. </p>
+</li>
+<li>
+<p><code>populationComposite</code>: Prints the time evolution of the state populations of the entire (full-dimensional) system into files (one for each initial condition, as above).</p>
+</li>
+<li>
+<p><code>fullstate</code>: For smaller systems, one can choose to print out the full state <span class="arithmatex">\(\rho(t)\)</span> or <span class="arithmatex">\(\psi(t)\)</span> for each time point into the files <code>rho_Re.iinit&lt;m&gt;.dat</code> and <code>rho_Im.iinit&lt;m&gt;.dat</code>, for the real and imaginary parts. These files contain <span class="arithmatex">\(N^2+1\)</span> (Lindblad) or <span class="arithmatex">\(N+1\)</span> (Schroedinger) columns the first one being the time point value and the remaining ones contain the vectorized density matrix or the state vector for that time point. Note that these file become very big very quickly -- use with care!</p>
 </li>
 </ul>
 <p>The user can change the frequency of output in time (printing only every <span class="arithmatex">\(j\)</span>-th time point) through the option <code>output_frequency</code>. This is particularly important when doing performance tests, as computing the reduced states for output requires extra computation and communication that might skew performance tests.</p>

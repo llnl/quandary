@@ -196,6 +196,8 @@ It is therefore recommended to utilize the python interface only for smaller sys
     maxiter             # Maximum number of optimization iterations. Default 200
     tol_infidelity      # Optimization stopping criterion based on the infidelity. Default 1e-5
     tol_costfunc        # Optimization stopping criterion based on the objective function value. Default 1e-4
+    tol_gnorm_abs       # Optimization stopping criterion based on absolute gradient norm drop. Default 1e-4
+    tol_gnorm_rel       # Optimization stopping criterion based on relative gradient norm drop. Default 1e-4
     costfunction        # Cost function measure: &quot;Jtrace&quot; or &quot;Jfrobenius&quot;. Default: &quot;Jtrace&quot;
     optim_target        # Optional: Set other optimization target string, if not specified through the targetgate or targetstate. 
     gamma_tik0          # Parameter for Tikhonov regularization ||alpha||^2. Default 1e-4
@@ -225,8 +227,6 @@ It is therefore recommended to utilize the python interface only for smaller sys
     Output parameters, available after Quandary has been executed (simulate or optimze)
     -----------------------------------------------------
     popt         # Optimized control palamters (Bspline coefficients). List[float]
-    time         # Vector of discretized time points. List[float]
-    optim_hist   # Optimization history: all fields as in Quandary's output file optim_history.dat. Dictionary.
 </code></pre></div>
             </div>
         </div>

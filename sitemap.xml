@@ -2,26 +2,26 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://software.llnl.gov/quandary/</loc>
-         <lastmod>2025-10-20</lastmod>
+         <lastmod>2026-02-03</lastmod>
     </url>
     <url>
          <loc>https://software.llnl.gov/quandary/QuandaryWithPython_HowTo/</loc>
-         <lastmod>2025-10-20</lastmod>
+         <lastmod>2026-02-03</lastmod>
     </url>
     <url>
          <loc>https://software.llnl.gov/quandary/config/</loc>
-         <lastmod>2025-10-20</lastmod>
+         <lastmod>2026-02-03</lastmod>
     </url>
     <url>
          <loc>https://software.llnl.gov/quandary/getting_started/</loc>
-         <lastmod>2025-10-20</lastmod>
+         <lastmod>2026-02-03</lastmod>
     </url>
     <url>
          <loc>https://software.llnl.gov/quandary/python_api/</loc>
-         <lastmod>2025-10-20</lastmod>
+         <lastmod>2026-02-03</lastmod>
     </url>
     <url>
          <loc>https://software.llnl.gov/quandary/user_guide/</loc>
-         <lastmod>2025-10-20</lastmod>
+         <lastmod>2026-02-03</lastmod>
     </url>
 </urlset>

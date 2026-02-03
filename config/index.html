@@ -148,6 +148,15 @@ decay_time = 0.0, 0.0
 // Time of dephase collapse operation (T2) per oscillator (gamma_2 = 1/T_2) (for Lindblad solver)
 dephase_time = 0.0, 0.0
 // Specify the initial conditions that are to be propagated
+// Available options and additional parameters:
+// - basis: basis states for gate optimization [&lt;osc_ID_i&gt;, &lt;osc_ID_j&gt;, ...] (defaults to all oscillators)
+// - file: read from file, &lt;path/to/file&gt;
+// - pure: kronecker product of pure vectors, &lt;state_osc_0&gt;, ..., &lt;state_osc_n&gt;
+// - diagonal: diagonal density basis matrices [&lt;osc_ID_i&gt;, &lt;osc_ID_j&gt;, ...] (defaults to all oscillators)
+// - ensemble: ensemble state for unconditional pure-state preparation, [&lt;osc_ID_i&gt;, &lt;osc_ID_j&gt;, ...] (defaults to all oscillators) - Lindblad solver only
+// - performance: test state for performance benchmarking (0 parameters)
+// - 3states: three predefined density matrix states (0 parameters) - Lindblad solver only
+// - Nplus1: N+1 basis states for gate optimization (0 parameters) - Lindblad solver only
 initialcondition = basis
 #initialcondition = file, &lt;path/to/initial_condition.dat&gt;
 #initialcondition = pure, 1, 0
@@ -155,28 +164,36 @@ initialcondition = basis
 #initialcondition = ensemble, 0
 #initialcondition = 3states
 #initialcondition = Nplus1
+#initialcondition = performance
 // Apply a pi-pulse to oscillator &lt;oscilID&gt; from &lt;tstart&gt; to &lt;tstop&gt; using a control strength of &lt;amp&gt; rad/ns. This ignores the codes control parameters inside [tstart,tstop], and instead applies the constant control amplitude |p+iq|=&lt;amp&gt; to oscillator &lt;oscilID&gt;, and zero control for all other oscillators. Format per pipulse: 4 values: &lt;oscilID (int)&gt;, &lt;tstart (double)&gt;, &lt;tstop (double)&gt;, &lt;amp(double)&gt;. For more than one pipulse, just put them behind each other. 
 #apply_pipulse = 0, 0.5, 0.604, 15.10381
 #apply_pipulse = 0, 0.5, 0.604, 15.10381, 1, 0.7, 0.804, 15.10381
-
+// Optional: Read system Hamiltonian from file (default: none - use built-in analytical Hamiltonian)
+#hamiltonian_file_Hsys = /path/to/system_hamiltonian.dat
+// Optional: Read control Hamiltonian from file (default: none - use built-in analytical Hamiltonian)
+#hamiltonian_file_Hc = /path/to/control_hamiltonian.dat
 
 /* --------------------------------------------------------------- */
 /* ------------------- Optimization options ----------------------*/
 /* --------------------------------------------------------------- */
 // Define the controllable segments for each oscillator and the type of parameterization. Multiple segments can be listed behind each other, with corresponding starting and finish times.
 // Format: &lt;controltype&gt;, &lt;number of basis functions&gt; [, &lt;tstart&gt;, &lt;tstop&gt;] 
-// Available control types: &quot;spline&quot; for 2nd order Bspline basis functions (recommended), &quot;spline0&quot; for piecewise constant control parameterization (aka 0th order Bspline basis functions)
+// Available control types: &quot;spline&quot; for 2nd order Bspline basis functions (recommended), &quot;spline0&quot; for piecewise constant control parameterization (aka 0th order Bspline basis functions),
+// &quot;spline_amplitude&quot; for amplitude-only parameterization, &quot;step&quot; for step function control
 control_segments0 = spline, 150
 control_segments1 = spline, 150
 # control_segments0 = spline0, 300
 # control_segments0 = spline, 150, &lt;tstart&gt;, &lt;tstop&gt;
 # control_segments0 = spline_amplitude, 150, 1.0
+# control_segments0 = step, &lt;amp1&gt;, &lt;amp2&gt;, &lt;tramp&gt;
+# control_segments0 = step, &lt;amp1&gt;, &lt;amp2&gt;, &lt;tramp&gt;, &lt;tstart&gt;, &lt;tstop&gt;
 // Decide whether control pulses should start and end at zero. Default: true.
 control_enforceBC=false
 // Set the initial control pulse parameters (GHz). One option for each segmemt. Note: Reading the initialization from file applies to all subsystems, not just the one oscillator with that index, i.e. the file should contain all parameters for all oscillators in one long column. 
 control_initialization0 = constant, 0.005
 control_initialization1 = constant, 0.005
 #control_initialization0 = constant, 0.005
+#control_initialization0 = random, 0.005
 #control_initialization0 = file, ./params.dat
 #control_initialization0 = constant, &lt;amp_init&gt;, &lt;phase_init&gt;
 // Maximum amplitude bound for the control pulses for each oscillator (GHz). One value for each segment. 
@@ -263,6 +280,7 @@ linearsolver_maxiter = 20
 // &quot;IMR&quot; - Implicit Midpoint Rule (IMR) of 2nd order, 
 // &quot;IMR4&quot; - Compositional IMR of order 2 using 3 stages, 
 // &quot;IMR8&quot; - Compositional IMR of order 8 using 15 stages, 
+// &quot;EE&quot; - Explicit Euler (EE) of 1st order (for debugging only)
 timestepper = IMR
 // For reproducability, one can choose to set a fixed seed for the random number generator. Comment out, or set negative if seed should be random (non-reproducable)
 rand_seed = 1234
