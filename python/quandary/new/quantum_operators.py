@@ -16,12 +16,12 @@ def number(n):
 def map_to_oscillators(id, Ne, Ng):
     """Return the local energy level of each oscillator for a given global index id."""
     # len(Ne) = number of subsystems
-    nlevels = [Ne[i]+Ng[i] for i in range(len(Ne))]
+    nlevels = [Ne[i] + Ng[i] for i in range(len(Ne))]
     localIDs = []
 
     index = int(id)
     for iosc in range(len(Ne)):
-        postdim = np.prod(nlevels[iosc+1:])
+        postdim = np.prod(nlevels[iosc + 1:])
         localIDs.append(int(index / postdim))
         index = index % postdim
 
@@ -29,55 +29,59 @@ def map_to_oscillators(id, Ne, Ng):
 
 
 def _eigen_and_reorder(H0, verbose=False):
-    """Internal function that computes eigen decomposition and re-orders it to make the eigenvector matrix as close to the identity as possible."""
+    """Internal function that computes eigen decomposition.
+
+    Re-orders it to make the eigenvector matrix as close to the identity as possible.
+    """
 
     # Get eigenvalues and vectors and sort them in ascending order
     Ntot = H0.shape[0]
     evals, evects = np.linalg.eig(H0)
     reord = np.argsort(evals)
     evals = evals[reord]
-    evects = evects[:,reord]
+    evects = evects[:, reord]
 
     # Find the column index corresponding to the largest element in each row of evects
     max_col = np.zeros(Ntot, dtype=np.int32)
     for row in range(Ntot):
-        max_col[row] = np.argmax(np.abs(evects[row,:]))
+        max_col[row] = np.argmax(np.abs(evects[row, :]))
 
     # test the error detection
     # max_col[1] = max_col[0]
 
     # loop over all columns and check max_col for duplicates
     Ndup_col = 0
-    for row in range(Ntot-1):
-        for k in range(row+1, Ntot):
+    for row in range(Ntot - 1):
+        for k in range(row + 1, Ntot):
             if max_col[row] == max_col[k]:
                 Ndup_col += 1
                 print("Error: detected identical max_col =", max_col[row], "for rows", row, "and", k)
-
 
     if Ndup_col > 0:
         print("Found", Ndup_col, "duplicate column indices in max_col array")
         raise ValueError('Permutation of eigen-vector matrix failed')
 
-    evects = evects[:,max_col]
+    evects = evects[:, max_col]
     evals = evals[max_col]
 
     # Make sure all diagonal elements are positive
     for j in range(Ntot):
-        if evects[j,j]<0.0:
-            evects[:,j] = - evects[:,j]
+        if evects[j, j] < 0.0:
+            evects[:, j] = - evects[:, j]
 
     return evals, evects
 
 
-def get_resonances(*, Ne, Ng, Hsys, Hc_re=[], Hc_im=[], rotfreq=[], cw_amp_thres=1e-7, cw_prox_thres=1e-2,verbose=True, stdmodel=True):
+def get_resonances(*, Ne, Ng, Hsys, Hc_re=[], Hc_im=[], rotfreq=[], cw_amp_thres=1e-7,
+                   cw_prox_thres=1e-2, verbose=True, stdmodel=True):
     """
     Computes system resonances, to be used as carrier wave frequencie.
     Returns resonance frequencies in GHz and corresponding growth rates.
     """
 
     if verbose:
-        print("\nComputing carrier frequencies, ignoring growth rate slower than:", cw_amp_thres, "and frequencies closer than:", cw_prox_thres, "[GHz])")
+        print("\nComputing carrier frequencies, ignoring growth rate slower than:", cw_amp_thres,
+              "and frequencies closer than:", cw_prox_thres, "[GHz])")
 
     nqubits = len(Ne)
     n = Hsys.shape[0]
@@ -109,7 +113,7 @@ def get_resonances(*, Ne, Ng, Hsys, Hc_re=[], Hc_im=[], rotfreq=[], cw_amp_thres
                 for j in range(i):
 
                     # Look for non-zero elements (skip otherwise)
-                    if abs(Hc_trans[i,j]) < 1e-14:
+                    if abs(Hc_trans[i, j]) < 1e-14:
                         continue
 
                     # Get the resonance frequency
@@ -129,17 +133,21 @@ def get_resonances(*, Ne, Ng, Hsys, Hc_re=[], Hc_im=[], rotfreq=[], cw_amp_thres
                         # Ignore resonances that are too close by comparing to all previous resonances
                         if any(abs(delta_f - f) < cw_prox_thres for f in resonances_a):
                             if verbose:
-                                print("    Ignoring resonance from ", ids_j, "to ", ids_i, ", freq", delta_f, ", growth rate=", abs(Hc_trans[i, j]), "being too close to one that already exists.")
+                                print("    Ignoring resonance from ", ids_j, "to ", ids_i, ", freq", delta_f,
+                                      ", growth rate=", abs(Hc_trans[i, j]),
+                                      "being too close to one that already exists.")
                         # Ignore resonances with growth rate smaller than user-defined threshold
-                        elif abs(Hc_trans[i,j]) < cw_amp_thres:
+                        elif abs(Hc_trans[i, j]) < cw_amp_thres:
                             if verbose:
-                                print("    Ignoring resonance from ", ids_j, "to ", ids_i, ", freq", delta_f, ", growth rate=", abs(Hc_trans[i, j]), "growth rate is too slow.")
+                                print("    Ignoring resonance from ", ids_j, "to ", ids_i, ", freq", delta_f,
+                                      ", growth rate=", abs(Hc_trans[i, j]), "growth rate is too slow.")
                         # Otherwise, add resonance to the list
                         else:
                             resonances_a.append(delta_f)
                             speed_a.append(abs(Hc_trans[i, j]))
                             if verbose:
-                                print("    Resonance from ", ids_j, "to ", ids_i, ", freq", delta_f, ", growth rate=", abs(Hc_trans[i, j]))
+                                print("    Resonance from ", ids_j, "to ", ids_i, ", freq", delta_f,
+                                      ", growth rate=", abs(Hc_trans[i, j]))
 
         # Append resonances for this qubit to overall list
         resonances.append(resonances_a)
@@ -161,7 +169,7 @@ def get_resonances(*, Ne, Ng, Hsys, Hc_re=[], Hc_im=[], rotfreq=[], cw_amp_thres
     return om, growth_rate
 
 
-def hamiltonians(*, N, freq01, selfkerr, crosskerr=[], Jkl = [], rotfreq=[], verbose=True):
+def hamiltonians(*, N, freq01, selfkerr, crosskerr=[], Jkl=[], rotfreq=[], verbose=True):
     """
     Create standard Hamiltonian operators to model pulse-driven superconducting qubits.
 
@@ -180,20 +188,20 @@ def hamiltonians(*, N, freq01, selfkerr, crosskerr=[], Jkl = [], rotfreq=[], ver
 
     Returns:
     --------
-    Hsys        : System Hamiltonian (time-independent), units rad/ns
-    Hc_re       : Real parts of control Hamiltonian operators for each qubit (Hc = [ [Hc_qubit1], [Hc_qubit2],... ]). Unit-less.
-    Hc_im       : Imag parts of control Hamiltonian operators for each qubit (Hc = [ [Hc_qubit1], [Hc_qubit2],... ]). Unit-less.
+    Hsys   : System Hamiltonian (time-independent), units rad/ns
+    Hc_re  : Real parts of control Hamiltonian operators for each qubit. Unit-less.
+    Hc_im  : Imag parts of control Hamiltonian operators for each qubit. Unit-less.
     """
 
     if len(rotfreq) == 0:
-        rotfreq=np.zeros(len(N))
+        rotfreq = np.zeros(len(N))
 
     nqubits = len(N)
     assert len(selfkerr) == nqubits
     assert len(freq01) == nqubits
     assert len(rotfreq) == nqubits
 
-    n = np.prod(N)     # System size
+    n = np.prod(N)  # System size
 
     # Set up lowering operators in full dimension
     Amat = []
@@ -201,38 +209,42 @@ def hamiltonians(*, N, freq01, selfkerr, crosskerr=[], Jkl = [], rotfreq=[], ver
         ai = lowering(N[i])
         for j in range(i):
             ai = np.kron(np.identity(N[j]), ai)
-        for j in range(i+1,len(N)):
+        for j in range(i + 1, len(N)):
             ai = np.kron(ai, np.identity(N[j]))
-        #print("Amat i =", i)
-        #print(ai)
+        # print("Amat i =", i)
+        # print(ai)
         Amat.append(ai)
 
     # Set up system Hamiltonian: Duffing oscillators
     Hsys = np.zeros((n, n))
     for q in range(nqubits):
-        domega_radns =  2.0*np.pi * (freq01[q] - rotfreq[q])
-        selfkerr_radns = 2.0*np.pi * selfkerr[q]
-        Hsys +=  domega_radns * Amat[q].T @ Amat[q]
-        Hsys -= selfkerr_radns/2.0 * Amat[q].T @ Amat[q].T @ Amat[q] @ Amat[q]
+        domega_radns = 2.0 * np.pi * (freq01[q] - rotfreq[q])
+        selfkerr_radns = 2.0 * np.pi * selfkerr[q]
+        Hsys += domega_radns * Amat[q].T @ Amat[q]
+        Hsys -= selfkerr_radns / 2.0 * Amat[q].T @ Amat[q].T @ Amat[q] @ Amat[q]
 
     # Add cross cerr coupling, if given
-    if len(crosskerr)>0:
+    if len(crosskerr) > 0:
         idkl = 0
         for q in range(nqubits):
             for p in range(q + 1, nqubits):
                 if abs(crosskerr[idkl]) > 1e-14:
-                    crosskerr_radns = 2.0*np.pi * crosskerr[idkl]
+                    crosskerr_radns = 2.0 * np.pi * crosskerr[idkl]
                     Hsys -= crosskerr_radns * Amat[q].T @ Amat[q] @ Amat[p].T @ Amat[p]
                 idkl += 1
 
     # Add Jkl coupling term.
-    # Note that if the rotating frame frequencies are different amongst oscillators, then this contributes to a *time-dependent* system Hamiltonian. Here, we treat this as time-independent, because this Hamiltonian here is *ONLY* used to compute the time-step size and resonances, and it is NOT passed to the quandary code. Quandary sets up the standard model with a time-dependent system Hamiltonian if the frequencies of rotation differ amongst oscillators.
-    if len(Jkl)>0:
+    # Note that if the rotating frame frequencies are different amongst oscillators, then this contributes
+    # to a *time-dependent* system Hamiltonian. Here, we treat this as time-independent, because this
+    # Hamiltonian here is *ONLY* used to compute the time-step size and resonances, and it is NOT passed
+    # to the quandary code. Quandary sets up the standard model with a time-dependent system Hamiltonian
+    # if the frequencies of rotation differ amongst oscillators.
+    if len(Jkl) > 0:
         idkl = 0
         for q in range(nqubits):
             for p in range(q + 1, nqubits):
                 if abs(Jkl[idkl]) > 1e-14:
-                    Jkl_radns  = 2.0*np.pi*Jkl[idkl]
+                    Jkl_radns = 2.0 * np.pi * Jkl[idkl]
                     Hsys += Jkl_radns * (Amat[q].T @ Amat[p] + Amat[q] @ Amat[p].T)
                 idkl += 1
 

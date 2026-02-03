@@ -6,7 +6,7 @@ import numpy as np
 def infidelity_(A, B):
     """Calculate infidelity between quantum states."""
     dim = int(np.sqrt(A.size))
-    return 1.0 - np.abs(np.trace(A.conj().transpose() @ B))**2/dim**2
+    return 1.0 - np.abs(np.trace(A.conj().transpose() @ B))**2 / dim**2
 
 
 def downsample_pulses(*, pt0=[], qt0=[], nsplines, spline_knot_spacing, nsteps, dT, Ne):
@@ -49,28 +49,28 @@ def downsample_pulses(*, pt0=[], qt0=[], nsplines, spline_knot_spacing, nsteps, 
         # print("simulate(): sizes_ok = ", sizes_ok)
         if sizes_ok:
             # do the downsampling and construct pcof0
-            pcof0 = np.zeros(0) # to hold the downsampled numpy array for the control vector
-            fact = 2e-3*np.pi # conversion factor from MHz to rad/ns
+            pcof0 = np.zeros(0)  # to hold the downsampled numpy array for the control vector
+            fact = 2e-3 * np.pi  # conversion factor from MHz to rad/ns
 
             for iosc in range(Nsys):
                 Nelem = np.size(pt0[iosc])
-                dt = (nsteps*dT)/(Nelem-1) # time step corresponding to (pt0, qt0)
+                dt = (nsteps * dT) / (Nelem - 1)  # time step corresponding to (pt0, qt0)
                 p_seg = pt0[iosc]
                 q_seg = qt0[iosc]
 
-                seg_re = np.zeros(nsplines) # to hold downsampled amplitudes
+                seg_re = np.zeros(nsplines)  # to hold downsampled amplitudes
                 seg_im = np.zeros(nsplines)
                 # downsample p_seg, q_seg
                 for i_spl in range(nsplines):
                     # the B-spline0 coefficients correspond to the time levels
-                    t_spl = (i_spl)*spline_knot_spacing
+                    t_spl = (i_spl) * spline_knot_spacing
                     # i = max(0, np.rint(t_spl/dt).astype(int))# given t_spl, find the closest time step index
                     i = int(np.rint(t_spl / dt))
-                    i = min(i, Nelem-1) # make sure i is in range
+                    i = min(i, Nelem - 1)  # make sure i is in range
                     seg_re[i_spl] = fact * p_seg[i]
                     seg_im[i_spl] = fact * q_seg[i]
 
-                pcof0 = np.append(pcof0, seg_re) # append segment to the global control vector
+                pcof0 = np.append(pcof0, seg_re)  # append segment to the global control vector
                 pcof0 = np.append(pcof0, seg_im)
             # print("simulation(): downsampling of (pt0, qt0) completed")
             return pcof0
