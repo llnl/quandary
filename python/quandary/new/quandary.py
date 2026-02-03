@@ -5,10 +5,12 @@ from __future__ import annotations
 import logging
 import os
 import subprocess
+import sys
 from typing import TYPE_CHECKING, Optional
 
 from .. import _quandary_impl
 from .._quandary_impl import QuandaryConfig, Config, DecoherenceType
+from .results import get_results as _get_results
 
 if TYPE_CHECKING:
     from .results import QuandaryResults
@@ -123,8 +125,6 @@ class Quandary:
             >>> results = quandary.run_mpi(n_procs=4)
             >>> print(f"Infidelity: {results.infidelity}")
         """
-        import sys
-
         # Use output_directory as working directory if not specified
         if working_dir is None:
             working_dir = self.output_directory
@@ -178,8 +178,6 @@ class Quandary:
             >>> results = quandary.get_results()
             >>> print(f"Infidelity: {results.infidelity}")
         """
-        from .results import get_results as _get_results
-
         return _get_results(
             datadir=self.output_directory,
             lindblad=self.decoherence_type != DecoherenceType.NONE,
