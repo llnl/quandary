@@ -122,6 +122,41 @@ You can silence Quandary output by adding the `--quiet` argument to the above co
 The `examples/` folder exemplifies the usage of Quandary's Python interface. 
 * `python example_cnot.py`
 
+# Building Documentation Locally
+
+## Building Doxygen Locally
+To build the Doxygen documentation locally:
+
+1. Install Doxygen and Graphviz (e.g., `brew install doxygen graphviz` on macOS or `apt install doxygen graphviz` on Ubuntu)
+2. Configure and build the docs:
+   ```
+   cd build
+   cmake ..
+   make quandary_doxygen
+   ```
+3. View the docs in your browser:
+   ```
+   open build/docs/doxygen/html/index.html
+   ```
+
+## Building User Guide Locally
+To build the user guide documentation locally:
+
+1. Install the required Python packages:
+   ```
+   pip install mkdocs pymdown-extensions mkdocs-bibtex mkdocs-macros-plugin mkdocs-jupyter
+   ```
+2. Build the MkDocs site:
+   ```
+   mkdocs build
+   ```
+3. To view the documentation in your browser while making changes (with live reload):
+   ```
+   mkdocs serve
+   ```
+   Then open http://127.0.0.1:8000/ in your browser.
+4. The built site will be in the `site` directory.
+
 # Tests
 
 
