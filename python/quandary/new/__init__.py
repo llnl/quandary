@@ -29,3 +29,32 @@ from .._quandary_impl import (
 # Import our implementation
 from .quandary import Quandary
 from .results import QuandaryResults, get_results
+
+# Quantum operators and Hamiltonians
+from .quantum_operators import (
+    lowering,
+    number,
+    map_to_oscillators,
+    hamiltonians,
+    get_resonances,
+)
+
+# Time estimation utilities
+from .time_estimation import (
+    estimate_timesteps,
+    timestep_richardson_est,
+)
+
+# Visualization utilities
+from .visualization import (
+    plot_pulse,
+    plot_expectedEnergy,
+    plot_population,
+    plot_results_1osc,
+)
+
+# General utilities
+from .utils import (
+    infidelity_,
+    downsample_pulses,
+)
