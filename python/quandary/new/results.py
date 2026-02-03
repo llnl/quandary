@@ -5,11 +5,13 @@ from __future__ import annotations
 import glob
 import logging
 import os
-import re
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from .._quandary_impl import Config
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +21,7 @@ class QuandaryResults:
     """Results from a Quandary simulation or optimization.
 
     Attributes:
+        config: Validated configuration with all defaults applied (None if loaded from files).
         time: Array of time points [ns].
         pt: Control pulses p(t) for each oscillator [MHz]. Access: pt[oscillator][time_index].
         qt: Control pulses q(t) for each oscillator [MHz]. Access: qt[oscillator][time_index].
@@ -36,6 +39,7 @@ class QuandaryResults:
             Access: population[oscillator][initial_condition][level, time_index].
     """
 
+    config: Optional[Config] = None
     time: np.ndarray = field(default_factory=lambda: np.array([]))
     pt: List[np.ndarray] = field(default_factory=list)
     qt: List[np.ndarray] = field(default_factory=list)
@@ -48,62 +52,56 @@ class QuandaryResults:
     population: List[List[np.ndarray]] = field(default_factory=list)
 
 
-def _detect_lindblad(datadir: str) -> bool:
-    """Auto-detect whether Lindblad solver was used from config_log.toml."""
-    config_log = os.path.join(datadir, "config_log.toml")
-    if os.path.exists(config_log):
-        try:
-            with open(config_log) as f:
-                content = f.read()
-                # Look for decoherence type setting
-                if re.search(
-                    r'type\s*=\s*["\']?(decay|dephase|both)["\']?',
-                    content,
-                    re.IGNORECASE,
-                ):
-                    return True
-        except OSError as e:
-            logger.warning(f"Could not read {config_log}: {e}")
-    return False
-
-
-def get_results(
-    datadir: str = "./",
-    lindblad: Optional[bool] = None,
-    n_init: Optional[int] = None,
-) -> QuandaryResults:
+def get_results(datadir: str = "./") -> QuandaryResults:
     """Load results from Quandary output files.
 
     This function parses output files from a Quandary run and returns them
-    in a structured format. Parameters are auto-detected from output files
-    if not provided.
+    in a structured format. The config is read from config_log.toml if available.
 
     Args:
         datadir: Directory containing Quandary output files.
-        lindblad: Whether Lindblad solver was used. Auto-detected if None.
-        n_init: Number of initial conditions. Auto-detected if None.
 
     Returns:
-        QuandaryResults containing all parsed output data.
+        QuandaryResults containing all parsed output data and config.
 
     Example:
         >>> results = get_results("./data_out")
         >>> print(f"Infidelity: {results.infidelity}")
+        >>> print(results.config.to_toml())
     """
+    from .._quandary_impl import Config, DecoherenceType
+
     results = QuandaryResults()
 
-    # Auto-detect from files
+    # Load config from config_log.toml
+    config_log = os.path.join(datadir, "config_log.toml")
+    if not os.path.exists(config_log):
+        raise FileNotFoundError(
+            f"config_log.toml not found in {datadir}. "
+            "Cannot load results without configuration."
+        )
+
+    try:
+        # Load config from TOML file
+        results.config = Config.from_toml(config_log, quiet=True)
+    except Exception as e:
+        logger.warning(f"Error loading config from {config_log}: {e}")
+        results.config = None
+
+    # Get parameters from config
+    if results.config:
+        lindblad = results.config.decoherence_type != DecoherenceType.NONE
+        n_init = results.config.n_initial_conditions
+    else:
+        # Fallback: detect from files
+        rho_files_temp = sorted(glob.glob(os.path.join(datadir, "rho_Re.iinit*.dat")))
+        lindblad = False  # Assume Schrodinger if config unavailable
+        n_init = len(rho_files_temp)
+
+    # Detect from files
     control_files = sorted(glob.glob(os.path.join(datadir, "control*.dat")))
     rho_files = sorted(glob.glob(os.path.join(datadir, "rho_Re.iinit*.dat")))
     n_osc = len(control_files)
-
-    # Auto-detect lindblad if not provided
-    if lindblad is None:
-        lindblad = _detect_lindblad(datadir)
-
-    # Auto-detect n_init if not provided
-    if n_init is None:
-        n_init = len(rho_files)
 
     # For Lindblad, we only want diagonal initial conditions for some outputs
     n_init_diag = n_init if not lindblad else int(np.sqrt(n_init))

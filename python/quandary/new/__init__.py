@@ -4,8 +4,8 @@
 from .._quandary_impl import (  # noqa: F401
     # Configuration
     QuandaryConfig,
-    # Run functions
-    run,
+    Config,
+    # Run function from C++ (used internally)
     run_from_file,
     # Enums
     DecoherenceType,
@@ -26,8 +26,10 @@ from .._quandary_impl import (  # noqa: F401
     ControlInitializationSettings,
 )
 
-# Import our implementation
-from .quandary import Quandary  # noqa: F401
+# Functional API (primary interface)
+from .runner import run, run_mpi  # noqa: F401
+
+# Results
 from .results import QuandaryResults, get_results  # noqa: F401
 
 # Quantum operators and Hamiltonians
@@ -57,4 +59,10 @@ from .visualization import (  # noqa: F401
 from .utils import (  # noqa: F401
     infidelity_,
     downsample_pulses,
+)
+
+# Config builders (factory functions)
+from .config_builders import (  # noqa: F401
+    create_simulation_config,
+    create_optimization_config,
 )

@@ -181,6 +181,15 @@ NB_MODULE(_quandary_impl, m) {
     .def(nb::init<const RawConfig&, bool>(),
       nb::arg("input"), nb::arg("quiet") = false,
       "Create a validated Config from RawConfig")
+    .def_static("from_file", &Config::fromFile,
+      nb::arg("filename"), nb::arg("quiet") = false,
+      "Load and validate a Config from a file (auto-detects TOML or .cfg format)")
+    .def_static("from_toml", &Config::fromToml,
+      nb::arg("toml_filename"), nb::arg("quiet") = false,
+      "Load and validate a Config from a TOML file")
+    .def_static("from_toml_string", &Config::fromTomlString,
+      nb::arg("toml_content"), nb::arg("quiet") = false,
+      "Load and validate a Config from a TOML string")
     .def_prop_ro("n_initial_conditions", &Config::getNInitialConditions,
       "Number of initial conditions")
     .def_prop_ro("output_directory", &Config::getOutputDirectory,
