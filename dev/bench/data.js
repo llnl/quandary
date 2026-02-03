@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1768586330399,
+  "lastUpdate": 1770158035608,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -2331,6 +2331,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
             "value": 4511.27,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Tara Drwenski",
+            "username": "tdrwenski",
+            "email": "tdrwenski@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "7722ec976b320fb8ce96d152188b4c94ed281664",
+          "message": "Merge pull request #109 from llnl/fix-formatting-user-guide\n\nFix formatting issues in user guide",
+          "timestamp": "2026-02-03T21:51:53Z",
+          "url": "https://github.com/llnl/quandary/commit/7722ec976b320fb8ce96d152188b4c94ed281664"
+        },
+        "date": 1770158033763,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "value": 0.757079935981892,
+            "range": "0.2751877603297216",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "value": 86.94,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "value": 5.369135521992575,
+            "range": "0.5385414843545178",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "value": 4313.77,
             "unit": "MB"
           }
         ]
