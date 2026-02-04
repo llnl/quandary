@@ -18,7 +18,7 @@ MasterEq::MasterEq(const Config& config, Oscillator** oscil_vec_, bool quietmode
   noscillators = nlevels.size();
   oscil_vec = oscil_vec_;
 
-  crosskerr = config.getCrossKerr();
+  crosskerr = config.getCrossKerrCoupling();
   Jkl = config.getDipoleCoupling();
 
   // Compute eta from rotation frequencies (eta_ij = w^r_i - w^r_j)

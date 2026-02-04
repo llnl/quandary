@@ -17,11 +17,11 @@ selfkerr = [0.2198, 0.2252]
 # selfkerr = 0.22  # single value applies to all subsystems
 # Cross-kerr coupling strength for subsystems k<->l ("\xi_kl", multiplying a_k^d a_k a_l^d a_l, GHz).
 # Option 1: All-to-all connectivity with single value
-crosskerr = 0.1
+# crosskerr_coupling = 0.1
 # Option 2: Per-subsystem-pair coupling using array of tables
-# crosskerr = [
-#   { subsystem = [0,1], value = 0.1 }
-# ]
+crosskerr_coupling = [
+  { subsystem = [0,1], value = 0.1 }
+]
 # Dipole-dipole coupling strength for subsystems k<->l ("J_kl", multiplying a_k^d a_l + a_k a_l^d, GHz).
 # Option 1: All-to-all connectivity with single value
 dipole_coupling = 0.0

@@ -110,18 +110,18 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     selfkerr = validators::scalarOrVectorOr<double>(*system_table, "selfkerr", num_osc, std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
 
-    // Parse crosskerr and dipole_coupling: either one value (all-to-all coupling) or array of tables with 'subsystem = [i,j]' field for i-j coupling)
+    // Parse crosskerr_coupling and dipole_coupling: either one value (all-to-all coupling) or array of tables with 'subsystem = [i,j]' field for i-j coupling)
     size_t num_pairs = (num_osc - 1) * num_osc / 2;
-    crosskerr.assign(num_pairs, ConfigDefaults::CROSSKERR);
+    crosskerr_coupling.assign(num_pairs, ConfigDefaults::CROSSKERR_COUPLING);
     dipole_coupling.assign(num_pairs, ConfigDefaults::DIPOLE_COUPLING);
-    // Overwrite for crosskerr
-    if (system_table->contains("crosskerr")) {
-      if ((*system_table)["crosskerr"].is_value()) {
-        double single_val = validators::field<double>(*system_table, "crosskerr").value();
-        crosskerr.assign(num_pairs, single_val);
+    // Overwrite for crosskerr_coupling
+    if (system_table->contains("crosskerr_coupling")) {
+      if ((*system_table)["crosskerr_coupling"].is_value()) {
+        double single_val = validators::field<double>(*system_table, "crosskerr_coupling").value();
+        crosskerr_coupling.assign(num_pairs, single_val);
       } else {
       auto parseFunc = [](const toml::table& t) { return validators::field<double>(t, "value").value(); };
-      crosskerr = parsePerSubsystemSettings<double>(*system_table, "crosskerr", num_osc, ConfigDefaults::CROSSKERR, parseFunc, logger);
+      crosskerr_coupling = parsePerSubsystemSettings<double>(*system_table, "crosskerr_coupling", num_osc, ConfigDefaults::CROSSKERR_COUPLING, parseFunc, logger);
       }
     }
     // Overwrite for dipole_coupling
@@ -363,9 +363,9 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   copyLast(selfkerr, num_osc);
 
   size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
-  crosskerr = settings.crosskerr.value_or(std::vector<double>(num_pairs_osc, ConfigDefaults::CROSSKERR));
-  copyLast(crosskerr, num_pairs_osc);
-  crosskerr.resize(num_pairs_osc);  // Truncate if larger than expected
+  crosskerr_coupling = settings.crosskerr.value_or(std::vector<double>(num_pairs_osc, ConfigDefaults::CROSSKERR_COUPLING));
+  copyLast(crosskerr_coupling, num_pairs_osc);
+  crosskerr_coupling.resize(num_pairs_osc);  // Truncate if larger than expected
 
   dipole_coupling = settings.Jkl.value_or(std::vector<double>(num_pairs_osc, ConfigDefaults::DIPOLE_COUPLING));
   copyLast(dipole_coupling, num_pairs_osc);
@@ -781,7 +781,7 @@ void Config::printConfig(std::stringstream& log) const {
   log << "dt = " << dt << "\n";
   log << "transition_frequency = " << printVector(transition_frequency) << "\n";
   log << "selfkerr = " << printVector(selfkerr) << "\n";
-  log << "crosskerr = " << toStringCoupling(crosskerr, nlevels.size()) << "\n";
+  log << "crosskerr_coupling = " << toStringCoupling(crosskerr_coupling, nlevels.size()) << "\n";
   log << "dipole_coupling = " << toStringCoupling(dipole_coupling, nlevels.size()) << "\n";
   log << "rotation_frequency = " << printVector(rotation_frequency) << "\n";
   log << "decoherence = {\n";

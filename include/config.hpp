@@ -66,7 +66,7 @@ class Config {
   double dt; ///< Time step size (ns). Determines final time: T=ntime*dt
   std::vector<double> transition_frequency; ///< Fundamental transition frequencies for each oscillator (GHz)
   std::vector<double> selfkerr; ///< Self-kerr frequencies for each oscillator (GHz)
-  std::vector<double> crosskerr; ///< Cross-kerr coupling frequencies for each oscillator coupling (GHz)
+  std::vector<double> crosskerr_coupling; ///< Cross-kerr coupling frequencies for each oscillator coupling (GHz)
   std::vector<double> dipole_coupling; ///< Dipole-dipole coupling frequencies for each oscillator coupling (GHz)
   std::vector<double> rotation_frequency; ///< Rotational wave approximation frequencies for each subsystem (GHz)
   DecoherenceType decoherence_type; ///< Switch between Schroedinger and Lindblad solver
@@ -142,7 +142,7 @@ class Config {
 
   const std::vector<double>& getTransitionFrequency() const { return transition_frequency; }
   const std::vector<double>& getSelfKerr() const { return selfkerr; }
-  const std::vector<double>& getCrossKerr() const { return crosskerr; }
+  const std::vector<double>& getCrossKerrCoupling() const { return crosskerr_coupling; }
   const std::vector<double>& getDipoleCoupling() const { return dipole_coupling; }
   const std::vector<double>& getRotationFrequency() const { return rotation_frequency; }
   DecoherenceType getDecoherenceType() const { return decoherence_type; }

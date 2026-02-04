@@ -17,7 +17,7 @@ namespace ConfigDefaults {
 // General options
 const double ROTATION_FREQUENCY = 0.0; ///< Default rotational wave approximation frequency (GHz)
 const double SELFKERR = 0.0; ///< Default self-kerr frequency (GHz)
-const double CROSSKERR = 0.0; ///< Default cross-kerr frequency (GHz)
+const double CROSSKERR_COUPLING = 0.0; ///< Default cross-kerr frequency (GHz)
 const double DIPOLE_COUPLING = 0.0; ///< Default dipole-dipole coupling frequency (GHz)
 const DecoherenceType DECOHERENCE_TYPE = DecoherenceType::NONE; ///< Default decoherence type enum
 const double DECAY_TIME = 0.0; ///< Default decay time

@@ -142,16 +142,16 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsAllToAll) {
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
-        crosskerr = 0.5
+        crosskerr_coupling = 0.5
       )",
       logger);
 
-  auto crosskerr = config.getCrossKerr();
+  auto crosskerr_coupling = config.getCrossKerrCoupling();
   size_t num_osc = config.getNumOsc();
   size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
-  EXPECT_EQ(crosskerr.size(), num_pairs_osc);
+  EXPECT_EQ(crosskerr_coupling.size(), num_pairs_osc);
   for (size_t i = 0; i < num_pairs_osc; ++i) {
-    EXPECT_DOUBLE_EQ(crosskerr[i], 0.5);
+    EXPECT_DOUBLE_EQ(crosskerr_coupling[i], 0.5);
   }
 }
 
@@ -164,22 +164,22 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsOneCoupling) {
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
-        crosskerr = [
+        crosskerr_coupling = [
         { subsystem=[1,2], value=0.4 },
         ]
       )",
       logger);
 
-  auto crosskerr = config.getCrossKerr();
+  auto crosskerr_coupling = config.getCrossKerrCoupling();
   size_t num_osc = config.getNumOsc();
   size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
-  EXPECT_EQ(crosskerr.size(), num_pairs_osc);
-  EXPECT_DOUBLE_EQ(crosskerr[0], 0.0);
-  EXPECT_DOUBLE_EQ(crosskerr[1], 0.0);
-  EXPECT_DOUBLE_EQ(crosskerr[2], 0.0);
-  EXPECT_DOUBLE_EQ(crosskerr[3], 0.4);
-  EXPECT_DOUBLE_EQ(crosskerr[4], 0.0);
-  EXPECT_DOUBLE_EQ(crosskerr[5], 0.0);
+  EXPECT_EQ(crosskerr_coupling.size(), num_pairs_osc);
+  EXPECT_DOUBLE_EQ(crosskerr_coupling[0], 0.0);
+  EXPECT_DOUBLE_EQ(crosskerr_coupling[1], 0.0);
+  EXPECT_DOUBLE_EQ(crosskerr_coupling[2], 0.0);
+  EXPECT_DOUBLE_EQ(crosskerr_coupling[3], 0.4);
+  EXPECT_DOUBLE_EQ(crosskerr_coupling[4], 0.0);
+  EXPECT_DOUBLE_EQ(crosskerr_coupling[5], 0.0);
 }
 
 TEST_F(TomlParserTest, ParseCrosskerrSettingsPerPair) {
@@ -191,7 +191,7 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsPerPair) {
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
-        crosskerr = [
+        crosskerr_coupling = [
         { subsystem=[0,1], value=0.1 },
         { subsystem=[0,2], value=0.2 },
         { subsystem=[0,3], value=0.3 },
@@ -202,16 +202,16 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsPerPair) {
       )",
       logger);
 
-  auto crosskerr = config.getCrossKerr();
+  auto crosskerr_coupling = config.getCrossKerrCoupling();
   size_t num_osc = config.getNumOsc();
   size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
-  EXPECT_EQ(crosskerr.size(), num_pairs_osc);
-  EXPECT_DOUBLE_EQ(crosskerr[0], 0.1);
-  EXPECT_DOUBLE_EQ(crosskerr[1], 0.2);
-  EXPECT_DOUBLE_EQ(crosskerr[2], 0.3);
-  EXPECT_DOUBLE_EQ(crosskerr[3], 0.4);
-  EXPECT_DOUBLE_EQ(crosskerr[4], 0.5);
-  EXPECT_DOUBLE_EQ(crosskerr[5], 0.6);
+  EXPECT_EQ(crosskerr_coupling.size(), num_pairs_osc);
+  EXPECT_DOUBLE_EQ(crosskerr_coupling[0], 0.1);
+  EXPECT_DOUBLE_EQ(crosskerr_coupling[1], 0.2);
+  EXPECT_DOUBLE_EQ(crosskerr_coupling[2], 0.3);
+  EXPECT_DOUBLE_EQ(crosskerr_coupling[3], 0.4);
+  EXPECT_DOUBLE_EQ(crosskerr_coupling[4], 0.5);
+  EXPECT_DOUBLE_EQ(crosskerr_coupling[5], 0.6);
 }
 
 TEST_F(TomlParserTest, ParseOutputSettings_AllOscillators) {
@@ -1331,7 +1331,7 @@ TEST_F(TomlParserTest, Transfreq_WrongSizeError) {
 }
 
 // Test that hasLength validator correctly rejects arrays with wrong number of elements.
-// The subsystem field for coupling parameters (Jkl, crosskerr) must have exactly 2 elements.
+// The subsystem field for coupling parameters (dipole_coupling, crosskerr_coupling) must have exactly 2 elements.
 TEST_F(TomlParserTest, CouplingSubsystem_HasLength_TooManyElements) {
   EXPECT_DEATH(
       {
@@ -1363,7 +1363,7 @@ TEST_F(TomlParserTest, CouplingSubsystem_HasLength_TooFewElements) {
               ntime = 1000
               dt = 0.1
               initial_condition = {type = "basis"}
-              crosskerr = [
+              crosskerr_coupling = [
                 { subsystem = [1], value = 0.5 }
               ]
             )",
