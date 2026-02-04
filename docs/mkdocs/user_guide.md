@@ -40,7 +40,7 @@ The **default Hamiltonian** in Quandary models superconducting (transmon) qubits
   H_c(t) &:= \sum_{k=0}^{Q-1} f^k(t) \left(a_k + a_k^\dagger \right)
 \end{align}
 
-where $\omega_k\geq 0$ denotes $0 \rightarrow 1$ transition frequencies for each oscillator $k$ (configured as `transition_frequency`), $\xi_k\geq 0$ are the self-Kerr coefficients (`selfkerr`). Couplings can be specified through the cross resonance coefficients $J_{kl}\geq 0$ ("dipole-dipole interaction", configured as `dipole_coupling`) or through $\xi_{kl}\geq 0$ ("zz-coupling", configured as `crosskerr`). 
+where $\omega_k\geq 0$ denotes $0 \rightarrow 1$ transition frequencies for each oscillator $k$ (configured as `transition_frequency`), $\xi_k\geq 0$ are the self-Kerr coefficients (`selfkerr`). Couplings can be specified through the cross resonance coefficients $J_{kl}\geq 0$ ("dipole-dipole interaction", configured as `dipole_coupling`) or through $\xi_{kl}\geq 0$ (`crosskerr_coupling`). 
 Here, $a_k\in \C^{N\times N}$ denotes the lowering operator acting on subsystem $k$.
 The control pulses $f^k(t)$ can be either specified or optimized for, compare section [Control pulse parameterization](#sec:controlpulses). **Custom system and control Hamiltonian operators** can be specified through Quandary's python interface.
 

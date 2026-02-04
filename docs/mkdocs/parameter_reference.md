@@ -13,7 +13,7 @@ Note that the CFG format is deprecated in favor of the TOML format and will be r
 | `dt` | Derived from `T`/`nsteps` | `dt` | Time step size (ns) |
 | `transition_frequency` | `freq01` | `transfreq` | 01-transition frequencies [GHz] |
 | `selfkerr` | `selfkerr` | `selfkerr` | Anharmonicities [GHz] |
-| `crosskerr_coupling` | `crosskerr` | `crosskerr` | ZZ coupling strength [GHz] |
+| `crosskerr_coupling` | `crosskerr` | `crosskerr` | Cross-Kerr coupling strength [GHz] |
 | `dipole_coupling` | `Jkl` | `Jkl` | Dipole-dipole coupling strength [GHz] |
 | `rotation_frequency` | `rotfreq` | `rotfreq` | Rotational wave frequencies [GHz] |
 | `decoherence` | `T1`/`T2` | `collapse_type` | Decoherence settings |
