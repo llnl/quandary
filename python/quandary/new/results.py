@@ -6,7 +6,7 @@ import glob
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import numpy as np
 
@@ -20,7 +20,8 @@ class QuandaryResults:
     """Results from a Quandary simulation or optimization.
 
     Attributes:
-        config: Validated configuration with all defaults applied (None if loaded from files).
+        config: Validated configuration with all defaults applied. This is always present
+            and represents the exact configuration that was used to generate these results.
         time: Array of time points [ns].
         pt: Control pulses p(t) for each oscillator [MHz]. Access: pt[oscillator][time_index].
         qt: Control pulses q(t) for each oscillator [MHz]. Access: qt[oscillator][time_index].
@@ -38,7 +39,7 @@ class QuandaryResults:
             Access: population[oscillator][initial_condition][level, time_index].
     """
 
-    config: Optional[Config] = None
+    config: Config
     time: np.ndarray = field(default_factory=lambda: np.array([]))
     pt: List[np.ndarray] = field(default_factory=list)
     qt: List[np.ndarray] = field(default_factory=list)
@@ -51,49 +52,34 @@ class QuandaryResults:
     population: List[List[np.ndarray]] = field(default_factory=list)
 
 
-def get_results(datadir: str = "./") -> QuandaryResults:
+def get_results(config: Config) -> QuandaryResults:
     """Load results from Quandary output files.
 
     This function parses output files from a Quandary run and returns them
-    in a structured format. The config is read from config_log.toml if available.
+    in a structured format. The output directory is read from the config.
 
     Args:
-        datadir: Directory containing Quandary output files.
+        config: Validated configuration object from the run.
 
     Returns:
         QuandaryResults containing all parsed output data and config.
 
     Example:
-        >>> results = get_results("./data_out")
+        >>> # After running
+        >>> validated_config = Config(my_config, quiet=False)
+        >>> results = get_results(validated_config)
         >>> print(f"Infidelity: {results.infidelity}")
         >>> print(results.config.to_toml())
     """
-    results = QuandaryResults()
-
-    # Load config from config_log.toml
-    config_log = os.path.join(datadir, "config_log.toml")
-    if not os.path.exists(config_log):
-        raise FileNotFoundError(
-            f"config_log.toml not found in {datadir}. "
-            "Cannot load results without configuration."
-        )
-
-    try:
-        # Load config from TOML file
-        results.config = Config.from_toml(config_log, quiet=True)
-    except Exception as e:
-        logger.warning(f"Error loading config from {config_log}: {e}")
-        results.config = None
+    # Get output directory from config
+    datadir = config.output_directory
 
     # Get parameters from config
-    if results.config:
-        lindblad = results.config.decoherence_type != DecoherenceType.NONE
-        n_init = results.config.n_initial_conditions
-    else:
-        # Fallback: detect from files
-        rho_files_temp = sorted(glob.glob(os.path.join(datadir, "rho_Re.iinit*.dat")))
-        lindblad = False  # Assume Schrodinger if config unavailable
-        n_init = len(rho_files_temp)
+    lindblad = config.decoherence_type != DecoherenceType.NONE
+    n_init = config.n_initial_conditions
+
+    # Create results object with the provided config
+    results = QuandaryResults(config=config)
 
     # Detect from files
     control_files = sorted(glob.glob(os.path.join(datadir, "control*.dat")))

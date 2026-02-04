@@ -57,11 +57,8 @@ def run(config: QuandaryConfig, quiet: bool = False) -> QuandaryResults:
     if return_code != 0:
         raise RuntimeError(f"Quandary execution failed with return code {return_code}")
 
-    # Load results
-    results = _get_results(datadir=validated_config.output_directory)
-
-    # Attach validated config
-    results.config = validated_config
+    # Load results with validated config
+    results = _get_results(validated_config)
 
     return results
 
@@ -149,10 +146,7 @@ def run_mpi(
             logger.error(f"Quandary failed: {result.stderr}")
         result.check_returncode()
 
-    # Load results
-    results = _get_results(datadir=validated_config.output_directory)
-
-    # Attach validated config
-    results.config = validated_config
+    # Load results with validated config
+    results = _get_results(validated_config)
 
     return results
