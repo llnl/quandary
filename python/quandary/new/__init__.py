@@ -57,6 +57,7 @@ from .visualization import (  # noqa: F401
 
 # General utilities
 from .utils import (  # noqa: F401
+    eval_controls,
     infidelity_,
     downsample_pulses,
 )

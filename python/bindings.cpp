@@ -181,6 +181,9 @@ NB_MODULE(_quandary_impl, m) {
     .def(nb::init<const RawConfig&, bool>(),
       nb::arg("input"), nb::arg("quiet") = false,
       "Create a validated Config from RawConfig")
+    .def(nb::init<const Config&>(),
+      nb::arg("other"),
+      "Copy constructor - creates a copy of another Config")
     .def_static("from_file", &Config::fromFile,
       nb::arg("filename"), nb::arg("quiet") = false,
       "Load and validate a Config from a file (auto-detects TOML or .cfg format)")
@@ -200,7 +203,10 @@ NB_MODULE(_quandary_impl, m) {
         std::stringstream ss;
         c.printConfig(ss);
         return ss.str();
-      }, "Serialize the configuration to TOML format");
+      }, "Serialize the configuration to TOML format")
+    .def("setup_for_eval_controls", &Config::setupForEvalControls,
+      nb::arg("points_per_ns"), nb::arg("pcof_file"), nb::arg("output_dir"),
+      "Configure for control evaluation at specified sample rate");
 
   // Run function - accepts Config
   m.def("run", [](const Config& config, bool quiet) {
