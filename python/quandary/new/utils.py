@@ -2,9 +2,13 @@
 
 import logging
 import os
+import shutil
 import tempfile
 
 import numpy as np
+
+from .._quandary_impl import Config, run
+from .results import get_results
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +53,6 @@ def eval_controls(config, pcof, points_per_ns=1.0, output_directory=None, quiet=
     >>> time, pt, qt = eval_controls(results.config, results.pcof, points_per_ns=1.0)
     >>> # Deploy pt, qt to hardware AWG
     """
-    from .._quandary_impl import Config, run
-    from .results import get_results
-
     # Set up output directory
     cleanup_temp = False
     if output_directory is None:
@@ -79,7 +80,6 @@ def eval_controls(config, pcof, points_per_ns=1.0, output_directory=None, quiet=
 
     # Clean up temporary directory if we created one
     if cleanup_temp:
-        import shutil
         try:
             shutil.rmtree(output_directory)
         except Exception as e:

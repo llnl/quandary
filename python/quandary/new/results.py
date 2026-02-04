@@ -6,12 +6,11 @@ import glob
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 
-if TYPE_CHECKING:
-    from .._quandary_impl import Config
+from .._quandary_impl import Config, DecoherenceType
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +68,6 @@ def get_results(datadir: str = "./") -> QuandaryResults:
         >>> print(f"Infidelity: {results.infidelity}")
         >>> print(results.config.to_toml())
     """
-    from .._quandary_impl import Config, DecoherenceType
-
     results = QuandaryResults()
 
     # Load config from config_log.toml
