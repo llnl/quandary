@@ -14,7 +14,8 @@ dependencies = [
     "pytest>=8.3.4,<9.0.0",
     "pandas>=2.2.3,<3.0.0",
     "pydantic>=2.10.6,<3.0.0",
-    "pytest-benchmark>=5.1.0,<6.0.0"
+    "pytest-benchmark>=5.1.0,<6.0.0",
+    "mpi4py>=3.1.0"
 ]
 
 [build-system]

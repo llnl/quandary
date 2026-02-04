@@ -1,4 +1,13 @@
-"""Functional API for running Quandary simulations and optimizations."""
+"""Functional API for running Quandary simulations and optimizations.
+
+MPI Lifecycle Management:
+    MPI initialization and finalization are managed by mpi4py, which is imported
+    in __init__.py. This allows multiple run() calls in the same Python process
+    (e.g., Jupyter notebooks, parameter sweeps) without MPI re-initialization errors.
+
+    The C++ runQuandary function is called with finalize=false to prevent it from
+    calling MPI_Finalize, allowing mpi4py to manage finalization at process exit.
+"""
 
 from __future__ import annotations
 
