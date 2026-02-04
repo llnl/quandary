@@ -69,7 +69,7 @@ def run_mpi(
     quiet: bool = False,
     mpi_exec: str = "mpirun",
     python_exec: Optional[str] = None,
-    working_dir: Optional[str] = None,
+    working_dir: str = ".",
 ) -> QuandaryResults:
     """Run Quandary with MPI via subprocess.
 
@@ -87,7 +87,7 @@ def run_mpi(
         quiet: If True, suppress console output.
         mpi_exec: MPI launcher command (e.g., "mpirun", "srun"). Default: "mpirun".
         python_exec: Path to Python executable. Defaults to sys.executable.
-        working_dir: Working directory for subprocess. Defaults to config.datadir.
+        working_dir: Working directory for subprocess. Defaults to current directory.
 
     Returns:
         QuandaryResults containing output data and the validated configuration.
@@ -104,10 +104,6 @@ def run_mpi(
     # Validate configuration first
     validated_config = Config(config, quiet)
 
-    # Use output_directory as working directory if not specified
-    if working_dir is None:
-        working_dir = validated_config.output_directory
-
     # Use current Python interpreter if not specified
     if python_exec is None:
         python_exec = sys.executable
@@ -116,11 +112,11 @@ def run_mpi(
     if not isinstance(working_dir, str):
         raise ValueError(f"working_dir must be a string, got {type(working_dir)}")
 
-    # Create the working directory if it doesn't exist
-    os.makedirs(working_dir, exist_ok=True)
+    # Create the output directory if it doesn't exist
+    os.makedirs(validated_config.output_directory, exist_ok=True)
 
-    # Write the TOML config file (use absolute path for subprocess)
-    config_file = os.path.abspath(os.path.join(working_dir, "config.toml"))
+    # Write the TOML config file to the output directory (use absolute path for subprocess)
+    config_file = os.path.abspath(os.path.join(validated_config.output_directory, "config.toml"))
     toml_content = validated_config.to_toml()
     with open(config_file, "w") as f:
         f.write(toml_content)
