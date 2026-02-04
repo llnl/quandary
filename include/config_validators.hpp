@@ -56,8 +56,10 @@ namespace validators {
  */
 template <typename T>
 std::string getTypeName() {
-  if constexpr (std::is_same_v<T, int> || std::is_same_v<T, int64_t> || std::is_same_v<T, size_t>) {
+  if constexpr (std::is_same_v<T, int> || std::is_same_v<T, int64_t>) {
     return "integer";
+  } else if constexpr (std::is_same_v<T, size_t>) {
+    return "nonnegative integer";
   } else if constexpr (std::is_same_v<T, double> || std::is_same_v<T, float>) {
     return "number";
   } else if constexpr (std::is_same_v<T, std::string>) {
