@@ -12,175 +12,204 @@ namespace nb = nanobind;
 
 // Declare extension module "_quandary_impl" (must match name given in CMake)
 NB_MODULE(_quandary_impl, m) {
-  m.doc() = "Quandary Python bindings";
+  m.doc() = "Quandary Python bindings.\n\n"
+            "Low-level C++ interface for quantum optimal control simulations.\n"
+            "Most users should use the high-level interface from quandary.new instead.";
 
   // Enums
-  nb::enum_<DecoherenceType>(m, "DecoherenceType")
-    .value("NONE", DecoherenceType::NONE)
-    .value("DECAY", DecoherenceType::DECAY)
-    .value("DEPHASE", DecoherenceType::DEPHASE)
-    .value("BOTH", DecoherenceType::BOTH);
+  nb::enum_<DecoherenceType>(m, "DecoherenceType", "Decoherence model type for Lindblad master equation")
+    .value("NONE", DecoherenceType::NONE, "No decoherence (Schrodinger equation)")
+    .value("DECAY", DecoherenceType::DECAY, "T1 decay only")
+    .value("DEPHASE", DecoherenceType::DEPHASE, "T2 dephasing only")
+    .value("BOTH", DecoherenceType::BOTH, "Both T1 decay and T2 dephasing");
 
-  nb::enum_<InitialConditionType>(m, "InitialConditionType")
-    .value("FROMFILE", InitialConditionType::FROMFILE)
-    .value("PRODUCT_STATE", InitialConditionType::PRODUCT_STATE)
-    .value("ENSEMBLE", InitialConditionType::ENSEMBLE)
-    .value("DIAGONAL", InitialConditionType::DIAGONAL)
-    .value("BASIS", InitialConditionType::BASIS)
-    .value("THREESTATES", InitialConditionType::THREESTATES)
-    .value("NPLUSONE", InitialConditionType::NPLUSONE)
-    .value("PERFORMANCE", InitialConditionType::PERFORMANCE);
+  nb::enum_<InitialConditionType>(m, "InitialConditionType", "Type of initial quantum state")
+    .value("FROMFILE", InitialConditionType::FROMFILE, "Load initial state from file")
+    .value("PRODUCT_STATE", InitialConditionType::PRODUCT_STATE, "Product state of specified levels")
+    .value("ENSEMBLE", InitialConditionType::ENSEMBLE, "Ensemble of basis states")
+    .value("DIAGONAL", InitialConditionType::DIAGONAL, "Diagonal density matrix")
+    .value("BASIS", InitialConditionType::BASIS, "Computational basis states")
+    .value("THREESTATES", InitialConditionType::THREESTATES, "Three-state initial condition")
+    .value("NPLUSONE", InitialConditionType::NPLUSONE, "N+1 initial condition")
+    .value("PERFORMANCE", InitialConditionType::PERFORMANCE, "Performance test initial condition");
 
-  nb::enum_<TargetType>(m, "TargetType")
-    .value("NONE", TargetType::NONE)
-    .value("GATE", TargetType::GATE)
-    .value("STATE", TargetType::STATE);
+  nb::enum_<TargetType>(m, "TargetType", "Type of optimization target")
+    .value("NONE", TargetType::NONE, "No target (simulation only)")
+    .value("GATE", TargetType::GATE, "Target unitary gate")
+    .value("STATE", TargetType::STATE, "Target quantum state");
 
-  nb::enum_<ObjectiveType>(m, "ObjectiveType")
-    .value("JFROBENIUS", ObjectiveType::JFROBENIUS)
-    .value("JTRACE", ObjectiveType::JTRACE)
-    .value("JMEASURE", ObjectiveType::JMEASURE);
+  nb::enum_<ObjectiveType>(m, "ObjectiveType", "Objective function for optimization")
+    .value("JFROBENIUS", ObjectiveType::JFROBENIUS, "Frobenius norm objective")
+    .value("JTRACE", ObjectiveType::JTRACE, "Trace fidelity objective")
+    .value("JMEASURE", ObjectiveType::JMEASURE, "Measurement-based objective");
 
-  nb::enum_<LinearSolverType>(m, "LinearSolverType")
-    .value("GMRES", LinearSolverType::GMRES)
-    .value("NEUMANN", LinearSolverType::NEUMANN);
+  nb::enum_<LinearSolverType>(m, "LinearSolverType", "Linear solver for time stepping")
+    .value("GMRES", LinearSolverType::GMRES, "GMRES iterative solver")
+    .value("NEUMANN", LinearSolverType::NEUMANN, "Neumann series approximation");
 
-  nb::enum_<RunType>(m, "RunType")
-    .value("SIMULATION", RunType::SIMULATION)
-    .value("GRADIENT", RunType::GRADIENT)
-    .value("OPTIMIZATION", RunType::OPTIMIZATION)
-    .value("EVALCONTROLS", RunType::EVALCONTROLS)
-    .value("NONE", RunType::NONE);
+  nb::enum_<RunType>(m, "RunType", "Type of computation to perform")
+    .value("SIMULATION", RunType::SIMULATION, "Forward simulation only")
+    .value("GRADIENT", RunType::GRADIENT, "Compute objective and gradient")
+    .value("OPTIMIZATION", RunType::OPTIMIZATION, "Run full optimization")
+    .value("EVALCONTROLS", RunType::EVALCONTROLS, "Evaluate existing control pulses")
+    .value("NONE", RunType::NONE, "No computation");
 
-  nb::enum_<ControlType>(m, "ControlType")
-    .value("NONE", ControlType::NONE)
-    .value("BSPLINE", ControlType::BSPLINE)
-    .value("BSPLINEAMP", ControlType::BSPLINEAMP)
-    .value("BSPLINE0", ControlType::BSPLINE0);
+  nb::enum_<ControlType>(m, "ControlType", "Control pulse parameterization type")
+    .value("NONE", ControlType::NONE, "No control")
+    .value("BSPLINE", ControlType::BSPLINE, "B-spline parameterization")
+    .value("BSPLINEAMP", ControlType::BSPLINEAMP, "B-spline with amplitude scaling")
+    .value("BSPLINE0", ControlType::BSPLINE0, "B-spline with zero boundary conditions");
 
-  nb::enum_<ControlInitializationType>(m, "ControlInitializationType")
-    .value("CONSTANT", ControlInitializationType::CONSTANT)
-    .value("RANDOM", ControlInitializationType::RANDOM)
-    .value("FILE", ControlInitializationType::FILE);
+  nb::enum_<ControlInitializationType>(m, "ControlInitializationType", "Control pulse initialization method")
+    .value("CONSTANT", ControlInitializationType::CONSTANT, "Constant amplitude initialization")
+    .value("RANDOM", ControlInitializationType::RANDOM, "Random initialization")
+    .value("FILE", ControlInitializationType::FILE, "Load from file");
 
-  nb::enum_<TimeStepperType>(m, "TimeStepperType")
-    .value("IMR", TimeStepperType::IMR)
-    .value("IMR4", TimeStepperType::IMR4)
-    .value("IMR8", TimeStepperType::IMR8)
-    .value("EE", TimeStepperType::EE);
+  nb::enum_<TimeStepperType>(m, "TimeStepperType", "Time integration method")
+    .value("IMR", TimeStepperType::IMR, "Implicit midpoint rule (2nd order)")
+    .value("IMR4", TimeStepperType::IMR4, "4th order implicit method")
+    .value("IMR8", TimeStepperType::IMR8, "8th order implicit method")
+    .value("EE", TimeStepperType::EE, "Explicit Euler (1st order)");
 
-  nb::enum_<GateType>(m, "GateType")
-    .value("NONE", GateType::NONE)
-    .value("XGATE", GateType::XGATE)
-    .value("YGATE", GateType::YGATE)
-    .value("ZGATE", GateType::ZGATE)
-    .value("HADAMARD", GateType::HADAMARD)
-    .value("CNOT", GateType::CNOT)
-    .value("SWAP", GateType::SWAP)
-    .value("SWAP_0Q", GateType::SWAP_0Q)
-    .value("CQNOT", GateType::CQNOT)
-    .value("QFT", GateType::QFT)
-    .value("FILE", GateType::FILE);
+  nb::enum_<GateType>(m, "GateType", "Predefined quantum gate types")
+    .value("NONE", GateType::NONE, "No gate")
+    .value("XGATE", GateType::XGATE, "Pauli X gate")
+    .value("YGATE", GateType::YGATE, "Pauli Y gate")
+    .value("ZGATE", GateType::ZGATE, "Pauli Z gate")
+    .value("HADAMARD", GateType::HADAMARD, "Hadamard gate")
+    .value("CNOT", GateType::CNOT, "Controlled-NOT gate")
+    .value("SWAP", GateType::SWAP, "SWAP gate")
+    .value("SWAP_0Q", GateType::SWAP_0Q, "SWAP 0-Q gate")
+    .value("CQNOT", GateType::CQNOT, "Controlled-qNOT gate")
+    .value("QFT", GateType::QFT, "Quantum Fourier Transform")
+    .value("FILE", GateType::FILE, "Load gate from file");
 
-  nb::enum_<OutputType>(m, "OutputType")
-    .value("EXPECTED_ENERGY", OutputType::EXPECTED_ENERGY)
-    .value("EXPECTED_ENERGY_COMPOSITE", OutputType::EXPECTED_ENERGY_COMPOSITE)
-    .value("POPULATION", OutputType::POPULATION)
-    .value("POPULATION_COMPOSITE", OutputType::POPULATION_COMPOSITE)
-    .value("FULLSTATE", OutputType::FULLSTATE);
+  nb::enum_<OutputType>(m, "OutputType", "Observable output types")
+    .value("EXPECTED_ENERGY", OutputType::EXPECTED_ENERGY, "Expected energy per oscillator")
+    .value("EXPECTED_ENERGY_COMPOSITE", OutputType::EXPECTED_ENERGY_COMPOSITE, "Expected energy of composite system")
+    .value("POPULATION", OutputType::POPULATION, "Level populations per oscillator")
+    .value("POPULATION_COMPOSITE", OutputType::POPULATION_COMPOSITE, "Level populations of composite system")
+    .value("FULLSTATE", OutputType::FULLSTATE, "Full quantum state vector");
 
   // Structs
-  nb::class_<InitialConditionSettings>(m, "InitialConditionSettings")
+  nb::class_<InitialConditionSettings>(m, "InitialConditionSettings",
+    "Settings for quantum initial state configuration.\n\n"
+    "Specify how the initial quantum state is prepared. Different fields are used\n"
+    "depending on the condition_type.")
     .def(nb::init<>())
-    .def_rw("condition_type", &InitialConditionSettings::type)
-    .def_rw("filename", &InitialConditionSettings::filename)
-    .def_rw("levels", &InitialConditionSettings::levels)
-    .def_rw("subsystem", &InitialConditionSettings::subsystem);
+    .def_rw("condition_type", &InitialConditionSettings::type, "Type of initial condition")
+    .def_rw("filename", &InitialConditionSettings::filename, "File path (for FROMFILE type)")
+    .def_rw("levels", &InitialConditionSettings::levels, "Level occupations per oscillator (for PRODUCT_STATE)")
+    .def_rw("subsystem", &InitialConditionSettings::subsystem, "Oscillator IDs (for ENSEMBLE, DIAGONAL, BASIS)");
 
-  nb::class_<OptimTargetSettings>(m, "OptimTargetSettings")
+  nb::class_<OptimTargetSettings>(m, "OptimTargetSettings",
+    "Settings for optimization target (gate or state).\n\n"
+    "Configure what the optimization should achieve. For GATE targets, specify\n"
+    "gate_type or filename. For STATE targets, specify levels or filename.")
     .def(nb::init<>())
-    .def_rw("target_type", &OptimTargetSettings::type)
-    .def_rw("gate_type", &OptimTargetSettings::gate_type)
-    .def_rw("gate_rot_freq", &OptimTargetSettings::gate_rot_freq)
-    .def_rw("levels", &OptimTargetSettings::levels)
-    .def_rw("filename", &OptimTargetSettings::filename);
+    .def_rw("target_type", &OptimTargetSettings::type, "Type of target (GATE or STATE)")
+    .def_rw("gate_type", &OptimTargetSettings::gate_type, "Predefined gate type (for GATE target)")
+    .def_rw("gate_rot_freq", &OptimTargetSettings::gate_rot_freq, "Gate rotation frequencies [GHz] (for GATE target)")
+    .def_rw("levels", &OptimTargetSettings::levels, "Target level occupations (for STATE target)")
+    .def_rw("filename", &OptimTargetSettings::filename, "File path to custom gate or state");
 
-  nb::class_<ControlParameterizationSettings>(m, "ControlParameterizationSettings")
+  nb::class_<ControlParameterizationSettings>(m, "ControlParameterizationSettings",
+    "Settings for control pulse parameterization.\n\n"
+    "Configure how control pulses are represented and parameterized during optimization.")
     .def(nb::init<>())
-    .def_rw("control_type", &ControlParameterizationSettings::type)
-    .def_rw("nspline", &ControlParameterizationSettings::nspline)
-    .def_rw("tstart", &ControlParameterizationSettings::tstart)
-    .def_rw("tstop", &ControlParameterizationSettings::tstop)
-    .def_rw("scaling", &ControlParameterizationSettings::scaling);
+    .def_rw("control_type", &ControlParameterizationSettings::type, "Parameterization type (BSPLINE, etc.)")
+    .def_rw("nspline", &ControlParameterizationSettings::nspline, "Number of B-spline basis functions")
+    .def_rw("tstart", &ControlParameterizationSettings::tstart, "Start time of parameterization [ns]")
+    .def_rw("tstop", &ControlParameterizationSettings::tstop, "Stop time of parameterization [ns]")
+    .def_rw("scaling", &ControlParameterizationSettings::scaling, "Amplitude scaling factor (BSPLINEAMP only)");
 
-  nb::class_<ControlInitializationSettings>(m, "ControlInitializationSettings")
+  nb::class_<ControlInitializationSettings>(m, "ControlInitializationSettings",
+    "Settings for initial control pulse values.\n\n"
+    "Configure how control parameters are initialized before optimization.")
     .def(nb::init<>())
-    .def_rw("init_type", &ControlInitializationSettings::type)
-    .def_rw("amplitude", &ControlInitializationSettings::amplitude)
-    .def_rw("phase", &ControlInitializationSettings::phase)
-    .def_rw("filename", &ControlInitializationSettings::filename);
+    .def_rw("init_type", &ControlInitializationSettings::type, "Initialization method")
+    .def_rw("amplitude", &ControlInitializationSettings::amplitude, "Initial amplitude [GHz] (for CONSTANT)")
+    .def_rw("phase", &ControlInitializationSettings::phase, "Initial phase [rad]")
+    .def_rw("filename", &ControlInitializationSettings::filename, "File path (for FILE type)");
 
   // QuandaryConfig - mutable configuration with all fields optional
-  nb::class_<RawConfig>(m, "QuandaryConfig")
+  nb::class_<RawConfig>(m, "QuandaryConfig",
+    "Mutable configuration builder for Quandary simulations.\n\n"
+    "Use this class to build a configuration by setting individual fields.\n"
+    "All fields are optional and will use defaults if not specified.\n"
+    "Pass to Config() or run() to validate and execute.\n\n"
+    "Example:\n"
+    "    config = QuandaryConfig()\n"
+    "    config.nlevels = [2, 2]\n"
+    "    config.ntime = 100\n"
+    "    config.dt = 0.01\n"
+    "    results = run(config)")
     .def(nb::init<>())
     // System parameters
-    .def_rw("nlevels", &RawConfig::nlevels)
-    .def_rw("nessential", &RawConfig::nessential)
-    .def_rw("ntime", &RawConfig::ntime)
-    .def_rw("dt", &RawConfig::dt)
-    .def_rw("transition_frequency", &RawConfig::transition_frequency)
-    .def_rw("selfkerr", &RawConfig::selfkerr)
-    .def_rw("crosskerr_coupling", &RawConfig::crosskerr_coupling)
-    .def_rw("dipole_coupling", &RawConfig::dipole_coupling)
-    .def_rw("rotation_frequency", &RawConfig::rotation_frequency)
-    .def_rw("decoherence_type", &RawConfig::decoherence_type)
-    .def_rw("decay_time", &RawConfig::decay_time)
-    .def_rw("dephase_time", &RawConfig::dephase_time)
-    .def_rw("initial_condition", &RawConfig::initial_condition)
+    .def_rw("nlevels", &RawConfig::nlevels, "Number of levels per subsystem")
+    .def_rw("nessential", &RawConfig::nessential, "Number of essential levels per subsystem (default: same as nlevels)")
+    .def_rw("ntime", &RawConfig::ntime, "Number of time steps")
+    .def_rw("dt", &RawConfig::dt, "Time step size [ns]")
+    .def_rw("transition_frequency", &RawConfig::transition_frequency, "Fundamental transition frequencies [GHz]")
+    .def_rw("selfkerr", &RawConfig::selfkerr, "Self-Kerr frequencies [GHz]")
+    .def_rw("crosskerr_coupling", &RawConfig::crosskerr_coupling, "Cross-Kerr coupling frequencies [GHz]")
+    .def_rw("dipole_coupling", &RawConfig::dipole_coupling, "Dipole-dipole coupling frequencies [GHz]")
+    .def_rw("rotation_frequency", &RawConfig::rotation_frequency, "Rotating frame frequencies [GHz]")
+    .def_rw("decoherence_type", &RawConfig::decoherence_type, "Decoherence model type")
+    .def_rw("decay_time", &RawConfig::decay_time, "T1 decay times [ns]")
+    .def_rw("dephase_time", &RawConfig::dephase_time, "T2 dephasing times [ns]")
+    .def_rw("initial_condition", &RawConfig::initial_condition, "Initial quantum state configuration")
     // Inherently optional
-    .def_rw("hamiltonian_file_Hsys", &RawConfig::hamiltonian_file_Hsys)
-    .def_rw("hamiltonian_file_Hc", &RawConfig::hamiltonian_file_Hc)
+    .def_rw("hamiltonian_file_Hsys", &RawConfig::hamiltonian_file_Hsys, "Optional file path for system Hamiltonian")
+    .def_rw("hamiltonian_file_Hc", &RawConfig::hamiltonian_file_Hc, "Optional file path for control Hamiltonians")
     // Control parameters
-    .def_rw("control_zero_boundary_condition", &RawConfig::control_zero_boundary_condition)
-    .def_rw("control_parameterizations", &RawConfig::control_parameterizations)
-    .def_rw("control_initializations", &RawConfig::control_initializations)
-    .def_rw("control_amplitude_bounds", &RawConfig::control_amplitude_bounds)
-    .def_rw("carrier_frequencies", &RawConfig::carrier_frequencies)
+    .def_rw("control_zero_boundary_condition", &RawConfig::control_zero_boundary_condition, "Enforce zero control amplitude at boundaries")
+    .def_rw("control_parameterizations", &RawConfig::control_parameterizations, "Control parameterizations per oscillator")
+    .def_rw("control_initializations", &RawConfig::control_initializations, "Control initializations per oscillator")
+    .def_rw("control_amplitude_bounds", &RawConfig::control_amplitude_bounds, "Maximum control amplitude per oscillator [GHz]")
+    .def_rw("carrier_frequencies", &RawConfig::carrier_frequencies, "Carrier frequencies for each control [GHz]")
     // Optimization parameters
-    .def_rw("optim_target", &RawConfig::optim_target)
-    .def_rw("optim_objective", &RawConfig::optim_objective)
-    .def_rw("optim_weights", &RawConfig::optim_weights)
-    .def_rw("optim_tol_grad_abs", &RawConfig::optim_tol_grad_abs)
-    .def_rw("optim_tol_grad_rel", &RawConfig::optim_tol_grad_rel)
-    .def_rw("optim_tol_final_cost", &RawConfig::optim_tol_final_cost)
-    .def_rw("optim_tol_infidelity", &RawConfig::optim_tol_infidelity)
-    .def_rw("optim_maxiter", &RawConfig::optim_maxiter)
-    .def_rw("optim_tikhonov_coeff", &RawConfig::optim_tikhonov_coeff)
-    .def_rw("optim_tikhonov_use_x0", &RawConfig::optim_tikhonov_use_x0)
-    .def_rw("optim_penalty_leakage", &RawConfig::optim_penalty_leakage)
-    .def_rw("optim_penalty_weightedcost", &RawConfig::optim_penalty_weightedcost)
-    .def_rw("optim_penalty_weightedcost_width", &RawConfig::optim_penalty_weightedcost_width)
-    .def_rw("optim_penalty_dpdm", &RawConfig::optim_penalty_dpdm)
-    .def_rw("optim_penalty_energy", &RawConfig::optim_penalty_energy)
-    .def_rw("optim_penalty_variation", &RawConfig::optim_penalty_variation)
+    .def_rw("optim_target", &RawConfig::optim_target, "Optimization target configuration")
+    .def_rw("optim_objective", &RawConfig::optim_objective, "Objective function type")
+    .def_rw("optim_weights", &RawConfig::optim_weights, "Weights for summing objective function")
+    .def_rw("optim_tol_grad_abs", &RawConfig::optim_tol_grad_abs, "Absolute gradient tolerance")
+    .def_rw("optim_tol_grad_rel", &RawConfig::optim_tol_grad_rel, "Relative gradient tolerance")
+    .def_rw("optim_tol_final_cost", &RawConfig::optim_tol_final_cost, "Final cost tolerance")
+    .def_rw("optim_tol_infidelity", &RawConfig::optim_tol_infidelity, "Infidelity tolerance")
+    .def_rw("optim_maxiter", &RawConfig::optim_maxiter, "Maximum optimization iterations")
+    .def_rw("optim_tikhonov_coeff", &RawConfig::optim_tikhonov_coeff, "Tikhonov regularization coefficient")
+    .def_rw("optim_tikhonov_use_x0", &RawConfig::optim_tikhonov_use_x0, "Use initial guess in Tikhonov regularization")
+    .def_rw("optim_penalty_leakage", &RawConfig::optim_penalty_leakage, "Leakage penalty coefficient")
+    .def_rw("optim_penalty_weightedcost", &RawConfig::optim_penalty_weightedcost, "Weighted cost penalty coefficient")
+    .def_rw("optim_penalty_weightedcost_width", &RawConfig::optim_penalty_weightedcost_width, "Weighted cost penalty width parameter")
+    .def_rw("optim_penalty_dpdm", &RawConfig::optim_penalty_dpdm, "Second derivative penalty coefficient")
+    .def_rw("optim_penalty_energy", &RawConfig::optim_penalty_energy, "Energy penalty coefficient")
+    .def_rw("optim_penalty_variation", &RawConfig::optim_penalty_variation, "Amplitude variation penalty coefficient")
     // Output parameters
-    .def_rw("output_directory", &RawConfig::output_directory)
-    .def_rw("output_observables", &RawConfig::output_observables)
-    .def_rw("output_timestep_stride", &RawConfig::output_timestep_stride)
-    .def_rw("output_optimization_stride", &RawConfig::output_optimization_stride)
+    .def_rw("output_directory", &RawConfig::output_directory, "Directory for output files")
+    .def_rw("output_observables", &RawConfig::output_observables, "Observable quantities to output")
+    .def_rw("output_timestep_stride", &RawConfig::output_timestep_stride, "Output frequency in time steps")
+    .def_rw("output_optimization_stride", &RawConfig::output_optimization_stride, "Output frequency in optimization iterations")
     // Solver parameters
-    .def_rw("runtype", &RawConfig::runtype)
-    .def_rw("usematfree", &RawConfig::usematfree)
-    .def_rw("linearsolver_type", &RawConfig::linearsolver_type)
-    .def_rw("linearsolver_maxiter", &RawConfig::linearsolver_maxiter)
-    .def_rw("timestepper_type", &RawConfig::timestepper_type)
-    .def_rw("rand_seed", &RawConfig::rand_seed);
+    .def_rw("runtype", &RawConfig::runtype, "Type of computation to perform")
+    .def_rw("usematfree", &RawConfig::usematfree, "Use matrix-free solver")
+    .def_rw("linearsolver_type", &RawConfig::linearsolver_type, "Linear solver type")
+    .def_rw("linearsolver_maxiter", &RawConfig::linearsolver_maxiter, "Maximum linear solver iterations")
+    .def_rw("timestepper_type", &RawConfig::timestepper_type, "Time integration method")
+    .def_rw("rand_seed", &RawConfig::rand_seed, "Random seed for reproducibility");
 
   // Config - validated configuration with computed values
-  nb::class_<Config>(m, "Config")
+  nb::class_<Config>(m, "Config",
+    "Validated and immutable Quandary configuration.\n\n"
+    "This class contains validated configuration parameters with all defaults applied.\n"
+    "Instances are immutable after construction. All properties are read-only.\n\n"
+    "Create from QuandaryConfig, TOML file, or TOML string:\n"
+    "    config = Config(quandary_config)\n"
+    "    config = Config.from_toml('simulation.toml')\n"
+    "    config = Config.from_toml_string(toml_content)")
     .def(nb::init<const RawConfig&, bool>(),
       nb::arg("input"), nb::arg("quiet") = false,
-      "Create a validated Config from RawConfig")
+      "Create a validated Config from QuandaryConfig")
     .def(nb::init<const Config&>(),
       nb::arg("other"),
       "Copy constructor - creates a copy of another Config")
