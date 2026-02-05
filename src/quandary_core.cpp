@@ -27,13 +27,16 @@ int runQuandary(const Config& config, bool quietmode, int argc, char** argv, int
   char filename[255];
   PetscErrorCode ierr;
 
-  /* Initialize MPI if not already done */
-  bool mpi_initialized_by_us = false;
+  /* Track whether we initialized MPI/PETSc (for proper finalization).
+   * If MPI was already initialized (e.g., by mpi4py), we're in "external mode"
+   * and should not finalize either MPI or PETSc. */
+  bool external_initialization = false;
   int mpi_already_initialized = 0;
   MPI_Initialized(&mpi_already_initialized);
-  if (!mpi_already_initialized) {
+  if (mpi_already_initialized) {
+    external_initialization = true;
+  } else {
     MPI_Init(&argc, &argv);
-    mpi_initialized_by_us = true;
   }
 
   int mpisize_world, mpirank_world;
@@ -101,11 +104,16 @@ int runQuandary(const Config& config, bool quietmode, int argc, char** argv, int
 
   if (mpirank_world == 0 && !quietmode)  std::cout<< "Parallel distribution: " << mpisize_init << " np_init  X  " << mpisize_petsc<< " np_petsc  " << std::endl;
 
-#ifdef WITH_SLEPC
-  ierr = SlepcInitialize(&petsc_argc, &petsc_argv, (char*)0, NULL);if (ierr) return ierr;
-#else
-  ierr = PetscInitialize(&petsc_argc, &petsc_argv, (char*)0, NULL);if (ierr) return ierr;
-#endif
+  /* Initialize PETSc/SLEPc if not already done */
+  PetscBool petsc_already_initialized = PETSC_FALSE;
+  PetscInitialized(&petsc_already_initialized);
+  if (!petsc_already_initialized) {
+    #ifdef WITH_SLEPC
+      ierr = SlepcInitialize(&petsc_argc, &petsc_argv, (char*)0, NULL);if (ierr) return ierr;
+    #else
+      ierr = PetscInitialize(&petsc_argc, &petsc_argv, (char*)0, NULL);if (ierr) return ierr;
+    #endif
+  }
   PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, 	PETSC_VIEWER_ASCII_MATLAB );
 
   size_t num_osc = config.getNumOsc();
@@ -554,16 +562,16 @@ int runQuandary(const Config& config, bool quietmode, int argc, char** argv, int
   VecDestroy(&grad);
 
 
-  /* Finallize Petsc */
-#ifdef WITH_SLEPC
-  ierr = SlepcFinalize();
-#else
-  PetscOptionsSetValue(NULL, "-options_left", "no"); // Remove warning about unused options.
-  ierr = PetscFinalize();
-#endif
-
-
-  if (mpi_initialized_by_us) {
+  /* Finalize Petsc and MPI only if not in external mode.
+   * When called from Python with mpi4py, MPI and PETSc are managed externally,
+   * allowing multiple run() calls in the same process without reinitialization errors. */
+  if (!external_initialization) {
+    #ifdef WITH_SLEPC
+      ierr = SlepcFinalize();
+    #else
+      PetscOptionsSetValue(NULL, "-options_left", "no"); // Remove warning about unused options.
+      ierr = PetscFinalize();
+    #endif
     MPI_Finalize();
   }
   return ierr;
