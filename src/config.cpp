@@ -1,4 +1,5 @@
 #include "config.hpp"
+#include "config_defaults.hpp"
 
 namespace {
 
@@ -316,7 +317,7 @@ RawConfig extractRawConfig(const toml::table& toml, const MPILogger& logger) {
     input.nessential = extractScalarOrVector<size_t>(*system_table, "nessential", num_osc);
     input.ntime = extractToml<size_t>(*system_table, "ntime");
     input.dt = extractToml<double>(*system_table, "dt");
-    input.transfreq = extractScalarOrVector<double>(*system_table, "transfreq", num_osc);
+    input.transition_frequency = extractScalarOrVector<double>(*system_table, "transfreq", num_osc);
     input.selfkerr = extractScalarOrVector<double>(*system_table, "selfkerr", num_osc);
 
     // Parse crosskerr coupling
@@ -324,14 +325,14 @@ RawConfig extractRawConfig(const toml::table& toml, const MPILogger& logger) {
       if ((*system_table)["crosskerr"].is_value()) {
         auto single_val = extractToml<double>(*system_table, "crosskerr");
         if (single_val.has_value()) {
-          input.crosskerr = std::vector<double>(num_pairs, *single_val);
+          input.crosskerr_coupling = std::vector<double>(num_pairs, *single_val);
         }
       } else {
         auto parseFunc = [](const toml::table& t) {
           auto val_opt = extractToml<double>(t, "value");
           return validators::field<double>(val_opt, "value").value();
         };
-        input.crosskerr = parsePerSubsystemSettings<double>(*system_table, "crosskerr", num_osc, ConfigDefaults::CROSSKERR, parseFunc, logger);
+        input.crosskerr_coupling = parsePerSubsystemSettings<double>(*system_table, "crosskerr", num_osc, ConfigDefaults::CROSSKERR_COUPLING, parseFunc, logger);
       }
     }
 
@@ -340,18 +341,18 @@ RawConfig extractRawConfig(const toml::table& toml, const MPILogger& logger) {
       if ((*system_table)["Jkl"].is_value()) {
         auto single_val = extractToml<double>(*system_table, "Jkl");
         if (single_val.has_value()) {
-          input.Jkl = std::vector<double>(num_pairs, *single_val);
+          input.dipole_coupling = std::vector<double>(num_pairs, *single_val);
         }
       } else {
         auto parseFunc = [](const toml::table& t) {
           auto val_opt = extractToml<double>(t, "value");
           return validators::field<double>(val_opt, "value").value();
         };
-        input.Jkl = parsePerSubsystemSettings<double>(*system_table, "Jkl", num_osc, ConfigDefaults::JKL, parseFunc, logger);
+        input.dipole_coupling = parsePerSubsystemSettings<double>(*system_table, "Jkl", num_osc, ConfigDefaults::DIPOLE_COUPLING, parseFunc, logger);
       }
     }
 
-    input.rotfreq = extractScalarOrVector<double>(*system_table, "rotfreq", num_osc);
+    input.rotation_frequency = extractScalarOrVector<double>(*system_table, "rotfreq", num_osc);
 
     // Parse decoherence settings
     if (system_table->contains("decoherence")) {
@@ -443,7 +444,7 @@ RawConfig extractRawConfig(const toml::table& toml, const MPILogger& logger) {
       if (tol_table) {
         input.optim_tol_grad_abs = extractToml<double>(*tol_table, "grad_abs");
         input.optim_tol_grad_rel = extractToml<double>(*tol_table, "grad_rel");
-        input.optim_tol_finalcost = extractToml<double>(*tol_table, "final_cost");
+        input.optim_tol_final_cost = extractToml<double>(*tol_table, "final_cost");
         input.optim_tol_infidelity = extractToml<double>(*tol_table, "infidelity");
       }
     }
@@ -545,16 +546,16 @@ Config::Config(const RawConfig& input, bool quiet_mode) : logger(MPILogger(quiet
 
     data.dt = validators::field<double>(input.dt, "dt").positive().value();
 
-    data.transfreq = validators::vectorField<double>(input.transfreq, "transfreq").hasLength(num_osc).value();
+    data.transition_frequency = validators::vectorField<double>(input.transition_frequency, "transfreq").hasLength(num_osc).value();
 
     data.selfkerr = validators::vectorField<double>(input.selfkerr, "selfkerr").valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
 
     size_t num_pairs = (num_osc - 1) * num_osc / 2;
-    data.crosskerr = validators::vectorField<double>(input.crosskerr, "crosskerr").valueOr(std::vector<double>(num_pairs, ConfigDefaults::CROSSKERR));
+    data.crosskerr_coupling = validators::vectorField<double>(input.crosskerr_coupling, "crosskerr").valueOr(std::vector<double>(num_pairs, ConfigDefaults::CROSSKERR_COUPLING));
 
-    data.Jkl = validators::vectorField<double>(input.Jkl, "Jkl").valueOr(std::vector<double>(num_pairs, ConfigDefaults::JKL));
+    data.dipole_coupling = validators::vectorField<double>(input.dipole_coupling, "Jkl").valueOr(std::vector<double>(num_pairs, ConfigDefaults::DIPOLE_COUPLING));
 
-    data.rotfreq = validators::vectorField<double>(input.rotfreq, "rotfreq").valueOr(std::vector<double>(num_osc, ConfigDefaults::ROTFREQ));
+    data.rotation_frequency = validators::vectorField<double>(input.rotation_frequency, "rotfreq").valueOr(std::vector<double>(num_osc, ConfigDefaults::ROTATION_FREQUENCY));
 
     data.decoherence_type = input.decoherence_type.value_or(ConfigDefaults::DECOHERENCE_TYPE);
 
@@ -604,7 +605,7 @@ Config::Config(const RawConfig& input, bool quiet_mode) : logger(MPILogger(quiet
 
     data.optim_tol_grad_rel = validators::field<double>(input.optim_tol_grad_rel, "optim_tol_grad_rel").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_REL);
 
-    data.optim_tol_finalcost = validators::field<double>(input.optim_tol_finalcost, "optim_tol_finalcost").positive().valueOr(ConfigDefaults::OPTIM_TOL_FINALCOST);
+    data.optim_tol_final_cost = validators::field<double>(input.optim_tol_final_cost, "optim_tol_finalcost").positive().valueOr(ConfigDefaults::OPTIM_TOL_FINAL_COST);
 
     data.optim_tol_infidelity = validators::field<double>(input.optim_tol_infidelity, "optim_tol_infidelity").positive().valueOr(ConfigDefaults::OPTIM_TOL_INFIDELITY);
 
@@ -686,26 +687,26 @@ Config::Config(const ParsedConfigData& settings, bool quiet_mode) : logger(MPILo
   }
 
   if (!settings.transfreq.has_value()) {
-    logger.exitWithError("transfreq cannot be empty");
+    logger.exitWithError("transition_frequency cannot be empty");
   }
 
-  data.transfreq = settings.transfreq.value();
-  copyLast(data.transfreq, num_osc);
+  data.transition_frequency = settings.transfreq.value();
+  copyLast(data.transition_frequency, num_osc);
 
   data.selfkerr = settings.selfkerr.value_or(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
   copyLast(data.selfkerr, num_osc);
 
   size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
-  data.crosskerr = settings.crosskerr.value_or(std::vector<double>(num_pairs_osc, ConfigDefaults::CROSSKERR));
-  copyLast(data.crosskerr, num_pairs_osc);
-  data.crosskerr.resize(num_pairs_osc);  // Truncate if larger than expected
+  data.crosskerr_coupling = settings.crosskerr.value_or(std::vector<double>(num_pairs_osc, ConfigDefaults::CROSSKERR_COUPLING));
+  copyLast(data.crosskerr_coupling, num_pairs_osc);
+  data.crosskerr_coupling.resize(num_pairs_osc);  // Truncate if larger than expected
 
-  data.Jkl = settings.Jkl.value_or(std::vector<double>(num_pairs_osc, ConfigDefaults::JKL));
-  copyLast(data.Jkl, num_pairs_osc);
-  data.Jkl.resize(num_pairs_osc);  // Truncate if larger than expected
+  data.dipole_coupling = settings.Jkl.value_or(std::vector<double>(num_pairs_osc, ConfigDefaults::DIPOLE_COUPLING));
+  copyLast(data.dipole_coupling, num_pairs_osc);
+  data.dipole_coupling.resize(num_pairs_osc);  // Truncate if larger than expected
 
-  data.rotfreq = settings.rotfreq.value_or(std::vector<double>(num_osc, ConfigDefaults::ROTFREQ));
-  copyLast(data.rotfreq, num_osc);
+  data.rotation_frequency = settings.rotfreq.value_or(std::vector<double>(num_osc, ConfigDefaults::ROTATION_FREQUENCY));
+  copyLast(data.rotation_frequency, num_osc);
 
   data.hamiltonian_file_Hsys = settings.hamiltonian_file_Hsys;
   data.hamiltonian_file_Hc = settings.hamiltonian_file_Hc;
@@ -778,7 +779,7 @@ Config::Config(const ParsedConfigData& settings, bool quiet_mode) : logger(MPILo
 
   data.optim_tol_grad_abs = settings.optim_tol_grad_abs.value_or(ConfigDefaults::OPTIM_TOL_GRAD_ABS);
   data.optim_tol_grad_rel = settings.optim_tol_grad_rel.value_or(ConfigDefaults::OPTIM_TOL_GRAD_REL);
-  data.optim_tol_finalcost = settings.optim_tol_finalcost.value_or(ConfigDefaults::OPTIM_TOL_FINALCOST);
+  data.optim_tol_final_cost = settings.optim_tol_final_cost.value_or(ConfigDefaults::OPTIM_TOL_FINAL_COST);
   data.optim_tol_infidelity = settings.optim_tol_infidelity.value_or(ConfigDefaults::OPTIM_TOL_INFIDELITY);
   data.optim_maxiter = settings.optim_maxiter.value_or(ConfigDefaults::OPTIM_MAXITER);
 
@@ -1115,11 +1116,11 @@ void Config::printConfig(std::stringstream& log) const {
   log << "nessential = " << printVector(data.nessential) << "\n";
   log << "ntime = " << data.ntime << "\n";
   log << "dt = " << data.dt << "\n";
-  log << "transfreq = " << printVector(data.transfreq) << "\n";
+  log << "transfreq = " << printVector(data.transition_frequency) << "\n";
   log << "selfkerr = " << printVector(data.selfkerr) << "\n";
-  log << "crosskerr = " << toStringCoupling(data.crosskerr, data.nlevels.size()) << "\n";
-  log << "Jkl = " << toStringCoupling(data.Jkl, data.nlevels.size()) << "\n";
-  log << "rotfreq = " << printVector(data.rotfreq) << "\n";
+  log << "crosskerr = " << toStringCoupling(data.crosskerr_coupling, data.nlevels.size()) << "\n";
+  log << "Jkl = " << toStringCoupling(data.dipole_coupling, data.nlevels.size()) << "\n";
+  log << "rotfreq = " << printVector(data.rotation_frequency) << "\n";
   log << "decoherence = {\n";
   log << "  type = \"" << enumToString(data.decoherence_type, DECOHERENCE_TYPE_MAP) << "\",\n";
   log << "  decay_time = " << printVector(data.decay_time) << ",\n";
@@ -1153,7 +1154,7 @@ void Config::printConfig(std::stringstream& log) const {
   }
   log << "tolerance = { grad_abs = " << data.optim_tol_grad_abs
       << ", grad_rel = " << data.optim_tol_grad_rel
-      << ", final_cost = " << data.optim_tol_finalcost
+      << ", final_cost = " << data.optim_tol_final_cost
       << ", infidelity = " << data.optim_tol_infidelity << " }\n";
   log << "maxiter = " << data.optim_maxiter << "\n";
   log << "tikhonov = { coeff = " << data.optim_tikhonov_coeff

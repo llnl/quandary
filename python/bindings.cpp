@@ -128,11 +128,11 @@ NB_MODULE(_quandary_impl, m) {
     .def_rw("nessential", &RawConfig::nessential)
     .def_rw("ntime", &RawConfig::ntime)
     .def_rw("dt", &RawConfig::dt)
-    .def_rw("transfreq", &RawConfig::transfreq)
+    .def_rw("transfreq", &RawConfig::transition_frequency)
     .def_rw("selfkerr", &RawConfig::selfkerr)
-    .def_rw("crosskerr", &RawConfig::crosskerr)
-    .def_rw("Jkl", &RawConfig::Jkl)
-    .def_rw("rotfreq", &RawConfig::rotfreq)
+    .def_rw("crosskerr", &RawConfig::crosskerr_coupling)
+    .def_rw("Jkl", &RawConfig::dipole_coupling)
+    .def_rw("rotfreq", &RawConfig::rotation_frequency)
     .def_rw("decoherence_type", &RawConfig::decoherence_type)
     .def_rw("decay_time", &RawConfig::decay_time)
     .def_rw("dephase_time", &RawConfig::dephase_time)
@@ -152,7 +152,7 @@ NB_MODULE(_quandary_impl, m) {
     .def_rw("optim_weights", &RawConfig::optim_weights)
     .def_rw("optim_tol_grad_abs", &RawConfig::optim_tol_grad_abs)
     .def_rw("optim_tol_grad_rel", &RawConfig::optim_tol_grad_rel)
-    .def_rw("optim_tol_finalcost", &RawConfig::optim_tol_finalcost)
+    .def_rw("optim_tol_finalcost", &RawConfig::optim_tol_final_cost)
     .def_rw("optim_tol_infidelity", &RawConfig::optim_tol_infidelity)
     .def_rw("optim_maxiter", &RawConfig::optim_maxiter)
     .def_rw("optim_tikhonov_coeff", &RawConfig::optim_tikhonov_coeff)
@@ -208,15 +208,15 @@ NB_MODULE(_quandary_impl, m) {
     .def_prop_ro("total_time", &Config::getTotalTime,
       "Total simulation time [ns]")
     // Physical parameters
-    .def_prop_ro("transfreq", [](const Config& c) { return c.getTransFreq(); },
+    .def_prop_ro("transfreq", [](const Config& c) { return c.getTransitionFrequency(); },
       "Transition frequencies [GHz]")
     .def_prop_ro("selfkerr", [](const Config& c) { return c.getSelfKerr(); },
       "Self-Kerr coefficients [GHz]")
-    .def_prop_ro("crosskerr", [](const Config& c) { return c.getCrossKerr(); },
+    .def_prop_ro("crosskerr", [](const Config& c) { return c.getCrossKerrCoupling(); },
       "Cross-Kerr coefficients [GHz]")
-    .def_prop_ro("Jkl", [](const Config& c) { return c.getJkl(); },
+    .def_prop_ro("Jkl", [](const Config& c) { return c.getDipoleCoupling(); },
       "Dipole-dipole coupling strengths [GHz]")
-    .def_prop_ro("rotfreq", [](const Config& c) { return c.getRotFreq(); },
+    .def_prop_ro("rotfreq", [](const Config& c) { return c.getRotationFrequency(); },
       "Rotating frame frequencies [GHz]")
     // Decoherence
     .def_prop_ro("decoherence_type", &Config::getDecoherenceType,

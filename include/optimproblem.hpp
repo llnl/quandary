@@ -85,7 +85,7 @@ class OptimProblem {
   double gamma_penalty_variation; ///< Parameter multiplying finite-difference squared regularization term
   double tol_grad_abs; ///< Stopping criterion based on absolute gradient norm
   double tol_grad_rel; ///< Stopping criterion based on relative gradient norm
-  double tol_finalcost; ///< Stopping criterion based on objective function value
+  double tol_final_cost; ///< Stopping criterion based on objective function value
   double tol_infidelity; ///< Stopping criterion based on infidelity
   int maxiter; ///< Stopping criterion based on maximum number of iterations
   Tao tao; ///< PETSc's TAO optimization solver
@@ -191,7 +191,7 @@ class OptimProblem {
    *
    * @return double Absolute tolerance for objective function convergence
    */
-  double getTolFinalCost()    { return tol_finalcost; };
+  double getTolFinalCost()    { return tol_final_cost; };
 
   /**
    * @brief Retrieves the gradient tolerance.

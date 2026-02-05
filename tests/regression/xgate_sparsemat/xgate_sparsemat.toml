@@ -3,8 +3,8 @@ nlevels = [2]
 nessential = [2]
 ntime = 700
 dt = 0.1
-transfreq = [4.1]
-rotfreq = [4.0]
+transition_frequency = [4.1]
+rotation_frequency = [4.0]
 selfkerr = [0.2198]
 decoherence = {type = "both", decay_time = [56000.0], dephase_time = [28000.0]}
 initial_condition = {type = "basis"}

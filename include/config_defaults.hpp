@@ -15,10 +15,10 @@
 namespace ConfigDefaults {
 
 // General options
-const double ROTFREQ = 0.0; ///< Default rotational wave approximation frequency (GHz)
+const double ROTATION_FREQUENCY = 0.0; ///< Default rotational wave approximation frequency (GHz)
 const double SELFKERR = 0.0; ///< Default self-kerr frequency (GHz)
-const double CROSSKERR = 0.0; ///< Default cross-kerr frequency (GHz)
-const double JKL = 0.0; ///< Default dipole-dipole coupling frequency (GHz)
+const double CROSSKERR_COUPLING = 0.0; ///< Default cross-kerr frequency (GHz)
+const double DIPOLE_COUPLING = 0.0; ///< Default dipole-dipole coupling frequency (GHz)
 const DecoherenceType DECOHERENCE_TYPE = DecoherenceType::NONE; ///< Default decoherence type enum
 const double DECAY_TIME = 0.0; ///< Default decay time
 const double DEPHASE_TIME = 0.0; ///< Default dephase time
@@ -44,7 +44,7 @@ const double OPTIM_TIKHONOV_COEFF = 1e-4; ///< Default Tikhonov regularization c
 const bool OPTIM_TIKHONOV_USE_X0 = false; ///< Default Tikhonov regularization type
 const double OPTIM_TOL_GRAD_ABS = 1e-8; ///< Default absolute gradient tolerance
 const double OPTIM_TOL_GRAD_REL = 1e-4; ///< Default relative gradient tolerance
-const double OPTIM_TOL_FINALCOST = 1e-8; ///< Default final time cost tolerance
+const double OPTIM_TOL_FINAL_COST = 1e-8; ///< Default final time cost tolerance
 const double OPTIM_TOL_INFIDELITY = 1e-5; ///< Default infidelity tolerance
 const size_t OPTIM_MAXITER = 200; ///< Default maximum optimization iterations
 

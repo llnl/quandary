@@ -41,7 +41,7 @@ TEST_F(CfgParserTest, ParseVectorSettings) {
   EXPECT_EQ(nlevels[0], 2);
   EXPECT_EQ(nlevels[1], 3);
 
-  auto transfreq = config.getTransFreq();
+  auto transfreq = config.getTransitionFrequency();
   EXPECT_EQ(transfreq.size(), 3);
   EXPECT_DOUBLE_EQ(transfreq[0], 4.1);
   EXPECT_DOUBLE_EQ(transfreq[1], 4.8);
@@ -103,7 +103,7 @@ TEST_F(CfgParserTest, ApplyDefaults) {
       false);
 
   EXPECT_EQ(config.getDecoherenceType(), DecoherenceType::NONE); // Default
-  EXPECT_EQ(config.getRotFreq()[0], 0.0); // Default
+  EXPECT_EQ(config.getRotationFrequency()[0], 0.0); // Default
 }
 
 TEST_F(CfgParserTest, InitialCondition_FromFile) {

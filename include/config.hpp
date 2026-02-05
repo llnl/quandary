@@ -48,11 +48,11 @@ struct ConfigFieldsT {
   Wrapper<std::vector<size_t>> nessential;
   Wrapper<size_t> ntime;
   Wrapper<double> dt;
-  Wrapper<std::vector<double>> transfreq;
+  Wrapper<std::vector<double>> transition_frequency;
   Wrapper<std::vector<double>> selfkerr;
-  Wrapper<std::vector<double>> crosskerr;
-  Wrapper<std::vector<double>> Jkl;
-  Wrapper<std::vector<double>> rotfreq;
+  Wrapper<std::vector<double>> crosskerr_coupling;
+  Wrapper<std::vector<double>> dipole_coupling;
+  Wrapper<std::vector<double>> rotation_frequency;
   Wrapper<DecoherenceType> decoherence_type;
   Wrapper<std::vector<double>> decay_time;
   Wrapper<std::vector<double>> dephase_time;
@@ -75,7 +75,7 @@ struct ConfigFieldsT {
   Wrapper<std::vector<double>> optim_weights;
   Wrapper<double> optim_tol_grad_abs;
   Wrapper<double> optim_tol_grad_rel;
-  Wrapper<double> optim_tol_finalcost;
+  Wrapper<double> optim_tol_final_cost;
   Wrapper<double> optim_tol_infidelity;
   Wrapper<size_t> optim_maxiter;
   Wrapper<double> optim_tikhonov_coeff;
@@ -207,11 +207,11 @@ class Config {
   double getDt() const { return data.dt; }
   double getTotalTime() const { return data.ntime * data.dt; }
 
-  const std::vector<double>& getTransFreq() const { return data.transfreq; }
+  const std::vector<double>& getTransitionFrequency() const { return data.transition_frequency; }
   const std::vector<double>& getSelfKerr() const { return data.selfkerr; }
-  const std::vector<double>& getCrossKerr() const { return data.crosskerr; }
-  const std::vector<double>& getJkl() const { return data.Jkl; }
-  const std::vector<double>& getRotFreq() const { return data.rotfreq; }
+  const std::vector<double>& getCrossKerrCoupling() const { return data.crosskerr_coupling; }
+  const std::vector<double>& getDipoleCoupling() const { return data.dipole_coupling; }
+  const std::vector<double>& getRotationFrequency() const { return data.rotation_frequency; }
   DecoherenceType getDecoherenceType() const { return data.decoherence_type; }
   const std::vector<double>& getDecayTime() const { return data.decay_time; }
   const std::vector<double>& getDephaseTime() const { return data.dephase_time; }
@@ -232,7 +232,7 @@ class Config {
   const std::vector<double>& getOptimWeights() const { return data.optim_weights; }
   double getOptimTolGradAbs() const { return data.optim_tol_grad_abs; }
   double getOptimTolGradRel() const { return data.optim_tol_grad_rel; }
-  double getOptimTolFinalCost() const { return data.optim_tol_finalcost; }
+  double getOptimTolFinalCost() const { return data.optim_tol_final_cost; }
   double getOptimTolInfidelity() const { return data.optim_tol_infidelity; }
   size_t getOptimMaxiter() const { return data.optim_maxiter; }
   double getOptimTikhonovCoeff() const { return data.optim_tikhonov_coeff; }

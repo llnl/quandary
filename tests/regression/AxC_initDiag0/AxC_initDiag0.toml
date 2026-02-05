@@ -2,10 +2,10 @@
 nlevels = [3, 20]
 ntime = 100
 dt = 0.0001
-transfreq = [4416.66, 6840.815]
+transition_frequency = [4416.66, 6840.815]
 selfkerr = [230.56, 0.0]
-crosskerr = 1.176000
-rotfreq = [4416.66, 6840.815]
+crosskerr_coupling = 1.176000
+rotation_frequency = [4416.66, 6840.815]
 decoherence = { type = "both", decay_time = [80.0, 0.3892042], dephase_time = [26.0, 5.0] }
 initial_condition = {type = "diagonal", subsystem = [0]}
 
