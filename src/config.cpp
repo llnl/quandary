@@ -317,13 +317,13 @@ RawConfig extractRawConfig(const toml::table& toml, const MPILogger& logger) {
     input.nessential = extractScalarOrVector<size_t>(*system_table, "nessential", num_osc);
     input.ntime = extractToml<size_t>(*system_table, "ntime");
     input.dt = extractToml<double>(*system_table, "dt");
-    input.transition_frequency = extractScalarOrVector<double>(*system_table, "transfreq", num_osc);
+    input.transition_frequency = extractScalarOrVector<double>(*system_table, "transition_frequency", num_osc);
     input.selfkerr = extractScalarOrVector<double>(*system_table, "selfkerr", num_osc);
 
     // Parse crosskerr coupling
-    if (system_table->contains("crosskerr")) {
-      if ((*system_table)["crosskerr"].is_value()) {
-        auto single_val = extractToml<double>(*system_table, "crosskerr");
+    if (system_table->contains("crosskerr_coupling")) {
+      if ((*system_table)["crosskerr_coupling"].is_value()) {
+        auto single_val = extractToml<double>(*system_table, "crosskerr_coupling");
         if (single_val.has_value()) {
           input.crosskerr_coupling = std::vector<double>(num_pairs, *single_val);
         }
@@ -332,14 +332,14 @@ RawConfig extractRawConfig(const toml::table& toml, const MPILogger& logger) {
           auto val_opt = extractToml<double>(t, "value");
           return validators::field<double>(val_opt, "value").value();
         };
-        input.crosskerr_coupling = parsePerSubsystemSettings<double>(*system_table, "crosskerr", num_osc, ConfigDefaults::CROSSKERR_COUPLING, parseFunc, logger);
+        input.crosskerr_coupling = parsePerSubsystemSettings<double>(*system_table, "crosskerr_coupling", num_osc, ConfigDefaults::CROSSKERR_COUPLING, parseFunc, logger);
       }
     }
 
-    // Parse Jkl coupling
-    if (system_table->contains("Jkl")) {
-      if ((*system_table)["Jkl"].is_value()) {
-        auto single_val = extractToml<double>(*system_table, "Jkl");
+    // Parse dipole_coupling coupling
+    if (system_table->contains("dipole_coupling")) {
+      if ((*system_table)["dipole_coupling"].is_value()) {
+        auto single_val = extractToml<double>(*system_table, "dipole_coupling");
         if (single_val.has_value()) {
           input.dipole_coupling = std::vector<double>(num_pairs, *single_val);
         }
@@ -348,11 +348,11 @@ RawConfig extractRawConfig(const toml::table& toml, const MPILogger& logger) {
           auto val_opt = extractToml<double>(t, "value");
           return validators::field<double>(val_opt, "value").value();
         };
-        input.dipole_coupling = parsePerSubsystemSettings<double>(*system_table, "Jkl", num_osc, ConfigDefaults::DIPOLE_COUPLING, parseFunc, logger);
+        input.dipole_coupling = parsePerSubsystemSettings<double>(*system_table, "dipole_coupling", num_osc, ConfigDefaults::DIPOLE_COUPLING, parseFunc, logger);
       }
     }
 
-    input.rotation_frequency = extractScalarOrVector<double>(*system_table, "rotfreq", num_osc);
+    input.rotation_frequency = extractScalarOrVector<double>(*system_table, "rotation_frequency", num_osc);
 
     // Parse decoherence settings
     if (system_table->contains("decoherence")) {
@@ -546,16 +546,16 @@ Config::Config(const RawConfig& input, bool quiet_mode) : logger(MPILogger(quiet
 
     data.dt = validators::field<double>(input.dt, "dt").positive().value();
 
-    data.transition_frequency = validators::vectorField<double>(input.transition_frequency, "transfreq").hasLength(num_osc).value();
+    data.transition_frequency = validators::vectorField<double>(input.transition_frequency, "transition_frequency").hasLength(num_osc).value();
 
     data.selfkerr = validators::vectorField<double>(input.selfkerr, "selfkerr").valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
 
     size_t num_pairs = (num_osc - 1) * num_osc / 2;
-    data.crosskerr_coupling = validators::vectorField<double>(input.crosskerr_coupling, "crosskerr").valueOr(std::vector<double>(num_pairs, ConfigDefaults::CROSSKERR_COUPLING));
+    data.crosskerr_coupling = validators::vectorField<double>(input.crosskerr_coupling, "crosskerr_coupling").valueOr(std::vector<double>(num_pairs, ConfigDefaults::CROSSKERR_COUPLING));
 
-    data.dipole_coupling = validators::vectorField<double>(input.dipole_coupling, "Jkl").valueOr(std::vector<double>(num_pairs, ConfigDefaults::DIPOLE_COUPLING));
+    data.dipole_coupling = validators::vectorField<double>(input.dipole_coupling, "dipole_coupling").valueOr(std::vector<double>(num_pairs, ConfigDefaults::DIPOLE_COUPLING));
 
-    data.rotation_frequency = validators::vectorField<double>(input.rotation_frequency, "rotfreq").valueOr(std::vector<double>(num_osc, ConfigDefaults::ROTATION_FREQUENCY));
+    data.rotation_frequency = validators::vectorField<double>(input.rotation_frequency, "rotation_frequency").valueOr(std::vector<double>(num_osc, ConfigDefaults::ROTATION_FREQUENCY));
 
     data.decoherence_type = input.decoherence_type.value_or(ConfigDefaults::DECOHERENCE_TYPE);
 
@@ -1116,11 +1116,11 @@ void Config::printConfig(std::stringstream& log) const {
   log << "nessential = " << printVector(data.nessential) << "\n";
   log << "ntime = " << data.ntime << "\n";
   log << "dt = " << data.dt << "\n";
-  log << "transfreq = " << printVector(data.transition_frequency) << "\n";
+  log << "transition_frequency = " << printVector(data.transition_frequency) << "\n";
   log << "selfkerr = " << printVector(data.selfkerr) << "\n";
-  log << "crosskerr = " << toStringCoupling(data.crosskerr_coupling, data.nlevels.size()) << "\n";
-  log << "Jkl = " << toStringCoupling(data.dipole_coupling, data.nlevels.size()) << "\n";
-  log << "rotfreq = " << printVector(data.rotation_frequency) << "\n";
+  log << "crosskerr_coupling = " << toStringCoupling(data.crosskerr_coupling, data.nlevels.size()) << "\n";
+  log << "dipole_coupling = " << toStringCoupling(data.dipole_coupling, data.nlevels.size()) << "\n";
+  log << "rotation_frequency = " << printVector(data.rotation_frequency) << "\n";
   log << "decoherence = {\n";
   log << "  type = \"" << enumToString(data.decoherence_type, DECOHERENCE_TYPE_MAP) << "\",\n";
   log << "  decay_time = " << printVector(data.decay_time) << ",\n";
