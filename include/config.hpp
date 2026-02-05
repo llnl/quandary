@@ -44,62 +44,62 @@ using Identity = T;
 template <template <typename> class Wrapper>
 struct ConfigFieldsT {
   // System parameters
-  Wrapper<std::vector<size_t>> nlevels;
-  Wrapper<std::vector<size_t>> nessential;
-  Wrapper<size_t> ntime;
-  Wrapper<double> dt;
-  Wrapper<std::vector<double>> transition_frequency;
-  Wrapper<std::vector<double>> selfkerr;
-  Wrapper<std::vector<double>> crosskerr_coupling;
-  Wrapper<std::vector<double>> dipole_coupling;
-  Wrapper<std::vector<double>> rotation_frequency;
-  Wrapper<DecoherenceType> decoherence_type;
-  Wrapper<std::vector<double>> decay_time;
-  Wrapper<std::vector<double>> dephase_time;
-  Wrapper<InitialConditionSettings> initial_condition;
+  Wrapper<std::vector<size_t>> nlevels; ///< Number of levels per subsystem
+  Wrapper<std::vector<size_t>> nessential; ///< Number of essential levels per subsystem (Default: same as nlevels)
+  Wrapper<size_t> ntime; ///< Number of time steps used for time-integration
+  Wrapper<double> dt; ///< Time step size (ns). Determines final time: T=ntime*dt
+  Wrapper<std::vector<double>> transition_frequency; ///< Fundamental transition frequencies for each oscillator (GHz)
+  Wrapper<std::vector<double>> selfkerr; ///< Self-kerr frequencies for each oscillator (GHz)
+  Wrapper<std::vector<double>> crosskerr_coupling; ///< Cross-kerr coupling frequencies for each oscillator coupling (GHz)
+  Wrapper<std::vector<double>> dipole_coupling; ///< Dipole-dipole coupling frequencies for each oscillator coupling (GHz)
+  Wrapper<std::vector<double>> rotation_frequency; ///< Rotational wave approximation frequencies for each subsystem (GHz)
+  Wrapper<DecoherenceType> decoherence_type; ///< Switch between Schroedinger and Lindblad solver
+  Wrapper<std::vector<double>> decay_time; ///< Time of decay operation (T1) per oscillator (for Lindblad solver)
+  Wrapper<std::vector<double>> dephase_time; ///< Time of dephase operation (T2) per oscillator (for Lindblad solver)
+  Wrapper<InitialConditionSettings> initial_condition; ///< Initial condition configuration
 
   // Inherently optional - no Wrapper
-  std::optional<std::string> hamiltonian_file_Hsys;
-  std::optional<std::string> hamiltonian_file_Hc;
+  std::optional<std::string> hamiltonian_file_Hsys; ///< File to read the system Hamiltonian from
+  std::optional<std::string> hamiltonian_file_Hc; ///< File to read the control Hamiltonian from
 
   // Control parameters
-  Wrapper<bool> control_zero_boundary_condition;
-  Wrapper<std::vector<ControlParameterizationSettings>> control_parameterizations;
-  Wrapper<std::vector<ControlInitializationSettings>> control_initializations;
-  Wrapper<std::vector<double>> control_amplitude_bounds;
-  Wrapper<std::vector<std::vector<double>>> carrier_frequencies;
+  Wrapper<bool> control_zero_boundary_condition; ///< Decide whether control pulses should start and end at zero
+  Wrapper<std::vector<ControlParameterizationSettings>> control_parameterizations; ///< Control parameterizations for each oscillator
+  Wrapper<std::vector<ControlInitializationSettings>> control_initializations; ///< Control initializations for each oscillator
+  Wrapper<std::vector<double>> control_amplitude_bounds; ///< Control amplitude bounds for each oscillator
+  Wrapper<std::vector<std::vector<double>>> carrier_frequencies; ///< Carrier frequencies for each oscillator
 
   // Optimization parameters
-  Wrapper<OptimTargetSettings> optim_target;
-  Wrapper<ObjectiveType> optim_objective;
-  Wrapper<std::vector<double>> optim_weights;
-  Wrapper<double> optim_tol_grad_abs;
-  Wrapper<double> optim_tol_grad_rel;
-  Wrapper<double> optim_tol_final_cost;
-  Wrapper<double> optim_tol_infidelity;
-  Wrapper<size_t> optim_maxiter;
-  Wrapper<double> optim_tikhonov_coeff;
-  Wrapper<bool> optim_tikhonov_use_x0;
-  Wrapper<double> optim_penalty_leakage;
-  Wrapper<double> optim_penalty_weightedcost;
-  Wrapper<double> optim_penalty_weightedcost_width;
-  Wrapper<double> optim_penalty_dpdm;
-  Wrapper<double> optim_penalty_energy;
-  Wrapper<double> optim_penalty_variation;
+  Wrapper<OptimTargetSettings> optim_target; ///< Grouped optimization target configuration
+  Wrapper<ObjectiveType> optim_objective; ///< Objective function measure
+  Wrapper<std::vector<double>> optim_weights; ///< Weights for summing up the objective function
+  Wrapper<double> optim_tol_grad_abs; ///< Absolute gradient tolerance
+  Wrapper<double> optim_tol_grad_rel; ///< Relative gradient tolerance
+  Wrapper<double> optim_tol_final_cost; ///< Final time cost tolerance
+  Wrapper<double> optim_tol_infidelity; ///< Infidelity tolerance
+  Wrapper<size_t> optim_maxiter; ///< Maximum iterations
+  Wrapper<double> optim_tikhonov_coeff; ///< Coefficient of Tikhonov regularization for the design variables
+  Wrapper<bool> optim_tikhonov_use_x0; ///< Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
+  Wrapper<double> optim_penalty_leakage; ///< Leakage penalty coefficient
+  Wrapper<double> optim_penalty_weightedcost; ///< Weighted cost penalty coefficient
+  Wrapper<double> optim_penalty_weightedcost_width; ///< Width parameter for weighted cost penalty
+  Wrapper<double> optim_penalty_dpdm; ///< Second derivative penalty coefficient
+  Wrapper<double> optim_penalty_energy; ///< Energy penalty coefficient
+  Wrapper<double> optim_penalty_variation; ///< Amplitude variation penalty coefficient
 
   // Output parameters
-  Wrapper<std::string> output_directory;
-  Wrapper<std::vector<OutputType>> output_observables;
-  Wrapper<size_t> output_timestep_stride;
-  Wrapper<size_t> output_optimization_stride;
+  Wrapper<std::string> output_directory; ///< Directory for output files
+  Wrapper<std::vector<OutputType>> output_observables; ///< Specify the desired observables.
+  Wrapper<size_t> output_timestep_stride; ///< Output frequency in the time domain: write output every <num> time-step
+  Wrapper<size_t> output_optimization_stride; ///< Frequency of writing output during optimization iterations
 
   // Solver parameters
-  Wrapper<RunType> runtype;
-  Wrapper<bool> usematfree;
-  Wrapper<LinearSolverType> linearsolver_type;
-  Wrapper<size_t> linearsolver_maxiter;
-  Wrapper<TimeStepperType> timestepper_type;
-  Wrapper<int> rand_seed;
+  Wrapper<RunType> runtype; ///< Runtype options: simulation, gradient, or optimization
+  Wrapper<bool> usematfree; ///< Use matrix free solver, instead of sparse matrix implementation
+  Wrapper<LinearSolverType> linearsolver_type; ///< Solver type for solving the linear system at each time step
+  Wrapper<size_t> linearsolver_maxiter; ///< Set maximum number of iterations for the linear solver
+  Wrapper<TimeStepperType> timestepper_type; ///< The time-stepping algorithm
+  Wrapper<int> rand_seed; ///< Fixed seed for the random number generator for reproducibility
 };
 
 /**
