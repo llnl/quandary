@@ -92,14 +92,14 @@ NB_MODULE(_quandary_impl, m) {
   // Structs
   nb::class_<InitialConditionSettings>(m, "InitialConditionSettings")
     .def(nb::init<>())
-    .def_rw("type", &InitialConditionSettings::type)
+    .def_rw("condition_type", &InitialConditionSettings::type)
     .def_rw("filename", &InitialConditionSettings::filename)
     .def_rw("levels", &InitialConditionSettings::levels)
     .def_rw("subsystem", &InitialConditionSettings::subsystem);
 
   nb::class_<OptimTargetSettings>(m, "OptimTargetSettings")
     .def(nb::init<>())
-    .def_rw("type", &OptimTargetSettings::type)
+    .def_rw("target_type", &OptimTargetSettings::type)
     .def_rw("gate_type", &OptimTargetSettings::gate_type)
     .def_rw("gate_rot_freq", &OptimTargetSettings::gate_rot_freq)
     .def_rw("levels", &OptimTargetSettings::levels)
@@ -107,7 +107,7 @@ NB_MODULE(_quandary_impl, m) {
 
   nb::class_<ControlParameterizationSettings>(m, "ControlParameterizationSettings")
     .def(nb::init<>())
-    .def_rw("type", &ControlParameterizationSettings::type)
+    .def_rw("control_type", &ControlParameterizationSettings::type)
     .def_rw("nspline", &ControlParameterizationSettings::nspline)
     .def_rw("tstart", &ControlParameterizationSettings::tstart)
     .def_rw("tstop", &ControlParameterizationSettings::tstop)
@@ -115,7 +115,7 @@ NB_MODULE(_quandary_impl, m) {
 
   nb::class_<ControlInitializationSettings>(m, "ControlInitializationSettings")
     .def(nb::init<>())
-    .def_rw("type", &ControlInitializationSettings::type)
+    .def_rw("init_type", &ControlInitializationSettings::type)
     .def_rw("amplitude", &ControlInitializationSettings::amplitude)
     .def_rw("phase", &ControlInitializationSettings::phase)
     .def_rw("filename", &ControlInitializationSettings::filename);

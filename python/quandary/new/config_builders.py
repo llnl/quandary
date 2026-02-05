@@ -48,7 +48,7 @@ def _setup_physics(
         maxctrl_MHz = [10.0] * nqubits
     if initialcondition is None:
         initialcondition = InitialConditionSettings()
-        initialcondition.type = InitialConditionType.BASIS
+        initialcondition.condition_type = InitialConditionType.BASIS
 
     # Build Hamiltonians
     Ntot = [Ne[i] + Ng[i] for i in range(nqubits)]
