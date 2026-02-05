@@ -14,6 +14,8 @@ from .._quandary_impl import (
     OptimTargetSettings,
     TargetType,
     GateType,
+    ControlInitializationSettings,
+    ControlInitializationType,
 )
 from .quantum_operators import hamiltonians, get_resonances
 from .time_estimation import estimate_timesteps
@@ -125,6 +127,7 @@ def create_simulation_config(
     Ne: List[int],
     freq01: List[float],
     T: float,
+    pcof = None,
     selfkerr: Optional[List[float]] = None,
     Ng: Optional[List[int]] = None,
     rotfreq: Optional[List[float]] = None,
@@ -181,10 +184,8 @@ def create_simulation_config(
 
     Example:
     -------
-    >>> config = create_simulation_config(Ne=[3, 3], freq01=[4.1, 4.2], T=100.0)
-    >>> # Modify advanced settings with full autocomplete:
-    >>> config.usematfree = False
-    >>> config.output_frequency = 10
+    >>> # Simple simulation with random/default controls
+    >>> config = create_simulation_config(Ne=[2], freq01=[4.1], T=50.0)
     >>> results = run(config)
     """
     config = _setup_physics(
@@ -203,6 +204,23 @@ def create_simulation_config(
     )
 
     config.runtype = RunType.SIMULATION
+
+    # If pcof is provided, write to file and set up control initialization
+    if pcof is not None:
+        # Write vector to temp file in output directory
+        output_dir = config.output_directory if hasattr(config, 'output_directory') and config.output_directory else "./run_dir"
+        os.makedirs(output_dir, exist_ok=True)
+        pcof_file = os.path.join(output_dir, "pcof_init.dat")
+        np.savetxt(pcof_file, pcof, fmt='%20.13e')
+
+        # Set up control initialization to load from file
+        control_inits = []
+        for iosc in range(len(Ne)):
+            init = ControlInitializationSettings()
+            init.init_type = ControlInitializationType.FILE
+            init.filename = pcof_file
+            control_inits.append(init)
+        config.control_initializations = control_inits
 
     return config
 
