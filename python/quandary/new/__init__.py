@@ -4,10 +4,9 @@
 # This ensures both are initialized once and managed by Python's lifecycle
 import mpi4py.MPI  # noqa: F401
 import petsc4py
-petsc4py.init()
 
 # Re-export the nanobind implementation from the parent package
-from .._quandary_impl import (  # noqa: F401
+from .._quandary_impl import (
     # Configuration
     QuandaryConfig,
     Config,
@@ -69,7 +68,61 @@ from .utils import (  # noqa: F401
 )
 
 # Config builders (factory functions)
-from .config_builders import (  # noqa: F401
+from .config_builders import (
     create_simulation_config,
     create_optimization_config,
 )
+
+# Define public API
+__all__ = [
+    # Configuration classes and types
+    "QuandaryConfig",
+    "Config",
+    "run_from_file",
+    # Enums
+    "DecoherenceType",
+    "InitialConditionType",
+    "TargetType",
+    "ObjectiveType",
+    "LinearSolverType",
+    "RunType",
+    "ControlType",
+    "ControlInitializationType",
+    "TimeStepperType",
+    "GateType",
+    "OutputType",
+    # Settings structs
+    "InitialConditionSettings",
+    "OptimTargetSettings",
+    "ControlParameterizationSettings",
+    "ControlInitializationSettings",
+    # Runner functions
+    "run",
+    "run_mpi",
+    # Results
+    "QuandaryResults",
+    "get_results",
+    # Quantum operators
+    "lowering",
+    "number",
+    "map_to_oscillators",
+    "hamiltonians",
+    "get_resonances",
+    # Time estimation
+    "estimate_timesteps",
+    "timestep_richardson_est",
+    # Visualization
+    "plot_pulse",
+    "plot_expectedEnergy",
+    "plot_population",
+    "plot_results_1osc",
+    # Utilities
+    "eval_controls",
+    "infidelity_",
+    "downsample_pulses",
+    # Config builders
+    "create_simulation_config",
+    "create_optimization_config",
+]
+
+petsc4py.init()
