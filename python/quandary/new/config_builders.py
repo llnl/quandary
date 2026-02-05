@@ -101,14 +101,8 @@ def _setup_physics(
     if len(Jkl) > 0:
         config.Jkl = Jkl
 
-    # Set carrier frequencies (need to format for config)
-    # TODO: Set carrier frequencies properly once we understand the config format
-
-    # Set initial condition
+    config.carrier_frequencies = carrier_frequency
     config.initial_condition.type = initialcondition
-
-    # Set default output directory
-    config.datadir = "./data_out"
 
     return config
 
@@ -215,7 +209,6 @@ def create_optimization_config(
     Jkl: Optional[List[float]] = None,
     Pmin: int = 150,
     maxctrl_MHz: Optional[List[float]] = None,
-    maxiter: int = 200,
     initialcondition: str = "basis",
     verbose: bool = True,
 ) -> QuandaryConfig:
@@ -256,8 +249,6 @@ def create_optimization_config(
         Minimum points to resolve shortest period. Default: 150
     maxctrl_MHz : List[float]
         Maximum control amplitudes [MHz] per qubit
-    maxiter : int
-        Maximum optimization iterations. Default: 200
     initialcondition : str
         Initial state specification. Default: "basis"
     verbose : bool
@@ -273,7 +264,6 @@ def create_optimization_config(
     >>> import numpy as np
     >>> X_gate = np.array([[0, 1], [1, 0]], dtype=complex)
     >>> config = create_optimization_config(Ne=[2], freq01=[4.1], T=50.0, targetgate=X_gate)
-    >>> config.maxiter = 500  # Modify with autocomplete
     >>> config.tol_infidelity = 1e-6
     >>> results = run(config)
     """
@@ -293,9 +283,7 @@ def create_optimization_config(
     )
 
     config.runtype = RunType.OPTIMIZATION
-    config.maxiter = maxiter
-
-    # Set target (need to handle this properly)
-    # TODO: Set targetgate/targetstate once we understand config format
+    config.target_gate = targetgate
+    config.target_state = targetstate
 
     return config
