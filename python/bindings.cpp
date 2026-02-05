@@ -193,12 +193,47 @@ NB_MODULE(_quandary_impl, m) {
     .def_static("from_toml_string", &Config::fromTomlString,
       nb::arg("toml_content"), nb::arg("quiet") = false,
       "Load and validate a Config from a TOML string")
-    .def_prop_ro("n_initial_conditions", &Config::getNInitialConditions,
-      "Number of initial conditions")
-    .def_prop_ro("output_directory", &Config::getOutputDirectory,
-      "Output directory path")
+    // System configuration
+    .def_prop_ro("nlevels", [](const Config& c) { return c.getNLevels(); },
+      "Number of total levels (essential + guard) per oscillator")
+    .def_prop_ro("nessential", [](const Config& c) { return c.getNEssential(); },
+      "Number of essential levels per oscillator")
+    .def_prop_ro("num_osc", &Config::getNumOsc,
+      "Number of oscillators")
+    // Time configuration
+    .def_prop_ro("ntime", &Config::getNTime,
+      "Number of time steps")
+    .def_prop_ro("dt", &Config::getDt,
+      "Time step size [ns]")
+    .def_prop_ro("total_time", &Config::getTotalTime,
+      "Total simulation time [ns]")
+    // Physical parameters
+    .def_prop_ro("transfreq", [](const Config& c) { return c.getTransFreq(); },
+      "Transition frequencies [GHz]")
+    .def_prop_ro("selfkerr", [](const Config& c) { return c.getSelfKerr(); },
+      "Self-Kerr coefficients [GHz]")
+    .def_prop_ro("crosskerr", [](const Config& c) { return c.getCrossKerr(); },
+      "Cross-Kerr coefficients [GHz]")
+    .def_prop_ro("Jkl", [](const Config& c) { return c.getJkl(); },
+      "Dipole-dipole coupling strengths [GHz]")
+    .def_prop_ro("rotfreq", [](const Config& c) { return c.getRotFreq(); },
+      "Rotating frame frequencies [GHz]")
+    // Decoherence
     .def_prop_ro("decoherence_type", &Config::getDecoherenceType,
       "Decoherence type (NONE, DECAY, DEPHASE, or BOTH)")
+    .def_prop_ro("decay_time", [](const Config& c) { return c.getDecayTime(); },
+      "T1 decay times [ns]")
+    .def_prop_ro("dephase_time", [](const Config& c) { return c.getDephaseTime(); },
+      "T2 dephasing times [ns]")
+    // Initial conditions
+    .def_prop_ro("n_initial_conditions", &Config::getNInitialConditions,
+      "Number of initial conditions")
+    .def_prop_ro("initial_condition", [](const Config& c) { return c.getInitialCondition(); },
+      "Initial condition settings")
+    // Output
+    .def_prop_ro("output_directory", &Config::getOutputDirectory,
+      "Output directory path")
+    // Methods
     .def("to_toml", [](const Config& c) {
         std::stringstream ss;
         c.printConfig(ss);
