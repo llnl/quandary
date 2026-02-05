@@ -1,9 +1,20 @@
 """Factory functions to create QuandaryConfig with automatic setup from physics parameters."""
 
 import logging
+import os
 from typing import List, Optional
 
-from .._quandary_impl import QuandaryConfig, RunType, InitialConditionType, InitialConditionSettings
+import numpy as np
+
+from .._quandary_impl import (
+    QuandaryConfig,
+    RunType,
+    InitialConditionType,
+    InitialConditionSettings,
+    OptimTargetSettings,
+    TargetType,
+    GateType,
+)
 from .quantum_operators import hamiltonians, get_resonances
 from .time_estimation import estimate_timesteps
 
@@ -200,8 +211,8 @@ def create_optimization_config(
     Ne: List[int],
     freq01: List[float],
     T: float,
-    targetgate: Optional[List[List[complex]]] = None,
-    targetstate: Optional[List[complex]] = None,
+    targetgate = None,
+    output_directory: str = "./run_dir",
     selfkerr: Optional[List[float]] = None,
     Ng: Optional[List[int]] = None,
     rotfreq: Optional[List[float]] = None,
@@ -215,8 +226,7 @@ def create_optimization_config(
     """
     Create an optimization config with automatic Hamiltonian and timestep computation.
 
-    Similar to create_simulation_config() but sets runtype to OPTIMIZATION and
-    includes optimization-specific parameters.
+    Similar to create_simulation_config() but sets runtype to OPTIMIZATION.
 
     Required Parameters:
     -------------------
@@ -226,15 +236,14 @@ def create_optimization_config(
         01-transition frequencies [GHz] per qubit
     T : float
         Pulse duration [ns]
-
-    At least one target must be specified:
-    targetgate : List[List[complex]]
-        Target unitary gate
-    targetstate : List[complex]
-        Target state vector
+    targetgate : array-like (list, numpy array, etc.)
+        Target unitary gate. Can be plain Python list like [[0,1],[1,0]]
+        or numpy array. Will be converted to complex automatically.
 
     Optional Parameters:
     -------------------
+    output_directory : str
+        Output directory for results and gate files. Default: "./run_dir"
     selfkerr : List[float]
         Anharmonicities [GHz] per qubit. Default: zeros
     Ng : List[int]
@@ -261,10 +270,12 @@ def create_optimization_config(
 
     Example:
     -------
-    >>> import numpy as np
-    >>> X_gate = np.array([[0, 1], [1, 0]], dtype=complex)
-    >>> config = create_optimization_config(Ne=[2], freq01=[4.1], T=50.0, targetgate=X_gate)
-    >>> config.tol_infidelity = 1e-6
+    >>> from quandary.new import create_optimization_config, run
+    >>>
+    >>> config = create_optimization_config(
+    ...     Ne=[2], freq01=[4.1], T=50.0,
+    ...     targetgate=[[0, 1], [1, 0]]  # X gate
+    ... )
     >>> results = run(config)
     """
     config = _setup_physics(
@@ -283,7 +294,28 @@ def create_optimization_config(
     )
 
     config.runtype = RunType.OPTIMIZATION
-    config.target_gate = targetgate
-    config.target_state = targetstate
+    config.output_directory = output_directory
+
+    # Set up target gate if provided
+    if targetgate is not None:
+        os.makedirs(output_directory, exist_ok=True)
+
+        # Convert to numpy array with complex dtype
+        gate_array = np.array(targetgate, dtype=complex)
+
+        # Write gate to file (column-major order)
+        gate_file = os.path.join(output_directory, "targetgate.dat")
+        gate_vec = np.concatenate((
+            gate_array.real.ravel(order='F'),
+            gate_array.imag.ravel(order='F')
+        ))
+        np.savetxt(gate_file, gate_vec, fmt='%20.13e')
+
+        # Set up target settings
+        target = OptimTargetSettings()
+        target.target_type = TargetType.GATE
+        target.gate_type = GateType.FILE
+        target.filename = gate_file
+        config.optim_target = target
 
     return config
