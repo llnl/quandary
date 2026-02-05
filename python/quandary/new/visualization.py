@@ -4,10 +4,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot_pulse(Ne, time, pt, qt):
+def plot_pulse(results):
+    """Plot the control pulse for all qubits.
+
+    Args:
+        results: QuandaryResults object from run()
     """
-    Plot the control pulse for all qubits
-    """
+    Ne = results.config.nessential
+    time = results.time
+    pt = results.pt
+    qt = results.qt
+
     plt.figure()
     nrows = len(Ne)
     ncols = 1
@@ -23,18 +30,23 @@ def plot_pulse(Ne, time, pt, qt):
                   str(round(maxq, 1)) + " MHz")
         plt.legend(loc='lower right')
         plt.xlim([0.0, time[-1]])
-    # plt.grid()
     plt.subplots_adjust(hspace=0.6)
     plt.draw()
     plt.show()
 
 
-def plot_expectedEnergy(Ne, time, expectedEnergy):
-    """Plot evolution of expected energy levels."""
+def plot_expectedEnergy(results):
+    """Plot evolution of expected energy levels.
+
+    Args:
+        results: QuandaryResults object from run()
+    """
+    Ne = results.config.nessential
+    time = results.time
+    expectedEnergy = results.expected_energy
 
     ninit = len(expectedEnergy[0])
     nplots = ninit  # one plot for each initial state
-    # nplots = np.prod(Ne)  # one plot for each initial state
     ncols = 2 if nplots >= 4 else 1  # 2 rows if more than 3 plots
     nrows = int(np.ceil(nplots / ncols))
     figsizex = 6.4 * nrows * 0.75
@@ -43,7 +55,6 @@ def plot_expectedEnergy(Ne, time, expectedEnergy):
     for iplot in range(nplots):
         iinit = iplot
         plt.subplot(nrows, ncols, iplot + 1)
-        plt.figsize = (15, 15)
         emax = 1.0
         for iosc in range(len(Ne)):
             label = 'Qubit ' + str(iosc) if len(Ne) > 1 else ''
@@ -64,11 +75,17 @@ def plot_expectedEnergy(Ne, time, expectedEnergy):
     plt.show()
 
 
-def plot_population(Ne, time, population):
-    """Plot evolution of population."""
+def plot_population(results):
+    """Plot evolution of population.
+
+    Args:
+        results: QuandaryResults object from run()
+    """
+    Ne = results.config.nessential
+    time = results.time
+    population = results.population
 
     ninit = len(population[0])
-    # nplots = np.prod(Ne)  # one plot for each initial state
     nplots = ninit  # one plot for each initial state
     ncols = 2 if nplots >= 4 else 1  # 2 rows if more than 3 plots
     nrows = int(np.ceil(nplots / ncols))
@@ -80,7 +97,6 @@ def plot_population(Ne, time, population):
     for iplot in range(nplots):
         iinit = iplot
         plt.subplot(nrows, ncols, iplot + 1)
-        plt.figsize = (15, 15)
         for iosc in range(len(Ne)):
             for istate in range(Ne[iosc]):
                 label = 'Qubit ' + str(iosc) if len(Ne) > 1 else ''
@@ -99,13 +115,22 @@ def plot_population(Ne, time, population):
     plt.show()
 
 
-def plot_results_1osc(myconfig, p, q, expectedEnergy, population):
-    """Plot all results of one oscillator."""
+def plot_results_1osc(results, oscillator=0):
+    """Plot all results of one oscillator (pulses, FFT, populations, expected energy).
+
+    Args:
+        results: QuandaryResults object from run()
+        oscillator: Index of oscillator to plot (default: 0)
+    """
+    t = results.time
+    p = results.pt[oscillator]
+    q = results.qt[oscillator]
+    expectedEnergy = results.expected_energy[oscillator]
+    population = results.population[oscillator]
+    Ne = results.config.nessential[oscillator]
 
     fig, ax = plt.subplots(2, 3, figsize=(20, 8))
     fig.subplots_adjust(hspace=0.3)
-
-    t = myconfig.time
 
     # Plot pulses
     ax[0, 0].plot(t, p, label='I')  # y label: MHz
@@ -118,7 +143,7 @@ def plot_results_1osc(myconfig, p, q, expectedEnergy, population):
     # Compute and plot FFT
     zlist = np.array(p) * 1e-3 + 1j * np.array(q) * 1e-3
     fft = np.fft.fft(zlist)
-    dt = myconfig.T / myconfig.nsteps
+    dt = results.config.dt
     fftfr = np.fft.fftfreq(len(zlist), d=dt)
 
     ax[0, 1].scatter(fftfr * 1e3, np.abs(fft)**2)
@@ -135,21 +160,15 @@ def plot_results_1osc(myconfig, p, q, expectedEnergy, population):
         row = 1
         col = iinit
 
-        for istate in range(myconfig.Ne[0]):  # for each essential level
+        for istate in range(Ne):  # for each essential level
             label = "|" + str(istate) + ">"
             ax[row, col].plot(t, population[iinit][istate], label=label)
-            # ax[row, col+1].plot(np.arange(0, numgate), prob_me_gate[i].real, label=str(i))
 
         ax[row, col].set_xlabel('Time (ns)')
         ax[row, col].set_ylabel('Population')
         ax[row, col].legend()
         ax[row, col].set_title('Populations from |%d>' % iinit)
         ax[row, col].grid()
-
-        # ax[row, col+1].set_xlabel('Gate repetition')
-        # ax[row, col+1].set_ylabel('Population')
-        # ax[row, col+1].legend()
-        # ax[row, col+1].set_title('ME solve, starting from %d' % state)
 
     # Plot expected Energy
     row, col = 0, 2
