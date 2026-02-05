@@ -3,7 +3,7 @@
 import logging
 from typing import List, Optional
 
-from .._quandary_impl import QuandaryConfig, RunType
+from .._quandary_impl import QuandaryConfig, RunType, InitialConditionType, InitialConditionSettings
 from .quantum_operators import hamiltonians, get_resonances
 from .time_estimation import estimate_timesteps
 
@@ -21,7 +21,7 @@ def _setup_physics(
     Jkl: Optional[List[float]] = None,
     Pmin: int = 150,
     maxctrl_MHz: Optional[List[float]] = None,
-    initialcondition: str = "basis",
+    initialcondition: Optional[InitialConditionSettings] = None,
     verbose: bool = True,
 ) -> QuandaryConfig:
     """Internal: Build base config with common physics parameters.
@@ -46,6 +46,9 @@ def _setup_physics(
         Jkl = []
     if maxctrl_MHz is None:
         maxctrl_MHz = [10.0] * nqubits
+    if initialcondition is None:
+        initialcondition = InitialConditionSettings()
+        initialcondition.type = InitialConditionType.BASIS
 
     # Build Hamiltonians
     Ntot = [Ne[i] + Ng[i] for i in range(nqubits)]
@@ -102,7 +105,7 @@ def _setup_physics(
         config.Jkl = Jkl
 
     config.carrier_frequencies = carrier_frequency
-    config.initial_condition.type = initialcondition
+    config.initial_condition = initialcondition
 
     return config
 
@@ -118,8 +121,7 @@ def create_simulation_config(
     Jkl: Optional[List[float]] = None,
     Pmin: int = 150,
     maxctrl_MHz: Optional[List[float]] = None,
-    targetgate: Optional[List[List[complex]]] = None,
-    initialcondition: str = "basis",
+    initialcondition: Optional[InitialConditionSettings] = None,
     verbose: bool = True,
 ) -> QuandaryConfig:
     """
@@ -155,10 +157,8 @@ def create_simulation_config(
         Minimum points to resolve shortest period (determines timesteps). Default: 150
     maxctrl_MHz : List[float]
         Maximum control amplitudes [MHz] per qubit for timestep estimation
-    targetgate : List[List[complex]]
-        Target gate for computing infidelity
-    initialcondition : str
-        Initial state specification. Default: "basis"
+    initialcondition : InitialConditionSettings
+        Initial state specification. Default: basis states
     verbose : bool
         Print setup information. Default: True
 
@@ -209,7 +209,7 @@ def create_optimization_config(
     Jkl: Optional[List[float]] = None,
     Pmin: int = 150,
     maxctrl_MHz: Optional[List[float]] = None,
-    initialcondition: str = "basis",
+    initialcondition: Optional[InitialConditionSettings] = None,
     verbose: bool = True,
 ) -> QuandaryConfig:
     """
@@ -249,8 +249,8 @@ def create_optimization_config(
         Minimum points to resolve shortest period. Default: 150
     maxctrl_MHz : List[float]
         Maximum control amplitudes [MHz] per qubit
-    initialcondition : str
-        Initial state specification. Default: "basis"
+    initialcondition : InitialConditionSettings
+        Initial state specification. Default: basis states
     verbose : bool
         Print setup information. Default: True
 
