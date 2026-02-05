@@ -51,7 +51,7 @@ def run(config: QuandaryConfig, quiet: bool = False) -> QuandaryResults:
         >>> config.nlevels = [2]
         >>> config.ntime = 1000
         >>> config.dt = 0.01
-        >>> config.transfreq = [4.1]
+        >>> config.transition_frequency = [4.1]
         >>> config.runtype = RunType.SIMULATION
         >>> results = run(config)
         >>> print(f"Infidelity: {results.infidelity}")
@@ -106,7 +106,7 @@ def run_mpi(
 
     Example:
         >>> # In Jupyter notebook
-        >>> config = create_optimization_config(Ne=[2], freq01=[4.1], T=50.0)
+        >>> config = create_optimization_config(Ne=[2], transition_frequency=[4.1], T=50.0)
         >>> results = run_mpi(config, n_procs=4)
         >>> print(f"Infidelity: {results.infidelity}")
     """

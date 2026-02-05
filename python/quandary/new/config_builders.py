@@ -25,15 +25,15 @@ logger = logging.getLogger(__name__)
 
 def _setup_physics(
     Ne: List[int],
-    freq01: List[float],
+    transition_frequency: List[float],
     T: float,
     selfkerr: Optional[List[float]] = None,
     Ng: Optional[List[int]] = None,
-    rotfreq: Optional[List[float]] = None,
-    crosskerr: Optional[List[float]] = None,
-    Jkl: Optional[List[float]] = None,
+    rotation_frequency: Optional[List[float]] = None,
+    crosskerr_coupling: Optional[List[float]] = None,
+    dipole_coupling: Optional[List[float]] = None,
     Pmin: int = 150,
-    maxctrl_MHz: Optional[List[float]] = None,
+    amplitude_bound: Optional[List[float]] = None,
     initialcondition: Optional[InitialConditionSettings] = None,
     verbose: bool = True,
 ) -> QuandaryConfig:
@@ -51,14 +51,14 @@ def _setup_physics(
         selfkerr = [0.0] * nqubits
     if Ng is None:
         Ng = [0] * nqubits
-    if rotfreq is None:
-        rotfreq = freq01[:]
-    if crosskerr is None:
-        crosskerr = []
-    if Jkl is None:
-        Jkl = []
-    if maxctrl_MHz is None:
-        maxctrl_MHz = [10.0] * nqubits
+    if rotation_frequency is None:
+        rotation_frequency = transition_frequency[:]
+    if crosskerr_coupling is None:
+        crosskerr_coupling = []
+    if dipole_coupling is None:
+        dipole_coupling = []
+    if amplitude_bound is None:
+        amplitude_bound = [10.0] * nqubits
     if initialcondition is None:
         initialcondition = InitialConditionSettings()
         initialcondition.condition_type = InitialConditionType.BASIS
@@ -67,11 +67,11 @@ def _setup_physics(
     Ntot = [Ne[i] + Ng[i] for i in range(nqubits)]
     Hsys, Hc_re, Hc_im = hamiltonians(
         N=Ntot,
-        freq01=freq01,
+        transition_frequency=transition_frequency,
         selfkerr=selfkerr,
-        crosskerr=crosskerr,
-        Jkl=Jkl,
-        rotfreq=rotfreq,
+        crosskerr_coupling=crosskerr_coupling,
+        dipole_coupling=dipole_coupling,
+        rotation_frequency=rotation_frequency,
         verbose=verbose,
     )
 
@@ -81,7 +81,7 @@ def _setup_physics(
         Hsys=Hsys,
         Hc_re=Hc_re,
         Hc_im=Hc_im,
-        maxctrl_MHz=maxctrl_MHz,
+        amplitude_bound=amplitude_bound,
         Pmin=Pmin,
     )
 
@@ -92,7 +92,7 @@ def _setup_physics(
         Hsys=Hsys,
         Hc_re=Hc_re,
         Hc_im=Hc_im,
-        rotfreq=rotfreq,
+        rotation_frequency=rotation_frequency,
         verbose=verbose,
     )
 
@@ -109,13 +109,13 @@ def _setup_physics(
     config.nessential = Ne
     config.ntime = nsteps
     config.dt = T / nsteps
-    config.transfreq = freq01
-    config.rotfreq = rotfreq
+    config.transition_frequency = transition_frequency
+    config.rotation_frequency = rotation_frequency
     config.selfkerr = selfkerr
-    if len(crosskerr) > 0:
-        config.crosskerr = crosskerr
-    if len(Jkl) > 0:
-        config.Jkl = Jkl
+    if len(crosskerr_coupling) > 0:
+        config.crosskerr_coupling = crosskerr_coupling
+    if len(dipole_coupling) > 0:
+        config.dipole_coupling = dipole_coupling
 
     config.carrier_frequencies = carrier_frequency
     config.initial_condition = initialcondition
@@ -125,16 +125,16 @@ def _setup_physics(
 
 def create_simulation_config(
     Ne: List[int],
-    freq01: List[float],
+    transition_frequency: List[float],
     T: float,
     pcof = None,
     selfkerr: Optional[List[float]] = None,
     Ng: Optional[List[int]] = None,
-    rotfreq: Optional[List[float]] = None,
-    crosskerr: Optional[List[float]] = None,
-    Jkl: Optional[List[float]] = None,
+    rotation_frequency: Optional[List[float]] = None,
+    crosskerr_coupling: Optional[List[float]] = None,
+    dipole_coupling: Optional[List[float]] = None,
     Pmin: int = 150,
-    maxctrl_MHz: Optional[List[float]] = None,
+    amplitude_bound: Optional[List[float]] = None,
     initialcondition: Optional[InitialConditionSettings] = None,
     verbose: bool = True,
 ) -> QuandaryConfig:
@@ -150,7 +150,7 @@ def create_simulation_config(
     -------------------
     Ne : List[int]
         Number of essential energy levels per qubit
-    freq01 : List[float]
+    transition_frequency : List[float]
         01-transition frequencies [GHz] per qubit
     T : float
         Pulse duration [ns]
@@ -161,15 +161,15 @@ def create_simulation_config(
         Anharmonicities [GHz] per qubit. Default: zeros
     Ng : List[int]
         Number of guard levels per qubit. Default: zeros
-    rotfreq : List[float]
-        Frequency of rotations for computational frame [GHz] per qubit. Default: freq01
-    crosskerr : List[float]
+    rotation_frequency : List[float]
+        Frequency of rotations for computational frame [GHz] per qubit. Default: transition_frequency
+    crosskerr_coupling : List[float]
         ZZ coupling strength [GHz]. Format: [g01, g02, ..., g12, g13, ...]
-    Jkl : List[float]
+    dipole_coupling : List[float]
         Dipole-dipole coupling strength [GHz]. Format: [J01, J02, ..., J12, J13, ...]
     Pmin : int
         Minimum points to resolve shortest period (determines timesteps). Default: 150
-    maxctrl_MHz : List[float]
+    amplitude_bound : List[float]
         Maximum control amplitudes [MHz] per qubit for timestep estimation
     initialcondition : InitialConditionSettings
         Initial state specification. Default: basis states
@@ -185,20 +185,20 @@ def create_simulation_config(
     Example:
     -------
     >>> # Simple simulation with random/default controls
-    >>> config = create_simulation_config(Ne=[2], freq01=[4.1], T=50.0)
+    >>> config = create_simulation_config(Ne=[2], transition_frequency=[4.1], T=50.0)
     >>> results = run(config)
     """
     config = _setup_physics(
         Ne=Ne,
-        freq01=freq01,
+        transition_frequency=transition_frequency,
         T=T,
         selfkerr=selfkerr,
         Ng=Ng,
-        rotfreq=rotfreq,
-        crosskerr=crosskerr,
-        Jkl=Jkl,
+        rotation_frequency=rotation_frequency,
+        crosskerr_coupling=crosskerr_coupling,
+        dipole_coupling=dipole_coupling,
         Pmin=Pmin,
-        maxctrl_MHz=maxctrl_MHz,
+        amplitude_bound=amplitude_bound,
         initialcondition=initialcondition,
         verbose=verbose,
     )
@@ -227,17 +227,17 @@ def create_simulation_config(
 
 def create_optimization_config(
     Ne: List[int],
-    freq01: List[float],
+    transition_frequency: List[float],
     T: float,
     targetgate = None,
     output_directory: str = "./run_dir",
     selfkerr: Optional[List[float]] = None,
     Ng: Optional[List[int]] = None,
-    rotfreq: Optional[List[float]] = None,
-    crosskerr: Optional[List[float]] = None,
-    Jkl: Optional[List[float]] = None,
+    rotation_frequency: Optional[List[float]] = None,
+    crosskerr_coupling: Optional[List[float]] = None,
+    dipole_coupling: Optional[List[float]] = None,
     Pmin: int = 150,
-    maxctrl_MHz: Optional[List[float]] = None,
+    amplitude_bound: Optional[List[float]] = None,
     initialcondition: Optional[InitialConditionSettings] = None,
     verbose: bool = True,
 ) -> QuandaryConfig:
@@ -250,7 +250,7 @@ def create_optimization_config(
     -------------------
     Ne : List[int]
         Number of essential energy levels per qubit
-    freq01 : List[float]
+    transition_frequency : List[float]
         01-transition frequencies [GHz] per qubit
     T : float
         Pulse duration [ns]
@@ -266,15 +266,15 @@ def create_optimization_config(
         Anharmonicities [GHz] per qubit. Default: zeros
     Ng : List[int]
         Number of guard levels per qubit. Default: zeros
-    rotfreq : List[float]
-        Frequency of rotations for computational frame [GHz] per qubit. Default: freq01
-    crosskerr : List[float]
+    rotation_frequency : List[float]
+        Frequency of rotations for computational frame [GHz] per qubit. Default: transition_frequency
+    crosskerr_coupling : List[float]
         ZZ coupling strength [GHz]
-    Jkl : List[float]
+    dipole_coupling : List[float]
         Dipole-dipole coupling strength [GHz]
     Pmin : int
         Minimum points to resolve shortest period. Default: 150
-    maxctrl_MHz : List[float]
+    amplitude_bound : List[float]
         Maximum control amplitudes [MHz] per qubit
     initialcondition : InitialConditionSettings
         Initial state specification. Default: basis states
@@ -291,22 +291,22 @@ def create_optimization_config(
     >>> from quandary.new import create_optimization_config, run
     >>>
     >>> config = create_optimization_config(
-    ...     Ne=[2], freq01=[4.1], T=50.0,
+    ...     Ne=[2], transition_frequency=[4.1], T=50.0,
     ...     targetgate=[[0, 1], [1, 0]]  # X gate
     ... )
     >>> results = run(config)
     """
     config = _setup_physics(
         Ne=Ne,
-        freq01=freq01,
+        transition_frequency=transition_frequency,
         T=T,
         selfkerr=selfkerr,
         Ng=Ng,
-        rotfreq=rotfreq,
-        crosskerr=crosskerr,
-        Jkl=Jkl,
+        rotation_frequency=rotation_frequency,
+        crosskerr_coupling=crosskerr_coupling,
+        dipole_coupling=dipole_coupling,
         Pmin=Pmin,
-        maxctrl_MHz=maxctrl_MHz,
+        amplitude_bound=amplitude_bound,
         initialcondition=initialcondition,
         verbose=verbose,
     )

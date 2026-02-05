@@ -72,7 +72,7 @@ def _eigen_and_reorder(H0, verbose=False):
     return evals, evects
 
 
-def get_resonances(*, Ne, Ng, Hsys, Hc_re=[], Hc_im=[], rotfreq=[], cw_amp_thres=1e-7,
+def get_resonances(*, Ne, Ng, Hsys, Hc_re=[], Hc_im=[], rotation_frequency=[], cw_amp_thres=1e-7,
                    cw_prox_thres=1e-2, verbose=True, stdmodel=True):
     """
     Computes system resonances, to be used as carrier wave frequencie.
@@ -169,22 +169,22 @@ def get_resonances(*, Ne, Ng, Hsys, Hc_re=[], Hc_im=[], rotfreq=[], cw_amp_thres
     return om, growth_rate
 
 
-def hamiltonians(*, N, freq01, selfkerr, crosskerr=[], Jkl=[], rotfreq=[], verbose=True):
+def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=[], dipole_coupling=[], rotation_frequency=[], verbose=True):
     """
     Create standard Hamiltonian operators to model pulse-driven superconducting qubits.
 
     Parameters:
     -----------
-    N        :  Total levels per oscillator (essential plus guard levels for each qubit)
-    freq 01  :  Groundstate frequency for each qubit [GHz]
-    selfkerr :  Self-kerr coefficient for each qubit [GHz]
+    N                    :  Total levels per oscillator (essential plus guard levels for each qubit)
+    transition_frequency :  Groundstate frequency for each qubit [GHz]
+    selfkerr             :  Self-kerr coefficient for each qubit [GHz]
 
     Optional Parameters:
     ---------------------
-    Crosskerr  : ZZ-coupling strength [GHz]
-    Jkl        : dipole-dipole coupling strength [GHz]
-    rotfreq    : Rotational frequencies for each qubit
-    verbose    : Switch to turn on more output. Default: True
+    crosskerr_coupling   : Cross-Kerr coupling strength [GHz]
+    dipole_coupling      : dipole-dipole coupling strength [GHz]
+    rotation_frequency   : Rotational frequencies for each qubit
+    verbose              : Switch to turn on more output. Default: True
 
     Returns:
     --------
@@ -193,13 +193,13 @@ def hamiltonians(*, N, freq01, selfkerr, crosskerr=[], Jkl=[], rotfreq=[], verbo
     Hc_im  : Imag parts of control Hamiltonian operators for each qubit. Unit-less.
     """
 
-    if len(rotfreq) == 0:
-        rotfreq = np.zeros(len(N))
+    if len(rotation_frequency) == 0:
+        rotation_frequency = np.zeros(len(N))
 
     nqubits = len(N)
     assert len(selfkerr) == nqubits
-    assert len(freq01) == nqubits
-    assert len(rotfreq) == nqubits
+    assert len(transition_frequency) == nqubits
+    assert len(rotation_frequency) == nqubits
 
     n = np.prod(N)  # System size
 
@@ -218,34 +218,34 @@ def hamiltonians(*, N, freq01, selfkerr, crosskerr=[], Jkl=[], rotfreq=[], verbo
     # Set up system Hamiltonian: Duffing oscillators
     Hsys = np.zeros((n, n))
     for q in range(nqubits):
-        domega_radns = 2.0 * np.pi * (freq01[q] - rotfreq[q])
+        domega_radns = 2.0 * np.pi * (transition_frequency[q] - rotation_frequency[q])
         selfkerr_radns = 2.0 * np.pi * selfkerr[q]
         Hsys += domega_radns * Amat[q].T @ Amat[q]
         Hsys -= selfkerr_radns / 2.0 * Amat[q].T @ Amat[q].T @ Amat[q] @ Amat[q]
 
     # Add cross cerr coupling, if given
-    if len(crosskerr) > 0:
+    if len(crosskerr_coupling) > 0:
         idkl = 0
         for q in range(nqubits):
             for p in range(q + 1, nqubits):
-                if abs(crosskerr[idkl]) > 1e-14:
-                    crosskerr_radns = 2.0 * np.pi * crosskerr[idkl]
+                if abs(crosskerr_coupling[idkl]) > 1e-14:
+                    crosskerr_radns = 2.0 * np.pi * crosskerr_coupling[idkl]
                     Hsys -= crosskerr_radns * Amat[q].T @ Amat[q] @ Amat[p].T @ Amat[p]
                 idkl += 1
 
-    # Add Jkl coupling term.
+    # Add dipole_coupling coupling term.
     # Note that if the rotating frame frequencies are different amongst oscillators, then this contributes
     # to a *time-dependent* system Hamiltonian. Here, we treat this as time-independent, because this
     # Hamiltonian here is *ONLY* used to compute the time-step size and resonances, and it is NOT passed
     # to the quandary code. Quandary sets up the standard model with a time-dependent system Hamiltonian
     # if the frequencies of rotation differ amongst oscillators.
-    if len(Jkl) > 0:
+    if len(dipole_coupling) > 0:
         idkl = 0
         for q in range(nqubits):
             for p in range(q + 1, nqubits):
-                if abs(Jkl[idkl]) > 1e-14:
-                    Jkl_radns = 2.0 * np.pi * Jkl[idkl]
-                    Hsys += Jkl_radns * (Amat[q].T @ Amat[p] + Amat[q] @ Amat[p].T)
+                if abs(dipole_coupling[idkl]) > 1e-14:
+                    dipole_coupling_radns = 2.0 * np.pi * dipole_coupling[idkl]
+                    Hsys += dipole_coupling_radns * (Amat[q].T @ Amat[p] + Amat[q] @ Amat[p].T)
                 idkl += 1
 
     # Set up control Hamiltonians
@@ -254,8 +254,8 @@ def hamiltonians(*, N, freq01, selfkerr, crosskerr=[], Jkl=[], rotfreq=[], verbo
 
     if verbose:
         print(f"*** {nqubits} coupled quantum systems setup ***")
-        print("System Hamiltonian frequencies [GHz]: f01 =", freq01, "rot. freq =", rotfreq)
+        print("System Hamiltonian frequencies [GHz]: f01 =", transition_frequency, "rot. freq =", rotation_frequency)
         print("Selfkerr=", selfkerr)
-        print("Coupling: X-Kerr=", crosskerr, ", J-C=", Jkl)
+        print("Coupling: X-Kerr=", crosskerr_coupling, ", J-C=", dipole_coupling)
 
     return Hsys, Hc_re, Hc_im
