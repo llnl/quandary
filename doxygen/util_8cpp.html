@@ -87,24 +87,37 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><code>#include &quot;<a class="el" href="util_8hpp_source.html">util.hpp</a>&quot;</code><br />
+<code>#include &lt;algorithm&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for util.cpp:</div>
 <div class="dyncontent">
 <div class="center"><img src="util_8cpp__incl.png" border="0" usemap="#a_2home_2runner_2work_2quandary_2quandary_2src_2util_8cpp" alt=""/></div>
 <map name="a_2home_2runner_2work_2quandary_2quandary_2src_2util_8cpp" id="a_2home_2runner_2work_2quandary_2quandary_2src_2util_8cpp">
-<area shape="rect" title=" " alt="" coords="157,5,367,45"/>
-<area shape="rect" href="util_8hpp.html" title=" " alt="" coords="227,93,297,119"/>
-<area shape="poly" title=" " alt="" coords="265,46,265,79,259,79,259,46"/>
+<area shape="rect" title=" " alt="" coords="407,5,618,45"/>
+<area shape="rect" href="util_8hpp.html" title=" " alt="" coords="427,93,497,119"/>
+<area shape="poly" title=" " alt="" coords="503,47,479,83,475,80,498,44"/>
+<area shape="rect" title=" " alt="" coords="522,93,607,119"/>
+<area shape="poly" title=" " alt="" coords="527,44,552,80,547,83,523,47"/>
 <area shape="rect" title=" " alt="" coords="5,167,100,192"/>
-<area shape="poly" title=" " alt="" coords="229,121,101,165,99,160,228,116"/>
-<area shape="rect" title=" " alt="" coords="124,167,197,192"/>
-<area shape="poly" title=" " alt="" coords="247,121,190,161,187,156,244,116"/>
-<area shape="rect" title=" " alt="" coords="222,167,302,192"/>
-<area shape="poly" title=" " alt="" coords="265,119,265,153,259,153,259,119"/>
-<area shape="rect" title=" " alt="" coords="327,167,389,192"/>
-<area shape="poly" title=" " alt="" coords="279,117,333,156,330,160,276,121"/>
-<area shape="rect" title=" " alt="" coords="414,167,513,192"/>
-<area shape="poly" title=" " alt="" coords="295,116,419,159,417,165,293,121"/>
+<area shape="poly" title=" " alt="" coords="427,116,114,169,113,164,426,110"/>
+<area shape="rect" title=" " alt="" coords="124,167,189,192"/>
+<area shape="poly" title=" " alt="" coords="427,118,203,169,202,164,426,113"/>
+<area shape="rect" title=" " alt="" coords="214,167,281,192"/>
+<area shape="poly" title=" " alt="" coords="428,121,294,165,293,160,427,116"/>
+<area shape="rect" title=" " alt="" coords="305,167,355,192"/>
+<area shape="poly" title=" " alt="" coords="442,121,365,162,362,158,440,116"/>
+<area shape="rect" title=" " alt="" coords="379,167,454,192"/>
+<area shape="poly" title=" " alt="" coords="457,120,434,157,429,154,452,118"/>
+<area shape="rect" title=" " alt="" coords="478,167,537,192"/>
+<area shape="poly" title=" " alt="" coords="472,118,495,154,490,157,467,120"/>
+<area shape="rect" title=" " alt="" coords="561,167,635,192"/>
+<area shape="poly" title=" " alt="" coords="485,116,565,158,563,163,483,121"/>
+<area shape="rect" title=" " alt="" coords="659,167,739,192"/>
+<area shape="poly" title=" " alt="" coords="498,115,649,160,648,165,497,120"/>
+<area shape="rect" title=" " alt="" coords="764,167,827,192"/>
+<area shape="poly" title=" " alt="" coords="498,113,511,116,629,139,751,164,750,169,628,144,509,121,497,118"/>
+<area shape="rect" title=" " alt="" coords="851,167,950,192"/>
+<area shape="poly" title=" " alt="" coords="498,113,510,116,672,141,838,164,837,169,671,146,510,121,497,119"/>
 </map>
 </div>
 </div><table class="memberdecls">
@@ -175,6 +188,12 @@ Functions</h2></td></tr>
 <tr class="memitem:aba1a77088d117f3bc68911de6c9b3a39" id="r_aba1a77088d117f3bc68911de6c9b3a39"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="util_8cpp.html#aba1a77088d117f3bc68911de6c9b3a39">isUnitary</a> (const Mat V_re, const Mat V_im)</td></tr>
 <tr class="memdesc:aba1a77088d117f3bc68911de6c9b3a39"><td class="mdescLeft">&#160;</td><td class="mdescRight">Tests if complex matrix A+iB is unitary.  <br /></td></tr>
 <tr class="separator:aba1a77088d117f3bc68911de6c9b3a39"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d6e3db40777f209b7aec4fe21b0b977" id="r_a5d6e3db40777f209b7aec4fe21b0b977"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="util_8cpp.html#a5d6e3db40777f209b7aec4fe21b0b977">toLower</a> (std::string str)</td></tr>
+<tr class="memdesc:a5d6e3db40777f209b7aec4fe21b0b977"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns a lowercase version of the input string.  <br /></td></tr>
+<tr class="separator:a5d6e3db40777f209b7aec4fe21b0b977"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abbb02750c2244b47f07df6151a33ead1" id="r_abbb02750c2244b47f07df6151a33ead1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="util_8cpp.html#abbb02750c2244b47f07df6151a33ead1">hasSuffix</a> (const std::string &amp;str, const std::string &amp;suffix)</td></tr>
+<tr class="memdesc:abbb02750c2244b47f07df6151a33ead1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Checks if string ends with specified suffix.  <br /></td></tr>
+<tr class="separator:abbb02750c2244b47f07df6151a33ead1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Macro Definition Documentation</h2>
 <a id="aea1d71af1a30c261dbd16745c82e94ba" name="aea1d71af1a30c261dbd16745c82e94ba"></a>
@@ -456,6 +475,44 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>int Vectorized index for element (row,col) </dd></dl>
+
+</div>
+</div>
+<a id="abbb02750c2244b47f07df6151a33ead1" name="abbb02750c2244b47f07df6151a33ead1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abbb02750c2244b47f07df6151a33ead1">&#9670;&#160;</a></span>hasSuffix()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool hasSuffix </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>str</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>suffix</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Checks if string ends with specified suffix. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">str</td><td>Input string to check. </td></tr>
+    <tr><td class="paramname">suffix</td><td>Suffix to look for. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>bool True if string ends with suffix, false otherwise. </dd></dl>
 
 </div>
 </div>
@@ -1157,6 +1214,33 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>PetscErrorCode Error code </dd></dl>
+
+</div>
+</div>
+<a id="a5d6e3db40777f209b7aec4fe21b0b977" name="a5d6e3db40777f209b7aec4fe21b0b977"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5d6e3db40777f209b7aec4fe21b0b977">&#9670;&#160;</a></span>toLower()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string toLower </td>
+          <td>(</td>
+          <td class="paramtype">std::string&#160;</td>
+          <td class="paramname"><em>str</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Returns a lowercase version of the input string. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">str</td><td>String to convert to lowercase. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>std::string Lowercase string </dd></dl>
 
 </div>
 </div>

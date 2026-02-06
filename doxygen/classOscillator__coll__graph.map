@@ -1,5 +1,0 @@
-<map id="Oscillator" name="Oscillator">
-<area shape="rect" id="Node000001" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="5,93,89,119"/>
-<area shape="rect" id="Node000002" href="$structPiPulse.html" title="Structure for storing pi&#45;pulse parameters." alt="" coords="13,5,82,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="50,45,50,93,45,93,45,45"/>
-</map>

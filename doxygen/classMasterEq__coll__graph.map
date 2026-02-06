@@ -1,10 +1,8 @@
 <map id="MasterEq" name="MasterEq">
-<area shape="rect" id="Node000001" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="6,269,89,295"/>
-<area shape="rect" id="Node000002" href="$classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="5,93,89,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="45,133,41,168,41,207,48,269,43,269,35,207,36,167,40,132"/>
-<area shape="rect" id="Node000004" href="$structMatShellCtx.html" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="115,181,217,207"/>
-<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="76,125,151,179,148,183,73,129"/>
-<area shape="rect" id="Node000003" href="$structPiPulse.html" title="Structure for storing pi&#45;pulse parameters." alt="" coords="13,5,82,31"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="50,45,50,93,45,93,45,45"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="140,217,65,271,62,267,137,213"/>
+<area shape="rect" id="Node000001" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="6,181,89,207"/>
+<area shape="rect" id="Node000002" href="$classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="5,5,89,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="45,45,41,80,41,119,48,181,43,181,35,119,36,79,40,44"/>
+<area shape="rect" id="Node000003" href="$structMatShellCtx.html" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="115,93,217,119"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="76,37,151,91,148,95,73,41"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="140,129,65,183,62,179,137,125"/>
 </map>

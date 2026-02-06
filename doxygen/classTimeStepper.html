@@ -108,22 +108,22 @@ Collaboration diagram for TimeStepper:</div>
 <div class="dyncontent">
 <div class="center"><img src="classTimeStepper__coll__graph.png" border="0" usemap="#aTimeStepper_coll__map" alt="Collaboration graph"/></div>
 <map name="aTimeStepper_coll__map" id="aTimeStepper_coll__map">
-<area shape="rect" title="Base class for time integration schemes to evolve the quantum dynamics." alt="" coords="217,357,323,383"/>
-<area shape="rect" href="classMasterEq.html" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="117,269,199,295"/>
-<area shape="poly" title=" " alt="" coords="175,304,200,331,241,355,238,360,196,335,171,308"/>
-<area shape="rect" href="classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="5,93,89,119"/>
-<area shape="poly" title=" " alt="" coords="40,133,33,169,34,188,40,205,56,226,77,243,123,267,120,272,74,248,53,230,36,208,29,189,28,169,35,132"/>
-<area shape="rect" href="structMatShellCtx.html" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="115,181,217,207"/>
-<area shape="poly" title=" " alt="" coords="76,125,151,179,148,183,73,129"/>
-<area shape="rect" href="structPiPulse.html" title="Structure for storing pi&#45;pulse parameters." alt="" coords="13,5,82,31"/>
-<area shape="poly" title=" " alt="" coords="50,45,50,93,45,93,45,45"/>
-<area shape="poly" title=" " alt="" coords="166,221,162,269,156,269,161,220"/>
-<area shape="rect" href="classOptimTarget.html" title="Optimization target specification for quantum control." alt="" coords="224,269,327,295"/>
-<area shape="poly" title=" " alt="" coords="275,309,274,319,273,357,267,357,269,319,270,308"/>
-<area shape="rect" href="classGate.html" title="Base class for quantum gate operations." alt="" coords="249,181,302,207"/>
-<area shape="poly" title=" " alt="" coords="278,221,278,269,273,269,273,221"/>
-<area shape="rect" href="classOutput.html" title="Output management for quantum control simulations and optimization." alt="" coords="357,269,423,295"/>
-<area shape="poly" title=" " alt="" coords="382,309,362,335,341,350,318,360,316,355,338,345,359,331,378,306"/>
+<area shape="rect" title="Base class for time integration schemes to evolve the quantum dynamics." alt="" coords="219,269,324,295"/>
+<area shape="rect" href="classMasterEq.html" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="118,181,201,207"/>
+<area shape="poly" title=" " alt="" coords="176,216,201,243,242,267,240,272,198,247,172,220"/>
+<area shape="rect" href="classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="5,5,89,31"/>
+<area shape="poly" title=" " alt="" coords="40,45,33,81,34,100,40,117,57,138,78,156,124,179,121,184,75,160,53,142,36,120,29,101,28,81,35,44"/>
+<area shape="rect" href="structMatShellCtx.html" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="115,93,217,119"/>
+<area shape="poly" title=" " alt="" coords="76,37,151,91,148,95,73,41"/>
+<area shape="poly" title=" " alt="" coords="167,133,163,181,158,181,161,132"/>
+<area shape="rect" href="classOptimTarget.html" title="Optimization target specification for quantum control." alt="" coords="225,181,328,207"/>
+<area shape="poly" title=" " alt="" coords="276,221,275,231,274,269,269,269,270,231,271,220"/>
+<area shape="rect" href="classGate.html" title="Base class for quantum gate operations." alt="" coords="249,93,302,119"/>
+<area shape="poly" title=" " alt="" coords="278,133,279,181,274,181,273,133"/>
+<area shape="rect" href="structInitialConditionSettings.html" title="Settings for initial conditions. Required, no defaults." alt="" coords="327,93,501,119"/>
+<area shape="poly" title=" " alt="" coords="394,130,355,160,307,184,305,179,353,155,391,126"/>
+<area shape="rect" href="classOutput.html" title="Output management for quantum control simulations and optimization." alt="" coords="358,181,425,207"/>
+<area shape="poly" title=" " alt="" coords="384,221,364,247,342,262,319,272,317,267,340,257,360,243,379,218"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
@@ -139,30 +139,52 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:afdf523a5e2230eec37e27f4a9e590796" id="r_afdf523a5e2230eec37e27f4a9e590796"><td class="memItemLeft" align="right" valign="top">Vec&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#afdf523a5e2230eec37e27f4a9e590796">getState</a> (size_t tindex)</td></tr>
 <tr class="memdesc:afdf523a5e2230eec37e27f4a9e590796"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves stored state at a specific time index.  <br /></td></tr>
 <tr class="separator:afdf523a5e2230eec37e27f4a9e590796"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9fc3872d5d0185924326261b5fce948e" id="r_a9fc3872d5d0185924326261b5fce948e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a9fc3872d5d0185924326261b5fce948e">setEvalLeakage</a> (bool flag)</td></tr>
+<tr class="separator:a9fc3872d5d0185924326261b5fce948e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3591ba25db19eb751f6b12c14115a6d7" id="r_a3591ba25db19eb751f6b12c14115a6d7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a3591ba25db19eb751f6b12c14115a6d7">setEvalWeightedCost</a> (bool flag, double width)</td></tr>
+<tr class="separator:a3591ba25db19eb751f6b12c14115a6d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a95750967adb5aba62a078c5807806bc5" id="r_a95750967adb5aba62a078c5807806bc5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a95750967adb5aba62a078c5807806bc5">setEvalDPDM</a> (bool flag)</td></tr>
+<tr class="separator:a95750967adb5aba62a078c5807806bc5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa6df7f02de1a822a07911ee3f783ce8a" id="r_aa6df7f02de1a822a07911ee3f783ce8a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#aa6df7f02de1a822a07911ee3f783ce8a">setEvalEnergy</a> (bool flag)</td></tr>
+<tr class="separator:aa6df7f02de1a822a07911ee3f783ce8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abfef40eac3cb9bd5789e824a3bd6e15c" id="r_abfef40eac3cb9bd5789e824a3bd6e15c"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#abfef40eac3cb9bd5789e824a3bd6e15c">getLeakageIntegral</a> ()</td></tr>
+<tr class="separator:abfef40eac3cb9bd5789e824a3bd6e15c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aefc0fa9c9ed6e704664aa2b8c6d86bdf" id="r_aefc0fa9c9ed6e704664aa2b8c6d86bdf"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#aefc0fa9c9ed6e704664aa2b8c6d86bdf">getWeightedCostIntegral</a> ()</td></tr>
+<tr class="separator:aefc0fa9c9ed6e704664aa2b8c6d86bdf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3e4006d9f66b31b39faa0050d2f27ea7" id="r_a3e4006d9f66b31b39faa0050d2f27ea7"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a3e4006d9f66b31b39faa0050d2f27ea7">getEnergyIntegral</a> ()</td></tr>
+<tr class="separator:a3e4006d9f66b31b39faa0050d2f27ea7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a33e06e155a957a310005c47b356a0d7b" id="r_a33e06e155a957a310005c47b356a0d7b"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a33e06e155a957a310005c47b356a0d7b">getDPDMIntegral</a> ()</td></tr>
+<tr class="separator:a33e06e155a957a310005c47b356a0d7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae2be974cc2dd652299ba12a36ffece58" id="r_ae2be974cc2dd652299ba12a36ffece58"><td class="memItemLeft" align="right" valign="top">Vec&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#ae2be974cc2dd652299ba12a36ffece58">solveODE</a> (int initid, Vec rho_t0)</td></tr>
 <tr class="memdesc:ae2be974cc2dd652299ba12a36ffece58"><td class="mdescLeft">&#160;</td><td class="mdescRight">Solves the ODE forward in time.  <br /></td></tr>
 <tr class="separator:ae2be974cc2dd652299ba12a36ffece58"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aab958d4087d5b20f0f6f6695560d05c4" id="r_aab958d4087d5b20f0f6f6695560d05c4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#aab958d4087d5b20f0f6f6695560d05c4">solveAdjointODE</a> (Vec rho_t0_bar, Vec finalstate, double Jbar_penalty, double Jbar_penalty_dpdm, double Jbar_penalty_energy)</td></tr>
-<tr class="memdesc:aab958d4087d5b20f0f6f6695560d05c4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Solves the adjoint ODE backward in time.  <br /></td></tr>
-<tr class="separator:aab958d4087d5b20f0f6f6695560d05c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a20323563a86450e343004279995a55f4" id="r_a20323563a86450e343004279995a55f4"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a20323563a86450e343004279995a55f4">penaltyIntegral</a> (double time, const Vec <a class="el" href="classTimeStepper.html#a7b47c0f5ce67d8f4a04c77c2c96bd93c">x</a>)</td></tr>
-<tr class="memdesc:a20323563a86450e343004279995a55f4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates the penalty integral term.  <br /></td></tr>
-<tr class="separator:a20323563a86450e343004279995a55f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac9ae1a39f30f0041375ae4ddf25a60b1" id="r_ac9ae1a39f30f0041375ae4ddf25a60b1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#ac9ae1a39f30f0041375ae4ddf25a60b1">penaltyIntegral_diff</a> (double time, const Vec <a class="el" href="classTimeStepper.html#a7b47c0f5ce67d8f4a04c77c2c96bd93c">x</a>, Vec xbar, double Jbar)</td></tr>
-<tr class="memdesc:ac9ae1a39f30f0041375ae4ddf25a60b1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes derivative of penalty integral term.  <br /></td></tr>
-<tr class="separator:ac9ae1a39f30f0041375ae4ddf25a60b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad13591047811f9ae208ece98c17985a3" id="r_ad13591047811f9ae208ece98c17985a3"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#ad13591047811f9ae208ece98c17985a3">penaltyDpDm</a> (Vec <a class="el" href="classTimeStepper.html#a7b47c0f5ce67d8f4a04c77c2c96bd93c">x</a>, Vec xm1, Vec xm2)</td></tr>
-<tr class="memdesc:ad13591047811f9ae208ece98c17985a3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates second-order derivative penalty for the state.  <br /></td></tr>
-<tr class="separator:ad13591047811f9ae208ece98c17985a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac8fa2931e974b2d1fb9f53527d0eb094" id="r_ac8fa2931e974b2d1fb9f53527d0eb094"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#ac8fa2931e974b2d1fb9f53527d0eb094">penaltyDpDm_diff</a> (int n, Vec xbar, double Jbar)</td></tr>
-<tr class="memdesc:ac8fa2931e974b2d1fb9f53527d0eb094"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes derivative of second-order penalty term.  <br /></td></tr>
-<tr class="separator:ac8fa2931e974b2d1fb9f53527d0eb094"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aba6754e8ed674e4191f4704591a22116" id="r_aba6754e8ed674e4191f4704591a22116"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#aba6754e8ed674e4191f4704591a22116">energyPenaltyIntegral</a> (double time)</td></tr>
-<tr class="memdesc:aba6754e8ed674e4191f4704591a22116"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates energy penalty integral term.  <br /></td></tr>
-<tr class="separator:aba6754e8ed674e4191f4704591a22116"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1b1453a4d14bf199a017661fd67f6dc9" id="r_a1b1453a4d14bf199a017661fd67f6dc9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a1b1453a4d14bf199a017661fd67f6dc9">energyPenaltyIntegral_diff</a> (double time, double Jbar, Vec <a class="el" href="classTimeStepper.html#a117e801337dbe849388f274d4dec83d0">redgrad</a>)</td></tr>
-<tr class="memdesc:a1b1453a4d14bf199a017661fd67f6dc9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes derivative of energy penalty integral.  <br /></td></tr>
-<tr class="separator:a1b1453a4d14bf199a017661fd67f6dc9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a383990435f66ab846631c632b9a0cc97" id="r_a383990435f66ab846631c632b9a0cc97"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a383990435f66ab846631c632b9a0cc97">solveAdjointODE</a> (Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy)</td></tr>
+<tr class="memdesc:a383990435f66ab846631c632b9a0cc97"><td class="mdescLeft">&#160;</td><td class="mdescRight">Solves the adjoint ODE backward in time.  <br /></td></tr>
+<tr class="separator:a383990435f66ab846631c632b9a0cc97"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a35fc3f22411d4e8068206ddd8300b431" id="r_a35fc3f22411d4e8068206ddd8300b431"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a35fc3f22411d4e8068206ddd8300b431">evalLeakage</a> (const Vec <a class="el" href="classTimeStepper.html#a7b47c0f5ce67d8f4a04c77c2c96bd93c">x</a>)</td></tr>
+<tr class="memdesc:a35fc3f22411d4e8068206ddd8300b431"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates leakage into guard levels.  <br /></td></tr>
+<tr class="separator:a35fc3f22411d4e8068206ddd8300b431"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac2da7c61e6f458475e791cabab404eb4" id="r_ac2da7c61e6f458475e791cabab404eb4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#ac2da7c61e6f458475e791cabab404eb4">evalLeakage_diff</a> (const Vec <a class="el" href="classTimeStepper.html#a7b47c0f5ce67d8f4a04c77c2c96bd93c">x</a>, Vec xbar, double Jbar)</td></tr>
+<tr class="memdesc:ac2da7c61e6f458475e791cabab404eb4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes derivative of leakage term.  <br /></td></tr>
+<tr class="separator:ac2da7c61e6f458475e791cabab404eb4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0112687423aeee33982111f3ddcb4f80" id="r_a0112687423aeee33982111f3ddcb4f80"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a0112687423aeee33982111f3ddcb4f80">evalWeightedCost</a> (double time, const Vec <a class="el" href="classTimeStepper.html#a7b47c0f5ce67d8f4a04c77c2c96bd93c">x</a>)</td></tr>
+<tr class="memdesc:a0112687423aeee33982111f3ddcb4f80"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates the weighted cost function term.  <br /></td></tr>
+<tr class="separator:a0112687423aeee33982111f3ddcb4f80"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaa5b164d39a15a50a40f8db5825bb98e" id="r_aaa5b164d39a15a50a40f8db5825bb98e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#aaa5b164d39a15a50a40f8db5825bb98e">evalWeightedCost_diff</a> (double time, const Vec <a class="el" href="classTimeStepper.html#a7b47c0f5ce67d8f4a04c77c2c96bd93c">x</a>, Vec xbar, double Jbar)</td></tr>
+<tr class="memdesc:aaa5b164d39a15a50a40f8db5825bb98e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes derivative of weighted cost function term.  <br /></td></tr>
+<tr class="separator:aaa5b164d39a15a50a40f8db5825bb98e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9ef40427b626ce19b2feb40aabd280d1" id="r_a9ef40427b626ce19b2feb40aabd280d1"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a9ef40427b626ce19b2feb40aabd280d1">evalDpDm</a> (Vec <a class="el" href="classTimeStepper.html#a7b47c0f5ce67d8f4a04c77c2c96bd93c">x</a>, Vec xm1, Vec xm2)</td></tr>
+<tr class="memdesc:a9ef40427b626ce19b2feb40aabd280d1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates second-order derivative variation for the state.  <br /></td></tr>
+<tr class="separator:a9ef40427b626ce19b2feb40aabd280d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add14996695f8083c7e27c445c536f965" id="r_add14996695f8083c7e27c445c536f965"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#add14996695f8083c7e27c445c536f965">evalDpDm_diff</a> (int n, Vec xbar, double Jbar)</td></tr>
+<tr class="memdesc:add14996695f8083c7e27c445c536f965"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes derivative of second-order derivative variation term.  <br /></td></tr>
+<tr class="separator:add14996695f8083c7e27c445c536f965"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5afc0b43e49d696c1ecece23fd285afe" id="r_a5afc0b43e49d696c1ecece23fd285afe"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a5afc0b43e49d696c1ecece23fd285afe">evalEnergy</a> (double time)</td></tr>
+<tr class="memdesc:a5afc0b43e49d696c1ecece23fd285afe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates energy integral term.  <br /></td></tr>
+<tr class="separator:a5afc0b43e49d696c1ecece23fd285afe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3eeed682aa59dcbfb8501255c6a81417" id="r_a3eeed682aa59dcbfb8501255c6a81417"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a3eeed682aa59dcbfb8501255c6a81417">evalEnergy_diff</a> (double time, double Jbar, Vec <a class="el" href="classTimeStepper.html#a117e801337dbe849388f274d4dec83d0">redgrad</a>)</td></tr>
+<tr class="memdesc:a3eeed682aa59dcbfb8501255c6a81417"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes derivative of energy integral.  <br /></td></tr>
+<tr class="separator:a3eeed682aa59dcbfb8501255c6a81417"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a983a7d5b2c04dfb04caaead7bf5b9a49" id="r_a983a7d5b2c04dfb04caaead7bf5b9a49"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a983a7d5b2c04dfb04caaead7bf5b9a49">evolveFWD</a> (const double tstart, const double tstop, Vec <a class="el" href="classTimeStepper.html#a7b47c0f5ce67d8f4a04c77c2c96bd93c">x</a>)=0</td></tr>
 <tr class="memdesc:a983a7d5b2c04dfb04caaead7bf5b9a49"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evolves state forward by one time-step from tstart to tstop.  <br /></td></tr>
 <tr class="separator:a983a7d5b2c04dfb04caaead7bf5b9a49"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -190,27 +212,6 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a117e801337dbe849388f274d4dec83d0" id="r_a117e801337dbe849388f274d4dec83d0"><td class="memItemLeft" align="right" valign="top">Vec&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a117e801337dbe849388f274d4dec83d0">redgrad</a></td></tr>
 <tr class="memdesc:a117e801337dbe849388f274d4dec83d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reduced gradient vector for optimization.  <br /></td></tr>
 <tr class="separator:a117e801337dbe849388f274d4dec83d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad904f4e9a7bc465c176813b5ea597e1c" id="r_ad904f4e9a7bc465c176813b5ea597e1c"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#ad904f4e9a7bc465c176813b5ea597e1c">penalty_integral</a></td></tr>
-<tr class="memdesc:ad904f4e9a7bc465c176813b5ea597e1c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sums the integral penalty term.  <br /></td></tr>
-<tr class="separator:ad904f4e9a7bc465c176813b5ea597e1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3c30655966d681d63abf2bf681246c27" id="r_a3c30655966d681d63abf2bf681246c27"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a3c30655966d681d63abf2bf681246c27">energy_penalty_integral</a></td></tr>
-<tr class="memdesc:a3c30655966d681d63abf2bf681246c27"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sums the energy penalty term.  <br /></td></tr>
-<tr class="separator:a3c30655966d681d63abf2bf681246c27"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4f04bd683057a0b0c9d7f983cd3e0ba2" id="r_a4f04bd683057a0b0c9d7f983cd3e0ba2"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a4f04bd683057a0b0c9d7f983cd3e0ba2">penalty_dpdm</a></td></tr>
-<tr class="memdesc:a4f04bd683057a0b0c9d7f983cd3e0ba2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sums second-order derivative penalty value.  <br /></td></tr>
-<tr class="separator:a4f04bd683057a0b0c9d7f983cd3e0ba2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adc015010aa8be6a70c99750f5834497b" id="r_adc015010aa8be6a70c99750f5834497b"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#adc015010aa8be6a70c99750f5834497b">penalty_param</a></td></tr>
-<tr class="memdesc:adc015010aa8be6a70c99750f5834497b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parameter for penalty term (Gaussian variance)  <br /></td></tr>
-<tr class="separator:adc015010aa8be6a70c99750f5834497b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4918ef7617d3067ca4d30fa2ba6d8c0e" id="r_a4918ef7617d3067ca4d30fa2ba6d8c0e"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a4918ef7617d3067ca4d30fa2ba6d8c0e">gamma_penalty</a></td></tr>
-<tr class="memdesc:a4918ef7617d3067ca4d30fa2ba6d8c0e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Weight for integral penalty term.  <br /></td></tr>
-<tr class="separator:a4918ef7617d3067ca4d30fa2ba6d8c0e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a47bd15cf9824ab95288af0cdd50a0c0c" id="r_a47bd15cf9824ab95288af0cdd50a0c0c"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a47bd15cf9824ab95288af0cdd50a0c0c">gamma_penalty_dpdm</a></td></tr>
-<tr class="memdesc:a47bd15cf9824ab95288af0cdd50a0c0c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Weight for second-order derivative penalty.  <br /></td></tr>
-<tr class="separator:a47bd15cf9824ab95288af0cdd50a0c0c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9dc38ea2f69981ce525681f7bb010c0e" id="r_a9dc38ea2f69981ce525681f7bb010c0e"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a9dc38ea2f69981ce525681f7bb010c0e">gamma_penalty_energy</a></td></tr>
-<tr class="memdesc:a9dc38ea2f69981ce525681f7bb010c0e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Weight for energy penalty.  <br /></td></tr>
-<tr class="separator:a9dc38ea2f69981ce525681f7bb010c0e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a46de3914a9b905cc78a0bc3539e9aca5" id="r_a46de3914a9b905cc78a0bc3539e9aca5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classOptimTarget.html">OptimTarget</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a46de3914a9b905cc78a0bc3539e9aca5">optim_target</a></td></tr>
 <tr class="memdesc:a46de3914a9b905cc78a0bc3539e9aca5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer to optimization target specification.  <br /></td></tr>
 <tr class="separator:a46de3914a9b905cc78a0bc3539e9aca5"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -238,9 +239,6 @@ Protected Attributes</h2></td></tr>
 <tr class="memitem:a33769128e30e615ac6527991392554e1" id="r_a33769128e30e615ac6527991392554e1"><td class="memItemLeft" align="right" valign="top">std::vector&lt; Vec &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a33769128e30e615ac6527991392554e1">dpdm_states</a></td></tr>
 <tr class="memdesc:a33769128e30e615ac6527991392554e1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Storage for states needed for second-order derivative penalty.  <br /></td></tr>
 <tr class="separator:a33769128e30e615ac6527991392554e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2d89224e5aa0186796c0f7849df5a5bc" id="r_a2d89224e5aa0186796c0f7849df5a5bc"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a2d89224e5aa0186796c0f7849df5a5bc">addLeakagePrevent</a></td></tr>
-<tr class="memdesc:a2d89224e5aa0186796c0f7849df5a5bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flag to include leakage prevention penalty term.  <br /></td></tr>
-<tr class="separator:a2d89224e5aa0186796c0f7849df5a5bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a354e57936c67ef0191a90d2c8c343e39" id="r_a354e57936c67ef0191a90d2c8c343e39"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a354e57936c67ef0191a90d2c8c343e39">mpirank_world</a></td></tr>
 <tr class="memdesc:a354e57936c67ef0191a90d2c8c343e39"><td class="mdescLeft">&#160;</td><td class="mdescRight">MPI rank in global communicator.  <br /></td></tr>
 <tr class="separator:a354e57936c67ef0191a90d2c8c343e39"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -259,13 +257,40 @@ Protected Attributes</h2></td></tr>
 <tr class="memitem:a212403add28856d8466b25e3a4ad2ad2" id="r_a212403add28856d8466b25e3a4ad2ad2"><td class="memItemLeft" align="right" valign="top">PetscInt&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a212403add28856d8466b25e3a4ad2ad2">iupp</a></td></tr>
 <tr class="memdesc:a212403add28856d8466b25e3a4ad2ad2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Last index (+1) of the local sub vector u,v.  <br /></td></tr>
 <tr class="separator:a212403add28856d8466b25e3a4ad2ad2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a99b0b18d71badc51a9b87d2d7d57d20c" id="r_a99b0b18d71badc51a9b87d2d7d57d20c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a99b0b18d71badc51a9b87d2d7d57d20c">eval_leakage</a></td></tr>
+<tr class="memdesc:a99b0b18d71badc51a9b87d2d7d57d20c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flag to compute leakage integral term.  <br /></td></tr>
+<tr class="separator:a99b0b18d71badc51a9b87d2d7d57d20c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad9804ae8bc41066e138d639d3f380891" id="r_ad9804ae8bc41066e138d639d3f380891"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#ad9804ae8bc41066e138d639d3f380891">eval_energy</a></td></tr>
+<tr class="memdesc:ad9804ae8bc41066e138d639d3f380891"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flag to compute energy integral term.  <br /></td></tr>
+<tr class="separator:ad9804ae8bc41066e138d639d3f380891"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a92a55fb2ae73659e448e7e77fc9ef040" id="r_a92a55fb2ae73659e448e7e77fc9ef040"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a92a55fb2ae73659e448e7e77fc9ef040">eval_dpdm</a></td></tr>
+<tr class="memdesc:a92a55fb2ae73659e448e7e77fc9ef040"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flag to compute second-order derivative integral term.  <br /></td></tr>
+<tr class="separator:a92a55fb2ae73659e448e7e77fc9ef040"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6176d0484706555a2f9a45fe8b2325c0" id="r_a6176d0484706555a2f9a45fe8b2325c0"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a6176d0484706555a2f9a45fe8b2325c0">eval_weightedcost</a></td></tr>
+<tr class="memdesc:a6176d0484706555a2f9a45fe8b2325c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flag to compute weighted cost integral term.  <br /></td></tr>
+<tr class="separator:a6176d0484706555a2f9a45fe8b2325c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afca5ec36b9bb153acbbb52b596f976dc" id="r_afca5ec36b9bb153acbbb52b596f976dc"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#afca5ec36b9bb153acbbb52b596f976dc">leakage_integral</a></td></tr>
+<tr class="memdesc:afca5ec36b9bb153acbbb52b596f976dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sums the integral over leakage.  <br /></td></tr>
+<tr class="separator:afca5ec36b9bb153acbbb52b596f976dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa319d31c86c5cf425af31e385f006259" id="r_aa319d31c86c5cf425af31e385f006259"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#aa319d31c86c5cf425af31e385f006259">energy_integral</a></td></tr>
+<tr class="memdesc:aa319d31c86c5cf425af31e385f006259"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sums the energy term.  <br /></td></tr>
+<tr class="separator:aa319d31c86c5cf425af31e385f006259"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a57b386fdb6f8eb841df7e0a831aec079" id="r_a57b386fdb6f8eb841df7e0a831aec079"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a57b386fdb6f8eb841df7e0a831aec079">dpdm_integral</a></td></tr>
+<tr class="memdesc:a57b386fdb6f8eb841df7e0a831aec079"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sums second-order derivative variation value.  <br /></td></tr>
+<tr class="separator:a57b386fdb6f8eb841df7e0a831aec079"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a09bc752ce79b2e9fda0e3039466c776a" id="r_a09bc752ce79b2e9fda0e3039466c776a"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a09bc752ce79b2e9fda0e3039466c776a">weightedcost_integral</a></td></tr>
+<tr class="memdesc:a09bc752ce79b2e9fda0e3039466c776a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sums the integral over weighted cost function.  <br /></td></tr>
+<tr class="separator:a09bc752ce79b2e9fda0e3039466c776a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa36baa9e720ac80f0cb0890a4ed67b56" id="r_aa36baa9e720ac80f0cb0890a4ed67b56"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#aa36baa9e720ac80f0cb0890a4ed67b56">weightedcost_width</a></td></tr>
+<tr class="memdesc:aa36baa9e720ac80f0cb0890a4ed67b56"><td class="mdescLeft">&#160;</td><td class="mdescRight">Width parameter for weighted cost function.  <br /></td></tr>
+<tr class="separator:aa36baa9e720ac80f0cb0890a4ed67b56"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Base class for time integration schemes to evolve the quantum dynamics. </p>
 <p>This abstract class provides the interface for time-stepping methods used to integrate the quantum evolution equations (Lindblad master equation or Schroedinger equation). It supports both forward and adjoint time integration, handles output of evolution data, and evaluates penalty integral terms.</p>
 <p>Main functionality:</p><ul>
 <li><a class="el" href="classTimeStepper.html#ae2be974cc2dd652299ba12a36ffece58">solveODE</a> propagates an initial state at time t0 to the final time T, while writing evolution data to files and adding to integral penalty terms, if needed.</li>
-<li><a class="el" href="classTimeStepper.html#aab958d4087d5b20f0f6f6695560d05c4">solveAdjointODE</a> propagates a terminal (adjoint) condition through the time domain backwards in time from T to 0, while updating the reduced gradient along the way.</li>
+<li><a class="el" href="classTimeStepper.html#a383990435f66ab846631c632b9a0cc97">solveAdjointODE</a> propagates a terminal (adjoint) condition through the time domain backwards in time from T to 0, while updating the reduced gradient along the way.</li>
 </ul>
 <p>This class contains references to:</p><ul>
 <li><a class="el" href="classMasterEq.html">MasterEq</a> for evaluating and applying the right-hand-side system matrix of the real-valued, vectorized differential equation to a state vector at each time-step</li>
@@ -374,14 +399,103 @@ Protected Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="aba6754e8ed674e4191f4704591a22116" name="aba6754e8ed674e4191f4704591a22116"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aba6754e8ed674e4191f4704591a22116">&#9670;&#160;</a></span>energyPenaltyIntegral()</h2>
+<a id="a9ef40427b626ce19b2feb40aabd280d1" name="a9ef40427b626ce19b2feb40aabd280d1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9ef40427b626ce19b2feb40aabd280d1">&#9670;&#160;</a></span>evalDpDm()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">double TimeStepper::energyPenaltyIntegral </td>
+          <td class="memname">double TimeStepper::evalDpDm </td>
+          <td>(</td>
+          <td class="paramtype">Vec&#160;</td>
+          <td class="paramname"><em>x</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Vec&#160;</td>
+          <td class="paramname"><em>xm1</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Vec&#160;</td>
+          <td class="paramname"><em>xm2</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Evaluates second-order derivative variation for the state. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">x</td><td>Current state vector </td></tr>
+    <tr><td class="paramname">xm1</td><td>State vector at previous time step </td></tr>
+    <tr><td class="paramname">xm2</td><td>State vector at two time steps ago </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>double Second-order variation value </dd></dl>
+
+</div>
+</div>
+<a id="add14996695f8083c7e27c445c536f965" name="add14996695f8083c7e27c445c536f965"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#add14996695f8083c7e27c445c536f965">&#9670;&#160;</a></span>evalDpDm_diff()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void TimeStepper::evalDpDm_diff </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>n</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Vec&#160;</td>
+          <td class="paramname"><em>xbar</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>Jbar</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Computes derivative of second-order derivative variation term. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">n</td><td>Time step index </td></tr>
+    <tr><td class="paramname">xbar</td><td>Adjoint state vector to update </td></tr>
+    <tr><td class="paramname">Jbar</td><td>Adjoint of dpdm term </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a5afc0b43e49d696c1ecece23fd285afe" name="a5afc0b43e49d696c1ecece23fd285afe"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5afc0b43e49d696c1ecece23fd285afe">&#9670;&#160;</a></span>evalEnergy()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double TimeStepper::evalEnergy </td>
           <td>(</td>
           <td class="paramtype">double&#160;</td>
           <td class="paramname"><em>time</em></td><td>)</td>
@@ -390,25 +504,25 @@ Protected Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Evaluates energy penalty integral term. </p>
+<p>Evaluates energy integral term. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">time</td><td>Current time </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>double Energy penalty value </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>double Energy value </dd></dl>
 
 </div>
 </div>
-<a id="a1b1453a4d14bf199a017661fd67f6dc9" name="a1b1453a4d14bf199a017661fd67f6dc9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1b1453a4d14bf199a017661fd67f6dc9">&#9670;&#160;</a></span>energyPenaltyIntegral_diff()</h2>
+<a id="a3eeed682aa59dcbfb8501255c6a81417" name="a3eeed682aa59dcbfb8501255c6a81417"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3eeed682aa59dcbfb8501255c6a81417">&#9670;&#160;</a></span>evalEnergy_diff()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void TimeStepper::energyPenaltyIntegral_diff </td>
+          <td class="memname">void TimeStepper::evalEnergy_diff </td>
           <td>(</td>
           <td class="paramtype">double&#160;</td>
           <td class="paramname"><em>time</em>, </td>
@@ -433,12 +547,172 @@ Protected Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Computes derivative of energy penalty integral. </p>
+<p>Computes derivative of energy integral. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">time</td><td>Current time </td></tr>
-    <tr><td class="paramname">Jbar</td><td>Adjoint of energy penalty </td></tr>
+    <tr><td class="paramname">Jbar</td><td>Adjoint of energy </td></tr>
     <tr><td class="paramname">redgrad</td><td>Reduced gradient vector to update </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a35fc3f22411d4e8068206ddd8300b431" name="a35fc3f22411d4e8068206ddd8300b431"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a35fc3f22411d4e8068206ddd8300b431">&#9670;&#160;</a></span>evalLeakage()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double TimeStepper::evalLeakage </td>
+          <td>(</td>
+          <td class="paramtype">const Vec&#160;</td>
+          <td class="paramname"><em>x</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Evaluates leakage into guard levels. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">x</td><td>Current state vector </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>double Leakage term value / ntime </dd></dl>
+
+</div>
+</div>
+<a id="ac2da7c61e6f458475e791cabab404eb4" name="ac2da7c61e6f458475e791cabab404eb4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac2da7c61e6f458475e791cabab404eb4">&#9670;&#160;</a></span>evalLeakage_diff()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void TimeStepper::evalLeakage_diff </td>
+          <td>(</td>
+          <td class="paramtype">const Vec&#160;</td>
+          <td class="paramname"><em>x</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Vec&#160;</td>
+          <td class="paramname"><em>xbar</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>Jbar</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Computes derivative of leakage term. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">x</td><td>Current state vector </td></tr>
+    <tr><td class="paramname">xbar</td><td>Adjoint state vector to update </td></tr>
+    <tr><td class="paramname">Jbar</td><td>Adjoint of leakage integral term </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a0112687423aeee33982111f3ddcb4f80" name="a0112687423aeee33982111f3ddcb4f80"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0112687423aeee33982111f3ddcb4f80">&#9670;&#160;</a></span>evalWeightedCost()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">double TimeStepper::evalWeightedCost </td>
+          <td>(</td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>time</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const Vec&#160;</td>
+          <td class="paramname"><em>x</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Evaluates the weighted cost function term. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">time</td><td>Current time </td></tr>
+    <tr><td class="paramname">x</td><td>Current state vector </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>double Weighted cost integral term value </dd></dl>
+
+</div>
+</div>
+<a id="aaa5b164d39a15a50a40f8db5825bb98e" name="aaa5b164d39a15a50a40f8db5825bb98e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaa5b164d39a15a50a40f8db5825bb98e">&#9670;&#160;</a></span>evalWeightedCost_diff()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void TimeStepper::evalWeightedCost_diff </td>
+          <td>(</td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>time</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const Vec&#160;</td>
+          <td class="paramname"><em>x</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Vec&#160;</td>
+          <td class="paramname"><em>xbar</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>Jbar</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Computes derivative of weighted cost function term. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">time</td><td>Current time </td></tr>
+    <tr><td class="paramname">x</td><td>Current state vector </td></tr>
+    <tr><td class="paramname">xbar</td><td>Adjoint state vector to update </td></tr>
+    <tr><td class="paramname">Jbar</td><td>Adjoint of weighted cost term </td></tr>
   </table>
   </dd>
 </dl>
@@ -576,6 +850,81 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="a33e06e155a957a310005c47b356a0d7b" name="a33e06e155a957a310005c47b356a0d7b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a33e06e155a957a310005c47b356a0d7b">&#9670;&#160;</a></span>getDPDMIntegral()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double TimeStepper::getDPDMIntegral </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a3e4006d9f66b31b39faa0050d2f27ea7" name="a3e4006d9f66b31b39faa0050d2f27ea7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3e4006d9f66b31b39faa0050d2f27ea7">&#9670;&#160;</a></span>getEnergyIntegral()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double TimeStepper::getEnergyIntegral </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="abfef40eac3cb9bd5789e824a3bd6e15c" name="abfef40eac3cb9bd5789e824a3bd6e15c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abfef40eac3cb9bd5789e824a3bd6e15c">&#9670;&#160;</a></span>getLeakageIntegral()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double TimeStepper::getLeakageIntegral </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="afdf523a5e2230eec37e27f4a9e590796" name="afdf523a5e2230eec37e27f4a9e590796"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#afdf523a5e2230eec37e27f4a9e590796">&#9670;&#160;</a></span>getState()</h2>
 
@@ -603,29 +952,129 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="ad13591047811f9ae208ece98c17985a3" name="ad13591047811f9ae208ece98c17985a3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad13591047811f9ae208ece98c17985a3">&#9670;&#160;</a></span>penaltyDpDm()</h2>
+<a id="aefc0fa9c9ed6e704664aa2b8c6d86bdf" name="aefc0fa9c9ed6e704664aa2b8c6d86bdf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aefc0fa9c9ed6e704664aa2b8c6d86bdf">&#9670;&#160;</a></span>getWeightedCostIntegral()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">double TimeStepper::penaltyDpDm </td>
+          <td class="memname">double TimeStepper::getWeightedCostIntegral </td>
           <td>(</td>
-          <td class="paramtype">Vec&#160;</td>
-          <td class="paramname"><em>x</em>, </td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a95750967adb5aba62a078c5807806bc5" name="a95750967adb5aba62a078c5807806bc5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a95750967adb5aba62a078c5807806bc5">&#9670;&#160;</a></span>setEvalDPDM()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void TimeStepper::setEvalDPDM </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>flag</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aa6df7f02de1a822a07911ee3f783ce8a" name="aa6df7f02de1a822a07911ee3f783ce8a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa6df7f02de1a822a07911ee3f783ce8a">&#9670;&#160;</a></span>setEvalEnergy()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void TimeStepper::setEvalEnergy </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>flag</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a9fc3872d5d0185924326261b5fce948e" name="a9fc3872d5d0185924326261b5fce948e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9fc3872d5d0185924326261b5fce948e">&#9670;&#160;</a></span>setEvalLeakage()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void TimeStepper::setEvalLeakage </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>flag</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a3591ba25db19eb751f6b12c14115a6d7" name="a3591ba25db19eb751f6b12c14115a6d7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3591ba25db19eb751f6b12c14115a6d7">&#9670;&#160;</a></span>setEvalWeightedCost()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void TimeStepper::setEvalWeightedCost </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>flag</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">Vec&#160;</td>
-          <td class="paramname"><em>xm1</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">Vec&#160;</td>
-          <td class="paramname"><em>xm2</em>&#160;</td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>width</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -633,156 +1082,17 @@ Protected Attributes</h2></td></tr>
           <td></td><td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p>Evaluates second-order derivative penalty for the state. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">x</td><td>Current state vector </td></tr>
-    <tr><td class="paramname">xm1</td><td>State vector at previous time step </td></tr>
-    <tr><td class="paramname">xm2</td><td>State vector at two time steps ago </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>double Second-order penalty value </dd></dl>
-
 </div>
 </div>
-<a id="ac8fa2931e974b2d1fb9f53527d0eb094" name="ac8fa2931e974b2d1fb9f53527d0eb094"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac8fa2931e974b2d1fb9f53527d0eb094">&#9670;&#160;</a></span>penaltyDpDm_diff()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void TimeStepper::penaltyDpDm_diff </td>
-          <td>(</td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>n</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">Vec&#160;</td>
-          <td class="paramname"><em>xbar</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>Jbar</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Computes derivative of second-order penalty term. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">n</td><td>Time step index </td></tr>
-    <tr><td class="paramname">xbar</td><td>Adjoint state vector to update </td></tr>
-    <tr><td class="paramname">Jbar</td><td>Adjoint of penalty term </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a id="a20323563a86450e343004279995a55f4" name="a20323563a86450e343004279995a55f4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a20323563a86450e343004279995a55f4">&#9670;&#160;</a></span>penaltyIntegral()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">double TimeStepper::penaltyIntegral </td>
-          <td>(</td>
-          <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>time</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const Vec&#160;</td>
-          <td class="paramname"><em>x</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Evaluates the penalty integral term. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">time</td><td>Current time </td></tr>
-    <tr><td class="paramname">x</td><td>Current state vector </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>double Penalty term value </dd></dl>
-
-</div>
-</div>
-<a id="ac9ae1a39f30f0041375ae4ddf25a60b1" name="ac9ae1a39f30f0041375ae4ddf25a60b1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac9ae1a39f30f0041375ae4ddf25a60b1">&#9670;&#160;</a></span>penaltyIntegral_diff()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void TimeStepper::penaltyIntegral_diff </td>
-          <td>(</td>
-          <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>time</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const Vec&#160;</td>
-          <td class="paramname"><em>x</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">Vec&#160;</td>
-          <td class="paramname"><em>xbar</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>Jbar</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Computes derivative of penalty integral term. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">time</td><td>Current time </td></tr>
-    <tr><td class="paramname">x</td><td>Current state vector </td></tr>
-    <tr><td class="paramname">xbar</td><td>Adjoint state vector to update </td></tr>
-    <tr><td class="paramname">Jbar</td><td>Adjoint of penalty term </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a id="aab958d4087d5b20f0f6f6695560d05c4" name="aab958d4087d5b20f0f6f6695560d05c4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aab958d4087d5b20f0f6f6695560d05c4">&#9670;&#160;</a></span>solveAdjointODE()</h2>
+<a id="a383990435f66ab846631c632b9a0cc97" name="a383990435f66ab846631c632b9a0cc97"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a383990435f66ab846631c632b9a0cc97">&#9670;&#160;</a></span>solveAdjointODE()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -803,19 +1113,25 @@ Protected Attributes</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>Jbar_penalty</em>, </td>
+          <td class="paramname"><em>Jbar_leakage</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>Jbar_penalty_dpdm</em>, </td>
+          <td class="paramname"><em>Jbar_weightedcost</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>Jbar_penalty_energy</em>&#160;</td>
+          <td class="paramname"><em>Jbar_dpdm</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>Jbar_energy</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -831,9 +1147,10 @@ Protected Attributes</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">rho_t0_bar</td><td>Terminal condition for adjoint state </td></tr>
     <tr><td class="paramname">finalstate</td><td>Final state from forward evolution </td></tr>
-    <tr><td class="paramname">Jbar_penalty</td><td>Adjoint of penalty integral term </td></tr>
-    <tr><td class="paramname">Jbar_penalty_dpdm</td><td>Adjoint of second-order derivative penalty </td></tr>
-    <tr><td class="paramname">Jbar_penalty_energy</td><td>Adjoint of energy penalty term </td></tr>
+    <tr><td class="paramname">Jbar_leakage</td><td>Adjoint of leakage integral term </td></tr>
+    <tr><td class="paramname">Jbar_weightedcost</td><td>Adjoint of weighted cost integral term </td></tr>
+    <tr><td class="paramname">Jbar_dpdm</td><td>Adjoint of second-order derivative variation </td></tr>
+    <tr><td class="paramname">Jbar_energy</td><td>Adjoint of energy integral term </td></tr>
   </table>
   </dd>
 </dl>
@@ -880,8 +1197,8 @@ Protected Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Data Documentation</h2>
-<a id="a2d89224e5aa0186796c0f7849df5a5bc" name="a2d89224e5aa0186796c0f7849df5a5bc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2d89224e5aa0186796c0f7849df5a5bc">&#9670;&#160;</a></span>addLeakagePrevent</h2>
+<a id="a57b386fdb6f8eb841df7e0a831aec079" name="a57b386fdb6f8eb841df7e0a831aec079"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a57b386fdb6f8eb841df7e0a831aec079">&#9670;&#160;</a></span>dpdm_integral</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -890,7 +1207,7 @@ Protected Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">bool TimeStepper::addLeakagePrevent</td>
+          <td class="memname">double TimeStepper::dpdm_integral</td>
         </tr>
       </table>
   </td>
@@ -900,7 +1217,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Flag to include leakage prevention penalty term. </p>
+<p>Sums second-order derivative variation value. </p>
 
 </div>
 </div>
@@ -944,67 +1261,123 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a3c30655966d681d63abf2bf681246c27" name="a3c30655966d681d63abf2bf681246c27"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3c30655966d681d63abf2bf681246c27">&#9670;&#160;</a></span>energy_penalty_integral</h2>
+<a id="aa319d31c86c5cf425af31e385f006259" name="aa319d31c86c5cf425af31e385f006259"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa319d31c86c5cf425af31e385f006259">&#9670;&#160;</a></span>energy_integral</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">double TimeStepper::energy_penalty_integral</td>
+          <td class="memname">double TimeStepper::energy_integral</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p>Sums the energy penalty term. </p>
+<p>Sums the energy term. </p>
 
 </div>
 </div>
-<a id="a4918ef7617d3067ca4d30fa2ba6d8c0e" name="a4918ef7617d3067ca4d30fa2ba6d8c0e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4918ef7617d3067ca4d30fa2ba6d8c0e">&#9670;&#160;</a></span>gamma_penalty</h2>
+<a id="a92a55fb2ae73659e448e7e77fc9ef040" name="a92a55fb2ae73659e448e7e77fc9ef040"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a92a55fb2ae73659e448e7e77fc9ef040">&#9670;&#160;</a></span>eval_dpdm</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">double TimeStepper::gamma_penalty</td>
+          <td class="memname">bool TimeStepper::eval_dpdm</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p>Weight for integral penalty term. </p>
+<p>Flag to compute second-order derivative integral term. </p>
 
 </div>
 </div>
-<a id="a47bd15cf9824ab95288af0cdd50a0c0c" name="a47bd15cf9824ab95288af0cdd50a0c0c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a47bd15cf9824ab95288af0cdd50a0c0c">&#9670;&#160;</a></span>gamma_penalty_dpdm</h2>
+<a id="ad9804ae8bc41066e138d639d3f380891" name="ad9804ae8bc41066e138d639d3f380891"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad9804ae8bc41066e138d639d3f380891">&#9670;&#160;</a></span>eval_energy</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">double TimeStepper::gamma_penalty_dpdm</td>
+          <td class="memname">bool TimeStepper::eval_energy</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p>Weight for second-order derivative penalty. </p>
+<p>Flag to compute energy integral term. </p>
 
 </div>
 </div>
-<a id="a9dc38ea2f69981ce525681f7bb010c0e" name="a9dc38ea2f69981ce525681f7bb010c0e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9dc38ea2f69981ce525681f7bb010c0e">&#9670;&#160;</a></span>gamma_penalty_energy</h2>
+<a id="a99b0b18d71badc51a9b87d2d7d57d20c" name="a99b0b18d71badc51a9b87d2d7d57d20c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a99b0b18d71badc51a9b87d2d7d57d20c">&#9670;&#160;</a></span>eval_leakage</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">double TimeStepper::gamma_penalty_energy</td>
+          <td class="memname">bool TimeStepper::eval_leakage</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p>Weight for energy penalty. </p>
+<p>Flag to compute leakage integral term. </p>
+
+</div>
+</div>
+<a id="a6176d0484706555a2f9a45fe8b2325c0" name="a6176d0484706555a2f9a45fe8b2325c0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6176d0484706555a2f9a45fe8b2325c0">&#9670;&#160;</a></span>eval_weightedcost</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool TimeStepper::eval_weightedcost</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Flag to compute weighted cost integral term. </p>
 
 </div>
 </div>
@@ -1053,6 +1426,30 @@ Protected Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Last index (+1) of the local sub vector u,v. </p>
+
+</div>
+</div>
+<a id="afca5ec36b9bb153acbbb52b596f976dc" name="afca5ec36b9bb153acbbb52b596f976dc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afca5ec36b9bb153acbbb52b596f976dc">&#9670;&#160;</a></span>leakage_integral</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double TimeStepper::leakage_integral</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Sums the integral over leakage. </p>
 
 </div>
 </div>
@@ -1216,54 +1613,6 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a4f04bd683057a0b0c9d7f983cd3e0ba2" name="a4f04bd683057a0b0c9d7f983cd3e0ba2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4f04bd683057a0b0c9d7f983cd3e0ba2">&#9670;&#160;</a></span>penalty_dpdm</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">double TimeStepper::penalty_dpdm</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Sums second-order derivative penalty value. </p>
-
-</div>
-</div>
-<a id="ad904f4e9a7bc465c176813b5ea597e1c" name="ad904f4e9a7bc465c176813b5ea597e1c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad904f4e9a7bc465c176813b5ea597e1c">&#9670;&#160;</a></span>penalty_integral</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">double TimeStepper::penalty_integral</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Sums the integral penalty term. </p>
-
-</div>
-</div>
-<a id="adc015010aa8be6a70c99750f5834497b" name="adc015010aa8be6a70c99750f5834497b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adc015010aa8be6a70c99750f5834497b">&#9670;&#160;</a></span>penalty_param</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">double TimeStepper::penalty_param</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Parameter for penalty term (Gaussian variance) </p>
-
-</div>
-</div>
 <a id="a117e801337dbe849388f274d4dec83d0" name="a117e801337dbe849388f274d4dec83d0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a117e801337dbe849388f274d4dec83d0">&#9670;&#160;</a></span>redgrad</h2>
 
@@ -1333,6 +1682,54 @@ Protected Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Final evolution time. </p>
+
+</div>
+</div>
+<a id="a09bc752ce79b2e9fda0e3039466c776a" name="a09bc752ce79b2e9fda0e3039466c776a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a09bc752ce79b2e9fda0e3039466c776a">&#9670;&#160;</a></span>weightedcost_integral</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double TimeStepper::weightedcost_integral</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Sums the integral over weighted cost function. </p>
+
+</div>
+</div>
+<a id="aa36baa9e720ac80f0cb0890a4ed67b56" name="aa36baa9e720ac80f0cb0890a4ed67b56"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa36baa9e720ac80f0cb0890a4ed67b56">&#9670;&#160;</a></span>weightedcost_width</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double TimeStepper::weightedcost_width</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Width parameter for weighted cost function. </p>
 
 </div>
 </div>

@@ -82,74 +82,118 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#define-members">Macros</a> &#124;
-<a href="#enum-members">Enumerations</a>  </div>
+<a href="#enum-members">Enumerations</a> &#124;
+<a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">defs.hpp File Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
 <p>Core type definitions and enumerations for Quandary quantum optimal control.  
 <a href="#details">More...</a></p>
-<div class="textblock"><div class="dynheader">
+<div class="textblock"><code>#include &lt;map&gt;</code><br />
+<code>#include &lt;optional&gt;</code><br />
+<code>#include &lt;string&gt;</code><br />
+<code>#include &lt;vector&gt;</code><br />
+</div><div class="textblock"><div class="dynheader">
+Include dependency graph for defs.hpp:</div>
+<div class="dyncontent">
+<div class="center"><img src="defs_8hpp__incl.png" border="0" usemap="#a_2home_2runner_2work_2quandary_2quandary_2include_2defs_8hpp" alt=""/></div>
+<map name="a_2home_2runner_2work_2quandary_2quandary_2include_2defs_8hpp" id="a_2home_2runner_2work_2quandary_2quandary_2include_2defs_8hpp">
+<area shape="rect" title="Core type definitions and enumerations for Quandary quantum optimal control." alt="" coords="57,5,268,45"/>
+<area shape="rect" title=" " alt="" coords="5,93,56,119"/>
+<area shape="poly" title=" " alt="" coords="132,48,64,88,61,84,130,43"/>
+<area shape="rect" title=" " alt="" coords="80,93,155,119"/>
+<area shape="poly" title=" " alt="" coords="154,47,133,83,129,80,149,44"/>
+<area shape="rect" title=" " alt="" coords="179,93,237,119"/>
+<area shape="poly" title=" " alt="" coords="176,44,197,80,192,83,171,47"/>
+<area shape="rect" title=" " alt="" coords="262,93,325,119"/>
+<area shape="poly" title=" " alt="" coords="196,43,264,84,261,88,193,48"/>
+</map>
+</div>
+</div><div class="textblock"><div class="dynheader">
 This graph shows which files directly or indirectly include this file:</div>
 <div class="dyncontent">
 <div class="center"><img src="defs_8hpp__dep__incl.png" border="0" usemap="#a_2home_2runner_2work_2quandary_2quandary_2include_2defs_8hppdep" alt=""/></div>
 <map name="a_2home_2runner_2work_2quandary_2quandary_2include_2defs_8hppdep" id="a_2home_2runner_2work_2quandary_2quandary_2include_2defs_8hppdep">
-<area shape="rect" title="Core type definitions and enumerations for Quandary quantum optimal control." alt="" coords="783,5,993,45"/>
-<area shape="rect" href="controlbasis_8hpp.html" title=" " alt="" coords="406,93,655,133"/>
-<area shape="poly" title=" " alt="" coords="797,51,610,96,608,91,796,46"/>
-<area shape="rect" href="hamiltonianfilereader_8hpp.html" title=" " alt="" coords="43,181,352,221"/>
-<area shape="poly" title=" " alt="" coords="769,33,685,40,590,52,491,70,394,96,346,115,300,138,226,183,223,179,297,134,344,110,392,91,489,65,589,46,684,35,769,28"/>
-<area shape="rect" href="mastereq_8hpp.html" title=" " alt="" coords="632,269,864,309"/>
-<area shape="poly" title=" " alt="" coords="895,59,896,95,893,138,884,182,865,223,837,251,803,271,801,267,834,247,860,220,879,180,888,137,891,95,889,60"/>
-<area shape="rect" href="optimtarget_8hpp.html" title=" " alt="" coords="1107,357,1354,397"/>
-<area shape="poly" title=" " alt="" coords="1007,34,1068,43,1126,55,1175,71,1194,81,1207,92,1229,123,1243,159,1251,197,1253,235,1248,306,1238,358,1233,357,1243,305,1248,235,1245,198,1238,160,1224,126,1203,95,1191,85,1173,76,1125,60,1067,48,1006,40"/>
-<area shape="rect" href="optimproblem_8hpp.html" title=" " alt="" coords="1157,533,1419,573"/>
-<area shape="poly" title=" " alt="" coords="1008,35,1121,55,1180,70,1237,91,1293,109,1343,125,1364,136,1379,151,1390,172,1393,200,1393,379,1391,403,1385,426,1363,470,1336,507,1311,535,1307,531,1332,503,1359,467,1380,424,1386,402,1388,379,1388,200,1385,174,1375,154,1360,140,1341,130,1292,114,1235,96,1178,76,1120,60,1007,40"/>
-<area shape="rect" href="main_8cpp.html" title=" " alt="" coords="489,621,700,661"/>
-<area shape="poly" title=" " alt="" coords="769,28,548,34,422,43,297,58,184,80,135,94,92,110,57,129,30,150,14,174,8,200,8,466,11,484,21,500,37,515,58,530,115,555,184,577,262,595,343,609,490,628,489,633,342,614,261,600,183,582,113,560,56,534,34,519,17,503,6,486,3,467,3,200,9,172,26,147,54,125,90,106,133,89,183,75,296,53,421,38,548,29,769,23"/>
-<area shape="rect" href="timestepper_8hpp.html" title=" " alt="" coords="812,445,1060,485"/>
-<area shape="poly" title=" " alt="" coords="968,47,1017,68,1068,97,1114,134,1134,156,1150,180,1159,201,1164,221,1163,242,1159,263,1140,302,1111,339,1076,373,1039,403,971,448,968,443,1036,399,1073,369,1107,335,1136,299,1154,261,1158,241,1158,222,1154,202,1146,183,1130,159,1110,137,1065,101,1015,73,966,52"/>
-<area shape="rect" href="oscillator_8hpp.html" title=" " alt="" coords="621,181,851,221"/>
-<area shape="poly" title=" " alt="" coords="864,58,755,183,751,179,860,54"/>
-<area shape="rect" href="gate_8hpp.html" title=" " alt="" coords="925,181,1136,221"/>
-<area shape="poly" title=" " alt="" coords="914,55,1017,179,1013,183,910,58"/>
-<area shape="poly" title=" " alt="" coords="445,139,271,184,270,179,444,134"/>
-<area shape="poly" title=" " alt="" coords="589,136,692,179,690,184,587,141"/>
-<area shape="rect" href="controlbasis_8cpp.html" title=" " alt="" coords="377,181,597,221"/>
-<area shape="poly" title=" " alt="" coords="517,147,499,182,494,180,512,145"/>
-<area shape="poly" title=" " alt="" coords="332,221,632,267,631,273,331,226"/>
-<area shape="rect" href="hamiltonianfilereader_8cpp.html" title=" " alt="" coords="43,269,323,309"/>
-<area shape="poly" title=" " alt="" coords="194,235,189,270,183,269,189,234"/>
-<area shape="poly" title=" " alt="" coords="868,309,1125,355,1125,360,867,314"/>
-<area shape="poly" title=" " alt="" coords="619,314,505,336,464,348,443,359,433,376,426,393,425,429,437,466,459,503,486,538,516,570,572,619,568,623,513,574,482,542,454,506,432,468,420,430,421,392,428,373,440,355,462,343,504,331,618,309"/>
-<area shape="poly" title=" " alt="" coords="851,312,885,330,914,356,927,377,935,401,939,445,934,445,930,402,922,379,910,359,882,335,848,317"/>
-<area shape="rect" href="output_8hpp.html" title=" " alt="" coords="687,357,899,397"/>
-<area shape="poly" title=" " alt="" coords="767,320,786,356,781,358,762,323"/>
-<area shape="rect" href="mastereq_8cpp.html" title=" " alt="" coords="453,357,664,397"/>
-<area shape="poly" title=" " alt="" coords="695,317,601,360,599,355,693,313"/>
-<area shape="poly" title=" " alt="" coords="1281,403,1301,421,1317,444,1323,468,1320,492,1303,534,1298,532,1315,491,1317,468,1312,446,1297,425,1277,407"/>
-<area shape="poly" title=" " alt="" coords="1154,404,1001,448,1000,443,1152,399"/>
-<area shape="rect" href="optimtarget_8cpp.html" title=" " alt="" coords="1084,445,1303,485"/>
-<area shape="poly" title=" " alt="" coords="1219,411,1204,446,1199,444,1214,409"/>
-<area shape="poly" title=" " alt="" coords="1143,575,701,630,700,624,1143,570"/>
-<area shape="rect" href="optimproblem_8cpp.html" title=" " alt="" coords="1171,621,1405,661"/>
-<area shape="poly" title=" " alt="" coords="1291,587,1291,621,1285,621,1285,587"/>
-<area shape="poly" title=" " alt="" coords="1027,486,1212,531,1210,536,1026,491"/>
-<area shape="poly" title=" " alt="" coords="896,495,834,536,805,557,776,576,716,603,658,624,656,619,714,598,773,571,802,552,830,531,893,491"/>
-<area shape="rect" href="timestepper_8cpp.html" title=" " alt="" coords="844,533,1063,573"/>
-<area shape="poly" title=" " alt="" coords="945,498,952,533,947,534,940,499"/>
-<area shape="poly" title=" " alt="" coords="780,411,733,487,670,564,615,623,612,619,666,560,728,484,775,408"/>
-<area shape="poly" title=" " alt="" coords="838,402,906,443,903,448,835,407"/>
-<area shape="rect" href="output_8cpp.html" title=" " alt="" coords="508,445,719,485"/>
-<area shape="poly" title=" " alt="" coords="743,406,654,448,652,443,741,401"/>
-<area shape="poly" title=" " alt="" coords="743,235,748,269,743,269,738,235"/>
-<area shape="poly" title=" " alt="" coords="609,226,464,252,411,264,387,272,369,295,362,317,363,376,363,466,367,496,379,521,396,544,419,564,472,597,527,619,525,624,470,601,416,569,392,548,374,524,362,497,357,467,357,376,357,317,364,292,384,267,409,259,463,247,608,221"/>
-<area shape="rect" href="oscillator_8cpp.html" title=" " alt="" coords="397,269,608,309"/>
-<area shape="poly" title=" " alt="" coords="673,229,555,272,553,267,671,224"/>
-<area shape="poly" title=" " alt="" coords="956,228,811,272,809,267,955,223"/>
-<area shape="poly" title=" " alt="" coords="1066,228,1112,267,1212,355,1208,359,1109,271,1062,232"/>
-<area shape="rect" href="gate_8cpp.html" title=" " alt="" coords="888,269,1099,309"/>
-<area shape="poly" title=" " alt="" coords="1019,235,1004,270,999,268,1014,233"/>
+<area shape="rect" title="Core type definitions and enumerations for Quandary quantum optimal control." alt="" coords="631,5,841,45"/>
+<area shape="rect" href="cfgparser_8hpp.html" title=" " alt="" coords="315,196,546,236"/>
+<area shape="poly" title=" " alt="" coords="617,35,544,43,473,55,413,72,391,83,377,95,370,107,368,119,376,146,392,172,412,194,408,197,388,175,371,148,363,119,365,105,373,92,389,78,411,67,472,49,544,37,617,30"/>
+<area shape="rect" href="config_8hpp.html" title=" " alt="" coords="499,284,709,324"/>
+<area shape="poly" title=" " alt="" coords="702,56,684,74,669,95,644,145,627,198,609,284,604,283,622,197,639,143,664,92,680,71,698,53"/>
+<area shape="rect" href="oscillator_8hpp.html" title=" " alt="" coords="800,372,1029,412"/>
+<area shape="poly" title=" " alt="" coords="737,59,740,142,749,189,765,235,791,277,824,314,889,370,886,374,821,318,787,280,760,237,744,191,735,142,731,59"/>
+<area shape="rect" href="mastereq_8hpp.html" title=" " alt="" coords="1016,460,1248,500"/>
+<area shape="poly" title=" " alt="" coords="856,37,969,58,1017,73,1048,91,1072,119,1083,147,1086,177,1085,215,1085,305,1090,349,1100,392,1125,459,1120,461,1095,394,1084,350,1080,305,1080,215,1080,177,1078,148,1067,122,1045,95,1014,78,968,63,855,42"/>
+<area shape="rect" href="optimtarget_8hpp.html" title=" " alt="" coords="1317,548,1563,588"/>
+<area shape="poly" title=" " alt="" coords="855,26,1085,32,1356,44,1595,63,1679,76,1728,91,1763,115,1787,141,1801,173,1805,215,1805,394,1799,432,1782,464,1757,491,1724,513,1687,530,1646,543,1564,560,1563,555,1645,538,1685,525,1721,508,1753,487,1778,461,1794,430,1800,393,1800,215,1796,174,1783,144,1760,119,1726,96,1678,81,1594,68,1356,49,1085,37,855,31"/>
+<area shape="rect" href="optimproblem_8hpp.html" title=" " alt="" coords="1321,724,1583,764"/>
+<area shape="poly" title=" " alt="" coords="855,25,1107,30,1408,42,1551,50,1676,61,1770,74,1803,82,1825,91,1862,115,1887,140,1902,172,1907,215,1907,570,1904,584,1897,598,1870,623,1831,646,1782,667,1669,701,1559,727,1557,721,1668,696,1780,662,1829,641,1867,619,1892,594,1899,582,1901,569,1901,215,1897,174,1883,143,1858,119,1823,96,1802,87,1769,80,1675,66,1551,55,1408,47,1107,36,855,31"/>
+<area shape="rect" href="main_8cpp.html" title=" " alt="" coords="833,812,1044,852"/>
+<area shape="poly" title=" " alt="" coords="617,34,492,42,355,54,231,72,181,83,144,96,91,117,47,138,31,151,19,167,11,188,8,215,8,657,14,671,32,685,62,699,101,713,203,738,328,760,601,796,833,819,833,825,600,802,327,766,202,743,100,718,60,704,29,690,10,674,3,658,3,215,6,187,14,165,27,147,45,134,89,112,142,91,180,78,230,67,355,49,491,37,617,29"/>
+<area shape="rect" href="timestepper_8hpp.html" title=" " alt="" coords="1151,636,1399,676"/>
+<area shape="poly" title=" " alt="" coords="855,26,1096,31,1382,43,1634,62,1724,75,1776,91,1812,115,1837,141,1851,172,1856,215,1856,482,1853,499,1843,516,1828,532,1808,546,1755,571,1691,592,1618,610,1542,625,1399,645,1398,640,1541,620,1617,605,1689,587,1753,566,1805,541,1824,527,1839,513,1848,498,1851,481,1851,215,1846,174,1833,144,1809,119,1774,96,1723,80,1634,67,1381,48,1095,37,855,31"/>
+<area shape="rect" href="optimtarget_8cpp.html" title=" " alt="" coords="43,636,261,676"/>
+<area shape="poly" title=" " alt="" coords="617,36,513,44,403,57,305,74,266,84,237,96,193,119,158,141,145,155,136,171,130,190,128,215,128,481,136,567,150,635,144,636,131,568,123,481,123,215,125,189,131,169,141,152,155,137,190,114,235,91,265,79,304,68,403,51,513,39,617,31"/>
+<area shape="rect" href="output_8cpp.html" title=" " alt="" coords="285,636,496,676"/>
+<area shape="poly" title=" " alt="" coords="617,36,528,44,436,57,356,74,325,84,301,96,268,120,246,145,233,175,229,215,229,481,233,507,242,531,256,554,273,574,314,608,354,634,351,638,311,613,270,578,252,557,237,534,228,508,224,482,224,215,228,173,241,142,265,116,299,91,323,79,354,68,435,51,527,39,616,31"/>
+<area shape="rect" href="oscillator_8cpp.html" title=" " alt="" coords="691,460,901,500"/>
+<area shape="poly" title=" " alt="" coords="734,59,731,93,731,148,743,240,760,330,793,459,788,461,755,331,737,241,725,148,725,93,729,59"/>
+<area shape="rect" href="cfgparser_8cpp.html" title=" " alt="" coords="264,284,475,324"/>
+<area shape="poly" title=" " alt="" coords="617,39,469,60,405,76,361,96,326,125,304,157,298,174,297,193,299,213,306,235,323,261,344,282,341,286,319,264,302,237,294,214,291,193,293,173,299,155,322,122,359,91,403,71,468,55,617,34"/>
+<area shape="rect" href="config__defaults_8hpp.html" title=" " alt="" coords="387,93,597,148"/>
+<area shape="poly" title=" " alt="" coords="675,53,562,96,560,91,673,48"/>
+<area shape="rect" href="controlbasis_8hpp.html" title=" " alt="" coords="785,101,1034,141"/>
+<area shape="poly" title=" " alt="" coords="784,49,876,98,873,103,782,54"/>
+<area shape="rect" href="hamiltonianfilereader_8hpp.html" title=" " alt="" coords="1120,196,1429,236"/>
+<area shape="poly" title=" " alt="" coords="855,33,977,53,1041,69,1102,91,1148,114,1191,142,1256,194,1252,198,1187,146,1145,119,1100,96,1039,74,976,58,854,38"/>
+<area shape="rect" href="gate_8hpp.html" title=" " alt="" coords="1504,101,1715,141"/>
+<area shape="poly" title=" " alt="" coords="855,37,1504,106,1504,111,855,42"/>
+<area shape="rect" href="gate_8cpp.html" title=" " alt="" coords="1453,196,1664,236"/>
+<area shape="poly" title=" " alt="" coords="855,38,1004,60,1165,91,1260,115,1355,143,1507,193,1506,198,1353,148,1259,120,1163,96,1003,65,855,43"/>
+<area shape="poly" title=" " alt="" coords="482,240,567,282,565,286,480,244"/>
+<area shape="poly" title=" " alt="" coords="411,249,385,285,381,282,407,246"/>
+<area shape="poly" title=" " alt="" coords="686,325,847,369,846,375,685,330"/>
+<area shape="poly" title=" " alt="" coords="496,330,433,350,410,361,396,374,389,391,396,411,418,450,443,488,502,557,570,619,642,673,714,719,782,758,892,809,890,814,780,762,711,724,639,678,567,623,499,561,439,491,413,453,391,413,384,391,391,370,407,357,431,345,494,325"/>
+<area shape="poly" title=" " alt="" coords="495,330,410,351,375,363,351,374,314,403,280,436,251,473,225,511,185,583,162,637,157,635,181,581,221,508,247,470,276,433,310,399,348,370,373,358,409,346,493,324"/>
+<area shape="rect" href="output_8hpp.html" title=" " alt="" coords="690,548,902,588"/>
+<area shape="poly" title=" " alt="" coords="618,336,655,435,681,498,712,526,748,546,745,550,709,530,677,502,650,437,613,338"/>
+<area shape="poly" title=" " alt="" coords="637,332,777,458,773,462,633,336"/>
+<area shape="rect" href="config_8cpp.html" title=" " alt="" coords="405,372,616,412"/>
+<area shape="poly" title=" " alt="" coords="575,335,533,374,530,370,571,331"/>
+<area shape="poly" title=" " alt="" coords="976,415,1085,458,1083,462,974,420"/>
+<area shape="poly" title=" " alt="" coords="925,425,936,490,941,567,941,657,941,812,936,812,936,657,936,567,930,491,919,426"/>
+<area shape="poly" title=" " alt="" coords="879,422,824,462,821,458,876,418"/>
+<area shape="poly" title=" " alt="" coords="1213,501,1373,545,1372,551,1212,506"/>
+<area shape="poly" title=" " alt="" coords="1069,508,1041,526,1017,550,998,577,986,602,976,650,971,701,960,765,947,812,942,811,955,763,966,701,970,649,981,601,994,575,1013,546,1037,522,1066,504"/>
+<area shape="poly" title=" " alt="" coords="1198,504,1227,522,1251,546,1264,568,1272,592,1277,635,1272,636,1266,594,1259,571,1247,550,1224,526,1195,508"/>
+<area shape="poly" title=" " alt="" coords="1046,506,870,551,869,545,1044,501"/>
+<area shape="rect" href="mastereq_8cpp.html" title=" " alt="" coords="1027,548,1237,588"/>
+<area shape="poly" title=" " alt="" coords="1135,514,1135,548,1129,548,1129,514"/>
+<area shape="poly" title=" " alt="" coords="1445,602,1453,724,1448,724,1440,602"/>
+<area shape="poly" title=" " alt="" coords="1393,597,1312,638,1310,634,1390,592"/>
+<area shape="poly" title=" " alt="" coords="1303,586,1250,591,975,605,761,610,547,617,274,639,262,640,261,635,273,633,547,612,761,605,975,600,1249,585,1303,581"/>
+<area shape="poly" title=" " alt="" coords="1326,769,1044,816,1044,811,1325,764"/>
+<area shape="rect" href="optimproblem_8cpp.html" title=" " alt="" coords="1335,812,1569,852"/>
+<area shape="poly" title=" " alt="" coords="1455,778,1455,812,1449,812,1449,778"/>
+<area shape="poly" title=" " alt="" coords="1327,680,1414,722,1412,726,1325,684"/>
+<area shape="poly" title=" " alt="" coords="1178,682,1122,701,1067,726,1035,747,1005,770,958,814,954,810,1001,766,1032,742,1064,722,1120,696,1177,677"/>
+<area shape="rect" href="timestepper_8cpp.html" title=" " alt="" coords="1077,724,1296,764"/>
+<area shape="poly" title=" " alt="" coords="1247,688,1208,726,1204,722,1243,684"/>
+<area shape="poly" title=" " alt="" coords="815,599,931,810,926,813,810,601"/>
+<area shape="poly" title=" " alt="" coords="915,588,1170,633,1169,639,914,593"/>
+<area shape="poly" title=" " alt="" coords="694,593,480,639,479,633,693,588"/>
+<area shape="poly" title=" " alt="" coords="469,161,445,197,441,194,465,158"/>
+<area shape="poly" title=" " alt="" coords="531,157,561,195,585,241,601,283,596,285,580,243,556,197,527,160"/>
+<area shape="poly" title=" " alt="" coords="962,146,989,167,1009,195,1017,220,1017,246,1010,271,999,296,968,340,938,374,934,370,964,337,994,293,1005,270,1011,245,1012,221,1004,197,985,171,959,150"/>
+<area shape="poly" title=" " alt="" coords="997,141,1202,193,1200,199,996,147"/>
+<area shape="rect" href="controlbasis_8cpp.html" title=" " alt="" coords="774,196,994,236"/>
+<area shape="poly" title=" " alt="" coords="903,155,892,197,887,195,898,153"/>
+<area shape="poly" title=" " alt="" coords="1363,239,1392,257,1414,283,1422,304,1414,325,1396,352,1373,375,1320,414,1263,443,1209,462,1208,457,1261,438,1318,410,1369,371,1391,348,1410,323,1416,304,1410,285,1388,262,1360,244"/>
+<area shape="rect" href="hamiltonianfilereader_8cpp.html" title=" " alt="" coords="1120,284,1400,324"/>
+<area shape="poly" title=" " alt="" coords="1272,250,1266,284,1261,283,1266,249"/>
+<area shape="poly" title=" " alt="" coords="1646,148,1664,168,1678,190,1684,213,1678,237,1640,290,1592,334,1538,371,1480,402,1419,426,1359,444,1249,468,1248,463,1358,439,1417,421,1477,397,1535,367,1589,330,1636,286,1674,235,1679,214,1673,192,1660,171,1642,152"/>
+<area shape="poly" title=" " alt="" coords="1651,147,1685,175,1719,211,1744,254,1752,278,1755,303,1755,394,1750,426,1737,454,1717,478,1692,499,1663,516,1631,530,1565,551,1563,546,1629,525,1660,511,1689,495,1714,475,1733,451,1745,424,1749,393,1749,303,1747,279,1740,256,1715,214,1682,178,1648,151"/>
+<area shape="poly" title=" " alt="" coords="1595,154,1571,197,1567,195,1590,151"/>
 </map>
 </div>
 </div>
@@ -164,16 +208,16 @@ Macros</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
-<tr class="memitem:a5e46e0fe90abc6230f71928a43849bd2" id="r_a5e46e0fe90abc6230f71928a43849bd2"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#a5e46e0fe90abc6230f71928a43849bd2">LindbladType</a> { <a class="el" href="defs_8hpp.html#a5e46e0fe90abc6230f71928a43849bd2ab50339a10e1de285ac99d4c3990b8693">NONE</a>
-, <a class="el" href="defs_8hpp.html#a5e46e0fe90abc6230f71928a43849bd2af34d9b416802d4cda3a4ee548619f206">DECAY</a>
-, <a class="el" href="defs_8hpp.html#a5e46e0fe90abc6230f71928a43849bd2a6df8d93940eeb1c56f01e4fd3a9b93c2">DEPHASE</a>
-, <a class="el" href="defs_8hpp.html#a5e46e0fe90abc6230f71928a43849bd2a6328e5e3186c227a021ef2ff77e40197">BOTH</a>
+<tr class="memitem:a2c10384f9c7e0b9428cb24549ca471cb" id="r_a2c10384f9c7e0b9428cb24549ca471cb"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cb">DecoherenceType</a> { <a class="el" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cbab50339a10e1de285ac99d4c3990b8693">NONE</a>
+, <a class="el" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cbaf34d9b416802d4cda3a4ee548619f206">DECAY</a>
+, <a class="el" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cba6df8d93940eeb1c56f01e4fd3a9b93c2">DEPHASE</a>
+, <a class="el" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cba6328e5e3186c227a021ef2ff77e40197">BOTH</a>
  }</td></tr>
-<tr class="memdesc:a5e46e0fe90abc6230f71928a43849bd2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Available Lindblad operator types for open quantum systems, or NONE for closed quantum systems.  <a href="defs_8hpp.html#a5e46e0fe90abc6230f71928a43849bd2">More...</a><br /></td></tr>
-<tr class="separator:a5e46e0fe90abc6230f71928a43849bd2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memdesc:a2c10384f9c7e0b9428cb24549ca471cb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Available Lindblad operator types for open quantum systems, or NONE for closed quantum systems.  <a href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cb">More...</a><br /></td></tr>
+<tr class="separator:a2c10384f9c7e0b9428cb24549ca471cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a83753afdf4b4b0d70f2a478cfba82d35" id="r_a83753afdf4b4b0d70f2a478cfba82d35"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35">InitialConditionType</a> { <br />
 &#160;&#160;<a class="el" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35aa689fe8f0fbe6f20034cbd7de3bc8b69">FROMFILE</a>
-, <a class="el" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35a514def582a10531df6cb5a547dd55cf6">PURE</a>
+, <a class="el" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35ac4e5ce66437febcb2c9b1d33328dfa3e">PRODUCT_STATE</a>
 , <a class="el" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35a6ed80ac51c01c67befa758cf79ff1c99">ENSEMBLE</a>
 , <a class="el" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35ad3fbf8a4dbb33b1e296fcaa32703b66d">DIAGONAL</a>
 , <br />
@@ -185,9 +229,9 @@ Enumerations</h2></td></tr>
  }</td></tr>
 <tr class="memdesc:a83753afdf4b4b0d70f2a478cfba82d35"><td class="mdescLeft">&#160;</td><td class="mdescRight">Available types of initial conditions that are propagated through the quantum dynamics.  <a href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35">More...</a><br /></td></tr>
 <tr class="separator:a83753afdf4b4b0d70f2a478cfba82d35"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0d59972970c855496cb4c877501e668f" id="r_a0d59972970c855496cb4c877501e668f"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#a0d59972970c855496cb4c877501e668f">TargetType</a> { <a class="el" href="defs_8hpp.html#a0d59972970c855496cb4c877501e668fa1818cedf1c2bed8c63664cc8313b443c">GATE</a>
-, <a class="el" href="defs_8hpp.html#a0d59972970c855496cb4c877501e668fa514def582a10531df6cb5a547dd55cf6">PURE</a>
-, <a class="el" href="defs_8hpp.html#a0d59972970c855496cb4c877501e668faa689fe8f0fbe6f20034cbd7de3bc8b69">FROMFILE</a>
+<tr class="memitem:a0d59972970c855496cb4c877501e668f" id="r_a0d59972970c855496cb4c877501e668f"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#a0d59972970c855496cb4c877501e668f">TargetType</a> { <a class="el" href="defs_8hpp.html#a0d59972970c855496cb4c877501e668fab50339a10e1de285ac99d4c3990b8693">NONE</a>
+, <a class="el" href="defs_8hpp.html#a0d59972970c855496cb4c877501e668fa1818cedf1c2bed8c63664cc8313b443c">GATE</a>
+, <a class="el" href="defs_8hpp.html#a0d59972970c855496cb4c877501e668fa2b848a8cc886d253d21a77c43cd50aae">STATE</a>
  }</td></tr>
 <tr class="memdesc:a0d59972970c855496cb4c877501e668f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Types of optimization targets for quantum control.  <a href="defs_8hpp.html#a0d59972970c855496cb4c877501e668f">More...</a><br /></td></tr>
 <tr class="separator:a0d59972970c855496cb4c877501e668f"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -213,17 +257,80 @@ Enumerations</h2></td></tr>
  }</td></tr>
 <tr class="memdesc:a192d9029b78da393fe9a628ccbd7fab4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Types of execution modes.  <a href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4">More...</a><br /></td></tr>
 <tr class="separator:a192d9029b78da393fe9a628ccbd7fab4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8005f1f182fd0248a710ca64f72508d4" id="r_a8005f1f182fd0248a710ca64f72508d4"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4">ControlType</a> { <br />
-&#160;&#160;<a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4ab50339a10e1de285ac99d4c3990b8693">NONE</a>
+<tr class="memitem:a8005f1f182fd0248a710ca64f72508d4" id="r_a8005f1f182fd0248a710ca64f72508d4"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4">ControlType</a> { <a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4ab50339a10e1de285ac99d4c3990b8693">NONE</a>
 , <a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4a123732cee284ea8ed914cfe1bb999a8d">BSPLINE</a>
 , <a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4ad0dc6d420f3760744adb8558bb03486b">BSPLINEAMP</a>
-, <a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4a522f694f92e679d874a1cc2b2616c3d7">STEP</a>
+, <a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4a7c5e020fa98e315c72eebf2df572b530">BSPLINE0</a>
+ }</td></tr>
+<tr class="memdesc:a8005f1f182fd0248a710ca64f72508d4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Types of control parameterizations.  <a href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4">More...</a><br /></td></tr>
+<tr class="separator:a8005f1f182fd0248a710ca64f72508d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab39932e2bb697b90570645caa8db9fab" id="r_ab39932e2bb697b90570645caa8db9fab"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#ab39932e2bb697b90570645caa8db9fab">ControlInitializationType</a> { <a class="el" href="defs_8hpp.html#ab39932e2bb697b90570645caa8db9faba8d6b5cada83510220f59e00ce86d4d92">CONSTANT</a>
+, <a class="el" href="defs_8hpp.html#ab39932e2bb697b90570645caa8db9faba170e02e86972c2be8559884cc3c12254">RANDOM</a>
+, <a class="el" href="defs_8hpp.html#ab39932e2bb697b90570645caa8db9faba9fc5887c030f7a3e19821ebec457e719">FILE</a>
+ }</td></tr>
+<tr class="memdesc:ab39932e2bb697b90570645caa8db9fab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Types of control initializations.  <a href="defs_8hpp.html#ab39932e2bb697b90570645caa8db9fab">More...</a><br /></td></tr>
+<tr class="separator:ab39932e2bb697b90570645caa8db9fab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab8793c9117a2093d80e47ae2c77b94cc" id="r_ab8793c9117a2093d80e47ae2c77b94cc"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cc">TimeStepperType</a> { <a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca674bc7351b4ecd7b8663cf2ec67de59d">IMR</a>
+, <a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca3b946d73ceabc7fcb1b495fd90c69342">IMR4</a>
+, <a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94ccaba199b3d06622112ab8537e1e147d4d6">IMR8</a>
+, <a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94ccaa57b8491d1d8fc1014dd54bcf83b130a">EE</a>
+ }</td></tr>
+<tr class="memdesc:ab8793c9117a2093d80e47ae2c77b94cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Types of time-stepping methods for evolving quantum states.  <a href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cc">More...</a><br /></td></tr>
+<tr class="separator:ab8793c9117a2093d80e47ae2c77b94cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a842ca6790f315b3f79faf3cda6d6789c" id="r_a842ca6790f315b3f79faf3cda6d6789c"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789c">GateType</a> { <br />
+&#160;&#160;<a class="el" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789cab50339a10e1de285ac99d4c3990b8693">NONE</a>
+, <a class="el" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789cae4b40ab75a516c13e3a390c2eb763a0b">XGATE</a>
+, <a class="el" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca00bd8ad68bebe95443a47c608a931d2f">YGATE</a>
+, <a class="el" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca064b399c889647c4ec08224f897cfeb8">ZGATE</a>
 , <br />
-&#160;&#160;<a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4a7c5e020fa98e315c72eebf2df572b530">BSPLINE0</a>
+&#160;&#160;<a class="el" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789caa048b506c74799e42b9a2f2282fd4e34">HADAMARD</a>
+, <a class="el" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca44d7f92f0edf49112af71a5326c54f0c">CNOT</a>
+, <a class="el" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca46fc23bc4e4d57e5469a39658a6dd3e8">SWAP</a>
+, <a class="el" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca81231bc9a2bdf86e41a84c29c196ea14">SWAP_0Q</a>
+, <br />
+&#160;&#160;<a class="el" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca11b41514321f8b1d6097146d0b0d06d7">CQNOT</a>
+, <a class="el" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789cadc9eb41de97c29762154fa78fd436cc6">QFT</a>
+, <a class="el" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca9fc5887c030f7a3e19821ebec457e719">FILE</a>
 <br />
  }</td></tr>
-<tr class="memdesc:a8005f1f182fd0248a710ca64f72508d4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Types of control parameterizations for quantum control pulses.  <a href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4">More...</a><br /></td></tr>
-<tr class="separator:a8005f1f182fd0248a710ca64f72508d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memdesc:a842ca6790f315b3f79faf3cda6d6789c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Types of quantum gates used in quantum control.  <a href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789c">More...</a><br /></td></tr>
+<tr class="separator:a842ca6790f315b3f79faf3cda6d6789c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4e0517338e6c4a31a2addafc06d4f3a3" id="r_a4e0517338e6c4a31a2addafc06d4f3a3"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3">OutputType</a> { <br />
+&#160;&#160;<a class="el" href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3ab89e5414ad1475658063644d3773c0cf">EXPECTED_ENERGY</a>
+, <a class="el" href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3a7c0b4973daa9a607b3d9f6d18e77e743">EXPECTED_ENERGY_COMPOSITE</a>
+, <a class="el" href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3a29be0fe08815f7d081b57f4781e3848e">POPULATION</a>
+, <a class="el" href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3a8440acc539289f75a22de69670ae4d23">POPULATION_COMPOSITE</a>
+, <br />
+&#160;&#160;<a class="el" href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3a881c7986b28e4af28ad41aa8744b137d">FULLSTATE</a>
+<br />
+ }</td></tr>
+<tr class="memdesc:a4e0517338e6c4a31a2addafc06d4f3a3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Types of output files to be written.  <a href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3">More...</a><br /></td></tr>
+<tr class="separator:a4e0517338e6c4a31a2addafc06d4f3a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:ab646421a1ab4b96a0f1aea7bc3101331" id="r_ab646421a1ab4b96a0f1aea7bc3101331"><td class="memItemLeft" align="right" valign="top">const std::map&lt; std::string, <a class="el" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cb">DecoherenceType</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#ab646421a1ab4b96a0f1aea7bc3101331">DECOHERENCE_TYPE_MAP</a></td></tr>
+<tr class="separator:ab646421a1ab4b96a0f1aea7bc3101331"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaeedef3fd26d3d46173e1942b0ac03d7" id="r_aaeedef3fd26d3d46173e1942b0ac03d7"><td class="memItemLeft" align="right" valign="top">const std::map&lt; std::string, <a class="el" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35">InitialConditionType</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#aaeedef3fd26d3d46173e1942b0ac03d7">INITCOND_TYPE_MAP</a></td></tr>
+<tr class="separator:aaeedef3fd26d3d46173e1942b0ac03d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad661c4ce8b2dc3424b09d8e1bce03199" id="r_ad661c4ce8b2dc3424b09d8e1bce03199"><td class="memItemLeft" align="right" valign="top">const std::map&lt; std::string, <a class="el" href="defs_8hpp.html#a0d59972970c855496cb4c877501e668f">TargetType</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#ad661c4ce8b2dc3424b09d8e1bce03199">TARGET_TYPE_MAP</a></td></tr>
+<tr class="separator:ad661c4ce8b2dc3424b09d8e1bce03199"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af1fc92dcf016afd103ecaa6c5ab5f320" id="r_af1fc92dcf016afd103ecaa6c5ab5f320"><td class="memItemLeft" align="right" valign="top">const std::map&lt; std::string, <a class="el" href="defs_8hpp.html#a45660f9909187129a953fa05e664576e">ObjectiveType</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#af1fc92dcf016afd103ecaa6c5ab5f320">OBJECTIVE_TYPE_MAP</a></td></tr>
+<tr class="separator:af1fc92dcf016afd103ecaa6c5ab5f320"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afdaeda282c1140ea9efd2ab0ba9214cc" id="r_afdaeda282c1140ea9efd2ab0ba9214cc"><td class="memItemLeft" align="right" valign="top">const std::map&lt; std::string, <a class="el" href="defs_8hpp.html#acb811991285b406a5a2880a4893bffb4">LinearSolverType</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#afdaeda282c1140ea9efd2ab0ba9214cc">LINEAR_SOLVER_TYPE_MAP</a></td></tr>
+<tr class="separator:afdaeda282c1140ea9efd2ab0ba9214cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af201133d829c305c13eb6cd4edf6aece" id="r_af201133d829c305c13eb6cd4edf6aece"><td class="memItemLeft" align="right" valign="top">const std::map&lt; std::string, <a class="el" href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4">RunType</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#af201133d829c305c13eb6cd4edf6aece">RUN_TYPE_MAP</a></td></tr>
+<tr class="separator:af201133d829c305c13eb6cd4edf6aece"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae0b3b31e4106fcfdffbe51378b7592e0" id="r_ae0b3b31e4106fcfdffbe51378b7592e0"><td class="memItemLeft" align="right" valign="top">const std::map&lt; std::string, <a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4">ControlType</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#ae0b3b31e4106fcfdffbe51378b7592e0">CONTROL_TYPE_MAP</a></td></tr>
+<tr class="separator:ae0b3b31e4106fcfdffbe51378b7592e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afbd5a170171bf64efb13ba86b9bc7651" id="r_afbd5a170171bf64efb13ba86b9bc7651"><td class="memItemLeft" align="right" valign="top">const std::map&lt; std::string, <a class="el" href="defs_8hpp.html#ab39932e2bb697b90570645caa8db9fab">ControlInitializationType</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#afbd5a170171bf64efb13ba86b9bc7651">CONTROL_INITIALIZATION_TYPE_MAP</a></td></tr>
+<tr class="separator:afbd5a170171bf64efb13ba86b9bc7651"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac2351b58393efd465c118b208ad97f6e" id="r_ac2351b58393efd465c118b208ad97f6e"><td class="memItemLeft" align="right" valign="top">const std::map&lt; std::string, <a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cc">TimeStepperType</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#ac2351b58393efd465c118b208ad97f6e">TIME_STEPPER_TYPE_MAP</a></td></tr>
+<tr class="separator:ac2351b58393efd465c118b208ad97f6e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5e2746ecd8780666cb6b081501b48783" id="r_a5e2746ecd8780666cb6b081501b48783"><td class="memItemLeft" align="right" valign="top">const std::map&lt; std::string, <a class="el" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789c">GateType</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#a5e2746ecd8780666cb6b081501b48783">GATE_TYPE_MAP</a></td></tr>
+<tr class="separator:a5e2746ecd8780666cb6b081501b48783"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a32c57c3719db0508480382f63dfa61bf" id="r_a32c57c3719db0508480382f63dfa61bf"><td class="memItemLeft" align="right" valign="top">const std::map&lt; std::string, <a class="el" href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3">OutputType</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#a32c57c3719db0508480382f63dfa61bf">OUTPUT_TYPE_MAP</a></td></tr>
+<tr class="separator:a32c57c3719db0508480382f63dfa61bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Core type definitions and enumerations for Quandary quantum optimal control. </p>
@@ -262,6 +369,38 @@ Enumerations</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Enumeration Type Documentation</h2>
+<a id="ab39932e2bb697b90570645caa8db9fab" name="ab39932e2bb697b90570645caa8db9fab"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab39932e2bb697b90570645caa8db9fab">&#9670;&#160;</a></span>ControlInitializationType</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="defs_8hpp.html#ab39932e2bb697b90570645caa8db9fab">ControlInitializationType</a></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Types of control initializations. </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="ab39932e2bb697b90570645caa8db9faba8d6b5cada83510220f59e00ce86d4d92" name="ab39932e2bb697b90570645caa8db9faba8d6b5cada83510220f59e00ce86d4d92"></a>CONSTANT&#160;</td><td class="fielddoc"><p>Constant. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ab39932e2bb697b90570645caa8db9faba170e02e86972c2be8559884cc3c12254" name="ab39932e2bb697b90570645caa8db9faba170e02e86972c2be8559884cc3c12254"></a>RANDOM&#160;</td><td class="fielddoc"><p>Random. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ab39932e2bb697b90570645caa8db9faba9fc5887c030f7a3e19821ebec457e719" name="ab39932e2bb697b90570645caa8db9faba9fc5887c030f7a3e19821ebec457e719"></a>FILE&#160;</td><td class="fielddoc"><p>From file. </p>
+</td></tr>
+</table>
+
+</div>
+</div>
 <a id="a8005f1f182fd0248a710ca64f72508d4" name="a8005f1f182fd0248a710ca64f72508d4"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a8005f1f182fd0248a710ca64f72508d4">&#9670;&#160;</a></span>ControlType</h2>
 
@@ -282,7 +421,7 @@ Enumerations</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Types of control parameterizations for quantum control pulses. </p>
+<p>Types of control parameterizations. </p>
 <p>Defines how control pulses are parameterized for optimization and simulation. </p>
 <table class="fieldtable">
 <tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a8005f1f182fd0248a710ca64f72508d4ab50339a10e1de285ac99d4c3990b8693" name="a8005f1f182fd0248a710ca64f72508d4ab50339a10e1de285ac99d4c3990b8693"></a>NONE&#160;</td><td class="fielddoc"><p>Non-controllable. </p>
@@ -291,9 +430,91 @@ Enumerations</h2></td></tr>
 </td></tr>
 <tr><td class="fieldname"><a id="a8005f1f182fd0248a710ca64f72508d4ad0dc6d420f3760744adb8558bb03486b" name="a8005f1f182fd0248a710ca64f72508d4ad0dc6d420f3760744adb8558bb03486b"></a>BSPLINEAMP&#160;</td><td class="fielddoc"><p>Paramerizes only the amplitudes of the control pulse with 2nd order BSpline basis functions. </p>
 </td></tr>
-<tr><td class="fieldname"><a id="a8005f1f182fd0248a710ca64f72508d4a522f694f92e679d874a1cc2b2616c3d7" name="a8005f1f182fd0248a710ca64f72508d4a522f694f92e679d874a1cc2b2616c3d7"></a>STEP&#160;</td><td class="fielddoc"><p>Control parameter is the width of a step function for a given amplitude. </p>
-</td></tr>
 <tr><td class="fieldname"><a id="a8005f1f182fd0248a710ca64f72508d4a7c5e020fa98e315c72eebf2df572b530" name="a8005f1f182fd0248a710ca64f72508d4a7c5e020fa98e315c72eebf2df572b530"></a>BSPLINE0&#160;</td><td class="fielddoc"><p>Control pulses are parameterized with Zeroth order Bspline (piece-wise constant) </p>
+</td></tr>
+</table>
+
+</div>
+</div>
+<a id="a2c10384f9c7e0b9428cb24549ca471cb" name="a2c10384f9c7e0b9428cb24549ca471cb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2c10384f9c7e0b9428cb24549ca471cb">&#9670;&#160;</a></span>DecoherenceType</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cb">DecoherenceType</a></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Available Lindblad operator types for open quantum systems, or NONE for closed quantum systems. </p>
+<p>For open quantum systems, this defines the types of dissipation and decoherence operators that can be applied to the quantum system in Lindblad master equation.</p>
+<dl class="section note"><dt>Note</dt><dd>If this is NONE, the quantum system is considered closed, solving Schroedinger's equation rather than Lindblad's master equation. </dd></dl>
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a2c10384f9c7e0b9428cb24549ca471cbab50339a10e1de285ac99d4c3990b8693" name="a2c10384f9c7e0b9428cb24549ca471cbab50339a10e1de285ac99d4c3990b8693"></a>NONE&#160;</td><td class="fielddoc"><p>No Lindblad operators (closed system) </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a2c10384f9c7e0b9428cb24549ca471cbaf34d9b416802d4cda3a4ee548619f206" name="a2c10384f9c7e0b9428cb24549ca471cbaf34d9b416802d4cda3a4ee548619f206"></a>DECAY&#160;</td><td class="fielddoc"><p>Decay operators only. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a2c10384f9c7e0b9428cb24549ca471cba6df8d93940eeb1c56f01e4fd3a9b93c2" name="a2c10384f9c7e0b9428cb24549ca471cba6df8d93940eeb1c56f01e4fd3a9b93c2"></a>DEPHASE&#160;</td><td class="fielddoc"><p>Dephasing operators only. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a2c10384f9c7e0b9428cb24549ca471cba6328e5e3186c227a021ef2ff77e40197" name="a2c10384f9c7e0b9428cb24549ca471cba6328e5e3186c227a021ef2ff77e40197"></a>BOTH&#160;</td><td class="fielddoc"><p>Both decay and dephasing operators. </p>
+</td></tr>
+</table>
+
+</div>
+</div>
+<a id="a842ca6790f315b3f79faf3cda6d6789c" name="a842ca6790f315b3f79faf3cda6d6789c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a842ca6790f315b3f79faf3cda6d6789c">&#9670;&#160;</a></span>GateType</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789c">GateType</a></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Types of quantum gates used in quantum control. </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a842ca6790f315b3f79faf3cda6d6789cab50339a10e1de285ac99d4c3990b8693" name="a842ca6790f315b3f79faf3cda6d6789cab50339a10e1de285ac99d4c3990b8693"></a>NONE&#160;</td><td class="fielddoc"><p>No gate. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a842ca6790f315b3f79faf3cda6d6789cae4b40ab75a516c13e3a390c2eb763a0b" name="a842ca6790f315b3f79faf3cda6d6789cae4b40ab75a516c13e3a390c2eb763a0b"></a>XGATE&#160;</td><td class="fielddoc"><p>X gate (Pauli-X) </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a842ca6790f315b3f79faf3cda6d6789ca00bd8ad68bebe95443a47c608a931d2f" name="a842ca6790f315b3f79faf3cda6d6789ca00bd8ad68bebe95443a47c608a931d2f"></a>YGATE&#160;</td><td class="fielddoc"><p>Y gate (Pauli-Y) </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a842ca6790f315b3f79faf3cda6d6789ca064b399c889647c4ec08224f897cfeb8" name="a842ca6790f315b3f79faf3cda6d6789ca064b399c889647c4ec08224f897cfeb8"></a>ZGATE&#160;</td><td class="fielddoc"><p>Z gate (Pauli-Z) </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a842ca6790f315b3f79faf3cda6d6789caa048b506c74799e42b9a2f2282fd4e34" name="a842ca6790f315b3f79faf3cda6d6789caa048b506c74799e42b9a2f2282fd4e34"></a>HADAMARD&#160;</td><td class="fielddoc"><p>Hadamard gate. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a842ca6790f315b3f79faf3cda6d6789ca44d7f92f0edf49112af71a5326c54f0c" name="a842ca6790f315b3f79faf3cda6d6789ca44d7f92f0edf49112af71a5326c54f0c"></a>CNOT&#160;</td><td class="fielddoc"><p><a class="el" href="classCNOT.html" title="Controlled-NOT (CNOT) gate implementation.">CNOT</a> gate. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a842ca6790f315b3f79faf3cda6d6789ca46fc23bc4e4d57e5469a39658a6dd3e8" name="a842ca6790f315b3f79faf3cda6d6789ca46fc23bc4e4d57e5469a39658a6dd3e8"></a>SWAP&#160;</td><td class="fielddoc"><p><a class="el" href="classSWAP.html" title="SWAP gate implementation.">SWAP</a> gate. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a842ca6790f315b3f79faf3cda6d6789ca81231bc9a2bdf86e41a84c29c196ea14" name="a842ca6790f315b3f79faf3cda6d6789ca81231bc9a2bdf86e41a84c29c196ea14"></a>SWAP_0Q&#160;</td><td class="fielddoc"><p>Multi-qubit <a class="el" href="classSWAP.html" title="SWAP gate implementation.">SWAP</a> gate with 0 qubit. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a842ca6790f315b3f79faf3cda6d6789ca11b41514321f8b1d6097146d0b0d06d7" name="a842ca6790f315b3f79faf3cda6d6789ca11b41514321f8b1d6097146d0b0d06d7"></a>CQNOT&#160;</td><td class="fielddoc"><p>Multi-qubit <a class="el" href="classCQNOT.html" title="Multi-qubit CQNOT gate implementation.">CQNOT</a> gate. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a842ca6790f315b3f79faf3cda6d6789cadc9eb41de97c29762154fa78fd436cc6" name="a842ca6790f315b3f79faf3cda6d6789cadc9eb41de97c29762154fa78fd436cc6"></a>QFT&#160;</td><td class="fielddoc"><p><a class="el" href="classQFT.html" title="Quantum Fourier Transform gate implementation.">QFT</a> gate. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a842ca6790f315b3f79faf3cda6d6789ca9fc5887c030f7a3e19821ebec457e719" name="a842ca6790f315b3f79faf3cda6d6789ca9fc5887c030f7a3e19821ebec457e719"></a>FILE&#160;</td><td class="fielddoc"><p><a class="el" href="classGate.html" title="Base class for quantum gate operations.">Gate</a> defined in a file. </p>
 </td></tr>
 </table>
 
@@ -324,7 +545,7 @@ Enumerations</h2></td></tr>
 <table class="fieldtable">
 <tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a83753afdf4b4b0d70f2a478cfba82d35aa689fe8f0fbe6f20034cbd7de3bc8b69" name="a83753afdf4b4b0d70f2a478cfba82d35aa689fe8f0fbe6f20034cbd7de3bc8b69"></a>FROMFILE&#160;</td><td class="fielddoc"><p>Read initial condition from file. </p>
 </td></tr>
-<tr><td class="fieldname"><a id="a83753afdf4b4b0d70f2a478cfba82d35a514def582a10531df6cb5a547dd55cf6" name="a83753afdf4b4b0d70f2a478cfba82d35a514def582a10531df6cb5a547dd55cf6"></a>PURE&#160;</td><td class="fielddoc"><p>Pure state initial condition. </p>
+<tr><td class="fieldname"><a id="a83753afdf4b4b0d70f2a478cfba82d35ac4e5ce66437febcb2c9b1d33328dfa3e" name="a83753afdf4b4b0d70f2a478cfba82d35ac4e5ce66437febcb2c9b1d33328dfa3e"></a>PRODUCT_STATE&#160;</td><td class="fielddoc"><p>Product state initial condition. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="a83753afdf4b4b0d70f2a478cfba82d35a6ed80ac51c01c67befa758cf79ff1c99" name="a83753afdf4b4b0d70f2a478cfba82d35a6ed80ac51c01c67befa758cf79ff1c99"></a>ENSEMBLE&#160;</td><td class="fielddoc"><p>Ensemble of states. </p>
 </td></tr>
@@ -337,42 +558,6 @@ Enumerations</h2></td></tr>
 <tr><td class="fieldname"><a id="a83753afdf4b4b0d70f2a478cfba82d35ab2ddc749ef3ae36a2661fb6e55abaf8d" name="a83753afdf4b4b0d70f2a478cfba82d35ab2ddc749ef3ae36a2661fb6e55abaf8d"></a>NPLUSONE&#160;</td><td class="fielddoc"><p>N+1 state system. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="a83753afdf4b4b0d70f2a478cfba82d35a063360736adfccfae2f1d8093c02959a" name="a83753afdf4b4b0d70f2a478cfba82d35a063360736adfccfae2f1d8093c02959a"></a>PERFORMANCE&#160;</td><td class="fielddoc"><p>Performance test configuration. </p>
-</td></tr>
-</table>
-
-</div>
-</div>
-<a id="a5e46e0fe90abc6230f71928a43849bd2" name="a5e46e0fe90abc6230f71928a43849bd2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5e46e0fe90abc6230f71928a43849bd2">&#9670;&#160;</a></span>LindbladType</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">enum class <a class="el" href="defs_8hpp.html#a5e46e0fe90abc6230f71928a43849bd2">LindbladType</a></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Available Lindblad operator types for open quantum systems, or NONE for closed quantum systems. </p>
-<p>For open quantum systems, this defines the types of dissipation and decoherence operators that can be applied to the quantum system in Lindblad master equation.</p>
-<dl class="section note"><dt>Note</dt><dd>If this is NONE, the quantum system is considered closed, solving Schroedinger's equation rather than Lindblad's master equation. </dd></dl>
-<table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a5e46e0fe90abc6230f71928a43849bd2ab50339a10e1de285ac99d4c3990b8693" name="a5e46e0fe90abc6230f71928a43849bd2ab50339a10e1de285ac99d4c3990b8693"></a>NONE&#160;</td><td class="fielddoc"><p>No Lindblad operators (closed system) </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a5e46e0fe90abc6230f71928a43849bd2af34d9b416802d4cda3a4ee548619f206" name="a5e46e0fe90abc6230f71928a43849bd2af34d9b416802d4cda3a4ee548619f206"></a>DECAY&#160;</td><td class="fielddoc"><p>Decay operators only. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a5e46e0fe90abc6230f71928a43849bd2a6df8d93940eeb1c56f01e4fd3a9b93c2" name="a5e46e0fe90abc6230f71928a43849bd2a6df8d93940eeb1c56f01e4fd3a9b93c2"></a>DEPHASE&#160;</td><td class="fielddoc"><p>Dephasing operators only. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a5e46e0fe90abc6230f71928a43849bd2a6328e5e3186c227a021ef2ff77e40197" name="a5e46e0fe90abc6230f71928a43849bd2a6328e5e3186c227a021ef2ff77e40197"></a>BOTH&#160;</td><td class="fielddoc"><p>Both decay and dephasing operators. </p>
 </td></tr>
 </table>
 
@@ -442,6 +627,42 @@ Enumerations</h2></td></tr>
 
 </div>
 </div>
+<a id="a4e0517338e6c4a31a2addafc06d4f3a3" name="a4e0517338e6c4a31a2addafc06d4f3a3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4e0517338e6c4a31a2addafc06d4f3a3">&#9670;&#160;</a></span>OutputType</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3">OutputType</a></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Types of output files to be written. </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a4e0517338e6c4a31a2addafc06d4f3a3ab89e5414ad1475658063644d3773c0cf" name="a4e0517338e6c4a31a2addafc06d4f3a3ab89e5414ad1475658063644d3773c0cf"></a>EXPECTED_ENERGY&#160;</td><td class="fielddoc"><p>Expected energy. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a4e0517338e6c4a31a2addafc06d4f3a3a7c0b4973daa9a607b3d9f6d18e77e743" name="a4e0517338e6c4a31a2addafc06d4f3a3a7c0b4973daa9a607b3d9f6d18e77e743"></a>EXPECTED_ENERGY_COMPOSITE&#160;</td><td class="fielddoc"><p>Expected energy composite. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a4e0517338e6c4a31a2addafc06d4f3a3a29be0fe08815f7d081b57f4781e3848e" name="a4e0517338e6c4a31a2addafc06d4f3a3a29be0fe08815f7d081b57f4781e3848e"></a>POPULATION&#160;</td><td class="fielddoc"><p>Population. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a4e0517338e6c4a31a2addafc06d4f3a3a8440acc539289f75a22de69670ae4d23" name="a4e0517338e6c4a31a2addafc06d4f3a3a8440acc539289f75a22de69670ae4d23"></a>POPULATION_COMPOSITE&#160;</td><td class="fielddoc"><p>Population composite. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a4e0517338e6c4a31a2addafc06d4f3a3a881c7986b28e4af28ad41aa8744b137d" name="a4e0517338e6c4a31a2addafc06d4f3a3a881c7986b28e4af28ad41aa8744b137d"></a>FULLSTATE&#160;</td><td class="fielddoc"><p>Full state. </p>
+</td></tr>
+</table>
+
+</div>
+</div>
 <a id="a192d9029b78da393fe9a628ccbd7fab4" name="a192d9029b78da393fe9a628ccbd7fab4"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a192d9029b78da393fe9a628ccbd7fab4">&#9670;&#160;</a></span>RunType</h2>
 
@@ -502,14 +723,330 @@ Enumerations</h2></td></tr>
 <p>Types of optimization targets for quantum control. </p>
 <p>Defines the target quantum state or operation for optimization. </p>
 <table class="fieldtable">
-<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a0d59972970c855496cb4c877501e668fa1818cedf1c2bed8c63664cc8313b443c" name="a0d59972970c855496cb4c877501e668fa1818cedf1c2bed8c63664cc8313b443c"></a>GATE&#160;</td><td class="fielddoc"><p><a class="el" href="classGate.html" title="Base class for quantum gate operations.">Gate</a> optimization: \(\rho_{\text{target}} = V\rho(0) V^\dagger\). </p>
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a0d59972970c855496cb4c877501e668fab50339a10e1de285ac99d4c3990b8693" name="a0d59972970c855496cb4c877501e668fab50339a10e1de285ac99d4c3990b8693"></a>NONE&#160;</td><td class="fielddoc"><p>No target specified (no optimization) </p>
 </td></tr>
-<tr><td class="fieldname"><a id="a0d59972970c855496cb4c877501e668fa514def582a10531df6cb5a547dd55cf6" name="a0d59972970c855496cb4c877501e668fa514def582a10531df6cb5a547dd55cf6"></a>PURE&#160;</td><td class="fielddoc"><p>Pure state preparation: \(\rho_{\text{target}} = e_m e_m^\dagger\) for some integer \(m\). </p>
+<tr><td class="fieldname"><a id="a0d59972970c855496cb4c877501e668fa1818cedf1c2bed8c63664cc8313b443c" name="a0d59972970c855496cb4c877501e668fa1818cedf1c2bed8c63664cc8313b443c"></a>GATE&#160;</td><td class="fielddoc"><p><a class="el" href="classGate.html" title="Base class for quantum gate operations.">Gate</a> optimization: \(\rho_{\text{target}} = V\rho(0) V^\dagger\) for V either read from file or chosen from default set of gates. </p>
 </td></tr>
-<tr><td class="fieldname"><a id="a0d59972970c855496cb4c877501e668faa689fe8f0fbe6f20034cbd7de3bc8b69" name="a0d59972970c855496cb4c877501e668faa689fe8f0fbe6f20034cbd7de3bc8b69"></a>FROMFILE&#160;</td><td class="fielddoc"><p>Target state read from file, vectorized density matrix format. </p>
+<tr><td class="fieldname"><a id="a0d59972970c855496cb4c877501e668fa2b848a8cc886d253d21a77c43cd50aae" name="a0d59972970c855496cb4c877501e668fa2b848a8cc886d253d21a77c43cd50aae"></a>STATE&#160;</td><td class="fielddoc"><p>State preparation: Either read from file, or \(\rho_{\text{target}} = e_m e_m^\dagger\) for some integer \(m\). </p>
 </td></tr>
 </table>
 
+</div>
+</div>
+<a id="ab8793c9117a2093d80e47ae2c77b94cc" name="ab8793c9117a2093d80e47ae2c77b94cc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab8793c9117a2093d80e47ae2c77b94cc">&#9670;&#160;</a></span>TimeStepperType</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cc">TimeStepperType</a></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Types of time-stepping methods for evolving quantum states. </p>
+<p>Defines the numerical methods used to evolve quantum states in time. </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="ab8793c9117a2093d80e47ae2c77b94cca674bc7351b4ecd7b8663cf2ec67de59d" name="ab8793c9117a2093d80e47ae2c77b94cca674bc7351b4ecd7b8663cf2ec67de59d"></a>IMR&#160;</td><td class="fielddoc"><p>Implicit Midpoint Rule (2nd order) </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ab8793c9117a2093d80e47ae2c77b94cca3b946d73ceabc7fcb1b495fd90c69342" name="ab8793c9117a2093d80e47ae2c77b94cca3b946d73ceabc7fcb1b495fd90c69342"></a>IMR4&#160;</td><td class="fielddoc"><p>Implicit Midpoint Rule with 4th order extrapolation. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ab8793c9117a2093d80e47ae2c77b94ccaba199b3d06622112ab8537e1e147d4d6" name="ab8793c9117a2093d80e47ae2c77b94ccaba199b3d06622112ab8537e1e147d4d6"></a>IMR8&#160;</td><td class="fielddoc"><p>Implicit Midpoint Rule with 8th order extrapolation. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="ab8793c9117a2093d80e47ae2c77b94ccaa57b8491d1d8fc1014dd54bcf83b130a" name="ab8793c9117a2093d80e47ae2c77b94ccaa57b8491d1d8fc1014dd54bcf83b130a"></a>EE&#160;</td><td class="fielddoc"><p>Explicit Euler (1st order) </p>
+</td></tr>
+</table>
+
+</div>
+</div>
+<h2 class="groupheader">Variable Documentation</h2>
+<a id="afbd5a170171bf64efb13ba86b9bc7651" name="afbd5a170171bf64efb13ba86b9bc7651"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afbd5a170171bf64efb13ba86b9bc7651">&#9670;&#160;</a></span>CONTROL_INITIALIZATION_TYPE_MAP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::map&lt;std::string, <a class="el" href="defs_8hpp.html#ab39932e2bb697b90570645caa8db9fab">ControlInitializationType</a>&gt; CONTROL_INITIALIZATION_TYPE_MAP</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">= {</div>
+<div class="line">    {<span class="stringliteral">&quot;constant&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#ab39932e2bb697b90570645caa8db9faba8d6b5cada83510220f59e00ce86d4d92">ControlInitializationType::CONSTANT</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;random&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#ab39932e2bb697b90570645caa8db9faba170e02e86972c2be8559884cc3c12254">ControlInitializationType::RANDOM</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;file&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#ab39932e2bb697b90570645caa8db9faba9fc5887c030f7a3e19821ebec457e719">ControlInitializationType::FILE</a>},</div>
+<div class="line">}</div>
+<div class="ttc" id="adefs_8hpp_html_ab39932e2bb697b90570645caa8db9faba170e02e86972c2be8559884cc3c12254"><div class="ttname"><a href="defs_8hpp.html#ab39932e2bb697b90570645caa8db9faba170e02e86972c2be8559884cc3c12254">ControlInitializationType::RANDOM</a></div><div class="ttdeci">@ RANDOM</div><div class="ttdoc">Random.</div></div>
+<div class="ttc" id="adefs_8hpp_html_ab39932e2bb697b90570645caa8db9faba8d6b5cada83510220f59e00ce86d4d92"><div class="ttname"><a href="defs_8hpp.html#ab39932e2bb697b90570645caa8db9faba8d6b5cada83510220f59e00ce86d4d92">ControlInitializationType::CONSTANT</a></div><div class="ttdeci">@ CONSTANT</div><div class="ttdoc">Constant.</div></div>
+<div class="ttc" id="adefs_8hpp_html_ab39932e2bb697b90570645caa8db9faba9fc5887c030f7a3e19821ebec457e719"><div class="ttname"><a href="defs_8hpp.html#ab39932e2bb697b90570645caa8db9faba9fc5887c030f7a3e19821ebec457e719">ControlInitializationType::FILE</a></div><div class="ttdeci">@ FILE</div><div class="ttdoc">From file.</div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="ae0b3b31e4106fcfdffbe51378b7592e0" name="ae0b3b31e4106fcfdffbe51378b7592e0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae0b3b31e4106fcfdffbe51378b7592e0">&#9670;&#160;</a></span>CONTROL_TYPE_MAP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::map&lt;std::string, <a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4">ControlType</a>&gt; CONTROL_TYPE_MAP</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">= {</div>
+<div class="line">    {<span class="stringliteral">&quot;none&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4ab50339a10e1de285ac99d4c3990b8693">ControlType::NONE</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;spline&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4a123732cee284ea8ed914cfe1bb999a8d">ControlType::BSPLINE</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;spline_amplitude&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4ad0dc6d420f3760744adb8558bb03486b">ControlType::BSPLINEAMP</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;spline0&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4a7c5e020fa98e315c72eebf2df572b530">ControlType::BSPLINE0</a>}</div>
+<div class="line">}</div>
+<div class="ttc" id="adefs_8hpp_html_a8005f1f182fd0248a710ca64f72508d4a123732cee284ea8ed914cfe1bb999a8d"><div class="ttname"><a href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4a123732cee284ea8ed914cfe1bb999a8d">ControlType::BSPLINE</a></div><div class="ttdeci">@ BSPLINE</div><div class="ttdoc">Control pulses are parameterized with 2nd order BSpline basis functions with carrier waves.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a8005f1f182fd0248a710ca64f72508d4a7c5e020fa98e315c72eebf2df572b530"><div class="ttname"><a href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4a7c5e020fa98e315c72eebf2df572b530">ControlType::BSPLINE0</a></div><div class="ttdeci">@ BSPLINE0</div><div class="ttdoc">Control pulses are parameterized with Zeroth order Bspline (piece-wise constant)</div></div>
+<div class="ttc" id="adefs_8hpp_html_a8005f1f182fd0248a710ca64f72508d4ab50339a10e1de285ac99d4c3990b8693"><div class="ttname"><a href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4ab50339a10e1de285ac99d4c3990b8693">ControlType::NONE</a></div><div class="ttdeci">@ NONE</div><div class="ttdoc">Non-controllable.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a8005f1f182fd0248a710ca64f72508d4ad0dc6d420f3760744adb8558bb03486b"><div class="ttname"><a href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4ad0dc6d420f3760744adb8558bb03486b">ControlType::BSPLINEAMP</a></div><div class="ttdeci">@ BSPLINEAMP</div><div class="ttdoc">Paramerizes only the amplitudes of the control pulse with 2nd order BSpline basis functions.</div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="ab646421a1ab4b96a0f1aea7bc3101331" name="ab646421a1ab4b96a0f1aea7bc3101331"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab646421a1ab4b96a0f1aea7bc3101331">&#9670;&#160;</a></span>DECOHERENCE_TYPE_MAP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::map&lt;std::string, <a class="el" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cb">DecoherenceType</a>&gt; DECOHERENCE_TYPE_MAP</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">= {</div>
+<div class="line">    {<span class="stringliteral">&quot;none&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cbab50339a10e1de285ac99d4c3990b8693">DecoherenceType::NONE</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;decay&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cbaf34d9b416802d4cda3a4ee548619f206">DecoherenceType::DECAY</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;dephase&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cba6df8d93940eeb1c56f01e4fd3a9b93c2">DecoherenceType::DEPHASE</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;both&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cba6328e5e3186c227a021ef2ff77e40197">DecoherenceType::BOTH</a>}</div>
+<div class="line">}</div>
+<div class="ttc" id="adefs_8hpp_html_a2c10384f9c7e0b9428cb24549ca471cba6328e5e3186c227a021ef2ff77e40197"><div class="ttname"><a href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cba6328e5e3186c227a021ef2ff77e40197">DecoherenceType::BOTH</a></div><div class="ttdeci">@ BOTH</div><div class="ttdoc">Both decay and dephasing operators.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a2c10384f9c7e0b9428cb24549ca471cba6df8d93940eeb1c56f01e4fd3a9b93c2"><div class="ttname"><a href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cba6df8d93940eeb1c56f01e4fd3a9b93c2">DecoherenceType::DEPHASE</a></div><div class="ttdeci">@ DEPHASE</div><div class="ttdoc">Dephasing operators only.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a2c10384f9c7e0b9428cb24549ca471cbab50339a10e1de285ac99d4c3990b8693"><div class="ttname"><a href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cbab50339a10e1de285ac99d4c3990b8693">DecoherenceType::NONE</a></div><div class="ttdeci">@ NONE</div><div class="ttdoc">No Lindblad operators (closed system)</div></div>
+<div class="ttc" id="adefs_8hpp_html_a2c10384f9c7e0b9428cb24549ca471cbaf34d9b416802d4cda3a4ee548619f206"><div class="ttname"><a href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cbaf34d9b416802d4cda3a4ee548619f206">DecoherenceType::DECAY</a></div><div class="ttdeci">@ DECAY</div><div class="ttdoc">Decay operators only.</div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="a5e2746ecd8780666cb6b081501b48783" name="a5e2746ecd8780666cb6b081501b48783"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e2746ecd8780666cb6b081501b48783">&#9670;&#160;</a></span>GATE_TYPE_MAP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::map&lt;std::string, <a class="el" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789c">GateType</a>&gt; GATE_TYPE_MAP</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">= {</div>
+<div class="line">    {<span class="stringliteral">&quot;none&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789cab50339a10e1de285ac99d4c3990b8693">GateType::NONE</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;xgate&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789cae4b40ab75a516c13e3a390c2eb763a0b">GateType::XGATE</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;ygate&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca00bd8ad68bebe95443a47c608a931d2f">GateType::YGATE</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;zgate&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca064b399c889647c4ec08224f897cfeb8">GateType::ZGATE</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;hadamard&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789caa048b506c74799e42b9a2f2282fd4e34">GateType::HADAMARD</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;cnot&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca44d7f92f0edf49112af71a5326c54f0c">GateType::CNOT</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;swap&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca46fc23bc4e4d57e5469a39658a6dd3e8">GateType::SWAP</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;swap0q&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca81231bc9a2bdf86e41a84c29c196ea14">GateType::SWAP_0Q</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;cqnot&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca11b41514321f8b1d6097146d0b0d06d7">GateType::CQNOT</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;qft&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789cadc9eb41de97c29762154fa78fd436cc6">GateType::QFT</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;file&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca9fc5887c030f7a3e19821ebec457e719">GateType::FILE</a>}</div>
+<div class="line">}</div>
+<div class="ttc" id="adefs_8hpp_html_a842ca6790f315b3f79faf3cda6d6789ca00bd8ad68bebe95443a47c608a931d2f"><div class="ttname"><a href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca00bd8ad68bebe95443a47c608a931d2f">GateType::YGATE</a></div><div class="ttdeci">@ YGATE</div><div class="ttdoc">Y gate (Pauli-Y)</div></div>
+<div class="ttc" id="adefs_8hpp_html_a842ca6790f315b3f79faf3cda6d6789ca064b399c889647c4ec08224f897cfeb8"><div class="ttname"><a href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca064b399c889647c4ec08224f897cfeb8">GateType::ZGATE</a></div><div class="ttdeci">@ ZGATE</div><div class="ttdoc">Z gate (Pauli-Z)</div></div>
+<div class="ttc" id="adefs_8hpp_html_a842ca6790f315b3f79faf3cda6d6789ca11b41514321f8b1d6097146d0b0d06d7"><div class="ttname"><a href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca11b41514321f8b1d6097146d0b0d06d7">GateType::CQNOT</a></div><div class="ttdeci">@ CQNOT</div><div class="ttdoc">Multi-qubit CQNOT gate.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a842ca6790f315b3f79faf3cda6d6789ca44d7f92f0edf49112af71a5326c54f0c"><div class="ttname"><a href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca44d7f92f0edf49112af71a5326c54f0c">GateType::CNOT</a></div><div class="ttdeci">@ CNOT</div><div class="ttdoc">CNOT gate.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a842ca6790f315b3f79faf3cda6d6789ca46fc23bc4e4d57e5469a39658a6dd3e8"><div class="ttname"><a href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca46fc23bc4e4d57e5469a39658a6dd3e8">GateType::SWAP</a></div><div class="ttdeci">@ SWAP</div><div class="ttdoc">SWAP gate.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a842ca6790f315b3f79faf3cda6d6789ca81231bc9a2bdf86e41a84c29c196ea14"><div class="ttname"><a href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca81231bc9a2bdf86e41a84c29c196ea14">GateType::SWAP_0Q</a></div><div class="ttdeci">@ SWAP_0Q</div><div class="ttdoc">Multi-qubit SWAP gate with 0 qubit.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a842ca6790f315b3f79faf3cda6d6789ca9fc5887c030f7a3e19821ebec457e719"><div class="ttname"><a href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca9fc5887c030f7a3e19821ebec457e719">GateType::FILE</a></div><div class="ttdeci">@ FILE</div><div class="ttdoc">Gate defined in a file.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a842ca6790f315b3f79faf3cda6d6789caa048b506c74799e42b9a2f2282fd4e34"><div class="ttname"><a href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789caa048b506c74799e42b9a2f2282fd4e34">GateType::HADAMARD</a></div><div class="ttdeci">@ HADAMARD</div><div class="ttdoc">Hadamard gate.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a842ca6790f315b3f79faf3cda6d6789cab50339a10e1de285ac99d4c3990b8693"><div class="ttname"><a href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789cab50339a10e1de285ac99d4c3990b8693">GateType::NONE</a></div><div class="ttdeci">@ NONE</div><div class="ttdoc">No gate.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a842ca6790f315b3f79faf3cda6d6789cadc9eb41de97c29762154fa78fd436cc6"><div class="ttname"><a href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789cadc9eb41de97c29762154fa78fd436cc6">GateType::QFT</a></div><div class="ttdeci">@ QFT</div><div class="ttdoc">QFT gate.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a842ca6790f315b3f79faf3cda6d6789cae4b40ab75a516c13e3a390c2eb763a0b"><div class="ttname"><a href="defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789cae4b40ab75a516c13e3a390c2eb763a0b">GateType::XGATE</a></div><div class="ttdeci">@ XGATE</div><div class="ttdoc">X gate (Pauli-X)</div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="aaeedef3fd26d3d46173e1942b0ac03d7" name="aaeedef3fd26d3d46173e1942b0ac03d7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaeedef3fd26d3d46173e1942b0ac03d7">&#9670;&#160;</a></span>INITCOND_TYPE_MAP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::map&lt;std::string, <a class="el" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35">InitialConditionType</a>&gt; INITCOND_TYPE_MAP</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">= {</div>
+<div class="line">    {<span class="stringliteral">&quot;file&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35aa689fe8f0fbe6f20034cbd7de3bc8b69">InitialConditionType::FROMFILE</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;state&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35ac4e5ce66437febcb2c9b1d33328dfa3e">InitialConditionType::PRODUCT_STATE</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;ensemble&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35a6ed80ac51c01c67befa758cf79ff1c99">InitialConditionType::ENSEMBLE</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;diagonal&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35ad3fbf8a4dbb33b1e296fcaa32703b66d">InitialConditionType::DIAGONAL</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;basis&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35aecd9016852718c6a5a9e5eed4021a89e">InitialConditionType::BASIS</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;3states&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35a25dd49c313e8f2a8c2b7c57a39a54c19">InitialConditionType::THREESTATES</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;nplus1&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35ab2ddc749ef3ae36a2661fb6e55abaf8d">InitialConditionType::NPLUSONE</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;performance&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35a063360736adfccfae2f1d8093c02959a">InitialConditionType::PERFORMANCE</a>}</div>
+<div class="line">}</div>
+<div class="ttc" id="adefs_8hpp_html_a83753afdf4b4b0d70f2a478cfba82d35a063360736adfccfae2f1d8093c02959a"><div class="ttname"><a href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35a063360736adfccfae2f1d8093c02959a">InitialConditionType::PERFORMANCE</a></div><div class="ttdeci">@ PERFORMANCE</div><div class="ttdoc">Performance test configuration.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a83753afdf4b4b0d70f2a478cfba82d35a25dd49c313e8f2a8c2b7c57a39a54c19"><div class="ttname"><a href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35a25dd49c313e8f2a8c2b7c57a39a54c19">InitialConditionType::THREESTATES</a></div><div class="ttdeci">@ THREESTATES</div><div class="ttdoc">Three-state system.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a83753afdf4b4b0d70f2a478cfba82d35a6ed80ac51c01c67befa758cf79ff1c99"><div class="ttname"><a href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35a6ed80ac51c01c67befa758cf79ff1c99">InitialConditionType::ENSEMBLE</a></div><div class="ttdeci">@ ENSEMBLE</div><div class="ttdoc">Ensemble of states.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a83753afdf4b4b0d70f2a478cfba82d35aa689fe8f0fbe6f20034cbd7de3bc8b69"><div class="ttname"><a href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35aa689fe8f0fbe6f20034cbd7de3bc8b69">InitialConditionType::FROMFILE</a></div><div class="ttdeci">@ FROMFILE</div><div class="ttdoc">Read initial condition from file.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a83753afdf4b4b0d70f2a478cfba82d35ab2ddc749ef3ae36a2661fb6e55abaf8d"><div class="ttname"><a href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35ab2ddc749ef3ae36a2661fb6e55abaf8d">InitialConditionType::NPLUSONE</a></div><div class="ttdeci">@ NPLUSONE</div><div class="ttdoc">N+1 state system.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a83753afdf4b4b0d70f2a478cfba82d35ac4e5ce66437febcb2c9b1d33328dfa3e"><div class="ttname"><a href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35ac4e5ce66437febcb2c9b1d33328dfa3e">InitialConditionType::PRODUCT_STATE</a></div><div class="ttdeci">@ PRODUCT_STATE</div><div class="ttdoc">Product state initial condition.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a83753afdf4b4b0d70f2a478cfba82d35ad3fbf8a4dbb33b1e296fcaa32703b66d"><div class="ttname"><a href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35ad3fbf8a4dbb33b1e296fcaa32703b66d">InitialConditionType::DIAGONAL</a></div><div class="ttdeci">@ DIAGONAL</div><div class="ttdoc">Diagonal density matrix.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a83753afdf4b4b0d70f2a478cfba82d35aecd9016852718c6a5a9e5eed4021a89e"><div class="ttname"><a href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35aecd9016852718c6a5a9e5eed4021a89e">InitialConditionType::BASIS</a></div><div class="ttdeci">@ BASIS</div><div class="ttdoc">Basis state.</div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="afdaeda282c1140ea9efd2ab0ba9214cc" name="afdaeda282c1140ea9efd2ab0ba9214cc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afdaeda282c1140ea9efd2ab0ba9214cc">&#9670;&#160;</a></span>LINEAR_SOLVER_TYPE_MAP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::map&lt;std::string, <a class="el" href="defs_8hpp.html#acb811991285b406a5a2880a4893bffb4">LinearSolverType</a>&gt; LINEAR_SOLVER_TYPE_MAP</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">= {</div>
+<div class="line">    {<span class="stringliteral">&quot;gmres&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#acb811991285b406a5a2880a4893bffb4ac1bfd84e7215afa3204b8e1cdb21a2bd">LinearSolverType::GMRES</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;neumann&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#acb811991285b406a5a2880a4893bffb4a2f2dd8d12511598975b5475371963bd4">LinearSolverType::NEUMANN</a>}</div>
+<div class="line">}</div>
+<div class="ttc" id="adefs_8hpp_html_acb811991285b406a5a2880a4893bffb4a2f2dd8d12511598975b5475371963bd4"><div class="ttname"><a href="defs_8hpp.html#acb811991285b406a5a2880a4893bffb4a2f2dd8d12511598975b5475371963bd4">LinearSolverType::NEUMANN</a></div><div class="ttdeci">@ NEUMANN</div><div class="ttdoc">Uses Neuman power iterations.</div></div>
+<div class="ttc" id="adefs_8hpp_html_acb811991285b406a5a2880a4893bffb4ac1bfd84e7215afa3204b8e1cdb21a2bd"><div class="ttname"><a href="defs_8hpp.html#acb811991285b406a5a2880a4893bffb4ac1bfd84e7215afa3204b8e1cdb21a2bd">LinearSolverType::GMRES</a></div><div class="ttdeci">@ GMRES</div><div class="ttdoc">Uses Petsc's GMRES solver (default)</div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="af1fc92dcf016afd103ecaa6c5ab5f320" name="af1fc92dcf016afd103ecaa6c5ab5f320"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af1fc92dcf016afd103ecaa6c5ab5f320">&#9670;&#160;</a></span>OBJECTIVE_TYPE_MAP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::map&lt;std::string, <a class="el" href="defs_8hpp.html#a45660f9909187129a953fa05e664576e">ObjectiveType</a>&gt; OBJECTIVE_TYPE_MAP</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">= {</div>
+<div class="line">    {<span class="stringliteral">&quot;jfrobenius&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a45660f9909187129a953fa05e664576ea4e04e42b04cbc7f70e9f0a76a2c85443">ObjectiveType::JFROBENIUS</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;jtrace&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a45660f9909187129a953fa05e664576ea84bd0377f8322f01c666904445360deb">ObjectiveType::JTRACE</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;jmeasure&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a45660f9909187129a953fa05e664576ea076d5820163e90aee6b55f60cd0594e3">ObjectiveType::JMEASURE</a>}</div>
+<div class="line">}</div>
+<div class="ttc" id="adefs_8hpp_html_a45660f9909187129a953fa05e664576ea076d5820163e90aee6b55f60cd0594e3"><div class="ttname"><a href="defs_8hpp.html#a45660f9909187129a953fa05e664576ea076d5820163e90aee6b55f60cd0594e3">ObjectiveType::JMEASURE</a></div><div class="ttdeci">@ JMEASURE</div><div class="ttdoc">Pure state measurement:  for observable .</div></div>
+<div class="ttc" id="adefs_8hpp_html_a45660f9909187129a953fa05e664576ea4e04e42b04cbc7f70e9f0a76a2c85443"><div class="ttname"><a href="defs_8hpp.html#a45660f9909187129a953fa05e664576ea4e04e42b04cbc7f70e9f0a76a2c85443">ObjectiveType::JFROBENIUS</a></div><div class="ttdeci">@ JFROBENIUS</div><div class="ttdoc">Weighted Frobenius norm: , where  = purity of .</div></div>
+<div class="ttc" id="adefs_8hpp_html_a45660f9909187129a953fa05e664576ea84bd0377f8322f01c666904445360deb"><div class="ttname"><a href="defs_8hpp.html#a45660f9909187129a953fa05e664576ea84bd0377f8322f01c666904445360deb">ObjectiveType::JTRACE</a></div><div class="ttdeci">@ JTRACE</div><div class="ttdoc">Weighted Hilbert-Schmidt overlap: , where  = purity of .</div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="a32c57c3719db0508480382f63dfa61bf" name="a32c57c3719db0508480382f63dfa61bf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a32c57c3719db0508480382f63dfa61bf">&#9670;&#160;</a></span>OUTPUT_TYPE_MAP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::map&lt;std::string, <a class="el" href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3">OutputType</a>&gt; OUTPUT_TYPE_MAP</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">= {</div>
+<div class="line">  {<span class="stringliteral">&quot;expectedenergy&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3ab89e5414ad1475658063644d3773c0cf">OutputType::EXPECTED_ENERGY</a>},</div>
+<div class="line">  {<span class="stringliteral">&quot;expectedenergycomposite&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3a7c0b4973daa9a607b3d9f6d18e77e743">OutputType::EXPECTED_ENERGY_COMPOSITE</a>},</div>
+<div class="line">  {<span class="stringliteral">&quot;population&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3a29be0fe08815f7d081b57f4781e3848e">OutputType::POPULATION</a>},</div>
+<div class="line">  {<span class="stringliteral">&quot;populationcomposite&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3a8440acc539289f75a22de69670ae4d23">OutputType::POPULATION_COMPOSITE</a>},</div>
+<div class="line">  {<span class="stringliteral">&quot;fullstate&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3a881c7986b28e4af28ad41aa8744b137d">OutputType::FULLSTATE</a>},</div>
+<div class="line">}</div>
+<div class="ttc" id="adefs_8hpp_html_a4e0517338e6c4a31a2addafc06d4f3a3a29be0fe08815f7d081b57f4781e3848e"><div class="ttname"><a href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3a29be0fe08815f7d081b57f4781e3848e">OutputType::POPULATION</a></div><div class="ttdeci">@ POPULATION</div><div class="ttdoc">Population.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a4e0517338e6c4a31a2addafc06d4f3a3a7c0b4973daa9a607b3d9f6d18e77e743"><div class="ttname"><a href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3a7c0b4973daa9a607b3d9f6d18e77e743">OutputType::EXPECTED_ENERGY_COMPOSITE</a></div><div class="ttdeci">@ EXPECTED_ENERGY_COMPOSITE</div><div class="ttdoc">Expected energy composite.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a4e0517338e6c4a31a2addafc06d4f3a3a8440acc539289f75a22de69670ae4d23"><div class="ttname"><a href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3a8440acc539289f75a22de69670ae4d23">OutputType::POPULATION_COMPOSITE</a></div><div class="ttdeci">@ POPULATION_COMPOSITE</div><div class="ttdoc">Population composite.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a4e0517338e6c4a31a2addafc06d4f3a3a881c7986b28e4af28ad41aa8744b137d"><div class="ttname"><a href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3a881c7986b28e4af28ad41aa8744b137d">OutputType::FULLSTATE</a></div><div class="ttdeci">@ FULLSTATE</div><div class="ttdoc">Full state.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a4e0517338e6c4a31a2addafc06d4f3a3ab89e5414ad1475658063644d3773c0cf"><div class="ttname"><a href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3ab89e5414ad1475658063644d3773c0cf">OutputType::EXPECTED_ENERGY</a></div><div class="ttdeci">@ EXPECTED_ENERGY</div><div class="ttdoc">Expected energy.</div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="af201133d829c305c13eb6cd4edf6aece" name="af201133d829c305c13eb6cd4edf6aece"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af201133d829c305c13eb6cd4edf6aece">&#9670;&#160;</a></span>RUN_TYPE_MAP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::map&lt;std::string, <a class="el" href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4">RunType</a>&gt; RUN_TYPE_MAP</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">= {</div>
+<div class="line">    {<span class="stringliteral">&quot;simulation&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4a64c71603ed31477ee4757ae9af42f7e9">RunType::SIMULATION</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;gradient&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4a90f70ea2675c36bd9b0b44a79f37a41f">RunType::GRADIENT</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;optimization&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4ab60b749b106311b4e48346adebdffc6d">RunType::OPTIMIZATION</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;evalcontrols&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4ab94b0751857b09bb3e56f8918194b2ce">RunType::EVALCONTROLS</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;none&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4ab50339a10e1de285ac99d4c3990b8693">RunType::NONE</a>}</div>
+<div class="line">}</div>
+<div class="ttc" id="adefs_8hpp_html_a192d9029b78da393fe9a628ccbd7fab4a64c71603ed31477ee4757ae9af42f7e9"><div class="ttname"><a href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4a64c71603ed31477ee4757ae9af42f7e9">RunType::SIMULATION</a></div><div class="ttdeci">@ SIMULATION</div><div class="ttdoc">Runs one simulation to compute the objective function (forward)</div></div>
+<div class="ttc" id="adefs_8hpp_html_a192d9029b78da393fe9a628ccbd7fab4a90f70ea2675c36bd9b0b44a79f37a41f"><div class="ttname"><a href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4a90f70ea2675c36bd9b0b44a79f37a41f">RunType::GRADIENT</a></div><div class="ttdeci">@ GRADIENT</div><div class="ttdoc">Runs a simulation followed by the adjoint for gradient computation (forward &amp; backward)</div></div>
+<div class="ttc" id="adefs_8hpp_html_a192d9029b78da393fe9a628ccbd7fab4ab50339a10e1de285ac99d4c3990b8693"><div class="ttname"><a href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4ab50339a10e1de285ac99d4c3990b8693">RunType::NONE</a></div><div class="ttdeci">@ NONE</div><div class="ttdoc">Don't run anything.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a192d9029b78da393fe9a628ccbd7fab4ab60b749b106311b4e48346adebdffc6d"><div class="ttname"><a href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4ab60b749b106311b4e48346adebdffc6d">RunType::OPTIMIZATION</a></div><div class="ttdeci">@ OPTIMIZATION</div><div class="ttdoc">Runs optimization iterations.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a192d9029b78da393fe9a628ccbd7fab4ab94b0751857b09bb3e56f8918194b2ce"><div class="ttname"><a href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4ab94b0751857b09bb3e56f8918194b2ce">RunType::EVALCONTROLS</a></div><div class="ttdeci">@ EVALCONTROLS</div><div class="ttdoc">Only evaluates the current control pulses (no simulation)</div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="ad661c4ce8b2dc3424b09d8e1bce03199" name="ad661c4ce8b2dc3424b09d8e1bce03199"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad661c4ce8b2dc3424b09d8e1bce03199">&#9670;&#160;</a></span>TARGET_TYPE_MAP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::map&lt;std::string, <a class="el" href="defs_8hpp.html#a0d59972970c855496cb4c877501e668f">TargetType</a>&gt; TARGET_TYPE_MAP</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">= {</div>
+<div class="line">    {<span class="stringliteral">&quot;none&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a0d59972970c855496cb4c877501e668fab50339a10e1de285ac99d4c3990b8693">TargetType::NONE</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;gate&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a0d59972970c855496cb4c877501e668fa1818cedf1c2bed8c63664cc8313b443c">TargetType::GATE</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;state&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a0d59972970c855496cb4c877501e668fa2b848a8cc886d253d21a77c43cd50aae">TargetType::STATE</a>},</div>
+<div class="line">}</div>
+<div class="ttc" id="adefs_8hpp_html_a0d59972970c855496cb4c877501e668fa1818cedf1c2bed8c63664cc8313b443c"><div class="ttname"><a href="defs_8hpp.html#a0d59972970c855496cb4c877501e668fa1818cedf1c2bed8c63664cc8313b443c">TargetType::GATE</a></div><div class="ttdeci">@ GATE</div><div class="ttdoc">Gate optimization:  for V either read from file or chosen from default set of gates.</div></div>
+<div class="ttc" id="adefs_8hpp_html_a0d59972970c855496cb4c877501e668fa2b848a8cc886d253d21a77c43cd50aae"><div class="ttname"><a href="defs_8hpp.html#a0d59972970c855496cb4c877501e668fa2b848a8cc886d253d21a77c43cd50aae">TargetType::STATE</a></div><div class="ttdeci">@ STATE</div><div class="ttdoc">State preparation: Either read from file, or  for some integer .</div></div>
+<div class="ttc" id="adefs_8hpp_html_a0d59972970c855496cb4c877501e668fab50339a10e1de285ac99d4c3990b8693"><div class="ttname"><a href="defs_8hpp.html#a0d59972970c855496cb4c877501e668fab50339a10e1de285ac99d4c3990b8693">TargetType::NONE</a></div><div class="ttdeci">@ NONE</div><div class="ttdoc">No target specified (no optimization)</div></div>
+</div><!-- fragment -->
+</div>
+</div>
+<a id="ac2351b58393efd465c118b208ad97f6e" name="ac2351b58393efd465c118b208ad97f6e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac2351b58393efd465c118b208ad97f6e">&#9670;&#160;</a></span>TIME_STEPPER_TYPE_MAP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::map&lt;std::string, <a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cc">TimeStepperType</a>&gt; TIME_STEPPER_TYPE_MAP</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">= {</div>
+<div class="line">    {<span class="stringliteral">&quot;imr&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca674bc7351b4ecd7b8663cf2ec67de59d">TimeStepperType::IMR</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;imr4&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca3b946d73ceabc7fcb1b495fd90c69342">TimeStepperType::IMR4</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;imr8&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94ccaba199b3d06622112ab8537e1e147d4d6">TimeStepperType::IMR8</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;ee&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94ccaa57b8491d1d8fc1014dd54bcf83b130a">TimeStepperType::EE</a>}</div>
+<div class="line">}</div>
+<div class="ttc" id="adefs_8hpp_html_ab8793c9117a2093d80e47ae2c77b94cca3b946d73ceabc7fcb1b495fd90c69342"><div class="ttname"><a href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca3b946d73ceabc7fcb1b495fd90c69342">TimeStepperType::IMR4</a></div><div class="ttdeci">@ IMR4</div><div class="ttdoc">Implicit Midpoint Rule with 4th order extrapolation.</div></div>
+<div class="ttc" id="adefs_8hpp_html_ab8793c9117a2093d80e47ae2c77b94cca674bc7351b4ecd7b8663cf2ec67de59d"><div class="ttname"><a href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca674bc7351b4ecd7b8663cf2ec67de59d">TimeStepperType::IMR</a></div><div class="ttdeci">@ IMR</div><div class="ttdoc">Implicit Midpoint Rule (2nd order)</div></div>
+<div class="ttc" id="adefs_8hpp_html_ab8793c9117a2093d80e47ae2c77b94ccaa57b8491d1d8fc1014dd54bcf83b130a"><div class="ttname"><a href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94ccaa57b8491d1d8fc1014dd54bcf83b130a">TimeStepperType::EE</a></div><div class="ttdeci">@ EE</div><div class="ttdoc">Explicit Euler (1st order)</div></div>
+<div class="ttc" id="adefs_8hpp_html_ab8793c9117a2093d80e47ae2c77b94ccaba199b3d06622112ab8537e1e147d4d6"><div class="ttname"><a href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94ccaba199b3d06622112ab8537e1e147d4d6">TimeStepperType::IMR8</a></div><div class="ttdeci">@ IMR8</div><div class="ttdoc">Implicit Midpoint Rule with 8th order extrapolation.</div></div>
+</div><!-- fragment -->
 </div>
 </div>
 </div><!-- contents -->

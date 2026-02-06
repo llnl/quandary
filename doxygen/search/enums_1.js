@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['initialconditiontype_0',['InitialConditionType',['../defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35',1,'defs.hpp']]]
+  ['decoherencetype_0',['DecoherenceType',['../defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cb',1,'defs.hpp']]]
 ];

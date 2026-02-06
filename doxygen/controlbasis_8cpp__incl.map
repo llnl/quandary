@@ -1,28 +1,42 @@
 <map id="/home/runner/work/quandary/quandary/src/controlbasis.cpp" name="/home/runner/work/quandary/quandary/src/controlbasis.cpp">
-<area shape="rect" id="Node000001" title=" " alt="" coords="219,5,439,45"/>
-<area shape="rect" id="Node000002" href="$controlbasis_8hpp.html" title=" " alt="" coords="264,93,393,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="331,46,331,79,326,79,326,46"/>
-<area shape="rect" id="Node000003" href="$defs_8hpp.html" title="Core type definitions and enumerations for Quandary quantum optimal control." alt="" coords="5,167,84,192"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="284,121,98,167,97,162,282,116"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="109,167,175,192"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="300,121,186,164,184,159,298,116"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="200,167,271,192"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="315,121,263,160,260,156,312,117"/>
-<area shape="rect" id="Node000006" title=" " alt="" coords="295,167,363,192"/>
-<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="331,119,331,153,326,153,326,119"/>
-<area shape="rect" id="Node000007" title=" " alt="" coords="357,240,420,265"/>
-<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="342,117,360,139,376,166,386,197,390,226,385,227,381,198,372,168,356,142,338,121"/>
-<area shape="rect" id="Node000008" title=" " alt="" coords="438,167,507,192"/>
-<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="353,116,438,158,436,163,351,121"/>
-<area shape="rect" id="Node000009" href="$util_8hpp.html" title=" " alt="" coords="553,167,624,192"/>
-<area shape="poly" id="edge8_Node000002_Node000009" title=" " alt="" coords="371,116,541,162,540,167,370,121"/>
-<area shape="poly" id="edge12_Node000009_Node000007" title=" " alt="" coords="557,195,434,238,432,233,556,190"/>
-<area shape="rect" id="Node000010" title=" " alt="" coords="444,240,539,265"/>
-<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="575,194,520,234,517,229,571,190"/>
-<area shape="rect" id="Node000011" title=" " alt="" coords="563,240,636,265"/>
-<area shape="poly" id="edge10_Node000009_Node000011" title=" " alt="" coords="593,192,598,226,593,227,588,193"/>
-<area shape="rect" id="Node000012" title=" " alt="" coords="661,240,741,265"/>
-<area shape="poly" id="edge11_Node000009_Node000012" title=" " alt="" coords="608,190,672,230,669,235,605,194"/>
-<area shape="rect" id="Node000013" title=" " alt="" coords="765,240,863,265"/>
-<area shape="poly" id="edge13_Node000009_Node000013" title=" " alt="" coords="625,189,765,233,764,238,624,194"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="341,5,561,45"/>
+<area shape="rect" id="Node000002" href="$controlbasis_8hpp.html" title=" " alt="" coords="387,93,516,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="454,46,454,79,449,79,449,46"/>
+<area shape="rect" id="Node000003" href="$defs_8hpp.html" title="Core type definitions and enumerations for Quandary quantum optimal control." alt="" coords="181,167,260,192"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="415,121,272,165,270,160,413,116"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="5,240,68,265"/>
+<area shape="poly" id="edge10_Node000002_Node000007" title=" " alt="" coords="387,117,283,135,225,150,170,169,111,200,63,234,60,229,108,196,168,164,224,145,282,130,386,112"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="418,167,485,192"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="454,119,454,153,449,153,449,119"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="509,167,580,192"/>
+<area shape="poly" id="edge8_Node000002_Node000009" title=" " alt="" coords="468,117,520,156,517,160,465,121"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="604,167,672,192"/>
+<area shape="poly" id="edge9_Node000002_Node000010" title=" " alt="" coords="482,116,596,159,594,164,480,121"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="697,167,766,192"/>
+<area shape="poly" id="edge11_Node000002_Node000011" title=" " alt="" coords="497,116,684,163,683,169,496,121"/>
+<area shape="rect" id="Node000012" href="$util_8hpp.html" title=" " alt="" coords="323,167,393,192"/>
+<area shape="poly" id="edge12_Node000002_Node000012" title=" " alt="" coords="438,121,386,160,382,156,435,117"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="274,240,325,265"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="235,190,278,229,275,233,232,194"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="93,240,167,265"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="208,194,157,233,154,229,204,190"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="191,240,250,265"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="223,192,223,226,218,226,218,192"/>
+<area shape="poly" id="edge6_Node000003_Node000007" title=" " alt="" coords="192,195,81,237,79,232,190,190"/>
+<area shape="poly" id="edge16_Node000012_Node000004" title=" " alt="" coords="350,194,319,231,315,228,346,191"/>
+<area shape="poly" id="edge17_Node000012_Node000005" title=" " alt="" coords="323,194,180,239,179,233,322,189"/>
+<area shape="poly" id="edge18_Node000012_Node000006" title=" " alt="" coords="337,194,256,236,254,231,335,190"/>
+<area shape="poly" id="edge21_Node000012_Node000007" title=" " alt="" coords="323,190,82,242,81,237,322,185"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="349,240,444,265"/>
+<area shape="poly" id="edge13_Node000012_Node000013" title=" " alt="" coords="367,191,386,227,382,229,362,194"/>
+<area shape="rect" id="Node000014" title=" " alt="" coords="468,240,533,265"/>
+<area shape="poly" id="edge14_Node000012_Node000014" title=" " alt="" coords="382,190,466,231,464,236,380,194"/>
+<area shape="rect" id="Node000015" title=" " alt="" coords="558,240,625,265"/>
+<area shape="poly" id="edge15_Node000012_Node000015" title=" " alt="" coords="394,189,546,235,544,240,393,194"/>
+<area shape="rect" id="Node000016" title=" " alt="" coords="649,240,723,265"/>
+<area shape="poly" id="edge19_Node000012_Node000016" title=" " alt="" coords="394,187,407,189,636,237,635,242,405,195,393,192"/>
+<area shape="rect" id="Node000017" title=" " alt="" coords="747,240,827,265"/>
+<area shape="poly" id="edge20_Node000012_Node000017" title=" " alt="" coords="394,187,406,189,497,205,568,214,734,237,733,242,568,219,496,210,406,195,393,192"/>
+<area shape="rect" id="Node000018" title=" " alt="" coords="851,240,950,265"/>
+<area shape="poly" id="edge22_Node000012_Node000018" title=" " alt="" coords="394,187,406,189,525,207,620,215,716,223,838,237,837,243,715,228,619,220,525,212,406,195,393,192"/>
 </map>

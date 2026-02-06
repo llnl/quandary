@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['ygate_0',['YGate',['../classYGate.html#ae94ef619eb4a5355e4bf8e6b0f7e76e3',1,'YGate']]]
+  ['xgate_0',['XGate',['../classXGate.html#a4631503f327b901385ef60c2ab12b795',1,'XGate']]]
 ];

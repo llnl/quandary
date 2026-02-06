@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['zgate_0',['ZGate',['../classZGate.html',1,'']]]
+  ['ygate_0',['YGate',['../classYGate.html',1,'']]]
 ];

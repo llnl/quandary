@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['objectivetype_0',['ObjectiveType',['../defs_8hpp.html#a45660f9909187129a953fa05e664576e',1,'defs.hpp']]]
+  ['initialconditiontype_0',['InitialConditionType',['../defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35',1,'defs.hpp']]]
 ];

@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['decay_0',['DECAY',['../defs_8hpp.html#a5e46e0fe90abc6230f71928a43849bd2af34d9b416802d4cda3a4ee548619f206',1,'defs.hpp']]],
-  ['dephase_1',['DEPHASE',['../defs_8hpp.html#a5e46e0fe90abc6230f71928a43849bd2a6df8d93940eeb1c56f01e4fd3a9b93c2',1,'defs.hpp']]],
-  ['diagonal_2',['DIAGONAL',['../defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35ad3fbf8a4dbb33b1e296fcaa32703b66d',1,'defs.hpp']]]
+  ['cnot_0',['CNOT',['../defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca44d7f92f0edf49112af71a5326c54f0c',1,'defs.hpp']]],
+  ['constant_1',['CONSTANT',['../defs_8hpp.html#ab39932e2bb697b90570645caa8db9faba8d6b5cada83510220f59e00ce86d4d92',1,'defs.hpp']]],
+  ['cqnot_2',['CQNOT',['../defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789ca11b41514321f8b1d6097146d0b0d06d7',1,'defs.hpp']]]
 ];

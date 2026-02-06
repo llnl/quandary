@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['runtype_0',['RunType',['../defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4',1,'defs.hpp']]]
+  ['linearsolvertype_0',['LinearSolverType',['../defs_8hpp.html#acb811991285b406a5a2880a4893bffb4',1,'defs.hpp']]]
 ];

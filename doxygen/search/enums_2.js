@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['lindbladtype_0',['LindbladType',['../defs_8hpp.html#a5e46e0fe90abc6230f71928a43849bd2',1,'defs.hpp']]],
-  ['linearsolvertype_1',['LinearSolverType',['../defs_8hpp.html#acb811991285b406a5a2880a4893bffb4',1,'defs.hpp']]]
+  ['gatetype_0',['GateType',['../defs_8hpp.html#a842ca6790f315b3f79faf3cda6d6789c',1,'defs.hpp']]]
 ];

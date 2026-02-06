@@ -93,9 +93,11 @@ Collaboration diagram for OptimTarget:</div>
 <div class="dyncontent">
 <div class="center"><img src="classOptimTarget__coll__graph.png" border="0" usemap="#aOptimTarget_coll__map" alt="Collaboration graph"/></div>
 <map name="aOptimTarget_coll__map" id="aOptimTarget_coll__map">
-<area shape="rect" title="Optimization target specification for quantum control." alt="" coords="5,93,108,119"/>
-<area shape="rect" href="classGate.html" title="Base class for quantum gate operations." alt="" coords="30,5,83,31"/>
-<area shape="poly" title=" " alt="" coords="59,45,59,93,54,93,54,45"/>
+<area shape="rect" title="Optimization target specification for quantum control." alt="" coords="50,93,153,119"/>
+<area shape="rect" href="classGate.html" title="Base class for quantum gate operations." alt="" coords="5,5,59,31"/>
+<area shape="poly" title=" " alt="" coords="49,40,70,68,92,91,88,95,66,71,45,43"/>
+<area shape="rect" href="structInitialConditionSettings.html" title="Settings for initial conditions. Required, no defaults." alt="" coords="83,5,258,31"/>
+<area shape="poly" title=" " alt="" coords="161,44,143,71,118,95,115,91,139,68,157,41"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
@@ -103,14 +105,11 @@ Collaboration diagram for OptimTarget:</div>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:ad4e0df2f3df0dfdf8ef8ecbfd299ca5a" id="r_ad4e0df2f3df0dfdf8ef8ecbfd299ca5a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#ad4e0df2f3df0dfdf8ef8ecbfd299ca5a">OptimTarget</a> ()</td></tr>
 <tr class="separator:ad4e0df2f3df0dfdf8ef8ecbfd299ca5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acdb2fc6a185481374dca4ff7ebe1694c" id="r_acdb2fc6a185481374dca4ff7ebe1694c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#acdb2fc6a185481374dca4ff7ebe1694c">OptimTarget</a> (std::vector&lt; std::string &gt; target_str, const std::string &amp;objective_str, std::vector&lt; std::string &gt; initcond_str, <a class="el" href="classMasterEq.html">MasterEq</a> *mastereq, double total_time, std::vector&lt; double &gt; read_gate_rot, Vec rho_t0, bool quietmode_)</td></tr>
-<tr class="memdesc:acdb2fc6a185481374dca4ff7ebe1694c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor with full target specification.  <br /></td></tr>
-<tr class="separator:acdb2fc6a185481374dca4ff7ebe1694c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a06a0595ea227a9c0051bb09755188ed6" id="r_a06a0595ea227a9c0051bb09755188ed6"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#a06a0595ea227a9c0051bb09755188ed6">OptimTarget</a> (const <a class="el" href="classConfig.html">Config</a> &amp;config, <a class="el" href="classMasterEq.html">MasterEq</a> *mastereq, double total_time, Vec rho_t0, bool quietmode_)</td></tr>
+<tr class="memdesc:a06a0595ea227a9c0051bb09755188ed6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor with full target specification.  <br /></td></tr>
+<tr class="separator:a06a0595ea227a9c0051bb09755188ed6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acabdfafb394a6fba453729cad1d04435" id="r_acabdfafb394a6fba453729cad1d04435"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#acabdfafb394a6fba453729cad1d04435">~OptimTarget</a> ()</td></tr>
 <tr class="separator:acabdfafb394a6fba453729cad1d04435"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4fc47d3feac302dfdb6bfb64fa56de68" id="r_a4fc47d3feac302dfdb6bfb64fa56de68"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defs_8hpp.html#a0d59972970c855496cb4c877501e668f">TargetType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#a4fc47d3feac302dfdb6bfb64fa56de68">getTargetType</a> ()</td></tr>
-<tr class="memdesc:a4fc47d3feac302dfdb6bfb64fa56de68"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the target type.  <br /></td></tr>
-<tr class="separator:a4fc47d3feac302dfdb6bfb64fa56de68"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1d6b9676ed98de1f16bd0f3abdb46c3d" id="r_a1d6b9676ed98de1f16bd0f3abdb46c3d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defs_8hpp.html#a45660f9909187129a953fa05e664576e">ObjectiveType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#a1d6b9676ed98de1f16bd0f3abdb46c3d">getObjectiveType</a> ()</td></tr>
 <tr class="memdesc:a1d6b9676ed98de1f16bd0f3abdb46c3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the objective function type.  <br /></td></tr>
 <tr class="separator:a1d6b9676ed98de1f16bd0f3abdb46c3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -160,10 +159,10 @@ Protected Attributes</h2></td></tr>
 <tr class="memdesc:a7f014cfafd676e826d877e95d42f68f1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of oscillators in the system.  <br /></td></tr>
 <tr class="separator:a7f014cfafd676e826d877e95d42f68f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a44c54b6a658798cc964f4c46070a19c4" id="r_a44c54b6a658798cc964f4c46070a19c4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defs_8hpp.html#a0d59972970c855496cb4c877501e668f">TargetType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#a44c54b6a658798cc964f4c46070a19c4">target_type</a></td></tr>
-<tr class="memdesc:a44c54b6a658798cc964f4c46070a19c4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type of optimization target (pure state preparation or gate optimization)  <br /></td></tr>
+<tr class="memdesc:a44c54b6a658798cc964f4c46070a19c4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type of optimization target (product state preparation or gate optimization)  <br /></td></tr>
 <tr class="separator:a44c54b6a658798cc964f4c46070a19c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a177e47037e091e35c89a61261b5c3a70" id="r_a177e47037e091e35c89a61261b5c3a70"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defs_8hpp.html#a45660f9909187129a953fa05e664576e">ObjectiveType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#a177e47037e091e35c89a61261b5c3a70">objective_type</a></td></tr>
-<tr class="memdesc:a177e47037e091e35c89a61261b5c3a70"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type of objective function measure (Frobenius, trace, pure-state measure)  <br /></td></tr>
+<tr class="memdesc:a177e47037e091e35c89a61261b5c3a70"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type of objective function measure (Frobenius, trace, product-state measure)  <br /></td></tr>
 <tr class="separator:a177e47037e091e35c89a61261b5c3a70"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a760721e590199816c6e78c0dd212fc47" id="r_a760721e590199816c6e78c0dd212fc47"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classGate.html">Gate</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#a760721e590199816c6e78c0dd212fc47">targetgate</a></td></tr>
 <tr class="memdesc:a760721e590199816c6e78c0dd212fc47"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer to target gate (if gate optimization)  <br /></td></tr>
@@ -172,23 +171,17 @@ Protected Attributes</h2></td></tr>
 <tr class="memdesc:a821937fbbb90e0149ef0604e0296ded7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Purity of initial state Tr(rho(0)^2)  <br /></td></tr>
 <tr class="separator:a821937fbbb90e0149ef0604e0296ded7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a633585f6dccf774666142b3434063dee" id="r_a633585f6dccf774666142b3434063dee"><td class="memItemLeft" align="right" valign="top">PetscInt&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#a633585f6dccf774666142b3434063dee">purestateID</a></td></tr>
-<tr class="memdesc:a633585f6dccf774666142b3434063dee"><td class="mdescLeft">&#160;</td><td class="mdescRight">For pure state preparation: integer m for preparing the target state \( e_m e_m^{\dagger}\).  <br /></td></tr>
+<tr class="memdesc:a633585f6dccf774666142b3434063dee"><td class="mdescLeft">&#160;</td><td class="mdescRight">For product state preparation: integer m for preparing the target state \( e_m e_m^{\dagger}\).  <br /></td></tr>
 <tr class="separator:a633585f6dccf774666142b3434063dee"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5f0dcc6280b4a0566551b5cee17233d5" id="r_a5f0dcc6280b4a0566551b5cee17233d5"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#a5f0dcc6280b4a0566551b5cee17233d5">target_filename</a></td></tr>
-<tr class="memdesc:a5f0dcc6280b4a0566551b5cee17233d5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Filename if target state is read from file.  <br /></td></tr>
-<tr class="separator:a5f0dcc6280b4a0566551b5cee17233d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8fbf4a56a771afe523bd3722f29930dc" id="r_a8fbf4a56a771afe523bd3722f29930dc"><td class="memItemLeft" align="right" valign="top">Vec&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#a8fbf4a56a771afe523bd3722f29930dc">targetstate</a></td></tr>
-<tr class="memdesc:a8fbf4a56a771afe523bd3722f29930dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Storage for the target state vector (NULL for pure states, \(V\rho V^\dagger\) for gates, density matrix from file)  <br /></td></tr>
+<tr class="memdesc:a8fbf4a56a771afe523bd3722f29930dc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Storage for the target state vector (NULL for product states, \(V\rho V^\dagger\) for gates, density matrix from file)  <br /></td></tr>
 <tr class="separator:a8fbf4a56a771afe523bd3722f29930dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9ad253f14dc10cb6973c69a749e99a94" id="r_a9ad253f14dc10cb6973c69a749e99a94"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35">InitialConditionType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#a9ad253f14dc10cb6973c69a749e99a94">initcond_type</a></td></tr>
-<tr class="memdesc:a9ad253f14dc10cb6973c69a749e99a94"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type of initial conditions.  <br /></td></tr>
-<tr class="separator:a9ad253f14dc10cb6973c69a749e99a94"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3e1ec452b0fe3e71285fc98b03fc54ff" id="r_a3e1ec452b0fe3e71285fc98b03fc54ff"><td class="memItemLeft" align="right" valign="top">std::vector&lt; size_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#a3e1ec452b0fe3e71285fc98b03fc54ff">initcond_IDs</a></td></tr>
-<tr class="memdesc:a3e1ec452b0fe3e71285fc98b03fc54ff"><td class="mdescLeft">&#160;</td><td class="mdescRight">Integer list for pure-state initialization.  <br /></td></tr>
-<tr class="separator:a3e1ec452b0fe3e71285fc98b03fc54ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2b104e0388ba61c811a89101a1216a53" id="r_a2b104e0388ba61c811a89101a1216a53"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defs_8hpp.html#a5e46e0fe90abc6230f71928a43849bd2">LindbladType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#a2b104e0388ba61c811a89101a1216a53">lindbladtype</a></td></tr>
-<tr class="memdesc:a2b104e0388ba61c811a89101a1216a53"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type of Lindblad decoherence operators, or NONE for Schroedinger solver.  <br /></td></tr>
-<tr class="separator:a2b104e0388ba61c811a89101a1216a53"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a968bfae3f6bf6745e2c9aa00924816b3" id="r_a968bfae3f6bf6745e2c9aa00924816b3"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structInitialConditionSettings.html">InitialConditionSettings</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#a968bfae3f6bf6745e2c9aa00924816b3">initcond</a></td></tr>
+<tr class="memdesc:a968bfae3f6bf6745e2c9aa00924816b3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initial conditions.  <br /></td></tr>
+<tr class="separator:a968bfae3f6bf6745e2c9aa00924816b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af86a16f0d6ea14ce375aee2726c56ee6" id="r_af86a16f0d6ea14ce375aee2726c56ee6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cb">DecoherenceType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#af86a16f0d6ea14ce375aee2726c56ee6">decoherence_type</a></td></tr>
+<tr class="memdesc:af86a16f0d6ea14ce375aee2726c56ee6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type of Lindblad decoherence operators, or NONE for Schroedinger solver.  <br /></td></tr>
+<tr class="separator:af86a16f0d6ea14ce375aee2726c56ee6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae6060e7c4806b7d310f16b8cab58937c" id="r_ae6060e7c4806b7d310f16b8cab58937c"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOptimTarget.html#ae6060e7c4806b7d310f16b8cab58937c">mpisize_petsc</a></td></tr>
 <tr class="memdesc:ae6060e7c4806b7d310f16b8cab58937c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Size of PETSc communicator.  <br /></td></tr>
 <tr class="separator:ae6060e7c4806b7d310f16b8cab58937c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -213,7 +206,7 @@ Protected Attributes</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Optimization target specification for quantum control. </p>
-<p>This class manages the target specification for quantum optimal control problems, including gate optimization and pure state preparation. It handles target and initial state preparation and the evaluation of the final-time objective function measure.</p>
+<p>This class manages the target specification for quantum optimal control problems, including gate optimization and product state preparation. It handles target and initial state preparation and the evaluation of the final-time objective function measure.</p>
 <p>Main functionality:</p><ul>
 <li><a class="el" href="classOptimTarget.html#ade33354a3f65b494f1226a58bc71d2a8">prepareInitialState</a> prepares and returns the states at time t=0, depending on what the optimization target is</li>
 <li><a class="el" href="classOptimTarget.html#a537386e8b5a67bb7ad33010eb915af4c">prepareTargetState</a> prepares and stores the corresponding target state for this initial state</li>
@@ -240,8 +233,8 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="acdb2fc6a185481374dca4ff7ebe1694c" name="acdb2fc6a185481374dca4ff7ebe1694c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#acdb2fc6a185481374dca4ff7ebe1694c">&#9670;&#160;</a></span>OptimTarget() <span class="overload">[2/2]</span></h2>
+<a id="a06a0595ea227a9c0051bb09755188ed6" name="a06a0595ea227a9c0051bb09755188ed6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a06a0595ea227a9c0051bb09755188ed6">&#9670;&#160;</a></span>OptimTarget() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -249,20 +242,8 @@ Protected Attributes</h2></td></tr>
         <tr>
           <td class="memname">OptimTarget::OptimTarget </td>
           <td>(</td>
-          <td class="paramtype">std::vector&lt; std::string &gt;&#160;</td>
-          <td class="paramname"><em>target_str</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const std::string &amp;&#160;</td>
-          <td class="paramname"><em>objective_str</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::vector&lt; std::string &gt;&#160;</td>
-          <td class="paramname"><em>initcond_str</em>, </td>
+          <td class="paramtype">const <a class="el" href="classConfig.html">Config</a> &amp;&#160;</td>
+          <td class="paramname"><em>config</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -275,12 +256,6 @@ Protected Attributes</h2></td></tr>
           <td></td>
           <td class="paramtype">double&#160;</td>
           <td class="paramname"><em>total_time</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::vector&lt; double &gt;&#160;</td>
-          <td class="paramname"><em>read_gate_rot</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -305,12 +280,9 @@ Protected Attributes</h2></td></tr>
 <p>Constructor with full target specification. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">target_str</td><td>Vector of strings specifying the target </td></tr>
-    <tr><td class="paramname">objective_str</td><td>String specifying the objective function type </td></tr>
-    <tr><td class="paramname">initcond_str</td><td>Vector of strings specifying initial conditions </td></tr>
+    <tr><td class="paramname">config</td><td>Configuration parameters </td></tr>
     <tr><td class="paramname">mastereq</td><td>Pointer to master equation solver </td></tr>
     <tr><td class="paramname">total_time</td><td>Total evolution time </td></tr>
-    <tr><td class="paramname">read_gate_rot</td><td><a class="el" href="classGate.html" title="Base class for quantum gate operations.">Gate</a> rotation parameters </td></tr>
     <tr><td class="paramname">rho_t0</td><td>Initial state vector </td></tr>
     <tr><td class="paramname">quietmode_</td><td>Flag for quiet operation </td></tr>
   </table>
@@ -624,34 +596,6 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a4fc47d3feac302dfdb6bfb64fa56de68" name="a4fc47d3feac302dfdb6bfb64fa56de68"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4fc47d3feac302dfdb6bfb64fa56de68">&#9670;&#160;</a></span>getTargetType()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="defs_8hpp.html#a0d59972970c855496cb4c877501e668f">TargetType</a> OptimTarget::getTargetType </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Retrieves the target type. </p>
-<dl class="section return"><dt>Returns</dt><dd>TargetType Type of optimization target </dd></dl>
-
-</div>
-</div>
 <a id="afcdb3bccc77da77d06e7c9a6f480e519" name="afcdb3bccc77da77d06e7c9a6f480e519"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#afcdb3bccc77da77d06e7c9a6f480e519">&#9670;&#160;</a></span>HilbertSchmidtOverlap()</h2>
 
@@ -866,6 +810,30 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="af86a16f0d6ea14ce375aee2726c56ee6" name="af86a16f0d6ea14ce375aee2726c56ee6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af86a16f0d6ea14ce375aee2726c56ee6">&#9670;&#160;</a></span>decoherence_type</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cb">DecoherenceType</a> OptimTarget::decoherence_type</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Type of Lindblad decoherence operators, or NONE for Schroedinger solver. </p>
+
+</div>
+</div>
 <a id="ab1d22a530ba62865fb25f1a990e12455" name="ab1d22a530ba62865fb25f1a990e12455"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab1d22a530ba62865fb25f1a990e12455">&#9670;&#160;</a></span>dim</h2>
 
@@ -962,8 +930,8 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a3e1ec452b0fe3e71285fc98b03fc54ff" name="a3e1ec452b0fe3e71285fc98b03fc54ff"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3e1ec452b0fe3e71285fc98b03fc54ff">&#9670;&#160;</a></span>initcond_IDs</h2>
+<a id="a968bfae3f6bf6745e2c9aa00924816b3" name="a968bfae3f6bf6745e2c9aa00924816b3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a968bfae3f6bf6745e2c9aa00924816b3">&#9670;&#160;</a></span>initcond</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -972,7 +940,7 @@ Protected Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">std::vector&lt;size_t&gt; OptimTarget::initcond_IDs</td>
+          <td class="memname"><a class="el" href="structInitialConditionSettings.html">InitialConditionSettings</a> OptimTarget::initcond</td>
         </tr>
       </table>
   </td>
@@ -982,31 +950,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Integer list for pure-state initialization. </p>
-
-</div>
-</div>
-<a id="a9ad253f14dc10cb6973c69a749e99a94" name="a9ad253f14dc10cb6973c69a749e99a94"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9ad253f14dc10cb6973c69a749e99a94">&#9670;&#160;</a></span>initcond_type</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35">InitialConditionType</a> OptimTarget::initcond_type</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Type of initial conditions. </p>
+<p>Initial conditions. </p>
 
 </div>
 </div>
@@ -1031,30 +975,6 @@ Protected Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Last index (+1) of the local sub vector u,v. </p>
-
-</div>
-</div>
-<a id="a2b104e0388ba61c811a89101a1216a53" name="a2b104e0388ba61c811a89101a1216a53"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2b104e0388ba61c811a89101a1216a53">&#9670;&#160;</a></span>lindbladtype</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="defs_8hpp.html#a5e46e0fe90abc6230f71928a43849bd2">LindbladType</a> OptimTarget::lindbladtype</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Type of Lindblad decoherence operators, or NONE for Schroedinger solver. </p>
 
 </div>
 </div>
@@ -1174,7 +1094,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Type of objective function measure (Frobenius, trace, pure-state measure) </p>
+<p>Type of objective function measure (Frobenius, trace, product-state measure) </p>
 
 </div>
 </div>
@@ -1198,7 +1118,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>For pure state preparation: integer m for preparing the target state \( e_m e_m^{\dagger}\). </p>
+<p>For product state preparation: integer m for preparing the target state \( e_m e_m^{\dagger}\). </p>
 
 </div>
 </div>
@@ -1250,30 +1170,6 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a5f0dcc6280b4a0566551b5cee17233d5" name="a5f0dcc6280b4a0566551b5cee17233d5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5f0dcc6280b4a0566551b5cee17233d5">&#9670;&#160;</a></span>target_filename</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string OptimTarget::target_filename</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Filename if target state is read from file. </p>
-
-</div>
-</div>
 <a id="a44c54b6a658798cc964f4c46070a19c4" name="a44c54b6a658798cc964f4c46070a19c4"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a44c54b6a658798cc964f4c46070a19c4">&#9670;&#160;</a></span>target_type</h2>
 
@@ -1294,7 +1190,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Type of optimization target (pure state preparation or gate optimization) </p>
+<p>Type of optimization target (product state preparation or gate optimization) </p>
 
 </div>
 </div>
@@ -1342,7 +1238,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Storage for the target state vector (NULL for pure states, \(V\rho V^\dagger\) for gates, density matrix from file) </p>
+<p>Storage for the target state vector (NULL for product states, \(V\rho V^\dagger\) for gates, density matrix from file) </p>
 
 </div>
 </div>

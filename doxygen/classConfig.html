@@ -78,99 +78,166 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
-<a href="#pub-attribs">Public Attributes</a> &#124;
-<a href="#pro-attribs">Protected Attributes</a> &#124;
+<a href="#pub-static-methods">Static Public Member Functions</a> &#124;
 <a href="classConfig-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">Config Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p>Configuration parameter management class.  
+<p>Configuration class containing all validated settings.  
  <a href="classConfig.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="config_8hpp_source.html">config.hpp</a>&gt;</code></p>
-<div class="dynheader">
-Inheritance diagram for Config:</div>
-<div class="dyncontent">
-<div class="center"><img src="classConfig__inherit__graph.png" border="0" usemap="#aConfig_inherit__map" alt="Inheritance graph"/></div>
-<map name="aConfig_inherit__map" id="aConfig_inherit__map">
-<area shape="rect" title="Configuration parameter management class." alt="" coords="55,93,118,119"/>
-<area shape="rect" title=" " alt="" coords="5,5,168,45"/>
-<area shape="poly" title=" " alt="" coords="89,59,89,93,84,93,84,59"/>
-</map>
-<center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
-<div class="dynheader">
-Collaboration diagram for Config:</div>
-<div class="dyncontent">
-<div class="center"><img src="classConfig__coll__graph.png" border="0" usemap="#aConfig_coll__map" alt="Collaboration graph"/></div>
-<map name="aConfig_coll__map" id="aConfig_coll__map">
-<area shape="rect" title="Configuration parameter management class." alt="" coords="55,93,118,119"/>
-<area shape="rect" title=" " alt="" coords="5,5,168,45"/>
-<area shape="poly" title=" " alt="" coords="89,59,89,93,84,93,84,59"/>
-</map>
-<center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:abd0c571c116924871e30444b192b792a" id="r_abd0c571c116924871e30444b192b792a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#abd0c571c116924871e30444b192b792a">Config</a> ()</td></tr>
-<tr class="separator:abd0c571c116924871e30444b192b792a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab46f27045a1872d97fa0a0b81f487533" id="r_ab46f27045a1872d97fa0a0b81f487533"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#ab46f27045a1872d97fa0a0b81f487533">Config</a> (MPI_Comm comm_, std::stringstream &amp;logstream, bool <a class="el" href="classConfig.html#a69e43e26e8fc671e1aa858843b7c546b">quietmode</a>=false)</td></tr>
-<tr class="memdesc:ab46f27045a1872d97fa0a0b81f487533"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor with MPI communicator and logging.  <br /></td></tr>
-<tr class="separator:ab46f27045a1872d97fa0a0b81f487533"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a543dce59b66475c5108088ee4ce1cdfc" id="r_a543dce59b66475c5108088ee4ce1cdfc"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a543dce59b66475c5108088ee4ce1cdfc">~Config</a> ()</td></tr>
-<tr class="separator:a543dce59b66475c5108088ee4ce1cdfc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2c5e36161681692c9094eccdffa03617" id="r_a2c5e36161681692c9094eccdffa03617"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a2c5e36161681692c9094eccdffa03617">ReadFile</a> (std::string filename)</td></tr>
-<tr class="memdesc:a2c5e36161681692c9094eccdffa03617"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parses a configuration file and stores key-value pairs in the map.  <br /></td></tr>
-<tr class="separator:a2c5e36161681692c9094eccdffa03617"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a86983fb6414f92585df934d331d6470e" id="r_a86983fb6414f92585df934d331d6470e"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a86983fb6414f92585df934d331d6470e">GetMpiRank</a> () const</td></tr>
-<tr class="memdesc:a86983fb6414f92585df934d331d6470e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the MPI rank of the current process.  <br /></td></tr>
-<tr class="separator:a86983fb6414f92585df934d331d6470e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a164a9e3e08f2156e96638fd13497ae73" id="r_a164a9e3e08f2156e96638fd13497ae73"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a164a9e3e08f2156e96638fd13497ae73">GetDoubleParam</a> (std::string key, double default_val=-1., bool warnme=true) const</td></tr>
-<tr class="memdesc:a164a9e3e08f2156e96638fd13497ae73"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a double parameter from the configuration.  <br /></td></tr>
-<tr class="separator:a164a9e3e08f2156e96638fd13497ae73"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0b95ff4eb04725d2581e92bc9e498124" id="r_a0b95ff4eb04725d2581e92bc9e498124"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a0b95ff4eb04725d2581e92bc9e498124">GetIntParam</a> (std::string key, int default_val=-1, bool warnme=true, bool exportme=true) const</td></tr>
-<tr class="memdesc:a0b95ff4eb04725d2581e92bc9e498124"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves an integer parameter from the configuration.  <br /></td></tr>
-<tr class="separator:a0b95ff4eb04725d2581e92bc9e498124"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0bdf56a2f5c97d4de7af6479bd0a6eae" id="r_a0bdf56a2f5c97d4de7af6479bd0a6eae"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a0bdf56a2f5c97d4de7af6479bd0a6eae">GetStrParam</a> (std::string key, std::string default_val=&quot;&quot;, bool exportme=true, bool warnme=true) const</td></tr>
-<tr class="memdesc:a0bdf56a2f5c97d4de7af6479bd0a6eae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a string parameter from the configuration.  <br /></td></tr>
-<tr class="separator:a0bdf56a2f5c97d4de7af6479bd0a6eae"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a636e08fe2e0495dc01e6b7627b73eec8" id="r_a636e08fe2e0495dc01e6b7627b73eec8"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a636e08fe2e0495dc01e6b7627b73eec8">GetBoolParam</a> (std::string key, bool default_val=false, bool warnme=true) const</td></tr>
-<tr class="memdesc:a636e08fe2e0495dc01e6b7627b73eec8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a boolean parameter from the configuration.  <br /></td></tr>
-<tr class="separator:a636e08fe2e0495dc01e6b7627b73eec8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abf8ad4be9360bf9d1d64ecd26935bd36" id="r_abf8ad4be9360bf9d1d64ecd26935bd36"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#abf8ad4be9360bf9d1d64ecd26935bd36">GetVecDoubleParam</a> (std::string key, std::vector&lt; double &gt; &amp;fillme, double default_val=1e20, bool exportme=true, bool warnme=true) const</td></tr>
-<tr class="memdesc:abf8ad4be9360bf9d1d64ecd26935bd36"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a vector of double parameters from the configuration.  <br /></td></tr>
-<tr class="separator:abf8ad4be9360bf9d1d64ecd26935bd36"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aee95e30e7f334cd35ea445893e2816a7" id="r_aee95e30e7f334cd35ea445893e2816a7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#aee95e30e7f334cd35ea445893e2816a7">GetVecIntParam</a> (std::string key, std::vector&lt; int &gt; &amp;fillme, int default_val=-1, bool warnme=true) const</td></tr>
-<tr class="memdesc:aee95e30e7f334cd35ea445893e2816a7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a vector of integer parameters from the configuration.  <br /></td></tr>
-<tr class="separator:aee95e30e7f334cd35ea445893e2816a7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a132bfcae3458d637d00cc73e7e2366ac" id="r_a132bfcae3458d637d00cc73e7e2366ac"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a132bfcae3458d637d00cc73e7e2366ac">GetVecStrParam</a> (std::string key, std::vector&lt; std::string &gt; &amp;fillme, std::string default_val=&quot;none&quot;, bool exportme=true, bool warnme=true) const</td></tr>
-<tr class="memdesc:a132bfcae3458d637d00cc73e7e2366ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves a vector of string parameters from the configuration.  <br /></td></tr>
-<tr class="separator:a132bfcae3458d637d00cc73e7e2366ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a91e69bb7163aa78062dd85dcdd2428b6" id="r_a91e69bb7163aa78062dd85dcdd2428b6"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a91e69bb7163aa78062dd85dcdd2428b6">Config</a> (const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;logger, const toml::table &amp;table)</td></tr>
+<tr class="separator:a91e69bb7163aa78062dd85dcdd2428b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6fd28555069a4f2d9b94321fb4efb812" id="r_a6fd28555069a4f2d9b94321fb4efb812"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a6fd28555069a4f2d9b94321fb4efb812">Config</a> (const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;logger, const <a class="el" href="structParsedConfigData.html">ParsedConfigData</a> &amp;settings)</td></tr>
+<tr class="separator:a6fd28555069a4f2d9b94321fb4efb812"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afd1b8e9a2f731db838bb5856670e314c" id="r_afd1b8e9a2f731db838bb5856670e314c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#afd1b8e9a2f731db838bb5856670e314c">~Config</a> ()=default</td></tr>
+<tr class="separator:afd1b8e9a2f731db838bb5856670e314c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa3b487804df5f269c9c86f5556ec2bb2" id="r_aa3b487804df5f269c9c86f5556ec2bb2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#aa3b487804df5f269c9c86f5556ec2bb2">printConfig</a> (std::stringstream &amp;log) const</td></tr>
+<tr class="separator:aa3b487804df5f269c9c86f5556ec2bb2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a25bb0e26b426f50ca748de11c564a519" id="r_a25bb0e26b426f50ca748de11c564a519"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; size_t &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a25bb0e26b426f50ca748de11c564a519">getNLevels</a> () const</td></tr>
+<tr class="separator:a25bb0e26b426f50ca748de11c564a519"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aeae8d01d86a9641b8837a5fa90984761" id="r_aeae8d01d86a9641b8837a5fa90984761"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#aeae8d01d86a9641b8837a5fa90984761">getNLevels</a> (size_t i_osc) const</td></tr>
+<tr class="separator:aeae8d01d86a9641b8837a5fa90984761"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa0dba62c210fc34eb7ef797f7c5918ef" id="r_aa0dba62c210fc34eb7ef797f7c5918ef"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#aa0dba62c210fc34eb7ef797f7c5918ef">getNumOsc</a> () const</td></tr>
+<tr class="separator:aa0dba62c210fc34eb7ef797f7c5918ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a123300a3f19efbf435d4ae8d96c14f5a" id="r_a123300a3f19efbf435d4ae8d96c14f5a"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; size_t &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a123300a3f19efbf435d4ae8d96c14f5a">getNEssential</a> () const</td></tr>
+<tr class="separator:a123300a3f19efbf435d4ae8d96c14f5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa830a549c30268350a94a77992298375" id="r_aa830a549c30268350a94a77992298375"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#aa830a549c30268350a94a77992298375">getNEssential</a> (size_t i_osc) const</td></tr>
+<tr class="separator:aa830a549c30268350a94a77992298375"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a333020995f024f40f984f13784382263" id="r_a333020995f024f40f984f13784382263"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a333020995f024f40f984f13784382263">getNTime</a> () const</td></tr>
+<tr class="separator:a333020995f024f40f984f13784382263"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aea36f537fe9c5b82e58571d453fad112" id="r_aea36f537fe9c5b82e58571d453fad112"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#aea36f537fe9c5b82e58571d453fad112">getDt</a> () const</td></tr>
+<tr class="separator:aea36f537fe9c5b82e58571d453fad112"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a578d0c614831ad7c769eab46e42391b8" id="r_a578d0c614831ad7c769eab46e42391b8"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a578d0c614831ad7c769eab46e42391b8">getTotalTime</a> () const</td></tr>
+<tr class="separator:a578d0c614831ad7c769eab46e42391b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a439643e632de04609da58c0a6cc390ad" id="r_a439643e632de04609da58c0a6cc390ad"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; double &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a439643e632de04609da58c0a6cc390ad">getTransitionFrequency</a> () const</td></tr>
+<tr class="separator:a439643e632de04609da58c0a6cc390ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acec23effcd55a7b055dd0eb3d63fdb48" id="r_acec23effcd55a7b055dd0eb3d63fdb48"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; double &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#acec23effcd55a7b055dd0eb3d63fdb48">getSelfKerr</a> () const</td></tr>
+<tr class="separator:acec23effcd55a7b055dd0eb3d63fdb48"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad9adacf0e0bdaf8ee09a630ec120181a" id="r_ad9adacf0e0bdaf8ee09a630ec120181a"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; double &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#ad9adacf0e0bdaf8ee09a630ec120181a">getCrossKerrCoupling</a> () const</td></tr>
+<tr class="separator:ad9adacf0e0bdaf8ee09a630ec120181a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a59c7ff7aefb4b01769a5fc9850e5e216" id="r_a59c7ff7aefb4b01769a5fc9850e5e216"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; double &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a59c7ff7aefb4b01769a5fc9850e5e216">getDipoleCoupling</a> () const</td></tr>
+<tr class="separator:a59c7ff7aefb4b01769a5fc9850e5e216"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae2c402d6c519fd351f291d50bfe28f3f" id="r_ae2c402d6c519fd351f291d50bfe28f3f"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; double &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#ae2c402d6c519fd351f291d50bfe28f3f">getRotationFrequency</a> () const</td></tr>
+<tr class="separator:ae2c402d6c519fd351f291d50bfe28f3f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad4dd5101b5c2df0ab7278cc937eb6962" id="r_ad4dd5101b5c2df0ab7278cc937eb6962"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cb">DecoherenceType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#ad4dd5101b5c2df0ab7278cc937eb6962">getDecoherenceType</a> () const</td></tr>
+<tr class="separator:ad4dd5101b5c2df0ab7278cc937eb6962"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a119408e3d4e8e4c9b24e03ea87f42296" id="r_a119408e3d4e8e4c9b24e03ea87f42296"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; double &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a119408e3d4e8e4c9b24e03ea87f42296">getDecayTime</a> () const</td></tr>
+<tr class="separator:a119408e3d4e8e4c9b24e03ea87f42296"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a445618aed75bc94d28ac5ce247a85562" id="r_a445618aed75bc94d28ac5ce247a85562"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; double &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a445618aed75bc94d28ac5ce247a85562">getDephaseTime</a> () const</td></tr>
+<tr class="separator:a445618aed75bc94d28ac5ce247a85562"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1674ef3079a642839ac9c6940fc83741" id="r_a1674ef3079a642839ac9c6940fc83741"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a1674ef3079a642839ac9c6940fc83741">getNInitialConditions</a> () const</td></tr>
+<tr class="separator:a1674ef3079a642839ac9c6940fc83741"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a695d5021f03a52ff36d2e19c91bafcc6" id="r_a695d5021f03a52ff36d2e19c91bafcc6"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structInitialConditionSettings.html">InitialConditionSettings</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a695d5021f03a52ff36d2e19c91bafcc6">getInitialCondition</a> () const</td></tr>
+<tr class="separator:a695d5021f03a52ff36d2e19c91bafcc6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac0d3eec8f48154aa770f9f38b00771fe" id="r_ac0d3eec8f48154aa770f9f38b00771fe"><td class="memItemLeft" align="right" valign="top">const std::optional&lt; std::string &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#ac0d3eec8f48154aa770f9f38b00771fe">getHamiltonianFileHsys</a> () const</td></tr>
+<tr class="separator:ac0d3eec8f48154aa770f9f38b00771fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7439b59fdf63f3969b5c7b55d42072e3" id="r_a7439b59fdf63f3969b5c7b55d42072e3"><td class="memItemLeft" align="right" valign="top">const std::optional&lt; std::string &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a7439b59fdf63f3969b5c7b55d42072e3">getHamiltonianFileHc</a> () const</td></tr>
+<tr class="separator:a7439b59fdf63f3969b5c7b55d42072e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a42df1801963f304c4b4768760a187865" id="r_a42df1801963f304c4b4768760a187865"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structControlParameterizationSettings.html">ControlParameterizationSettings</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a42df1801963f304c4b4768760a187865">getControlParameterizations</a> (size_t i_osc) const</td></tr>
+<tr class="separator:a42df1801963f304c4b4768760a187865"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1f476a3b543a062e3269032277137a1b" id="r_a1f476a3b543a062e3269032277137a1b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a1f476a3b543a062e3269032277137a1b">getControlZeroBoundaryCondition</a> () const</td></tr>
+<tr class="separator:a1f476a3b543a062e3269032277137a1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abc91c5267cd1a7e507cc20686e8b8bfc" id="r_abc91c5267cd1a7e507cc20686e8b8bfc"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structControlInitializationSettings.html">ControlInitializationSettings</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#abc91c5267cd1a7e507cc20686e8b8bfc">getControlInitializations</a> (size_t i_osc) const</td></tr>
+<tr class="separator:abc91c5267cd1a7e507cc20686e8b8bfc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a88ec8ff8dc89f02c4448cf3842ce83c4" id="r_a88ec8ff8dc89f02c4448cf3842ce83c4"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a88ec8ff8dc89f02c4448cf3842ce83c4">getControlAmplitudeBound</a> (size_t i_osc) const</td></tr>
+<tr class="separator:a88ec8ff8dc89f02c4448cf3842ce83c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9fd77f5f3d936efe953beba88058d27e" id="r_a9fd77f5f3d936efe953beba88058d27e"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; double &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a9fd77f5f3d936efe953beba88058d27e">getCarrierFrequencies</a> (size_t i_osc) const</td></tr>
+<tr class="separator:a9fd77f5f3d936efe953beba88058d27e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1a228d5c2f4354530b0617e7fab94163" id="r_a1a228d5c2f4354530b0617e7fab94163"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structOptimTargetSettings.html">OptimTargetSettings</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a1a228d5c2f4354530b0617e7fab94163">getOptimTarget</a> () const</td></tr>
+<tr class="separator:a1a228d5c2f4354530b0617e7fab94163"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a80da4e2ca7a30f99c4ae70078cf9f660" id="r_a80da4e2ca7a30f99c4ae70078cf9f660"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defs_8hpp.html#a45660f9909187129a953fa05e664576e">ObjectiveType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a80da4e2ca7a30f99c4ae70078cf9f660">getOptimObjective</a> () const</td></tr>
+<tr class="separator:a80da4e2ca7a30f99c4ae70078cf9f660"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0f5c1b28086591dd87fbc38092855df0" id="r_a0f5c1b28086591dd87fbc38092855df0"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; double &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a0f5c1b28086591dd87fbc38092855df0">getOptimWeights</a> () const</td></tr>
+<tr class="separator:a0f5c1b28086591dd87fbc38092855df0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5967db939ee8cc0e088a039487b97f42" id="r_a5967db939ee8cc0e088a039487b97f42"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a5967db939ee8cc0e088a039487b97f42">getOptimTolGradAbs</a> () const</td></tr>
+<tr class="separator:a5967db939ee8cc0e088a039487b97f42"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a112fd2d54d38beb21e9f99dd144c1f3d" id="r_a112fd2d54d38beb21e9f99dd144c1f3d"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a112fd2d54d38beb21e9f99dd144c1f3d">getOptimTolGradRel</a> () const</td></tr>
+<tr class="separator:a112fd2d54d38beb21e9f99dd144c1f3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a50e9f2c48de7bf4d744e8a112d9165d9" id="r_a50e9f2c48de7bf4d744e8a112d9165d9"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a50e9f2c48de7bf4d744e8a112d9165d9">getOptimTolFinalCost</a> () const</td></tr>
+<tr class="separator:a50e9f2c48de7bf4d744e8a112d9165d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a51d4e0769956b7d7a0b9ecca29b7fd61" id="r_a51d4e0769956b7d7a0b9ecca29b7fd61"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a51d4e0769956b7d7a0b9ecca29b7fd61">getOptimTolInfidelity</a> () const</td></tr>
+<tr class="separator:a51d4e0769956b7d7a0b9ecca29b7fd61"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a40e86c7dfb82e736c8c7ea93d71b47df" id="r_a40e86c7dfb82e736c8c7ea93d71b47df"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a40e86c7dfb82e736c8c7ea93d71b47df">getOptimMaxiter</a> () const</td></tr>
+<tr class="separator:a40e86c7dfb82e736c8c7ea93d71b47df"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4c1121b667130f4545a2bc9440dae02c" id="r_a4c1121b667130f4545a2bc9440dae02c"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a4c1121b667130f4545a2bc9440dae02c">getOptimTikhonovCoeff</a> () const</td></tr>
+<tr class="separator:a4c1121b667130f4545a2bc9440dae02c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad2447a16f5c083ef89257e7c060f9c3c" id="r_ad2447a16f5c083ef89257e7c060f9c3c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#ad2447a16f5c083ef89257e7c060f9c3c">getOptimTikhonovUseX0</a> () const</td></tr>
+<tr class="separator:ad2447a16f5c083ef89257e7c060f9c3c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2e897ef13730458161f9cce49669f53c" id="r_a2e897ef13730458161f9cce49669f53c"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a2e897ef13730458161f9cce49669f53c">getOptimPenaltyLeakage</a> () const</td></tr>
+<tr class="separator:a2e897ef13730458161f9cce49669f53c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a63d1b80f0c4203044cef6908c4d83145" id="r_a63d1b80f0c4203044cef6908c4d83145"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a63d1b80f0c4203044cef6908c4d83145">getOptimPenaltyWeightedCost</a> () const</td></tr>
+<tr class="separator:a63d1b80f0c4203044cef6908c4d83145"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aec5c4e66711e3e1316a09c715e8d5d7a" id="r_aec5c4e66711e3e1316a09c715e8d5d7a"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#aec5c4e66711e3e1316a09c715e8d5d7a">getOptimPenaltyWeightedCostWidth</a> () const</td></tr>
+<tr class="separator:aec5c4e66711e3e1316a09c715e8d5d7a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af6d9121b51fe9434f887d05d8fd99ce9" id="r_af6d9121b51fe9434f887d05d8fd99ce9"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#af6d9121b51fe9434f887d05d8fd99ce9">getOptimPenaltyDpdm</a> () const</td></tr>
+<tr class="separator:af6d9121b51fe9434f887d05d8fd99ce9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a31442cb8531a50b17c8ba2fc095b71c0" id="r_a31442cb8531a50b17c8ba2fc095b71c0"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a31442cb8531a50b17c8ba2fc095b71c0">getOptimPenaltyEnergy</a> () const</td></tr>
+<tr class="separator:a31442cb8531a50b17c8ba2fc095b71c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a673cf313c3872fe3c5bb2cedf505ec0b" id="r_a673cf313c3872fe3c5bb2cedf505ec0b"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a673cf313c3872fe3c5bb2cedf505ec0b">getOptimPenaltyVariation</a> () const</td></tr>
+<tr class="separator:a673cf313c3872fe3c5bb2cedf505ec0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2949c9811c65aab69f584ecdf2a8835a" id="r_a2949c9811c65aab69f584ecdf2a8835a"><td class="memItemLeft" align="right" valign="top">const std::string &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a2949c9811c65aab69f584ecdf2a8835a">getOutputDirectory</a> () const</td></tr>
+<tr class="separator:a2949c9811c65aab69f584ecdf2a8835a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3844568aab658f84931348453e69fa5a" id="r_a3844568aab658f84931348453e69fa5a"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; <a class="el" href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3">OutputType</a> &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a3844568aab658f84931348453e69fa5a">getOutputObservables</a> () const</td></tr>
+<tr class="separator:a3844568aab658f84931348453e69fa5a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8bfd6fa417cd673db0b62e5286b40394" id="r_a8bfd6fa417cd673db0b62e5286b40394"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a8bfd6fa417cd673db0b62e5286b40394">getOutputTimestepStride</a> () const</td></tr>
+<tr class="separator:a8bfd6fa417cd673db0b62e5286b40394"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7bed478677800c41f2a85c643774223c" id="r_a7bed478677800c41f2a85c643774223c"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a7bed478677800c41f2a85c643774223c">getOutputOptimizationStride</a> () const</td></tr>
+<tr class="separator:a7bed478677800c41f2a85c643774223c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae95457f903e39dfeef9108957cebb8e8" id="r_ae95457f903e39dfeef9108957cebb8e8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4">RunType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#ae95457f903e39dfeef9108957cebb8e8">getRuntype</a> () const</td></tr>
+<tr class="separator:ae95457f903e39dfeef9108957cebb8e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a04a1fb3870b3a7e9e525316bc1c1caf5" id="r_a04a1fb3870b3a7e9e525316bc1c1caf5"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a04a1fb3870b3a7e9e525316bc1c1caf5">getUseMatFree</a> () const</td></tr>
+<tr class="separator:a04a1fb3870b3a7e9e525316bc1c1caf5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a99ecf46d57e71ef40cc48894b72fb01c" id="r_a99ecf46d57e71ef40cc48894b72fb01c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defs_8hpp.html#acb811991285b406a5a2880a4893bffb4">LinearSolverType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a99ecf46d57e71ef40cc48894b72fb01c">getLinearSolverType</a> () const</td></tr>
+<tr class="separator:a99ecf46d57e71ef40cc48894b72fb01c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3cfe687a057a9a4174c370fb075be996" id="r_a3cfe687a057a9a4174c370fb075be996"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a3cfe687a057a9a4174c370fb075be996">getLinearSolverMaxiter</a> () const</td></tr>
+<tr class="separator:a3cfe687a057a9a4174c370fb075be996"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a912e99b3f529e4ff2aba8e91dd0dd7d1" id="r_a912e99b3f529e4ff2aba8e91dd0dd7d1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cc">TimeStepperType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a912e99b3f529e4ff2aba8e91dd0dd7d1">getTimestepperType</a> () const</td></tr>
+<tr class="separator:a912e99b3f529e4ff2aba8e91dd0dd7d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae6529302aa2df655e0ad93966a4aa27a" id="r_ae6529302aa2df655e0ad93966a4aa27a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#ae6529302aa2df655e0ad93966a4aa27a">getRandSeed</a> () const</td></tr>
+<tr class="separator:ae6529302aa2df655e0ad93966a4aa27a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
-Public Attributes</h2></td></tr>
-<tr class="memitem:a52f64cb2653c5d13c4d91ff6a67c3d94" id="r_a52f64cb2653c5d13c4d91ff6a67c3d94"><td class="memItemLeft" align="right" valign="top">std::stringstream *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a52f64cb2653c5d13c4d91ff6a67c3d94">log</a></td></tr>
-<tr class="memdesc:a52f64cb2653c5d13c4d91ff6a67c3d94"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer to log stream for output messages.  <br /></td></tr>
-<tr class="separator:a52f64cb2653c5d13c4d91ff6a67c3d94"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-attribs" name="pro-attribs"></a>
-Protected Attributes</h2></td></tr>
-<tr class="memitem:a114f9fc48ff32c7ff0a88a33214f5356" id="r_a114f9fc48ff32c7ff0a88a33214f5356"><td class="memItemLeft" align="right" valign="top">MPI_Comm&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a114f9fc48ff32c7ff0a88a33214f5356">comm</a></td></tr>
-<tr class="memdesc:a114f9fc48ff32c7ff0a88a33214f5356"><td class="mdescLeft">&#160;</td><td class="mdescRight">MPI communicator for parallel operations.  <br /></td></tr>
-<tr class="separator:a114f9fc48ff32c7ff0a88a33214f5356"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa8542ccac5fe7eb941e51fb023f2bf3e" id="r_aa8542ccac5fe7eb941e51fb023f2bf3e"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#aa8542ccac5fe7eb941e51fb023f2bf3e">mpi_rank</a></td></tr>
-<tr class="memdesc:aa8542ccac5fe7eb941e51fb023f2bf3e"><td class="mdescLeft">&#160;</td><td class="mdescRight">MPI rank of the current process.  <br /></td></tr>
-<tr class="separator:aa8542ccac5fe7eb941e51fb023f2bf3e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a69e43e26e8fc671e1aa858843b7c546b" id="r_a69e43e26e8fc671e1aa858843b7c546b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a69e43e26e8fc671e1aa858843b7c546b">quietmode</a></td></tr>
-<tr class="memdesc:a69e43e26e8fc671e1aa858843b7c546b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flag to control verbose output.  <br /></td></tr>
-<tr class="separator:a69e43e26e8fc671e1aa858843b7c546b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-methods" name="pub-static-methods"></a>
+Static Public Member Functions</h2></td></tr>
+<tr class="memitem:af3fbc264397827ba4ca50bdd7365f27a" id="r_af3fbc264397827ba4ca50bdd7365f27a"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classConfig.html">Config</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#af3fbc264397827ba4ca50bdd7365f27a">fromFile</a> (const std::string &amp;filename, const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;logger)</td></tr>
+<tr class="separator:af3fbc264397827ba4ca50bdd7365f27a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a264d531eae652baafba935e997664fab" id="r_a264d531eae652baafba935e997664fab"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classConfig.html">Config</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a264d531eae652baafba935e997664fab">fromToml</a> (const std::string &amp;toml_filename, const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;logger)</td></tr>
+<tr class="separator:a264d531eae652baafba935e997664fab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae8dd504998dc4ef94fee24146f50e338" id="r_ae8dd504998dc4ef94fee24146f50e338"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classConfig.html">Config</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#ae8dd504998dc4ef94fee24146f50e338">fromTomlString</a> (const std::string &amp;toml_content, const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;logger)</td></tr>
+<tr class="separator:ae8dd504998dc4ef94fee24146f50e338"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5cf7e9c5494ff83587658eab8bfcb5a3" id="r_a5cf7e9c5494ff83587658eab8bfcb5a3"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classConfig.html">Config</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a5cf7e9c5494ff83587658eab8bfcb5a3">fromCfg</a> (const std::string &amp;cfg_filename, const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;logger)</td></tr>
+<tr class="separator:a5cf7e9c5494ff83587658eab8bfcb5a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abda181e7225b0f5e375d7412c68d9ef7" id="r_abda181e7225b0f5e375d7412c68d9ef7"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classConfig.html">Config</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#abda181e7225b0f5e375d7412c68d9ef7">fromCfgString</a> (const std::string &amp;cfg_content, const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;logger)</td></tr>
+<tr class="separator:abda181e7225b0f5e375d7412c68d9ef7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Configuration parameter management class. </p>
-<p>The <code><a class="el" href="classConfig.html" title="Configuration parameter management class.">Config</a></code> class extends std::map to provide functionality for reading configuration files and retrieving parameters with type conversion and default values. It supports MPI communication and logging capabilities. </p>
+<div class="textblock"><p>Configuration class containing all validated settings. </p>
+<p>Contains validated, typed configuration parameters. All fields have been validated with defaults set. Handles parsing from TOML configuration files and deprecated CFG format, as well as printing log of used configuration. This class is immutable after construction.</p>
+<dl class="section note"><dt>Note</dt><dd>Adding a new toml configuration option:</dd></dl>
+<p>1) Add new member variable to the <a class="el" href="classConfig.html" title="Configuration class containing all validated settings.">Config</a> class below</p>
+<p>2) Add parsing logic in constructor Config::Config(toml::table) in <a class="el" href="config_8cpp.html">src/config.cpp</a>. Either access directly from toml table, or use chains of validators for type-safe extraction and validation. For example:</p>
+<p>Parsing simple scalar fields (T foo):</p><ul>
+<li><code>foo = toml["foo"].value()</code>: required scalar field, no default, not validated)</li>
+<li><code>foo = toml["foo"].value_or(default_value)</code>: optional scalar with default, not validated</li>
+<li><code>foo = <a class="el" href="namespacevalidators.html#ad31bfb55ece48fcb240c7f43b5470baa" title="Creates a scalar field validator.">validators::field</a>&lt;T&gt;(toml, "foo").&lt;validation_chain&gt;.value()</code>: validated required scalar</li>
+<li><code>foo = <a class="el" href="namespacevalidators.html#ad31bfb55ece48fcb240c7f43b5470baa" title="Creates a scalar field validator.">validators::field</a>&lt;T&gt;(toml, "foo").&lt;validation_chain&gt;.valueOr(default_value)</code>: validated optional scalar with default</li>
+</ul>
+<p>Parsing vectors (std::vector&lt;T&gt; foo):</p><ul>
+<li><code>foo = toml["foo"].as_array()-&gt;as&lt;T&gt;().value_or(default_vector)</code>: vector with default, not validated</li>
+<li><code>foo = <a class="el" href="namespacevalidators.html#a1bc2b2095efd69ee6f612c52a4dce86e" title="Creates a vector field validator.">validators::vectorField</a>&lt;T&gt;(toml, "foo").&lt;validation_chain&gt;.value()</code>: validated required vector</li>
+<li><code>foo = <a class="el" href="namespacevalidators.html#a1bc2b2095efd69ee6f612c52a4dce86e" title="Creates a vector field validator.">validators::vectorField</a>&lt;T&gt;(toml, "foo").&lt;validation_chain&gt;.value(default_vector)</code>: validated optional vector with default</li>
+</ul>
+<p>Available validation chain methods can found in <a class="el" href="config__validators_8hpp.html">include/config_validators.hpp</a>, such as: <code>.positive()</code>, <code>.greaterThan(val)</code>, <code>.lessThan(val)</code>, <code>.minLength(len)</code>, <code>.hasLength(len)</code>, etc.</p>
+<p>3) Add a getter method to the <a class="el" href="classConfig.html" title="Configuration class containing all validated settings.">Config</a> class below (<code>T getFoo() const {return foo};</code>)</p>
+<p>4) Add printing logic in <a class="el" href="classConfig.html#aa3b487804df5f269c9c86f5556ec2bb2">Config::printConfig()</a> in <a class="el" href="config_8cpp.html">src/config.cpp</a> </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="abd0c571c116924871e30444b192b792a" name="abd0c571c116924871e30444b192b792a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abd0c571c116924871e30444b192b792a">&#9670;&#160;</a></span>Config() <span class="overload">[1/2]</span></h2>
+<a id="a91e69bb7163aa78062dd85dcdd2428b6" name="a91e69bb7163aa78062dd85dcdd2428b6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a91e69bb7163aa78062dd85dcdd2428b6">&#9670;&#160;</a></span>Config() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -178,37 +245,14 @@ Protected Attributes</h2></td></tr>
         <tr>
           <td class="memname">Config::Config </td>
           <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="ab46f27045a1872d97fa0a0b81f487533" name="ab46f27045a1872d97fa0a0b81f487533"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab46f27045a1872d97fa0a0b81f487533">&#9670;&#160;</a></span>Config() <span class="overload">[2/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">Config::Config </td>
-          <td>(</td>
-          <td class="paramtype">MPI_Comm&#160;</td>
-          <td class="paramname"><em>comm_</em>, </td>
+          <td class="paramtype">const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;&#160;</td>
+          <td class="paramname"><em>logger</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::stringstream &amp;&#160;</td>
-          <td class="paramname"><em>logstream</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>quietmode</em> = <code>false</code>&#160;</td>
+          <td class="paramtype">const toml::table &amp;&#160;</td>
+          <td class="paramname"><em>table</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -218,23 +262,44 @@ Protected Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Constructor with MPI communicator and logging. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">comm_</td><td>MPI communicator for parallel operations. </td></tr>
-    <tr><td class="paramname">logstream</td><td>Reference to the log stream for output. </td></tr>
-    <tr><td class="paramname">quietmode</td><td>Flag to enable quiet mode (default: false). </td></tr>
-  </table>
-  </dd>
-</dl>
-
 </div>
 </div>
-<a id="a543dce59b66475c5108088ee4ce1cdfc" name="a543dce59b66475c5108088ee4ce1cdfc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a543dce59b66475c5108088ee4ce1cdfc">&#9670;&#160;</a></span>~Config()</h2>
+<a id="a6fd28555069a4f2d9b94321fb4efb812" name="a6fd28555069a4f2d9b94321fb4efb812"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6fd28555069a4f2d9b94321fb4efb812">&#9670;&#160;</a></span>Config() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">Config::Config </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;&#160;</td>
+          <td class="paramname"><em>logger</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structParsedConfigData.html">ParsedConfigData</a> &amp;&#160;</td>
+          <td class="paramname"><em>settings</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="afd1b8e9a2f731db838bb5856670e314c" name="afd1b8e9a2f731db838bb5856670e314c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afd1b8e9a2f731db838bb5856670e314c">&#9670;&#160;</a></span>~Config()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">Config::~Config </td>
@@ -243,421 +308,327 @@ Protected Attributes</h2></td></tr>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">default</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a636e08fe2e0495dc01e6b7627b73eec8" name="a636e08fe2e0495dc01e6b7627b73eec8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a636e08fe2e0495dc01e6b7627b73eec8">&#9670;&#160;</a></span>GetBoolParam()</h2>
+<a id="a5cf7e9c5494ff83587658eab8bfcb5a3" name="a5cf7e9c5494ff83587658eab8bfcb5a3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5cf7e9c5494ff83587658eab8bfcb5a3">&#9670;&#160;</a></span>fromCfg()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">bool Config::GetBoolParam </td>
+          <td class="memname"><a class="el" href="classConfig.html">Config</a> Config::fromCfg </td>
           <td>(</td>
-          <td class="paramtype">std::string&#160;</td>
-          <td class="paramname"><em>key</em>, </td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>cfg_filename</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>default_val</em> = <code>false</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>warnme</em> = <code>true</code>&#160;</td>
+          <td class="paramtype">const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;&#160;</td>
+          <td class="paramname"><em>logger</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
           <td>)</td>
-          <td></td><td> const</td>
+          <td></td><td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p>Retrieves a boolean parameter from the configuration. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">key</td><td>Parameter name to look up. </td></tr>
-    <tr><td class="paramname">default_val</td><td>Default value if parameter is not found (default: false). </td></tr>
-    <tr><td class="paramname">warnme</td><td>Flag to enable warning if parameter is not found (default: true). </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>bool Parameter value or default value. </dd></dl>
-
 </div>
 </div>
-<a id="a164a9e3e08f2156e96638fd13497ae73" name="a164a9e3e08f2156e96638fd13497ae73"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a164a9e3e08f2156e96638fd13497ae73">&#9670;&#160;</a></span>GetDoubleParam()</h2>
+<a id="abda181e7225b0f5e375d7412c68d9ef7" name="abda181e7225b0f5e375d7412c68d9ef7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abda181e7225b0f5e375d7412c68d9ef7">&#9670;&#160;</a></span>fromCfgString()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">double Config::GetDoubleParam </td>
+          <td class="memname"><a class="el" href="classConfig.html">Config</a> Config::fromCfgString </td>
           <td>(</td>
-          <td class="paramtype">std::string&#160;</td>
-          <td class="paramname"><em>key</em>, </td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>cfg_content</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>default_val</em> = <code>-1.</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>warnme</em> = <code>true</code>&#160;</td>
+          <td class="paramtype">const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;&#160;</td>
+          <td class="paramname"><em>logger</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
           <td>)</td>
-          <td></td><td> const</td>
+          <td></td><td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p>Retrieves a double parameter from the configuration. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">key</td><td>Parameter name to look up. </td></tr>
-    <tr><td class="paramname">default_val</td><td>Default value if parameter is not found (default: -1.0). </td></tr>
-    <tr><td class="paramname">warnme</td><td>Flag to enable warning if parameter is not found (default: true). </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>double Parameter value or default value. </dd></dl>
-
 </div>
 </div>
-<a id="a0b95ff4eb04725d2581e92bc9e498124" name="a0b95ff4eb04725d2581e92bc9e498124"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0b95ff4eb04725d2581e92bc9e498124">&#9670;&#160;</a></span>GetIntParam()</h2>
+<a id="af3fbc264397827ba4ca50bdd7365f27a" name="af3fbc264397827ba4ca50bdd7365f27a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af3fbc264397827ba4ca50bdd7365f27a">&#9670;&#160;</a></span>fromFile()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">int Config::GetIntParam </td>
+          <td class="memname"><a class="el" href="classConfig.html">Config</a> Config::fromFile </td>
           <td>(</td>
-          <td class="paramtype">std::string&#160;</td>
-          <td class="paramname"><em>key</em>, </td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>filename</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>default_val</em> = <code>-1</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>warnme</em> = <code>true</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>exportme</em> = <code>true</code>&#160;</td>
+          <td class="paramtype">const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;&#160;</td>
+          <td class="paramname"><em>logger</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
           <td>)</td>
-          <td></td><td> const</td>
+          <td></td><td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p>Retrieves an integer parameter from the configuration. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">key</td><td>Parameter name to look up. </td></tr>
-    <tr><td class="paramname">default_val</td><td>Default value if parameter is not found (default: -1). </td></tr>
-    <tr><td class="paramname">warnme</td><td>Flag to enable warning if parameter is not found (default: true). </td></tr>
-    <tr><td class="paramname">exportme</td><td>Flag to enable logging of the parameter value (default: true). </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>int Parameter value or default value. </dd></dl>
-
 </div>
 </div>
-<a id="a86983fb6414f92585df934d331d6470e" name="a86983fb6414f92585df934d331d6470e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a86983fb6414f92585df934d331d6470e">&#9670;&#160;</a></span>GetMpiRank()</h2>
+<a id="a264d531eae652baafba935e997664fab" name="a264d531eae652baafba935e997664fab"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a264d531eae652baafba935e997664fab">&#9670;&#160;</a></span>fromToml()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">int Config::GetMpiRank </td>
+          <td class="memname"><a class="el" href="classConfig.html">Config</a> Config::fromToml </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>toml_filename</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;&#160;</td>
+          <td class="paramname"><em>logger</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ae8dd504998dc4ef94fee24146f50e338" name="ae8dd504998dc4ef94fee24146f50e338"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae8dd504998dc4ef94fee24146f50e338">&#9670;&#160;</a></span>fromTomlString()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classConfig.html">Config</a> Config::fromTomlString </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>toml_content</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;&#160;</td>
+          <td class="paramname"><em>logger</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a9fd77f5f3d936efe953beba88058d27e" name="a9fd77f5f3d936efe953beba88058d27e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9fd77f5f3d936efe953beba88058d27e">&#9670;&#160;</a></span>getCarrierFrequencies()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt; double &gt; &amp; Config::getCarrierFrequencies </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>i_osc</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a88ec8ff8dc89f02c4448cf3842ce83c4" name="a88ec8ff8dc89f02c4448cf3842ce83c4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a88ec8ff8dc89f02c4448cf3842ce83c4">&#9670;&#160;</a></span>getControlAmplitudeBound()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Config::getControlAmplitudeBound </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>i_osc</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="abc91c5267cd1a7e507cc20686e8b8bfc" name="abc91c5267cd1a7e507cc20686e8b8bfc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abc91c5267cd1a7e507cc20686e8b8bfc">&#9670;&#160;</a></span>getControlInitializations()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="structControlInitializationSettings.html">ControlInitializationSettings</a> &amp; Config::getControlInitializations </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>i_osc</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a42df1801963f304c4b4768760a187865" name="a42df1801963f304c4b4768760a187865"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a42df1801963f304c4b4768760a187865">&#9670;&#160;</a></span>getControlParameterizations()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="structControlParameterizationSettings.html">ControlParameterizationSettings</a> &amp; Config::getControlParameterizations </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>i_osc</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a1f476a3b543a062e3269032277137a1b" name="a1f476a3b543a062e3269032277137a1b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1f476a3b543a062e3269032277137a1b">&#9670;&#160;</a></span>getControlZeroBoundaryCondition()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Config::getControlZeroBoundaryCondition </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
-<p>Retrieves the MPI rank of the current process. </p>
-<dl class="section return"><dt>Returns</dt><dd>int MPI rank. </dd></dl>
-
 </div>
 </div>
-<a id="a0bdf56a2f5c97d4de7af6479bd0a6eae" name="a0bdf56a2f5c97d4de7af6479bd0a6eae"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0bdf56a2f5c97d4de7af6479bd0a6eae">&#9670;&#160;</a></span>GetStrParam()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::string Config::GetStrParam </td>
-          <td>(</td>
-          <td class="paramtype">std::string&#160;</td>
-          <td class="paramname"><em>key</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string&#160;</td>
-          <td class="paramname"><em>default_val</em> = <code>&quot;&quot;</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>exportme</em> = <code>true</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>warnme</em> = <code>true</code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td> const</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Retrieves a string parameter from the configuration. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">key</td><td>Parameter name to look up. </td></tr>
-    <tr><td class="paramname">default_val</td><td>Default value if parameter is not found (default: ""). </td></tr>
-    <tr><td class="paramname">exportme</td><td>Flag to enable logging of the parameter value (default: true). </td></tr>
-    <tr><td class="paramname">warnme</td><td>Flag to enable warning if parameter is not found (default: true). </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>std::string Parameter value or default value. </dd></dl>
-
-</div>
-</div>
-<a id="abf8ad4be9360bf9d1d64ecd26935bd36" name="abf8ad4be9360bf9d1d64ecd26935bd36"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abf8ad4be9360bf9d1d64ecd26935bd36">&#9670;&#160;</a></span>GetVecDoubleParam()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void Config::GetVecDoubleParam </td>
-          <td>(</td>
-          <td class="paramtype">std::string&#160;</td>
-          <td class="paramname"><em>key</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::vector&lt; double &gt; &amp;&#160;</td>
-          <td class="paramname"><em>fillme</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>default_val</em> = <code>1e20</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>exportme</em> = <code>true</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>warnme</em> = <code>true</code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td> const</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Retrieves a vector of double parameters from the configuration. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">key</td><td>Parameter name to look up. </td></tr>
-    <tr><td class="paramname">fillme</td><td>Reference to vector to be filled with parameter values. </td></tr>
-    <tr><td class="paramname">default_val</td><td>Default value for each element if parameter is not found (default: 1e20). </td></tr>
-    <tr><td class="paramname">exportme</td><td>Flag to enable logging of the parameter values (default: true). </td></tr>
-    <tr><td class="paramname">warnme</td><td>Flag to enable warning if parameter is not found (default: true). </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a id="aee95e30e7f334cd35ea445893e2816a7" name="aee95e30e7f334cd35ea445893e2816a7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aee95e30e7f334cd35ea445893e2816a7">&#9670;&#160;</a></span>GetVecIntParam()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void Config::GetVecIntParam </td>
-          <td>(</td>
-          <td class="paramtype">std::string&#160;</td>
-          <td class="paramname"><em>key</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::vector&lt; int &gt; &amp;&#160;</td>
-          <td class="paramname"><em>fillme</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>default_val</em> = <code>-1</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>warnme</em> = <code>true</code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td> const</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Retrieves a vector of integer parameters from the configuration. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">key</td><td>Parameter name to look up. </td></tr>
-    <tr><td class="paramname">fillme</td><td>Reference to vector to be filled with parameter values. </td></tr>
-    <tr><td class="paramname">default_val</td><td>Default value for each element if parameter is not found (default: -1). </td></tr>
-    <tr><td class="paramname">warnme</td><td>Flag to enable warning if parameter is not found (default: true). </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a id="a132bfcae3458d637d00cc73e7e2366ac" name="a132bfcae3458d637d00cc73e7e2366ac"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a132bfcae3458d637d00cc73e7e2366ac">&#9670;&#160;</a></span>GetVecStrParam()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void Config::GetVecStrParam </td>
-          <td>(</td>
-          <td class="paramtype">std::string&#160;</td>
-          <td class="paramname"><em>key</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::vector&lt; std::string &gt; &amp;&#160;</td>
-          <td class="paramname"><em>fillme</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">std::string&#160;</td>
-          <td class="paramname"><em>default_val</em> = <code>&quot;none&quot;</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>exportme</em> = <code>true</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>warnme</em> = <code>true</code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td> const</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Retrieves a vector of string parameters from the configuration. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">key</td><td>Parameter name to look up. </td></tr>
-    <tr><td class="paramname">fillme</td><td>Reference to vector to be filled with parameter values. </td></tr>
-    <tr><td class="paramname">default_val</td><td>Default value for each element if parameter is not found (default: "none"). </td></tr>
-    <tr><td class="paramname">exportme</td><td>Flag to enable logging of the parameter values (default: true). </td></tr>
-    <tr><td class="paramname">warnme</td><td>Flag to enable warning if parameter is not found (default: true). </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<a id="a2c5e36161681692c9094eccdffa03617" name="a2c5e36161681692c9094eccdffa03617"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2c5e36161681692c9094eccdffa03617">&#9670;&#160;</a></span>ReadFile()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void Config::ReadFile </td>
-          <td>(</td>
-          <td class="paramtype">std::string&#160;</td>
-          <td class="paramname"><em>filename</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Parses a configuration file and stores key-value pairs in the map. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">filename</td><td>Path to the configuration file to be parsed. </td></tr>
-  </table>
-  </dd>
-</dl>
-
-</div>
-</div>
-<h2 class="groupheader">Member Data Documentation</h2>
-<a id="a114f9fc48ff32c7ff0a88a33214f5356" name="a114f9fc48ff32c7ff0a88a33214f5356"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a114f9fc48ff32c7ff0a88a33214f5356">&#9670;&#160;</a></span>comm</h2>
+<a id="ad9adacf0e0bdaf8ee09a630ec120181a" name="ad9adacf0e0bdaf8ee09a630ec120181a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad9adacf0e0bdaf8ee09a630ec120181a">&#9670;&#160;</a></span>getCrossKerrCoupling()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -666,38 +637,23 @@ Protected Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">MPI_Comm Config::comm</td>
+          <td class="memname">const std::vector&lt; double &gt; &amp; Config::getCrossKerrCoupling </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
         </tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
-<p>MPI communicator for parallel operations. </p>
-
 </div>
 </div>
-<a id="a52f64cb2653c5d13c4d91ff6a67c3d94" name="a52f64cb2653c5d13c4d91ff6a67c3d94"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a52f64cb2653c5d13c4d91ff6a67c3d94">&#9670;&#160;</a></span>log</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::stringstream* Config::log</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Pointer to log stream for output messages. </p>
-
-</div>
-</div>
-<a id="aa8542ccac5fe7eb941e51fb023f2bf3e" name="aa8542ccac5fe7eb941e51fb023f2bf3e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa8542ccac5fe7eb941e51fb023f2bf3e">&#9670;&#160;</a></span>mpi_rank</h2>
+<a id="a119408e3d4e8e4c9b24e03ea87f42296" name="a119408e3d4e8e4c9b24e03ea87f42296"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a119408e3d4e8e4c9b24e03ea87f42296">&#9670;&#160;</a></span>getDecayTime()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -706,22 +662,23 @@ Protected Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">int Config::mpi_rank</td>
+          <td class="memname">const std::vector&lt; double &gt; &amp; Config::getDecayTime </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
         </tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
-<p>MPI rank of the current process. </p>
-
 </div>
 </div>
-<a id="a69e43e26e8fc671e1aa858843b7c546b" name="a69e43e26e8fc671e1aa858843b7c546b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a69e43e26e8fc671e1aa858843b7c546b">&#9670;&#160;</a></span>quietmode</h2>
+<a id="ad4dd5101b5c2df0ab7278cc937eb6962" name="ad4dd5101b5c2df0ab7278cc937eb6962"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad4dd5101b5c2df0ab7278cc937eb6962">&#9670;&#160;</a></span>getDecoherenceType()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -730,17 +687,1113 @@ Protected Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">bool Config::quietmode</td>
+          <td class="memname"><a class="el" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cb">DecoherenceType</a> Config::getDecoherenceType </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
         </tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
-<p>Flag to control verbose output. </p>
+</div>
+</div>
+<a id="a445618aed75bc94d28ac5ce247a85562" name="a445618aed75bc94d28ac5ce247a85562"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a445618aed75bc94d28ac5ce247a85562">&#9670;&#160;</a></span>getDephaseTime()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt; double &gt; &amp; Config::getDephaseTime </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a59c7ff7aefb4b01769a5fc9850e5e216" name="a59c7ff7aefb4b01769a5fc9850e5e216"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a59c7ff7aefb4b01769a5fc9850e5e216">&#9670;&#160;</a></span>getDipoleCoupling()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt; double &gt; &amp; Config::getDipoleCoupling </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aea36f537fe9c5b82e58571d453fad112" name="aea36f537fe9c5b82e58571d453fad112"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aea36f537fe9c5b82e58571d453fad112">&#9670;&#160;</a></span>getDt()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Config::getDt </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a7439b59fdf63f3969b5c7b55d42072e3" name="a7439b59fdf63f3969b5c7b55d42072e3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7439b59fdf63f3969b5c7b55d42072e3">&#9670;&#160;</a></span>getHamiltonianFileHc()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::optional&lt; std::string &gt; &amp; Config::getHamiltonianFileHc </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ac0d3eec8f48154aa770f9f38b00771fe" name="ac0d3eec8f48154aa770f9f38b00771fe"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac0d3eec8f48154aa770f9f38b00771fe">&#9670;&#160;</a></span>getHamiltonianFileHsys()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::optional&lt; std::string &gt; &amp; Config::getHamiltonianFileHsys </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a695d5021f03a52ff36d2e19c91bafcc6" name="a695d5021f03a52ff36d2e19c91bafcc6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a695d5021f03a52ff36d2e19c91bafcc6">&#9670;&#160;</a></span>getInitialCondition()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="structInitialConditionSettings.html">InitialConditionSettings</a> &amp; Config::getInitialCondition </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a3cfe687a057a9a4174c370fb075be996" name="a3cfe687a057a9a4174c370fb075be996"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3cfe687a057a9a4174c370fb075be996">&#9670;&#160;</a></span>getLinearSolverMaxiter()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t Config::getLinearSolverMaxiter </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a99ecf46d57e71ef40cc48894b72fb01c" name="a99ecf46d57e71ef40cc48894b72fb01c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a99ecf46d57e71ef40cc48894b72fb01c">&#9670;&#160;</a></span>getLinearSolverType()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="defs_8hpp.html#acb811991285b406a5a2880a4893bffb4">LinearSolverType</a> Config::getLinearSolverType </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a123300a3f19efbf435d4ae8d96c14f5a" name="a123300a3f19efbf435d4ae8d96c14f5a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a123300a3f19efbf435d4ae8d96c14f5a">&#9670;&#160;</a></span>getNEssential() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt; size_t &gt; &amp; Config::getNEssential </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aa830a549c30268350a94a77992298375" name="aa830a549c30268350a94a77992298375"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa830a549c30268350a94a77992298375">&#9670;&#160;</a></span>getNEssential() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t Config::getNEssential </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>i_osc</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a1674ef3079a642839ac9c6940fc83741" name="a1674ef3079a642839ac9c6940fc83741"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1674ef3079a642839ac9c6940fc83741">&#9670;&#160;</a></span>getNInitialConditions()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t Config::getNInitialConditions </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a25bb0e26b426f50ca748de11c564a519" name="a25bb0e26b426f50ca748de11c564a519"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a25bb0e26b426f50ca748de11c564a519">&#9670;&#160;</a></span>getNLevels() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt; size_t &gt; &amp; Config::getNLevels </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aeae8d01d86a9641b8837a5fa90984761" name="aeae8d01d86a9641b8837a5fa90984761"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aeae8d01d86a9641b8837a5fa90984761">&#9670;&#160;</a></span>getNLevels() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t Config::getNLevels </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>i_osc</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a333020995f024f40f984f13784382263" name="a333020995f024f40f984f13784382263"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a333020995f024f40f984f13784382263">&#9670;&#160;</a></span>getNTime()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t Config::getNTime </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aa0dba62c210fc34eb7ef797f7c5918ef" name="aa0dba62c210fc34eb7ef797f7c5918ef"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa0dba62c210fc34eb7ef797f7c5918ef">&#9670;&#160;</a></span>getNumOsc()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t Config::getNumOsc </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a40e86c7dfb82e736c8c7ea93d71b47df" name="a40e86c7dfb82e736c8c7ea93d71b47df"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a40e86c7dfb82e736c8c7ea93d71b47df">&#9670;&#160;</a></span>getOptimMaxiter()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t Config::getOptimMaxiter </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a80da4e2ca7a30f99c4ae70078cf9f660" name="a80da4e2ca7a30f99c4ae70078cf9f660"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a80da4e2ca7a30f99c4ae70078cf9f660">&#9670;&#160;</a></span>getOptimObjective()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="defs_8hpp.html#a45660f9909187129a953fa05e664576e">ObjectiveType</a> Config::getOptimObjective </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="af6d9121b51fe9434f887d05d8fd99ce9" name="af6d9121b51fe9434f887d05d8fd99ce9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af6d9121b51fe9434f887d05d8fd99ce9">&#9670;&#160;</a></span>getOptimPenaltyDpdm()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Config::getOptimPenaltyDpdm </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a31442cb8531a50b17c8ba2fc095b71c0" name="a31442cb8531a50b17c8ba2fc095b71c0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a31442cb8531a50b17c8ba2fc095b71c0">&#9670;&#160;</a></span>getOptimPenaltyEnergy()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Config::getOptimPenaltyEnergy </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a2e897ef13730458161f9cce49669f53c" name="a2e897ef13730458161f9cce49669f53c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2e897ef13730458161f9cce49669f53c">&#9670;&#160;</a></span>getOptimPenaltyLeakage()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Config::getOptimPenaltyLeakage </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a673cf313c3872fe3c5bb2cedf505ec0b" name="a673cf313c3872fe3c5bb2cedf505ec0b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a673cf313c3872fe3c5bb2cedf505ec0b">&#9670;&#160;</a></span>getOptimPenaltyVariation()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Config::getOptimPenaltyVariation </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a63d1b80f0c4203044cef6908c4d83145" name="a63d1b80f0c4203044cef6908c4d83145"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a63d1b80f0c4203044cef6908c4d83145">&#9670;&#160;</a></span>getOptimPenaltyWeightedCost()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Config::getOptimPenaltyWeightedCost </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aec5c4e66711e3e1316a09c715e8d5d7a" name="aec5c4e66711e3e1316a09c715e8d5d7a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aec5c4e66711e3e1316a09c715e8d5d7a">&#9670;&#160;</a></span>getOptimPenaltyWeightedCostWidth()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Config::getOptimPenaltyWeightedCostWidth </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a1a228d5c2f4354530b0617e7fab94163" name="a1a228d5c2f4354530b0617e7fab94163"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1a228d5c2f4354530b0617e7fab94163">&#9670;&#160;</a></span>getOptimTarget()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="structOptimTargetSettings.html">OptimTargetSettings</a> &amp; Config::getOptimTarget </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a4c1121b667130f4545a2bc9440dae02c" name="a4c1121b667130f4545a2bc9440dae02c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4c1121b667130f4545a2bc9440dae02c">&#9670;&#160;</a></span>getOptimTikhonovCoeff()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Config::getOptimTikhonovCoeff </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ad2447a16f5c083ef89257e7c060f9c3c" name="ad2447a16f5c083ef89257e7c060f9c3c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad2447a16f5c083ef89257e7c060f9c3c">&#9670;&#160;</a></span>getOptimTikhonovUseX0()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Config::getOptimTikhonovUseX0 </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a50e9f2c48de7bf4d744e8a112d9165d9" name="a50e9f2c48de7bf4d744e8a112d9165d9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a50e9f2c48de7bf4d744e8a112d9165d9">&#9670;&#160;</a></span>getOptimTolFinalCost()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Config::getOptimTolFinalCost </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a5967db939ee8cc0e088a039487b97f42" name="a5967db939ee8cc0e088a039487b97f42"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5967db939ee8cc0e088a039487b97f42">&#9670;&#160;</a></span>getOptimTolGradAbs()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Config::getOptimTolGradAbs </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a112fd2d54d38beb21e9f99dd144c1f3d" name="a112fd2d54d38beb21e9f99dd144c1f3d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a112fd2d54d38beb21e9f99dd144c1f3d">&#9670;&#160;</a></span>getOptimTolGradRel()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Config::getOptimTolGradRel </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a51d4e0769956b7d7a0b9ecca29b7fd61" name="a51d4e0769956b7d7a0b9ecca29b7fd61"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a51d4e0769956b7d7a0b9ecca29b7fd61">&#9670;&#160;</a></span>getOptimTolInfidelity()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Config::getOptimTolInfidelity </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a0f5c1b28086591dd87fbc38092855df0" name="a0f5c1b28086591dd87fbc38092855df0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0f5c1b28086591dd87fbc38092855df0">&#9670;&#160;</a></span>getOptimWeights()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt; double &gt; &amp; Config::getOptimWeights </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a2949c9811c65aab69f584ecdf2a8835a" name="a2949c9811c65aab69f584ecdf2a8835a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2949c9811c65aab69f584ecdf2a8835a">&#9670;&#160;</a></span>getOutputDirectory()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::string &amp; Config::getOutputDirectory </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a3844568aab658f84931348453e69fa5a" name="a3844568aab658f84931348453e69fa5a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3844568aab658f84931348453e69fa5a">&#9670;&#160;</a></span>getOutputObservables()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt; <a class="el" href="defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3">OutputType</a> &gt; &amp; Config::getOutputObservables </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a7bed478677800c41f2a85c643774223c" name="a7bed478677800c41f2a85c643774223c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7bed478677800c41f2a85c643774223c">&#9670;&#160;</a></span>getOutputOptimizationStride()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t Config::getOutputOptimizationStride </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a8bfd6fa417cd673db0b62e5286b40394" name="a8bfd6fa417cd673db0b62e5286b40394"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8bfd6fa417cd673db0b62e5286b40394">&#9670;&#160;</a></span>getOutputTimestepStride()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t Config::getOutputTimestepStride </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ae6529302aa2df655e0ad93966a4aa27a" name="ae6529302aa2df655e0ad93966a4aa27a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae6529302aa2df655e0ad93966a4aa27a">&#9670;&#160;</a></span>getRandSeed()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">int Config::getRandSeed </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ae2c402d6c519fd351f291d50bfe28f3f" name="ae2c402d6c519fd351f291d50bfe28f3f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae2c402d6c519fd351f291d50bfe28f3f">&#9670;&#160;</a></span>getRotationFrequency()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt; double &gt; &amp; Config::getRotationFrequency </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ae95457f903e39dfeef9108957cebb8e8" name="ae95457f903e39dfeef9108957cebb8e8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae95457f903e39dfeef9108957cebb8e8">&#9670;&#160;</a></span>getRuntype()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4">RunType</a> Config::getRuntype </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="acec23effcd55a7b055dd0eb3d63fdb48" name="acec23effcd55a7b055dd0eb3d63fdb48"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acec23effcd55a7b055dd0eb3d63fdb48">&#9670;&#160;</a></span>getSelfKerr()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt; double &gt; &amp; Config::getSelfKerr </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a912e99b3f529e4ff2aba8e91dd0dd7d1" name="a912e99b3f529e4ff2aba8e91dd0dd7d1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a912e99b3f529e4ff2aba8e91dd0dd7d1">&#9670;&#160;</a></span>getTimestepperType()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cc">TimeStepperType</a> Config::getTimestepperType </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a578d0c614831ad7c769eab46e42391b8" name="a578d0c614831ad7c769eab46e42391b8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a578d0c614831ad7c769eab46e42391b8">&#9670;&#160;</a></span>getTotalTime()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Config::getTotalTime </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a439643e632de04609da58c0a6cc390ad" name="a439643e632de04609da58c0a6cc390ad"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a439643e632de04609da58c0a6cc390ad">&#9670;&#160;</a></span>getTransitionFrequency()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const std::vector&lt; double &gt; &amp; Config::getTransitionFrequency </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a04a1fb3870b3a7e9e525316bc1c1caf5" name="a04a1fb3870b3a7e9e525316bc1c1caf5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a04a1fb3870b3a7e9e525316bc1c1caf5">&#9670;&#160;</a></span>getUseMatFree()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Config::getUseMatFree </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aa3b487804df5f269c9c86f5556ec2bb2" name="aa3b487804df5f269c9c86f5556ec2bb2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa3b487804df5f269c9c86f5556ec2bb2">&#9670;&#160;</a></span>printConfig()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Config::printConfig </td>
+          <td>(</td>
+          <td class="paramtype">std::stringstream &amp;&#160;</td>
+          <td class="paramname"><em>log</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
 
 </div>
 </div>

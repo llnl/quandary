@@ -1,30 +1,4 @@
 var searchData=
 [
-  ['_7ebspline0_0',['~BSpline0',['../classBSpline0.html#aa6484b888ecc658a7f4c986314b7ed00',1,'BSpline0']]],
-  ['_7ebspline2nd_1',['~BSpline2nd',['../classBSpline2nd.html#a6ffe47ff9ca66ef87ee612b2273111c1',1,'BSpline2nd']]],
-  ['_7ebspline2ndamplitude_2',['~BSpline2ndAmplitude',['../classBSpline2ndAmplitude.html#a841d295f00ad7d61def417d4a9568620',1,'BSpline2ndAmplitude']]],
-  ['_7ecnot_3',['~CNOT',['../classCNOT.html#a9074d4194dff57830d2495c245322b5b',1,'CNOT']]],
-  ['_7ecompositionalimplmidpoint_4',['~CompositionalImplMidpoint',['../classCompositionalImplMidpoint.html#aabf27010befbb63f09410b723b464e35',1,'CompositionalImplMidpoint']]],
-  ['_7econfig_5',['~Config',['../classConfig.html#a543dce59b66475c5108088ee4ce1cdfc',1,'Config']]],
-  ['_7econtrolbasis_6',['~ControlBasis',['../classControlBasis.html#a81b0caa30a036c04c4a1d9875255dc0e',1,'ControlBasis']]],
-  ['_7ecqnot_7',['~CQNOT',['../classCQNOT.html#a92da43928d54adfe18703eac2bc9ca15',1,'CQNOT']]],
-  ['_7eexpleuler_8',['~ExplEuler',['../classExplEuler.html#a747f73a98132ca13fc63dfac029b8445',1,'ExplEuler']]],
-  ['_7efromfile_9',['~FromFile',['../classFromFile.html#a55d731b4b85a447e145fe32d7ec505e2',1,'FromFile']]],
-  ['_7egate_10',['~Gate',['../classGate.html#aa04556acb1cdc5715e38ced8f28c6b27',1,'Gate']]],
-  ['_7ehadamardgate_11',['~HadamardGate',['../classHadamardGate.html#a2f1511c16f6e5ab81b3aea5a1c3d87d0',1,'HadamardGate']]],
-  ['_7ehamiltonianfilereader_12',['~HamiltonianFileReader',['../classHamiltonianFileReader.html#a1ec6a49b5db37a5201a611238c844ec6',1,'HamiltonianFileReader']]],
-  ['_7eimplmidpoint_13',['~ImplMidpoint',['../classImplMidpoint.html#a07af22b53012189a3f821c24baa5b099',1,'ImplMidpoint']]],
-  ['_7emastereq_14',['~MasterEq',['../classMasterEq.html#af9b8723f0500416cd3d2fcdd14fd9483',1,'MasterEq']]],
-  ['_7eoptimproblem_15',['~OptimProblem',['../classOptimProblem.html#a1faf876ea1193b35fd753e6671f4c024',1,'OptimProblem']]],
-  ['_7eoptimtarget_16',['~OptimTarget',['../classOptimTarget.html#acabdfafb394a6fba453729cad1d04435',1,'OptimTarget']]],
-  ['_7eoscillator_17',['~Oscillator',['../classOscillator.html#a2ad7e67cb42d0a44d430675ffc084c5b',1,'Oscillator']]],
-  ['_7eoutput_18',['~Output',['../classOutput.html#a61d0840daf98bea49e4dc471f235eeab',1,'Output']]],
-  ['_7eqft_19',['~QFT',['../classQFT.html#aaed490bef8453cbed98a1bd04993facf',1,'QFT']]],
-  ['_7estep_20',['~Step',['../classStep.html#aaedd45ac621bb7f9a8383078d37d5d2c',1,'Step']]],
-  ['_7eswap_21',['~SWAP',['../classSWAP.html#a4b02f6c62d39b9485349b6c813d557db',1,'SWAP']]],
-  ['_7eswap_5f0q_22',['~SWAP_0Q',['../classSWAP__0Q.html#ac9d006e6e7fe1aab045fb32e2dc1415c',1,'SWAP_0Q']]],
-  ['_7etimestepper_23',['~TimeStepper',['../classTimeStepper.html#a2d80eb58c811581ef79a0b3749fb5825',1,'TimeStepper']]],
-  ['_7exgate_24',['~XGate',['../classXGate.html#aba4ee512f73d9d921e182a29d172b15d',1,'XGate']]],
-  ['_7eygate_25',['~YGate',['../classYGate.html#af79bd61478ffcd69baa4357aaf15a7d0',1,'YGate']]],
-  ['_7ezgate_26',['~ZGate',['../classZGate.html#a7e80bdc22cbf45bf857558cc4b6a56d4',1,'ZGate']]]
+  ['zgate_0',['ZGate',['../classZGate.html#a8dff9a28b7619cef668fe6a0b6c1536c',1,'ZGate']]]
 ];

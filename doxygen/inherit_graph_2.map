@@ -1,3 +1,9 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="Node000000" href="$classHamiltonianFileReader.html" title="Interface for reading Hamiltonian data from files." alt="" coords="5,5,176,31"/>
+<area shape="rect" id="Node000000" href="$classControlBasis.html" title="Abstract base class for control parameterizations." alt="" coords="5,55,109,80"/>
+<area shape="rect" id="Node000001" href="$classBSpline0.html" title="Discretization of the Controls using piece&#45;wise constant (0&#45;th order) Bsplines." alt="" coords="199,5,278,31"/>
+<area shape="poly" id="edge1_Node000000_Node000001" title=" " alt="" coords="117,48,199,26,200,31,119,54"/>
+<area shape="rect" id="Node000002" href="$classBSpline2nd.html" title="Control parameterization using quadratic (2nd order) Bspline basis functions." alt="" coords="191,55,286,80"/>
+<area shape="poly" id="edge2_Node000000_Node000002" title=" " alt="" coords="123,65,191,65,191,70,123,70"/>
+<area shape="rect" id="Node000003" href="$classBSpline2ndAmplitude.html" title="Control parameterization where only the pulse amplitude is parameterized by Bsplines,..." alt="" coords="157,104,320,129"/>
+<area shape="poly" id="edge3_Node000000_Node000003" title=" " alt="" coords="119,81,192,101,190,106,117,86"/>
 </map>

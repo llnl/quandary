@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['ensemble_0',['ENSEMBLE',['../defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35a6ed80ac51c01c67befa758cf79ff1c99',1,'defs.hpp']]],
-  ['evalcontrols_1',['EVALCONTROLS',['../defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4ab94b0751857b09bb3e56f8918194b2ce',1,'defs.hpp']]]
+  ['decay_0',['DECAY',['../defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cbaf34d9b416802d4cda3a4ee548619f206',1,'defs.hpp']]],
+  ['dephase_1',['DEPHASE',['../defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cba6df8d93940eeb1c56f01e4fd3a9b93c2',1,'defs.hpp']]],
+  ['diagonal_2',['DIAGONAL',['../defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35ad3fbf8a4dbb33b1e296fcaa32703b66d',1,'defs.hpp']]]
 ];
