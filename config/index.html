@@ -106,8 +106,16 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#summary-of-all-c-configuration-options" class="nav-link">Summary of all C++ configuration options</a>
+            <li class="nav-item" data-bs-level="1"><a href="#configuration-options" class="nav-link">Configuration Options</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#toml-configuration" class="nav-link">TOML Configuration</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#configuration-template" class="nav-link">Configuration Template</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
         </ul>
@@ -115,174 +123,203 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="summary-of-all-c-configuration-options">Summary of all C++ configuration options</h1>
-<p>Here is a list of all options available to the C++ Quandary code, this is the same as in <code>config_template.cfg</code>.</p>
-<pre><code class="language-cfg">/* --------------------------------------------------------------- */
-/* -------------------------- Testcase  -------------------------- */
-/* --------------------------------------------------------------- */
-// Number of levels per subsystem
-nlevels = 2, 2
-// Number of essential levels per subsystem (Default: same as nlevels) 
-nessential = 2, 2
-// Number of time steps used for time-integration
+<h1 id="configuration-options">Configuration Options</h1>
+<p>Quandary supports <a href="https://toml.io/en/">TOML</a> configuration files (recommended) and legacy CFG format.</p>
+<h2 id="toml-configuration">TOML Configuration</h2>
+<p>TOML is the recommended configuration format. It provides a clear, hierarchical structure and better validation.</p>
+<p>Note that some parameter names differ between TOML and the Python interface.
+For a complete cross-reference of all parameters, see the <a href="../parameter_reference/">Parameter Reference</a>.</p>
+<h2 id="configuration-template">Configuration Template</h2>
+<p>Below is the complete template with comments explaining each parameter:</p>
+<pre><code class="language-toml">[system]
+# Number of levels per subsystem
+nlevels = [2, 2]
+# Number of essential levels per subsystem. Either a single value (same for all) or one per subsystem. (Default: same as nlevels)
+nessential = [2, 2]
+# Number of time steps used for time-integration
 ntime = 1000
-// Time step size (ns). Determines final time: T=ntime*dt
+# Time step size (ns). Determines final time: T=ntime*dt
 dt = 0.1
-// Fundamental transition frequencies (|0&gt; to |1&gt; transition) for each oscillator (&quot;\omega_k&quot;, multiplying a_k^d a_k, GHz)
-transfreq = 4.10595, 4.81526
-// Self-kerr frequencies for each oscillator (&quot;\xi_k&quot;, multiplying a_k^d a_k^d a_k a_k, GHz)
-selfkerr = 0.2198, 0.2252
-// Cross-kerr coupling frequencies for each oscillator coupling k&lt;-&gt;l (&quot;\xi_kl&quot;, multiplying a_k^d a_k a_l^d a_l, GHz). Format: xi_01, xi_02, xi03, ... ,xi_12, xi_13, ...
-crosskerr = 0.1
-// Dipole-dipole coupling frequencies for each oscillator coupling k&lt;-&gt;l (&quot;J_kl&quot;, multiplying a_k^d a_l + a_k a_l^d, GHz). Format Jkl = J_01, J_02, ..., J12, J13, ... 
-Jkl = 0.0
-// Rotational wave approximation frequencies for each subsystem (&quot;\omega_rot&quot;, GHz). Note: The target gate rotation can be specified separately with option &quot;gate_rot_freq&quot;, see below.
-rotfreq = 4.10595, 4.81526
-// Switch between Schroedinger and Lindblad solver. 'none' solves Schroedinger solver (state vector dynamics), all other options solve Lindblads master equation (density matrix dynamics)
-collapse_type = none
-#collapse_type = decay
-#collapse_type = dephase
-#collapse_type = both
-// Time of decay collapse operation (T1) per oscillator (gamma_1 = 1/T_1) (for Lindblad solver) 
-decay_time = 0.0, 0.0  
-// Time of dephase collapse operation (T2) per oscillator (gamma_2 = 1/T_2) (for Lindblad solver)
-dephase_time = 0.0, 0.0
-// Specify the initial conditions that are to be propagated
-// Available options and additional parameters:
-// - basis: basis states for gate optimization [&lt;osc_ID_i&gt;, &lt;osc_ID_j&gt;, ...] (defaults to all oscillators)
-// - file: read from file, &lt;path/to/file&gt;
-// - pure: kronecker product of pure vectors, &lt;state_osc_0&gt;, ..., &lt;state_osc_n&gt;
-// - diagonal: diagonal density basis matrices [&lt;osc_ID_i&gt;, &lt;osc_ID_j&gt;, ...] (defaults to all oscillators)
-// - ensemble: ensemble state for unconditional pure-state preparation, [&lt;osc_ID_i&gt;, &lt;osc_ID_j&gt;, ...] (defaults to all oscillators) - Lindblad solver only
-// - performance: test state for performance benchmarking (0 parameters)
-// - 3states: three predefined density matrix states (0 parameters) - Lindblad solver only
-// - Nplus1: N+1 basis states for gate optimization (0 parameters) - Lindblad solver only
-initialcondition = basis
-#initialcondition = file, &lt;path/to/initial_condition.dat&gt;
-#initialcondition = pure, 1, 0
-#initialcondition = diagonal, 0
-#initialcondition = ensemble, 0
-#initialcondition = 3states
-#initialcondition = Nplus1
-#initialcondition = performance
-// Apply a pi-pulse to oscillator &lt;oscilID&gt; from &lt;tstart&gt; to &lt;tstop&gt; using a control strength of &lt;amp&gt; rad/ns. This ignores the codes control parameters inside [tstart,tstop], and instead applies the constant control amplitude |p+iq|=&lt;amp&gt; to oscillator &lt;oscilID&gt;, and zero control for all other oscillators. Format per pipulse: 4 values: &lt;oscilID (int)&gt;, &lt;tstart (double)&gt;, &lt;tstop (double)&gt;, &lt;amp(double)&gt;. For more than one pipulse, just put them behind each other. 
-#apply_pipulse = 0, 0.5, 0.604, 15.10381
-#apply_pipulse = 0, 0.5, 0.604, 15.10381, 1, 0.7, 0.804, 15.10381
-// Optional: Read system Hamiltonian from file (default: none - use built-in analytical Hamiltonian)
-#hamiltonian_file_Hsys = /path/to/system_hamiltonian.dat
-// Optional: Read control Hamiltonian from file (default: none - use built-in analytical Hamiltonian)
-#hamiltonian_file_Hc = /path/to/control_hamiltonian.dat
+# Fundamental transition frequencies (|0&gt; to |1&gt; transition) for each subsystem (&quot;\omega_k&quot;, multiplying a_k^d a_k, GHz).
+# Either a single value (same for all) or one per subsystem.
+transition_frequency = [4.10595, 4.81526]
+# transition_frequency = 4.1  # single value applies to all subsystems
+# Self-kerr frequencies for each subsystem (&quot;\xi_k&quot;, multiplying a_k^d a_k^d a_k a_k, GHz).
+# Either a single value (same for all) or one per subsystem. (Default: 0.0)
+selfkerr = [0.2198, 0.2252]
+# selfkerr = 0.22  # single value applies to all subsystems
+# Cross-kerr coupling strength for subsystems k&lt;-&gt;l (&quot;\xi_kl&quot;, multiplying a_k^d a_k a_l^d a_l, GHz).
+# Option 1: All-to-all connectivity with single value
+# crosskerr_coupling = 0.1
+# Option 2: Per-subsystem-pair coupling using array of tables
+crosskerr_coupling = [
+  { subsystem = [0,1], value = 0.1 }
+]
+# Dipole-dipole coupling strength for subsystems k&lt;-&gt;l (&quot;J_kl&quot;, multiplying a_k^d a_l + a_k a_l^d, GHz).
+# Option 1: All-to-all connectivity with single value
+dipole_coupling = 0.0
+# Option 2: Per-subsystem-pair coupling using array of tables
+# dipole_coupling = [
+#   {subsystem = [0,1], value = 0.0 }
+# ]
+# Rotational wave approximation frequencies for each subsystem (&quot;\omega_rot&quot;, GHz).
+# Either a single value (same for all) or one per subsystem. (Default: 0.0)
+rotation_frequency = [4.10595, 4.81526]
+# rotation_frequency = 0.0  # single value applies to all subsystems
 
-/* --------------------------------------------------------------- */
-/* ------------------- Optimization options ----------------------*/
-/* --------------------------------------------------------------- */
-// Define the controllable segments for each oscillator and the type of parameterization. Multiple segments can be listed behind each other, with corresponding starting and finish times.
-// Format: &lt;controltype&gt;, &lt;number of basis functions&gt; [, &lt;tstart&gt;, &lt;tstop&gt;] 
-// Available control types: &quot;spline&quot; for 2nd order Bspline basis functions (recommended), &quot;spline0&quot; for piecewise constant control parameterization (aka 0th order Bspline basis functions),
-// &quot;spline_amplitude&quot; for amplitude-only parameterization, &quot;step&quot; for step function control
-control_segments0 = spline, 150
-control_segments1 = spline, 150
-# control_segments0 = spline0, 300
-# control_segments0 = spline, 150, &lt;tstart&gt;, &lt;tstop&gt;
-# control_segments0 = spline_amplitude, 150, 1.0
-# control_segments0 = step, &lt;amp1&gt;, &lt;amp2&gt;, &lt;tramp&gt;
-# control_segments0 = step, &lt;amp1&gt;, &lt;amp2&gt;, &lt;tramp&gt;, &lt;tstart&gt;, &lt;tstop&gt;
-// Decide whether control pulses should start and end at zero. Default: true.
-control_enforceBC=false
-// Set the initial control pulse parameters (GHz). One option for each segmemt. Note: Reading the initialization from file applies to all subsystems, not just the one oscillator with that index, i.e. the file should contain all parameters for all oscillators in one long column. 
-control_initialization0 = constant, 0.005
-control_initialization1 = constant, 0.005
-#control_initialization0 = constant, 0.005
-#control_initialization0 = random, 0.005
-#control_initialization0 = file, ./params.dat
-#control_initialization0 = constant, &lt;amp_init&gt;, &lt;phase_init&gt;
-// Maximum amplitude bound for the control pulses for each oscillator (GHz). One value for each segment. 
-control_bounds0 = 0.008
-control_bounds1 = 0.008
-// Carrier wave frequencies for each oscillator 0..Q-1. (GHz)
-carrier_frequency0 = 0.0, -0.2198, -0.1
-carrier_frequency1 = 0.0, -0.2252, -0.1
-// Optimization target
-optim_target = gate, cnot
-#optim_target = gate, cqnot 
-#optim_target = gate, swap 
-#optim_target = gate, swap0q 
-#optim_target = gate, qft 
-#optim_target = gate, xgate
-#optim_target = gate, hadamard
-#optim_target = gate, file, /path/to/target_gate.dat
-#optim_target = pure, 0, 0
-#optim_target = file, /path/to/target_state.dat
-// Frequency of rotation of the target gate, for each oscillator (GHz). Default: 0.0
-# gate_rot_freq = 0.0,0.0
-// Objective function measure
-optim_objective = Jtrace
-# optim_objective = Jfrobenius
-# optim_objective = Jmeasure
-// Weights for summing up the objective function (beta_i). If less numbers than oscillators are given, the last one will e propagated to the remaining ones. 
-optim_weights = 1.0
-# optim_weights = 0.5, 0.5
-// Optimization stopping tolerance based on gradient norm (absolute: ||G|| &lt; atol )
-optim_atol = 1e-7
-// Optimization stopping tolerance based on gradient norm (relative: ||G||/||G0|| &lt; rtol )
-optim_rtol = 1e-8
-// Optimization stopping criterion based on the final time cost (absolute: J(T) &lt; ftol)
-optim_ftol = 1e-5
-// Optimization stopping criterion based on the infidelity (absolute: 1-Favg &lt; inf_tol)
-optim_inftol = 1e-5
-// Maximum number of optimization iterations
-optim_maxiter = 200
-// Coefficient (gamma_1) of Tikhonov regularization for the design variables (gamma_1/2 || design ||^2)
-optim_regul   = 0.00001
-// Coefficient (gamma_2) for adding first integral penalty term (gamma_1 \int_0^T P(rho(t) dt )
-optim_penalty = 0.0
-// integral penalty parameter inside the weight in P(rho(t)) (gaussian variance a)
-optim_penalty_param = 0.0
-// Coefficient (gamma_3) for penalizing the integral of the second derivative of state populations (gamma_3 \int_0^T d^2/dt^2(Pop(rho)) dt )
-optim_penalty_dpdm = 0.0
-// Coefficient (gamma_4) for penalizing the control pulse energy integral (gamma_4 \int_0^T p^2 + q^2 dt )
-optim_penalty_energy= 0.0
-// Coefficient (gamma_5) for penalizing variations in control amplitudes. Only used for piece-wise constant control paramterizations (spline0)
-optim_penalty_variation= 0.0
-// Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
-optim_regul_tik0=false
+# Decoherence setting: Switch between Schroedinger and Lindblad solver. Default is &quot;none&quot; which solves Schroedinger equation (state vector dynamics), all other types solve Lindblads master equation for the density matrix.
+decoherence = { type = &quot;none&quot;,              # &quot;none&quot;, &quot;decay&quot;, &quot;dephase&quot;, or &quot;both&quot;
+            #    decay_time = [0.0, 0.0],   # Decay times T1: single value or one per subsystem (ns)
+            #    dephase_time = [0.0, 0.0]  # Dephasing times T2: single value or one per subsystem (ns)
+              }
 
+# Specify the initial conditions that are to be propagated
+# Avalable initial condition types:
+# &quot;basis&quot; - all basis states of the full composite system, or of specified subsystems (subsystem = [...])
+# &quot;state&quot; - single initial state specified as levels of a product state (levels = [...])
+# &quot;file&quot; - read one initial state from file (filename = &quot;...&quot;)
+# &quot;diagonal&quot; - for Lindblad solver, all diagonal basis density matrices of the full system, or of specified subsystems (subsystem = [...])
+# &quot;ensemble&quot; - for Lindblad solver, ensemble state used for pure-state preparation, optionally over specified subsystems (subsystem = [...])
+# &quot;3states&quot; - for Lindblad solver, three initial states for gate optimization
+# &quot;nplus1&quot; - for Lindblad solver, N+1 initial states for fidelity estimation
+initial_condition = {type = &quot;basis&quot;}
+# initial_condition = {type = &quot;state&quot;, levels = [1, 0]}
+# initial_condition = {type = &quot;basis&quot;, subsystem = [0, 1]}
+# initial_condition = {type = &quot;file&quot;, filename = &quot;path/to/initial_state.dat&quot;}
 
-/* --------------------------------------------------------------- */
-/* ------------------- Output and runtypes ----------------------*/
-/* --------------------------------------------------------------- */
-// Directory for output files
-datadir = ./data_out
-// Specify the desired output for each oscillator, one line per oscillator. Format: list of either of the following options: 
-//&quot;expectedEnergy&quot; - time evolution of the expected energy level for this oscillator (expected energy of the reduced density matrix) 
-//&quot;expectedEnergyComposite&quot; - time evolution of expected energy level of the full-dimensional composite system
-//&quot;population&quot; - time evolution of the energy level populations (probabilities) for this oscillator (diagonals of the reduced density matrix) 
-//&quot;populationComposite&quot; - time evolution of the energy level population (probabilities) for the full-dimensional composite system
-//&quot;fullstate&quot; - time-evolution of the full state of the composite system (full density matrix, or state vector) (note: 'fullstate' can appear in *any* of the lines). WARNING: This might result in *huge* output files! Use with care.
-output0 = population, expectedEnergy
-output1 = population, expectedEnergy
-// Output frequency in the time domain: write output every &lt;num&gt; time-step 
-output_frequency = 1
-// Frequency of writing output during optimization: write output every &lt;num&gt; optimization iterations. 
-optim_monitor_frequency = 1
-// Runtype options: a forward simulation only, forward simulation and backward simulation for gradient, or &quot;optimization&quot; to run a full optimization cycle
-#runtype = simulation
-#runtype = gradient
-runtype = optimization
-// Use matrix free solver, instead of sparse matrix implementation. Only available for 2,3,4, or 5 oscillators. 
+# Optional: Read system Hamiltonian from file (default: none - use built-in Hamiltonian)
+# hamiltonian_file_Hsys = &quot;/path/to/system_hamiltonian.dat&quot;
+# Optional: Read control Hamiltonian from file (default: none - use built-in Hamiltonian)
+# hamiltonian_file_Hc = &quot;/path/to/control_hamiltonian.dat&quot;
+
+[control]
+# Control parameterization options:
+# Available control types:
+# &quot;spline&quot; - 2nd order B-spline basis functions (recommended).
+# &quot;spline0&quot; - piecewise constant control parameterization (0th order B-splines)
+# &quot;spline_amplitude&quot; - amplitude-only parameterization
+# For each type, specify number of basis functions (num), and optionally start and stop times (tstart, tstop)
+# Option 1: Parameterization that applies to all subsystems
+parameterization = { type = &quot;spline&quot;, num = 150}
+# parameterization = { type = &quot;spline0&quot;, num = 300 , tstart = 0.0, tstop = 10.0 }
+
+# Option 2: Specify different parameterizations per-subsystem as array of tables
+# parameterization = [
+#   { subsystem = 0, type = &quot;spline&quot;, num = 150, tstart = 0.0, tstop = 10.0 },
+#   { subsystem = 1, type = &quot;spline0&quot;, num = 300 }
+# ]
+
+# Carrier wave frequencies (GHz).
+# Option 1: Specify different arrays of frequencies for each subsystem, as array of tables
+carrier_frequency = [
+  {subsystem = 0, value = [0.0, -0.2198, -0.1]},
+  {subsystem = 1, value = [0.0, -0.2252, -0.1]}
+]
+# Option 2: Same array of frequencies for all subsystems using a table
+# carrier_frequency = { values = [0.0, -0.2252, -0.1] }
+# Option 3: Same array of frequencies for all subsystems using shorthand
+# carrier_frequency = [0.0, -0.2252, -0.1]
+
+## Control parameter initialization:
+# Available types:
+# &quot;random&quot; - random initialization within amplitude bounds (amplitude = ...)
+# &quot;constant&quot; - constant amplitude initialization (amplitude = ...)
+# &quot;file&quot; - read initial parameters from file (filename = &quot;...&quot;)
+## Option 1: Initialization that applies to all subsystems
+initialization = { type = &quot;random&quot;, amplitude = 0.005}
+# initialization = { type = &quot;file&quot;, filename = &quot;./params.dat&quot;}
+## Option 2: Specify different initialization per subsystem as array of tables
+# initialization = [
+#   { subsystem = 0, type = &quot;constant&quot;, amplitude = 0.003 },
+#   { subsystem = 1, type = &quot;random&quot;, amplitude = 0.05 }
+# ]
+
+# Maximum amplitude bound for the control pulses (GHz).
+# Option 1: Single value applies to all subsystems
+amplitude_bound = 0.008
+# Option 2: Specify different bounds for each subsystem as array
+# amplitude_bound = [0.008, 0.010]
+
+## Decide whether control pulses should start and end at zero.
+zero_boundary_condition = false
+
+[optimization]
+# Optimization target options:
+# Available target types:
+# &quot;none&quot; - No optimization target
+# &quot;gate&quot; - Unitary gate transformation. The gate can be read from file (filename = &quot;...&quot;), or chosen from standard gates below (gate_type = &quot;...&quot;). Optionally, a gate rotation frequency can be specified (gate_rot_freq = single value or array)
+# &quot;state&quot; - Single target state. The state can be read from file (filename = &quot;...&quot;), or can be specified as levels of a product state (levels = [...])
+target = {type = &quot;gate&quot;, gate_type = &quot;cnot&quot;} # &quot;cnot&quot;, &quot;cqnot&quot;, &quot;swap&quot;, &quot;swap0q&quot;, &quot;qft&quot;, &quot;xgate&quot;, &quot;ygate&quot;, &quot;zgate&quot;, &quot;hadamard&quot;
+# target = { type = &quot;gate&quot;, gate_type = &quot;cnot&quot;, gate_rot_freq = 0.0 }           # single value for all
+# target = { type = &quot;gate&quot;, gate_type = &quot;cnot&quot;, gate_rot_freq = [0.0, 0.0] }    # one per subsystem
+# target = {type = &quot;gate&quot;, filename = &quot;/path/to/target_gate.dat&quot;}
+# target = {type = &quot;state&quot;, levels = [0, 0]}
+# target = {type = &quot;state&quot;, filename = &quot;/path/to/target_state.dat&quot;}
+#target = {type = &quot;none&quot;}
+
+# Objective function measure options: &quot;Jtrace&quot;, &quot;Jfrobenius&quot;, &quot;Jmeasure&quot;
+objective = &quot;Jtrace&quot;
+
+# Weights (beta_i) for summing up objective function terms from different initial conditions.
+# Must be an array of weights (one per initial condition). Default is uniform weighting.
+# weights = [1.0, 0.1, 0.1, 0.1]
+
+# Optimization tolerances (stopping criteria):
+tolerance = { grad_abs = 1e-7,     # absolute gradient norm tolerance (||G|| &lt; grad_abs)
+              grad_rel = 1e-8,     # relative gradient norm tolerance (||G||/||G0|| &lt; grad_rel)
+              final_cost = 1e-5,   # final-time cost tolerance (J(T) &lt; final_cost)
+              infidelity = 1e-5    # infidelity tolerance (1 - F_avg &lt; infidelity)
+            }
+# Maximum number of optimization iterations
+maxiter = 200
+
+# Tikhonov regularization for the optimization variables (gamma * ||x||^2)
+tikhonov = { coeff = 0.00001,   # Coefficient (gamma) for Tikhonov regularization
+             use_x0 = false     # use gamma * ||x - x_0||^2 instead (default: false)
+           }
+
+# Coefficients for Penalty terms added to the optimization cost function
+penalty = { leakage = 0.0,                # Penalize leakage into guard levels
+            energy = 0.0,                 # Penalize integral over control pulse energy
+            dpdm = 0.0,                   # Penalize 2nd derivative of state populations
+            variation = 0.0,              # Penalize control pulse variation (for 0-th order Bsplines)
+            weightedcost = 0.0,           # Penalize time-weighted cost function integral
+            weightedcost_width = 0.0      # Width paramter for weighted cost function integral
+          }
+
+[output]
+# Directory for output files
+directory = &quot;./data_out&quot;
+# Specify the desired observables during time evolution. Format: list of any of the following options:
+# &quot;expectedEnergy&quot; - expected level occupation for each subsystem
+# &quot;expectedEnergyComposite&quot; - expected level of the full-dimensional composite system
+# &quot;population&quot; - level occupation (probabilities) for each subsystem
+# &quot;populationComposite&quot; - level occupation (probabilities) for the full-dimensional composite system
+# &quot;fullstate&quot; - full state of the composite system (full density matrix, or state vector). WARNING: This might result in very large output files - use with care.
+observables = [&quot;population&quot;, &quot;expectedEnergy&quot;]
+# Output frequency in the time domain: write output every &lt;num&gt; time-step
+timestep_stride = 1
+# Output frequency for optimization history: write every &lt;num&gt; optimization iterations
+optimization_stride = 1
+
+[solver]
+# Runtype options:
+# &quot;simulation&quot; - a forward simulation only
+# &quot;gradient&quot; - forward simulation and backward simulation
+# &quot;optimization&quot; - a full optimization cycle
+# &quot;evalControls&quot; - only evaluates the current control pulses (no simulation)
+runtype = &quot;optimization&quot;
+# Use matrix free solver, instead of sparse matrix implementation. Only available for 2,3,4, or 5 subsystems.
 usematfree = true
-// Solver type for solving the linear system at each time step
-linearsolver_type = gmres
-# linearsolver_type = neumann
-// Set maximum number of iterations for the linear solver
-linearsolver_maxiter = 20
-// Switch the time-stepping algorithm. Currently available: 
-// &quot;IMR&quot; - Implicit Midpoint Rule (IMR) of 2nd order, 
-// &quot;IMR4&quot; - Compositional IMR of order 2 using 3 stages, 
-// &quot;IMR8&quot; - Compositional IMR of order 8 using 15 stages, 
-// &quot;EE&quot; - Explicit Euler (EE) of 1st order (for debugging only)
-timestepper = IMR
-// For reproducability, one can choose to set a fixed seed for the random number generator. Comment out, or set negative if seed should be random (non-reproducable)
+# Linear solver configuration: type can be &quot;gmres&quot; or &quot;neumann&quot;, and maximum number of iteration (maxiter)
+linearsolver = { type = &quot;gmres&quot;, maxiter = 20 }
+# Switch the time-stepping algorithm. Currently available:
+# &quot;IMR&quot; - Implicit Midpoint Rule (IMR) of 2nd order,
+# &quot;IMR4&quot; - Compositional IMR of order 2 using 3 stages,
+# &quot;IMR8&quot; - Compositional IMR of order 8 using 15 stages,
+# &quot;EE&quot; - Explicit Euler (EE) of 1st order, (for debugging only)
+timestepper = &quot;IMR&quot;
+# Fixed seed for the random number generator. Comment out, or set negative if seed should be random (non-reproducable)
 rand_seed = 1234
 
 </code></pre></div>

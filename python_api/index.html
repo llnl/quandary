@@ -108,6 +108,10 @@
             
             <li class="nav-item" data-bs-level="1"><a href="#interfacing-to-python-environment" class="nav-link">Interfacing to Python environment</a>
               <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#parameter-naming" class="nav-link">Parameter Naming</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
               </ul>
             </li>
             
@@ -128,6 +132,8 @@
 <li>Simulate and optimize with <strong>custom system and control Hamiltonian operators</strong>, other than the default model for superconducting quantum devices defined in <a href="../user_guide/">User Guide</a>. </li>
 </ul>
 <p>All interface functions are defined in <code>./quandary.py</code>, which defines the <code>Quandary</code> dataclass that gathers all configuration options and sets default values. Default values are overwritten by user input either through the constructor call through <code>Quandary(&lt;membervar&gt;=&lt;value&gt;)</code> directly, or by accessing the member variables after construction and calling <code>update()</code> afterwards. A good place to get started is to look at the example <code>example_swap02.py</code>, or jump start with the <a href="../QuandaryWithPython_HowTo/">Jupyter Notebook Tutorial</a></p>
+<h2 id="parameter-naming">Parameter Naming</h2>
+<p>For historical reasons, some parameter names differ between the Python interface and TOML configuration. For a complete cross-reference of all parameters across interfaces, see the <a href="../parameter_reference/">Parameter Reference</a>.</p>
 <p>Under the hood, the python interface dumps all configuration options to file and evokes (multiple) subprocesses that execute the C++ code on this configuration file. The C++ output files are loaded back into the python interpreter.
 It is therefore recommended to utilize the python interface only for smaller system sizes (fewer qubits), and switch to operate the C++ code directly when larger systems are considered (e.g. when parallel linear algebra is required.)</p>
 <h3 id="custom-hamiltonian-models">Custom Hamiltonian models</h3>

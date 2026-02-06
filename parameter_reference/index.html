@@ -6,9 +6,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         
         <meta name="author" content="LLNL">
-        <link rel="canonical" href="https://software.llnl.gov/quandary/getting_started/">
+        <link rel="canonical" href="https://software.llnl.gov/quandary/parameter_reference/">
         <link rel="shortcut icon" href="../img/favicon.ico">
-        <title>Getting Started - Quandary</title>
+        <title>Quandary Parameter Reference - Quandary</title>
         <link href="../css/bootstrap.min.css" rel="stylesheet">
         <link href="../css/fontawesome.min.css" rel="stylesheet">
         <link href="../css/brands.min.css" rel="stylesheet">
@@ -38,11 +38,11 @@
                                 <a href=".." class="nav-link">Home</a>
                             </li>
                             <li class="nav-item dropdown">
-                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Basics</a>
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Basics</a>
                                 <ul class="dropdown-menu">
                                     
 <li>
-    <a href="./" class="dropdown-item active" aria-current="page">Getting Started</a>
+    <a href="../getting_started/" class="dropdown-item">Getting Started</a>
 </li>
                                     
 <li>
@@ -78,16 +78,6 @@
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
-                            <li class="nav-item">
-                                <a rel="prev" href=".." class="nav-link">
-                                    <i class="fa fa-arrow-left"></i> Previous
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a rel="next" href="../QuandaryWithPython_HowTo/" class="nav-link">
-                                    Next <i class="fa fa-arrow-right"></i>
-                                </a>
-                            </li>
                     </ul>
                 </div>
             </div>
@@ -106,17 +96,25 @@
     <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
         <ul class="nav flex-column">
             
-            <li class="nav-item" data-bs-level="1"><a href="#getting-started" class="nav-link">Getting Started</a>
+            <li class="nav-item" data-bs-level="1"><a href="#quandary-parameter-reference" class="nav-link">Quandary Parameter Reference</a>
               <ul class="nav flex-column">
-            <li class="nav-item" data-bs-level="2"><a href="#installation" class="nav-link">Installation</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-bs-level="2"><a href="#running" class="nav-link">Running</a>
+            <li class="nav-item" data-bs-level="2"><a href="#system-parameters" class="nav-link">System Parameters</a>
               <ul class="nav flex-column">
               </ul>
             </li>
-            <li class="nav-item" data-bs-level="2"><a href="#next-steps" class="nav-link">Next Steps</a>
+            <li class="nav-item" data-bs-level="2"><a href="#control-parameters" class="nav-link">Control Parameters</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#optimization-parameters" class="nav-link">Optimization Parameters</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#output-parameters" class="nav-link">Output Parameters</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#solver-parameters" class="nav-link">Solver Parameters</a>
               <ul class="nav flex-column">
               </ul>
             </li>
@@ -127,64 +125,278 @@
 </div></div>
                     <div class="col-md-9" role="main">
 
-<h1 id="getting-started">Getting Started</h1>
-<h2 id="installation">Installation</h2>
-<p>You have two options to install the Quandary binary:</p>
-<h3 id="option-1-install-via-spack-recommended">Option 1: Install via Spack (Recommended)</h3>
-<p>If you have <a href="https://spack.readthedocs.io/en/latest/getting_started.html#installation">Spack</a> installed:</p>
-<pre><code class="language-console">spack install quandary
-</code></pre>
-<p>This automatically handles all dependencies including PETSc and MPI.</p>
-<h3 id="option-2-build-from-source">Option 2: Build from Source</h3>
-<p><strong>Prerequisites for building from source:</strong></p>
-<ul>
-<li><strong>PETSc</strong> (Portable, Extensible Toolkit for Scientific Computation)</li>
-<li><strong>MPI</strong> implementation for parallel execution</li>
-<li><strong>CMake</strong> 3.23 or later</li>
-<li><strong>C++ compiler</strong> with C++17 support</li>
-</ul>
-<p><strong>Steps:</strong></p>
-<ul>
-<li>Clone the repository:</li>
-</ul>
-<pre><code class="language-console">git clone https://github.com/LLNL/quandary.git
-cd quandary
-</code></pre>
-<ul>
-<li>Follow the detailed build instructions in the <a href="https://github.com/LLNL/quandary/blob/main/README.md">README.md</a></li>
-</ul>
-<h2 id="running">Running</h2>
-<h3 id="c-interface">C++ Interface</h3>
-<p>Test your installation with the provided template:</p>
-<pre><code class="language-console">./quandary config_template.toml  # Serial execution
-mpirun -np 4 ./quandary config_template.toml  # Parallel execution
-</code></pre>
-<p>Results are written as column-based text files in the output directory <code>data_out/</code>. The <code>config_template.toml</code> is currently set to run a CNOT optimization test case. It lists all available options and configurations, and is filled with comments that should help users to set up new simulation and optimization runs, and match the input options to the equations found in this document.</p>
-<p>You can silence Quandary by adding the <code>--quiet</code> command line argument.</p>
-<h3 id="python-interface">Python Interface</h3>
-<p>For Python interface, after cloning quandary:</p>
-<pre><code class="language-console">pip install -e .
-</code></pre>
-<p>Test the Python interface with a working example:</p>
-<pre><code class="language-console">cd examples
-python example_cnot.py
-</code></pre>
-<p>This example demonstrates:</p>
-<ul>
-<li>Setting up a 2-qubit system</li>
-<li>Defining a CNOT gate target</li>
-<li>Running optimization</li>
-<li>Plotting results</li>
-</ul>
-<p>The output will show optimization progress and generate control pulse plots.</p>
-<h2 id="next-steps">Next Steps</h2>
-<ul>
-<li><strong><a href="https://github.com/LLNL/quandary-examples/">Examples</a></strong>: Check out the quandary-examples repo</li>
-<li><strong><a href="../QuandaryWithPython_HowTo/">Jupyter Example</a></strong>: Check out the Jupyter Notebook Tutorial in these docs or in the above repo</li>
-<li><strong><a href="../user_guide/">User Guide</a></strong>: Comprehensive documentation of Quandary's capabilities and details</li>
-<li><strong><a href="../config/">C++ Config Reference</a></strong>: Reference listing configuration files in detail</li>
-<li><strong><a href="../python_api/">Python API Reference</a></strong>: Reference listing the Python interface in detail</li>
-</ul></div>
+<h1 id="quandary-parameter-reference">Quandary Parameter Reference</h1>
+<p>This document provides a comprehensive mapping between parameters in different Quandary interfaces.
+Note that the CFG format is deprecated in favor of the TOML format and will be removed. See also <a href="../config/">Config Options</a>.</p>
+<h2 id="system-parameters">System Parameters</h2>
+<table>
+<thead>
+<tr>
+<th>TOML Setting</th>
+<th>Python Interface</th>
+<th>CFG Format</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nlevels</code></td>
+<td><code>Ne</code> + <code>Ng</code></td>
+<td><code>nlevels</code></td>
+<td>Number of energy levels per oscillator</td>
+</tr>
+<tr>
+<td><code>nessential</code></td>
+<td><code>Ne</code></td>
+<td><code>nessential</code></td>
+<td>Number of essential levels per subsystem</td>
+</tr>
+<tr>
+<td><code>ntime</code></td>
+<td>Derived</td>
+<td><code>ntime</code></td>
+<td>Number of time steps used for time-integration</td>
+</tr>
+<tr>
+<td><code>dt</code></td>
+<td>Derived from <code>T</code>/<code>nsteps</code></td>
+<td><code>dt</code></td>
+<td>Time step size (ns)</td>
+</tr>
+<tr>
+<td><code>transition_frequency</code></td>
+<td><code>freq01</code></td>
+<td><code>transfreq</code></td>
+<td>01-transition frequencies [GHz]</td>
+</tr>
+<tr>
+<td><code>selfkerr</code></td>
+<td><code>selfkerr</code></td>
+<td><code>selfkerr</code></td>
+<td>Anharmonicities [GHz]</td>
+</tr>
+<tr>
+<td><code>crosskerr_coupling</code></td>
+<td><code>crosskerr</code></td>
+<td><code>crosskerr</code></td>
+<td>Cross-Kerr coupling strength [GHz]</td>
+</tr>
+<tr>
+<td><code>dipole_coupling</code></td>
+<td><code>Jkl</code></td>
+<td><code>Jkl</code></td>
+<td>Dipole-dipole coupling strength [GHz]</td>
+</tr>
+<tr>
+<td><code>rotation_frequency</code></td>
+<td><code>rotfreq</code></td>
+<td><code>rotfreq</code></td>
+<td>Rotational wave frequencies [GHz]</td>
+</tr>
+<tr>
+<td><code>decoherence</code></td>
+<td><code>T1</code>/<code>T2</code></td>
+<td><code>collapse_type</code></td>
+<td>Decoherence settings</td>
+</tr>
+<tr>
+<td><code>initial_condition</code></td>
+<td><code>initialcondition</code></td>
+<td><code>initialcondition</code></td>
+<td>Initial quantum state</td>
+</tr>
+<tr>
+<td><code>hamiltonian_file_Hsys</code></td>
+<td><code>Hsys</code></td>
+<td><code>hamiltonian_file_Hsys</code></td>
+<td>System Hamiltonian file</td>
+</tr>
+<tr>
+<td><code>hamiltonian_file_Hc</code></td>
+<td><code>Hc_re</code>/<code>Hc_im</code></td>
+<td><code>hamiltonian_file_Hc</code></td>
+<td>Control Hamiltonian file</td>
+</tr>
+</tbody>
+</table>
+<h2 id="control-parameters">Control Parameters</h2>
+<table>
+<thead>
+<tr>
+<th>TOML Setting</th>
+<th>Python Interface</th>
+<th>CFG Format</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>parameterization</code></td>
+<td><code>spline_order</code>, <code>nsplines</code></td>
+<td><code>control_segments</code></td>
+<td>Control parameterization</td>
+</tr>
+<tr>
+<td><code>carrier_frequency</code></td>
+<td><code>carrier_frequency</code></td>
+<td><code>carrier_frequency</code></td>
+<td>Carrier frequencies</td>
+</tr>
+<tr>
+<td><code>initialization</code></td>
+<td><code>initctrl_MHz</code>, <code>randomize_init_ctrl</code></td>
+<td><code>control_init_type</code></td>
+<td>Control initialization</td>
+</tr>
+<tr>
+<td><code>amplitude_bound</code></td>
+<td><code>maxctrl_MHz</code></td>
+<td><code>control_bounds</code></td>
+<td>Control amplitude bounds</td>
+</tr>
+<tr>
+<td><code>zero_boundary_condition</code></td>
+<td><code>control_enforce_BC</code></td>
+<td><code>control_enforceBC</code></td>
+<td>Control boundary condition</td>
+</tr>
+</tbody>
+</table>
+<h2 id="optimization-parameters">Optimization Parameters</h2>
+<table>
+<thead>
+<tr>
+<th>TOML Setting</th>
+<th>Python Interface</th>
+<th>CFG Format</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>target</code></td>
+<td><code>targetgate</code>/<code>targetstate</code></td>
+<td><code>optim_target</code></td>
+<td>Optimization target</td>
+</tr>
+<tr>
+<td><code>objective</code></td>
+<td><code>costfunction</code></td>
+<td><code>optim_objective</code></td>
+<td>Objective function</td>
+</tr>
+<tr>
+<td><code>weights</code></td>
+<td>N/A</td>
+<td><code>optim_weights</code></td>
+<td>Objective function weights</td>
+</tr>
+<tr>
+<td><code>tolerance</code></td>
+<td><code>tol_infidelity</code>, <code>tol_costfunc</code>, etc.</td>
+<td><code>optim_tol_*</code></td>
+<td>Optimization tolerances</td>
+</tr>
+<tr>
+<td><code>maxiter</code></td>
+<td><code>maxiter</code></td>
+<td><code>optim_maxiter</code></td>
+<td>Maximum iterations</td>
+</tr>
+<tr>
+<td><code>tikhonov</code></td>
+<td><code>gamma_tik0</code>, <code>gamma_tik0_interpolate</code></td>
+<td><code>optim_regul</code></td>
+<td>Regularization parameters</td>
+</tr>
+<tr>
+<td><code>penalty</code></td>
+<td><code>gamma_leakage</code>, <code>gamma_energy</code>, etc.</td>
+<td><code>optim_penalty_*</code></td>
+<td>Penalty parameters</td>
+</tr>
+</tbody>
+</table>
+<h2 id="output-parameters">Output Parameters</h2>
+<table>
+<thead>
+<tr>
+<th>TOML Setting</th>
+<th>Python Interface</th>
+<th>CFG Format</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>directory</code></td>
+<td><code>datadir</code> (method param)</td>
+<td><code>datadir</code></td>
+<td>Output directory</td>
+</tr>
+<tr>
+<td><code>observables</code></td>
+<td>N/A</td>
+<td><code>output</code></td>
+<td>Observables to output</td>
+</tr>
+<tr>
+<td><code>timestep_stride</code></td>
+<td>N/A</td>
+<td><code>output_frequency</code></td>
+<td>Output frequency</td>
+</tr>
+<tr>
+<td><code>optimization_stride</code></td>
+<td><code>print_frequency_iter</code></td>
+<td><code>optim_monitor_frequency</code></td>
+<td>Optimization output frequency</td>
+</tr>
+</tbody>
+</table>
+<h2 id="solver-parameters">Solver Parameters</h2>
+<table>
+<thead>
+<tr>
+<th>TOML Setting</th>
+<th>Python Interface</th>
+<th>CFG Format</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>runtype</code></td>
+<td>N/A</td>
+<td><code>runtype</code></td>
+<td>Run type</td>
+</tr>
+<tr>
+<td><code>usematfree</code></td>
+<td><code>usematfree</code></td>
+<td><code>usematfree</code></td>
+<td>Matrix-free solver setting</td>
+</tr>
+<tr>
+<td><code>linearsolver</code></td>
+<td>N/A</td>
+<td><code>linearsolver_type</code></td>
+<td>Linear solver configuration</td>
+</tr>
+<tr>
+<td><code>timestepper</code></td>
+<td><code>timestepper</code></td>
+<td><code>timestepper</code></td>
+<td>Time-stepping algorithm</td>
+</tr>
+<tr>
+<td><code>rand_seed</code></td>
+<td><code>rand_seed</code></td>
+<td><code>rand_seed</code></td>
+<td>Random seed</td>
+</tr>
+</tbody>
+</table></div>
             </div>
         </div>
 
