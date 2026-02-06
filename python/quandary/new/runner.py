@@ -106,7 +106,7 @@ def run_mpi(
 
     Example:
         >>> # In Jupyter notebook
-        >>> config = create_optimization_config(Ne=[2], transition_frequency=[4.1], T=50.0)
+        >>> config = create_optimization_config(nessential=[2], transition_frequency=[4.1], final_time=50.0)
         >>> results = run_mpi(config, n_procs=4)
         >>> print(f"Infidelity: {results.infidelity}")
     """

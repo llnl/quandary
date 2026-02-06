@@ -3,7 +3,7 @@
 import numpy as np
 
 
-def estimate_timesteps(*, T=1.0, Hsys=[], Hc_re=[], Hc_im=[], amplitude_bound=[], Pmin=40):
+def estimate_timesteps(*, final_time=1.0, Hsys=[], Hc_re=[], Hc_im=[], amplitude_bound=[], Pmin=40):
     """
     Estimate the number of time steps based on eigenvalues of Hamiltonians.
 
@@ -34,9 +34,9 @@ def estimate_timesteps(*, T=1.0, Hsys=[], Hc_re=[], Hc_im=[], amplitude_bound=[]
     # ctrl_fac = 1.2  # Heuristic, assuming that the total Hamiltonian is dominated by the system part.
     ctrl_fac = 1.0
     samplerate = ctrl_fac * maxeig * Pmin / (2 * np.pi)
-    nsteps = int(np.ceil(T * samplerate))
+    ntime = int(np.ceil(final_time * samplerate))
 
-    return nsteps
+    return ntime
 
 
 def timestep_richardson_est(quandary, tol=1e-8, order=2, quandary_exec=""):

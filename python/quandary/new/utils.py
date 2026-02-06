@@ -94,7 +94,7 @@ def infidelity_(A, B):
     return 1.0 - np.abs(np.trace(A.conj().transpose() @ B))**2 / dim**2
 
 
-def downsample_pulses(*, pt0=[], qt0=[], nsplines, spline_knot_spacing, nsteps, dT, Ne):
+def downsample_pulses(*, pt0=[], qt0=[], nsplines, spline_knot_spacing, ntime, dt, nessential):
     """
     Downsample control pulses from high-resolution (pt0, qt0) to B-spline coefficients.
 
@@ -104,18 +104,18 @@ def downsample_pulses(*, pt0=[], qt0=[], nsplines, spline_knot_spacing, nsteps, 
     Parameters:
     -----------
     pt0 : List[ndarray]
-        Real part of control pulses [MHz] for each oscillator. Size: (nsteps+1,) per oscillator.
+        Real part of control pulses [MHz] for each oscillator. Size: (ntime+1,) per oscillator.
     qt0 : List[ndarray]
-        Imaginary part of control pulses [MHz] for each oscillator. Size: (nsteps+1,) per oscillator.
+        Imaginary part of control pulses [MHz] for each oscillator. Size: (ntime+1,) per oscillator.
     nsplines : int
         Number of B-spline basis functions.
     spline_knot_spacing : float
         Spacing between B-spline knots [ns].
-    nsteps : int
+    ntime : int
         Number of time steps.
-    dT : float
+    dt : float
         Time step size [ns].
-    Ne : List[int]
+    nessential : List[int]
         Number of essential levels per oscillator.
 
     Returns:
@@ -123,7 +123,7 @@ def downsample_pulses(*, pt0=[], qt0=[], nsplines, spline_knot_spacing, nsteps, 
     pcof0 : ndarray
         Control parameter vector (B-spline coefficients) in rad/ns.
     """
-    Nsys = len(Ne)
+    Nsys = len(nessential)
     if len(pt0) == Nsys and len(qt0) == Nsys:
         sizes_ok = True
         for iosc in range(Nsys):
@@ -139,7 +139,7 @@ def downsample_pulses(*, pt0=[], qt0=[], nsplines, spline_knot_spacing, nsteps, 
 
             for iosc in range(Nsys):
                 Nelem = np.size(pt0[iosc])
-                dt = (nsteps * dT) / (Nelem - 1)  # time step corresponding to (pt0, qt0)
+                dt_pulse = (ntime * dt) / (Nelem - 1)  # time step corresponding to (pt0, qt0)
                 p_seg = pt0[iosc]
                 q_seg = qt0[iosc]
 

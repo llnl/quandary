@@ -24,11 +24,11 @@ logger = logging.getLogger(__name__)
 
 
 def _setup_physics(
-    Ne: List[int],
+    nessential: List[int],
     transition_frequency: List[float],
-    T: float,
+    final_time: float,
     selfkerr: Optional[List[float]] = None,
-    Ng: Optional[List[int]] = None,
+    nguard: Optional[List[int]] = None,
     rotation_frequency: Optional[List[float]] = None,
     crosskerr_coupling: Optional[List[float]] = None,
     dipole_coupling: Optional[List[float]] = None,
@@ -46,11 +46,11 @@ def _setup_physics(
         QuandaryConfig with physics parameters configured.
     """
     # Set defaults
-    nqubits = len(Ne)
+    nqubits = len(nessential)
     if selfkerr is None:
         selfkerr = [0.0] * nqubits
-    if Ng is None:
-        Ng = [0] * nqubits
+    if nguard is None:
+        nguard = [0] * nqubits
     if rotation_frequency is None:
         rotation_frequency = transition_frequency[:]
     if crosskerr_coupling is None:
@@ -64,9 +64,9 @@ def _setup_physics(
         initialcondition.condition_type = InitialConditionType.BASIS
 
     # Build Hamiltonians
-    Ntot = [Ne[i] + Ng[i] for i in range(nqubits)]
+    nlevels = [nessential[i] + nguard[i] for i in range(nqubits)]
     Hsys, Hc_re, Hc_im = hamiltonians(
-        N=Ntot,
+        N=nlevels,
         transition_frequency=transition_frequency,
         selfkerr=selfkerr,
         crosskerr_coupling=crosskerr_coupling,
@@ -76,8 +76,8 @@ def _setup_physics(
     )
 
     # Estimate timesteps
-    nsteps = estimate_timesteps(
-        T=T,
+    ntime = estimate_timesteps(
+        final_time=final_time,
         Hsys=Hsys,
         Hc_re=Hc_re,
         Hc_im=Hc_im,
@@ -87,8 +87,8 @@ def _setup_physics(
 
     # Compute carrier frequencies
     carrier_frequency, _ = get_resonances(
-        Ne=Ne,
-        Ng=Ng,
+        nessential=nessential,
+        nguard=nguard,
         Hsys=Hsys,
         Hc_re=Hc_re,
         Hc_im=Hc_im,
@@ -98,17 +98,17 @@ def _setup_physics(
 
     if verbose:
         logger.info("Configuration computed:")
-        logger.info(f"  Total time: {T} ns")
-        logger.info(f"  Time steps: {nsteps}")
-        logger.info(f"  dt: {T/nsteps:.6f} ns")
+        logger.info(f"  Total time: {final_time} ns")
+        logger.info(f"  Time steps: {ntime}")
+        logger.info(f"  dt: {final_time/ntime:.6f} ns")
         logger.info(f"  Carrier frequencies: {carrier_frequency}")
 
     # Create config with common fields
     config = QuandaryConfig()
-    config.nlevels = Ntot
-    config.nessential = Ne
-    config.ntime = nsteps
-    config.dt = T / nsteps
+    config.nlevels = nlevels
+    config.nessential = nessential
+    config.ntime = ntime
+    config.dt = final_time / ntime
     config.transition_frequency = transition_frequency
     config.rotation_frequency = rotation_frequency
     config.selfkerr = selfkerr
@@ -124,12 +124,12 @@ def _setup_physics(
 
 
 def create_simulation_config(
-    Ne: List[int],
+    nessential: List[int],
     transition_frequency: List[float],
-    T: float,
+    final_time: float,
     pcof = None,
     selfkerr: Optional[List[float]] = None,
-    Ng: Optional[List[int]] = None,
+    nguard: Optional[List[int]] = None,
     rotation_frequency: Optional[List[float]] = None,
     crosskerr_coupling: Optional[List[float]] = None,
     dipole_coupling: Optional[List[float]] = None,
@@ -148,18 +148,18 @@ def create_simulation_config(
 
     Required Parameters:
     -------------------
-    Ne : List[int]
+    nessential : List[int]
         Number of essential energy levels per qubit
     transition_frequency : List[float]
         01-transition frequencies [GHz] per qubit
-    T : float
+    final_time : float
         Pulse duration [ns]
 
     Optional Parameters:
     -------------------
     selfkerr : List[float]
         Anharmonicities [GHz] per qubit. Default: zeros
-    Ng : List[int]
+    nguard : List[int]
         Number of guard levels per qubit. Default: zeros
     rotation_frequency : List[float]
         Frequency of rotations for computational frame [GHz] per qubit. Default: transition_frequency
@@ -185,15 +185,15 @@ def create_simulation_config(
     Example:
     -------
     >>> # Simple simulation with random/default controls
-    >>> config = create_simulation_config(Ne=[2], transition_frequency=[4.1], T=50.0)
+    >>> config = create_simulation_config(nessential=[2], transition_frequency=[4.1], final_time=50.0)
     >>> results = run(config)
     """
     config = _setup_physics(
-        Ne=Ne,
+        nessential=nessential,
         transition_frequency=transition_frequency,
-        T=T,
+        final_time=final_time,
         selfkerr=selfkerr,
-        Ng=Ng,
+        nguard=nguard,
         rotation_frequency=rotation_frequency,
         crosskerr_coupling=crosskerr_coupling,
         dipole_coupling=dipole_coupling,
@@ -215,7 +215,7 @@ def create_simulation_config(
 
         # Set up control initialization to load from file
         control_inits = []
-        for iosc in range(len(Ne)):
+        for iosc in range(len(nessential)):
             init = ControlInitializationSettings()
             init.init_type = ControlInitializationType.FILE
             init.filename = pcof_file
@@ -226,13 +226,13 @@ def create_simulation_config(
 
 
 def create_optimization_config(
-    Ne: List[int],
+    nessential: List[int],
     transition_frequency: List[float],
-    T: float,
+    final_time: float,
     targetgate = None,
     output_directory: str = "./run_dir",
     selfkerr: Optional[List[float]] = None,
-    Ng: Optional[List[int]] = None,
+    nguard: Optional[List[int]] = None,
     rotation_frequency: Optional[List[float]] = None,
     crosskerr_coupling: Optional[List[float]] = None,
     dipole_coupling: Optional[List[float]] = None,
@@ -248,11 +248,11 @@ def create_optimization_config(
 
     Required Parameters:
     -------------------
-    Ne : List[int]
+    nessential : List[int]
         Number of essential energy levels per qubit
     transition_frequency : List[float]
         01-transition frequencies [GHz] per qubit
-    T : float
+    final_time : float
         Pulse duration [ns]
     targetgate : array-like (list, numpy array, etc.)
         Target unitary gate. Can be plain Python list like [[0,1],[1,0]]
@@ -264,7 +264,7 @@ def create_optimization_config(
         Output directory for results and gate files. Default: "./run_dir"
     selfkerr : List[float]
         Anharmonicities [GHz] per qubit. Default: zeros
-    Ng : List[int]
+    nguard : List[int]
         Number of guard levels per qubit. Default: zeros
     rotation_frequency : List[float]
         Frequency of rotations for computational frame [GHz] per qubit. Default: transition_frequency
@@ -291,17 +291,17 @@ def create_optimization_config(
     >>> from quandary.new import create_optimization_config, run
     >>>
     >>> config = create_optimization_config(
-    ...     Ne=[2], transition_frequency=[4.1], T=50.0,
+    ...     nessential=[2], transition_frequency=[4.1], final_time=50.0,
     ...     targetgate=[[0, 1], [1, 0]]  # X gate
     ... )
     >>> results = run(config)
     """
     config = _setup_physics(
-        Ne=Ne,
+        nessential=nessential,
         transition_frequency=transition_frequency,
-        T=T,
+        final_time=final_time,
         selfkerr=selfkerr,
-        Ng=Ng,
+        nguard=nguard,
         rotation_frequency=rotation_frequency,
         crosskerr_coupling=crosskerr_coupling,
         dipole_coupling=dipole_coupling,

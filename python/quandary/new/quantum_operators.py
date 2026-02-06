@@ -13,14 +13,14 @@ def number(n):
     return np.diag(np.arange(n))
 
 
-def map_to_oscillators(id, Ne, Ng):
+def map_to_oscillators(id, nessential, nguard):
     """Return the local energy level of each oscillator for a given global index id."""
-    # len(Ne) = number of subsystems
-    nlevels = [Ne[i] + Ng[i] for i in range(len(Ne))]
+    # len(nessential) = number of subsystems
+    nlevels = [nessential[i] + nguard[i] for i in range(len(nessential))]
     localIDs = []
 
     index = int(id)
-    for iosc in range(len(Ne)):
+    for iosc in range(len(nessential)):
         postdim = np.prod(nlevels[iosc + 1:])
         localIDs.append(int(index / postdim))
         index = index % postdim
@@ -72,7 +72,7 @@ def _eigen_and_reorder(H0, verbose=False):
     return evals, evects
 
 
-def get_resonances(*, Ne, Ng, Hsys, Hc_re=[], Hc_im=[], rotation_frequency=[], cw_amp_thres=1e-7,
+def get_resonances(*, nessential, nguard, Hsys, Hc_re=[], Hc_im=[], rotation_frequency=[], cw_amp_thres=1e-7,
                    cw_prox_thres=1e-2, verbose=True, stdmodel=True):
     """
     Computes system resonances, to be used as carrier wave frequencie.
@@ -83,7 +83,7 @@ def get_resonances(*, Ne, Ng, Hsys, Hc_re=[], Hc_im=[], rotation_frequency=[], c
         print("\nComputing carrier frequencies, ignoring growth rate slower than:", cw_amp_thres,
               "and frequencies closer than:", cw_prox_thres, "[GHz])")
 
-    nqubits = len(Ne)
+    nqubits = len(nessential)
     n = Hsys.shape[0]
 
     # Get eigenvalues of system Hamiltonian (GHz)
@@ -122,12 +122,12 @@ def get_resonances(*, Ne, Ng, Hsys, Hc_re=[], Hc_im=[], rotation_frequency=[], c
                         delta_f = 0.0
 
                     # Get involved oscillator levels
-                    ids_i = map_to_oscillators(i, Ne, Ng)
-                    ids_j = map_to_oscillators(j, Ne, Ng)
+                    ids_i = map_to_oscillators(i, nessential, nguard)
+                    ids_j = map_to_oscillators(j, nessential, nguard)
 
                     # make sure both indices correspond to essential energy levels
-                    is_ess_i = all(ids_i[k] < Ne[k] for k in range(len(Ne)))
-                    is_ess_j = all(ids_j[k] < Ne[k] for k in range(len(Ne)))
+                    is_ess_i = all(ids_i[k] < nessential[k] for k in range(len(nessential)))
+                    is_ess_j = all(ids_j[k] < nessential[k] for k in range(len(nessential)))
 
                     if (is_ess_i and is_ess_j):
                         # Ignore resonances that are too close by comparing to all previous resonances
