@@ -77,6 +77,7 @@ def run_mpi(
     n_procs: int,
     quiet: bool = False,
     mpi_exec: str = "mpirun",
+    nproc_flag: str = "-np",
     python_exec: Optional[str] = None,
     working_dir: str = ".",
 ) -> QuandaryResults:
@@ -94,7 +95,8 @@ def run_mpi(
         config: A QuandaryConfig object with all required fields set.
         n_procs: Number of MPI processes to use.
         quiet: If True, suppress console output.
-        mpi_exec: MPI launcher command (e.g., "mpirun", "srun"). Default: "mpirun".
+        mpi_exec: MPI launcher command (e.g., "mpirun", "srun", "flux run"). Default: "mpirun".
+        nproc_flag: Flag for specifying number of processes (e.g., "-np", "-n"). Default: "-np".
         python_exec: Path to Python executable. Defaults to sys.executable.
         working_dir: Working directory for subprocess. Defaults to current directory.
 
@@ -134,7 +136,7 @@ def run_mpi(
     python_code = f'from quandary.new import run_from_file; run_from_file("{config_file}", quiet={quiet})'
 
     # Build the command
-    cmd = [mpi_exec, "-n", str(n_procs), python_exec, "-c", python_code]
+    cmd = [mpi_exec, nproc_flag, str(n_procs), python_exec, "-c", python_code]
 
     logger.info(f"Running MPI with {n_procs} processes")
 
