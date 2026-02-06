@@ -11,18 +11,32 @@ MasterEq::MasterEq(){
 }
 
 
-MasterEq::MasterEq(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nessential_, Oscillator** oscil_vec_, const std::vector<double>& crosskerr_, const std::vector<double>& Jkl_, const std::vector<double>& eta_, LindbladType lindbladtype_, bool usematfree_, const std::string& hamiltonian_file_Hsys_, const std::string& hamiltonian_file_Hc_, bool quietmode_) {
-  nlevels = nlevels_;
-  nessential = nessential_;
+MasterEq::MasterEq(const Config& config, Oscillator** oscil_vec_, bool quietmode_) {
+  // Extract parameters from config
+  nlevels = config.getNLevels();
+  nessential = config.getNEssential();
   noscillators = nlevels.size();
   oscil_vec = oscil_vec_;
-  crosskerr = crosskerr_;
-  Jkl = Jkl_;
-  eta = eta_;
-  usematfree = usematfree_;
-  lindbladtype = lindbladtype_;
-  hamiltonian_file_Hsys = hamiltonian_file_Hsys_;
-  hamiltonian_file_Hc = hamiltonian_file_Hc_;
+
+  crosskerr = config.getCrossKerrCoupling();
+  Jkl = config.getDipoleCoupling();
+
+  // Compute eta from rotation frequencies (eta_ij = w^r_i - w^r_j)
+  const std::vector<double>& rot_freq = config.getRotationFrequency();
+  eta.resize(nlevels.size() * (nlevels.size() - 1) / 2);
+  int idx = 0;
+  for (size_t iosc = 0; iosc < nlevels.size(); iosc++) {
+    for (size_t josc = iosc + 1; josc < nlevels.size(); josc++) {
+      eta[idx] = rot_freq[iosc] - rot_freq[josc];
+      idx++;
+    }
+  }
+
+  decoherence_type = config.getDecoherenceType();
+  usematfree = config.getUseMatFree();
+
+  hamiltonian_file_Hsys = config.getHamiltonianFileHsys();
+  hamiltonian_file_Hc = config.getHamiltonianFileHc();
   quietmode = quietmode_;
 
 
@@ -47,7 +61,7 @@ MasterEq::MasterEq(const std::vector<size_t>& nlevels_, const std::vector<size_t
     dim_rho *= oscil_vec[iosc]->getNLevels();
     dim_ess *= nessential[iosc];
   }
-  if (lindbladtype != LindbladType::NONE) {  // Solve Lindblads equation, dim = N^2
+  if (decoherence_type != DecoherenceType::NONE) {  // Solve Lindblads equation, dim = N^2
     dim = dim_rho*dim_rho; 
     if (mpirank_world == 0 && !quietmode) {
       printf("Solving Lindblads master equation (open quantum system).\n");
@@ -88,26 +102,26 @@ MasterEq::MasterEq(const std::vector<size_t>& nlevels_, const std::vector<size_t
   MatSetFromOptions(RHS); MatSetUp(RHS);
   MatAssemblyBegin(RHS,MAT_FINAL_ASSEMBLY); MatAssemblyEnd(RHS,MAT_FINAL_ASSEMBLY);
 
-  /* Check Lindblad collapse operator configuration */
-  switch (lindbladtype)  {
-    case LindbladType::NONE:
+  /* Check Lindblad ollapse decoherence operator configuration */
+  switch (decoherence_type)  {
+    case DecoherenceType::NONE:
       addT1 = false;
       addT2 = false;
       break;
-    case LindbladType::DECAY: 
+    case DecoherenceType::DECAY: 
       addT1 = true;
       addT2 = false;
       break;
-    case LindbladType::DEPHASE:
+    case DecoherenceType::DEPHASE:
       addT1 = false;
       addT2 = true;
       break;
-    case LindbladType::BOTH:
+    case DecoherenceType::BOTH:
       addT1 = true;
       addT2 = true;
       break;
     default:
-      printf("ERROR! Wrong lindblad type: %d\n", static_cast<int>(lindbladtype));
+      printf("ERROR! Wrong lindblad type: %d\n", static_cast<int>(decoherence_type));
       exit(1);
   }
 
@@ -129,7 +143,7 @@ MasterEq::MasterEq(const std::vector<size_t>& nlevels_, const std::vector<size_t
   RHSctx.eta = eta;
   RHSctx.addT1 = addT1;
   RHSctx.addT2 = addT2;
-  RHSctx.lindbladtype = lindbladtype;
+  RHSctx.decoherence_type = decoherence_type;
   if (!usematfree){
     RHSctx.Ac_vec = Ac_vec;
     RHSctx.Bc_vec = Bc_vec;
@@ -222,7 +236,7 @@ void MasterEq::initSparseMatSolver(){
     MatSetType(myBcMatk, MATMPIAIJ);
     MatSetSizes(myAcMatk, localsize, localsize, globalsize, globalsize);
     MatSetSizes(myBcMatk, localsize, localsize, globalsize, globalsize);
-    if (lindbladtype != LindbladType::NONE) {
+    if (decoherence_type != DecoherenceType::NONE) {
       MatMPIAIJSetPreallocation(myAcMatk, 4, NULL, 4, NULL);
       MatMPIAIJSetPreallocation(myBcMatk, 4, NULL, 4, NULL);
     } else {
@@ -249,7 +263,7 @@ void MasterEq::initSparseMatSolver(){
         MatSetType(myBdkl, MATMPIAIJ);
         MatSetSizes(myAdkl, localsize, localsize, globalsize, globalsize);
         MatSetSizes(myBdkl, localsize, localsize, globalsize, globalsize);
-        if (lindbladtype != LindbladType::NONE) {
+        if (decoherence_type != DecoherenceType::NONE) {
           MatMPIAIJSetPreallocation(myAdkl, 4, NULL, 4, NULL);
           MatMPIAIJSetPreallocation(myBdkl, 4, NULL, 4, NULL);
         } else {
@@ -270,11 +284,11 @@ void MasterEq::initSparseMatSolver(){
   PetscInt dimmat = dim_rho; // this is N!
 
   /* If a Hamiltonian file is given, read the system matrices from file. */ 
-  if (hamiltonian_file_Hsys.compare("none") != 0 || hamiltonian_file_Hc.compare("none") != 0) {
+  if (hamiltonian_file_Hsys.has_value() || hamiltonian_file_Hc.has_value()) {
     if (mpirank_world==0 && !quietmode) printf("\n# Reading Hamiltonian model from files.\n");
 
     /* Read Hamiltonians from file */
-    HamiltonianFileReader* py = new HamiltonianFileReader(hamiltonian_file_Hsys, hamiltonian_file_Hc, lindbladtype, dim_rho, quietmode);
+    HamiltonianFileReader* py = new HamiltonianFileReader(hamiltonian_file_Hsys, hamiltonian_file_Hc, decoherence_type, dim_rho, quietmode);
     py->receiveHsys(Ad, Bd);
     py->receiveHc(Ac_vec, Bc_vec); 
 
@@ -301,7 +315,7 @@ void MasterEq::initSparseMatSolver(){
         // A_c or I_N \kron A_c
         col1 = row + npostk;
         col2 = row - npostk;
-        if (lindbladtype != LindbladType::NONE) r1 = row % dimmat;   // I_N \kron A_c 
+        if (decoherence_type != DecoherenceType::NONE) r1 = row % dimmat;   // I_N \kron A_c 
         else r1 = row;   // A_c
         r1 = r1 % (nk*npostk);
         r1 = r1 / npostk;
@@ -313,7 +327,7 @@ void MasterEq::initSparseMatSolver(){
           val = -sqrt(r1);
           if (fabs(val)>1e-14) MatSetValue(Ac_vec[iosc], row, col2, val, ADD_VALUES);
         } 
-        if (lindbladtype != LindbladType::NONE){
+        if (decoherence_type != DecoherenceType::NONE){
           //- A_c \kron I_N
           col1 = row + npostk*dimmat;
           col2 = row - npostk*dimmat;
@@ -338,7 +352,7 @@ void MasterEq::initSparseMatSolver(){
         // B_c or  I_n \kron B_c 
         col1 = row + npostk;
         col2 = row - npostk;
-        if (lindbladtype != LindbladType::NONE) r1 = row % dimmat; // I_n \kron B_c
+        if (decoherence_type != DecoherenceType::NONE) r1 = row % dimmat; // I_n \kron B_c
         else r1 = row;  // -Bc
         r1 = r1 % (nk*npostk);
         r1 = r1 / npostk;
@@ -350,7 +364,7 @@ void MasterEq::initSparseMatSolver(){
           val = -sqrt(r1);
           if (fabs(val)>1e-14) MatSetValue(Bc_vec[iosc], row, col2, val, ADD_VALUES);
         } 
-        if (lindbladtype != LindbladType::NONE){
+        if (decoherence_type != DecoherenceType::NONE){
           //+ B_c \kron I_N
           col1 = row + npostk*dimmat;
           col2 = row - npostk*dimmat;
@@ -411,7 +425,7 @@ void MasterEq::initSparseMatSolver(){
               if (fabs(val)>1e-14) MatSetValue(Bd_vec[matid], row, col, -val, ADD_VALUES);
             }
 
-            if (lindbladtype != LindbladType::NONE) {
+            if (decoherence_type != DecoherenceType::NONE) {
               // Add -/+ (al^Tak -/+ alak^T) \kron I
               r1 = row % (dimmat * dimmat / nprek );
               r1a = r1 / (npostk*dimmat);
@@ -452,7 +466,7 @@ void MasterEq::initSparseMatSolver(){
       for (PetscInt row = ilow; row<iupp; row++){
 
         // Indices for -I_N \kron B_d
-        if (lindbladtype != LindbladType::NONE) r1 = row % dimmat;
+        if (decoherence_type != DecoherenceType::NONE) r1 = row % dimmat;
         else r1 = row;
         r1 = r1 % (nk * npostk);
         r1 = r1 / npostk;
@@ -460,7 +474,7 @@ void MasterEq::initSparseMatSolver(){
         r2 = row / dimmat;
         r2 = r2 % (nk * npostk);
         r2 = r2 / npostk;
-        if (lindbladtype == LindbladType::NONE) r2 = 0;
+        if (decoherence_type == DecoherenceType::NONE) r2 = 0;
 
         // -Bd, or -I_N \kron B_d + B_d \kron I_N
         val  = - ( detunek * r1 - xik / 2. * (r1*r1 - r1) );
@@ -476,7 +490,7 @@ void MasterEq::initSparseMatSolver(){
         coupling_id++;
 
         for (PetscInt row = ilow; row<iupp; row++){
-          if (lindbladtype != LindbladType::NONE) r1 = row % dimmat;
+          if (decoherence_type != DecoherenceType::NONE) r1 = row % dimmat;
           else r1 = row;
           r1 = r1 % (nk * npostk);
           r1a = r1 / npostk;
@@ -490,8 +504,8 @@ void MasterEq::initSparseMatSolver(){
           r2b = r2 % npostk;
           r2b = r2b % (nj*npostj);
           r2b = r2b / npostj;
-          if (lindbladtype == LindbladType::NONE) r2a = 0;
-          if (lindbladtype == LindbladType::NONE) r2b = 0;
+          if (decoherence_type == DecoherenceType::NONE) r2a = 0;
+          if (decoherence_type == DecoherenceType::NONE) r2b = 0;
 
           // -I_N \kron B_d + B_d \kron I_N
           val =  xikj * r1a * r1b  - xikj * r2a * r2b;
@@ -686,7 +700,7 @@ void MasterEq::compute_dRHS_dParams(const double t, const Vec x, const Vec xbar,
     compute_dRHS_dParams_sparsemat(t, x, xbar,  alpha, grad, nlevels, isu, isv, Ac_vec, Bc_vec, aux, oscil_vec);
 
   } else {  // matrix-free application of RHS
-    compute_dRHS_dParams_matfree(dim, t, x, xbar,  alpha, grad, nlevels, lindbladtype, oscil_vec);
+    compute_dRHS_dParams_matfree(dim, t, x, xbar,  alpha, grad, nlevels, decoherence_type, oscil_vec);
   }
 }
 
@@ -967,7 +981,7 @@ void compute_dRHS_dParams_sparsemat(const double t,const Vec x,const Vec xbar, c
 }
 
 // Compute gradient of RHS wrt parameters (Matrix-free version)
-void compute_dRHS_dParams_matfree(const PetscInt dim, const double t,const Vec x,const Vec xbar, const double alpha, Vec grad, std::vector<size_t>& nlevels, LindbladType lindbladtype, Oscillator** oscil_vec){
+void compute_dRHS_dParams_matfree(const PetscInt dim, const double t,const Vec x,const Vec xbar, const double alpha, Vec grad, std::vector<size_t>& nlevels, DecoherenceType decoherence_type, Oscillator** oscil_vec){
   double res_p_re,  res_p_im, res_q_re, res_q_im;
 
   int noscillators = nlevels.size();
@@ -990,7 +1004,7 @@ void compute_dRHS_dParams_matfree(const PetscInt dim, const double t,const Vec x
     int stridei0p = TensorGetIndex(n0, 0,1);
     /* Switch for Lindblad vs Schroedinger solver */
     int n0p = n0;
-    if (lindbladtype == LindbladType::NONE) { // Schroedinger
+    if (decoherence_type == DecoherenceType::NONE) { // Schroedinger
       n0p = 1; // Cut down so that below loop has i0p=0 and i1p=0/
     }
 
@@ -1023,7 +1037,7 @@ void compute_dRHS_dParams_matfree(const PetscInt dim, const double t,const Vec x
     /* Switch for Lindblad vs Schroedinger solver */
     int n0p = n0;
     int n1p = n1;
-    if (lindbladtype == LindbladType::NONE) { // Schroedinger
+    if (decoherence_type == DecoherenceType::NONE) { // Schroedinger
       n0p = 1; // Cut down so that below loop has i0p=0 and i1p=0/
       n1p = 1;
     }
@@ -1068,7 +1082,7 @@ void compute_dRHS_dParams_matfree(const PetscInt dim, const double t,const Vec x
     int n0p = n0;
     int n1p = n1;
     int n2p = n2;
-    if (lindbladtype == LindbladType::NONE) { // Schroedinger
+    if (decoherence_type == DecoherenceType::NONE) { // Schroedinger
       n0p = 1; // Cut down so that below loop has i0p=0 and i1p=0/
       n1p = 1;
       n2p = 1;
@@ -1125,7 +1139,7 @@ void compute_dRHS_dParams_matfree(const PetscInt dim, const double t,const Vec x
     int n1p = n1;
     int n2p = n2;
     int n3p = n3;
-    if (lindbladtype == LindbladType::NONE) { // Schroedinger
+    if (decoherence_type == DecoherenceType::NONE) { // Schroedinger
       n0p = 1; // Cut down so that below loop has i0p=0 and i1p=0/
       n1p = 1;
       n2p = 1;
@@ -1195,7 +1209,7 @@ void compute_dRHS_dParams_matfree(const PetscInt dim, const double t,const Vec x
     int n2p = n2;
     int n3p = n3;
     int n4p = n4;
-    if (lindbladtype == LindbladType::NONE) { // Schroedinger
+    if (decoherence_type == DecoherenceType::NONE) { // Schroedinger
       n0p = 1; // Cut down so that below loop has i0p=0 and i1p=0/
       n1p = 1;
       n2p = 1;
@@ -1308,7 +1322,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
 
   /* Switch for Lindblad vs Schroedinger solver */
   int n0p = n0;
-  if (shellctx->lindbladtype == LindbladType::NONE) { // Schroedinger
+  if (shellctx->decoherence_type == DecoherenceType::NONE) { // Schroedinger
     n0p = 1; // Cut down so that below loop has i0p=0 and i1p=0/
   }
 
@@ -1326,7 +1340,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
           double hd  = H_detune(detuning_freq0, i0)
                      + H_selfkerr(xi0, i0);
           double hdp = 0.0;
-          if (shellctx->lindbladtype != LindbladType::NONE) {
+          if (shellctx->decoherence_type != DecoherenceType::NONE) {
             hdp = H_detune(detuning_freq0, i0p)
                 + H_selfkerr(xi0, i0p);
           }
@@ -1335,7 +1349,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
 
           // Decay l1, diagonal part: xout += l1diag xin
           // Dephasing l2: xout += l2(ik, ikp) xin
-          if (shellctx->lindbladtype != LindbladType::NONE) {
+          if (shellctx->decoherence_type != DecoherenceType::NONE) {
             double l1diag = L1diag(decay0, i0, i0p);
             double l2 = L2(dephase0, i0, i0p);
             yre += (l2 + l1diag) * xre;
@@ -1345,7 +1359,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
           /* --- Offdiagonal: Jkl coupling term --- */
 
           /* --- Offdiagonal part of decay L1 */
-          if (shellctx->lindbladtype != LindbladType::NONE) {
+          if (shellctx->decoherence_type != DecoherenceType::NONE) {
             L1decay(shellctx->dim, it, n0, i0, i0p, stridei0, stridei0p, xptr, decay0, &yre, &yim);
           }
 
@@ -1399,7 +1413,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
 
   /* Switch for Lindblad vs Schroedinger solver */
   int n0p = n0;
-  if (shellctx->lindbladtype == LindbladType::NONE) { // Schroedinger
+  if (shellctx->decoherence_type == DecoherenceType::NONE) { // Schroedinger
     n0p = 1; // Cut down so that below loop has i0p=0 and i1p=0/
   }
 
@@ -1417,7 +1431,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
           double hd  = H_detune(detuning_freq0, i0)
                      + H_selfkerr(xi0, i0);
           double hdp = 0.0;
-          if (shellctx->lindbladtype != LindbladType::NONE) {
+          if (shellctx->decoherence_type != DecoherenceType::NONE) {
             hdp = H_detune(detuning_freq0, i0p)
                   + H_selfkerr(xi0, i0p);
           }
@@ -1426,7 +1440,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
 
           // Decay l1^T, diagonal part: xout += l1diag xin
           // Dephasing l2^T: xout += l2(ik, ikp) xin
-          if (shellctx->lindbladtype != LindbladType::NONE) {
+          if (shellctx->decoherence_type != DecoherenceType::NONE) {
             double l1diag = L1diag(decay0, i0, i0p);
             double l2 = L2(dephase0, i0, i0p);
             yre += (l2 + l1diag) * xre;
@@ -1436,7 +1450,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
           /* --- Offdiagonal coupling term J_kl --- */
  
           /* --- Offdiagonal part of decay L1^T */
-          if (shellctx->lindbladtype != LindbladType::NONE) {
+          if (shellctx->decoherence_type != DecoherenceType::NONE) {
             // Oscillators 0
             L1decay_T(shellctx->dim, it, i0, i0p, stridei0, stridei0p, xptr, decay0, &yre, &yim);
           }
@@ -1511,7 +1525,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
   /* Switch for Lindblad vs Schroedinger solver */
   int n0p = n0;
   int n1p = n1;
-  if (shellctx->lindbladtype == LindbladType::NONE) { // Schroedinger
+  if (shellctx->decoherence_type == DecoherenceType::NONE) { // Schroedinger
     n0p = 1; // Cut down so that below loop has i0p=0 and i1p=0/
     n1p = 1;
   }
@@ -1533,7 +1547,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
                      + H_selfkerr(xi0, xi1, i0, i1)
                      + H_crosskerr(xi01, i0, i1);
           double hdp = 0.0;
-          if (shellctx->lindbladtype != LindbladType::NONE) {
+          if (shellctx->decoherence_type != DecoherenceType::NONE) {
             hdp = H_detune(detuning_freq0, detuning_freq1, i0p, i1p)
                 + H_selfkerr(xi0, xi1, i0p, i1p)
                 + H_crosskerr(xi01, i0p, i1p);
@@ -1543,7 +1557,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
 
           // Decay l1, diagonal part: xout += l1diag xin
           // Dephasing l2: xout += l2(ik, ikp) xin
-          if (shellctx->lindbladtype != LindbladType::NONE) {
+          if (shellctx->decoherence_type != DecoherenceType::NONE) {
             double l1diag = L1diag(decay0, decay1, i0, i1, i0p, i1p);
             double l2 = L2(dephase0, dephase1, i0, i1, i0p, i1p);
             yre += (l2 + l1diag) * xre;
@@ -1555,7 +1569,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
           Jkl_coupling(shellctx->dim, it, n0, n1, n0p, n1p, i0, i0p, i1, i1p, stridei0, stridei0p, stridei1, stridei1p, xptr, J01, cos01, sin01, &yre, &yim);
 
           /* --- Offdiagonal part of decay L1 */
-          if (shellctx->lindbladtype != LindbladType::NONE) {
+          if (shellctx->decoherence_type != DecoherenceType::NONE) {
             // Oscillators 0
             L1decay(shellctx->dim, it, n0, i0, i0p, stridei0, stridei0p, xptr, decay0, &yre, &yim);
             // Oscillator 1
@@ -1635,7 +1649,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
   /* Switch for Lindblad vs Schroedinger solver */
   int n0p = n0;
   int n1p = n1;
-  if (shellctx->lindbladtype == LindbladType::NONE) { // Schroedinger
+  if (shellctx->decoherence_type == DecoherenceType::NONE) { // Schroedinger
     n0p = 1; // Cut down so that below loop has i0p=0 and i1p=0/
     n1p = 1;
   }
@@ -1657,7 +1671,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
                      + H_selfkerr(xi0, xi1, i0, i1)
                      + H_crosskerr(xi01, i0, i1);
           double hdp = 0.0;
-          if (shellctx->lindbladtype != LindbladType::NONE) {
+          if (shellctx->decoherence_type != DecoherenceType::NONE) {
             hdp = H_detune(detuning_freq0, detuning_freq1, i0p, i1p)
                   + H_selfkerr(xi0, xi1, i0p, i1p)
                   + H_crosskerr(xi01, i0p, i1p);
@@ -1667,7 +1681,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
 
           // Decay l1^T, diagonal part: xout += l1diag xin
           // Dephasing l2^T: xout += l2(ik, ikp) xin
-          if (shellctx->lindbladtype != LindbladType::NONE) {
+          if (shellctx->decoherence_type != DecoherenceType::NONE) {
             double l1diag = L1diag(decay0, decay1, i0, i1, i0p, i1p);
             double l2 = L2(dephase0, dephase1, i0, i1, i0p, i1p);
             yre += (l2 + l1diag) * xre;
@@ -1679,7 +1693,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
           Jkl_coupling_T(shellctx->dim, it, n0, n1, n0p, n1p, i0, i0p, i1, i1p, stridei0, stridei0p, stridei1, stridei1p, xptr, J01, cos01, sin01, &yre, &yim);
  
           /* --- Offdiagonal part of decay L1^T */
-          if (shellctx->lindbladtype != LindbladType::NONE) {
+          if (shellctx->decoherence_type != DecoherenceType::NONE) {
             // Oscillators 0
             L1decay_T(shellctx->dim, it, i0, i0p, stridei0, stridei0p, xptr, decay0, &yre, &yim);
             // Oscillator 1
@@ -1775,7 +1789,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
   int n0p = n0;
   int n1p = n1;
   int n2p = n2;
-  if (shellctx->lindbladtype == LindbladType::NONE) { // Schroedinger
+  if (shellctx->decoherence_type == DecoherenceType::NONE) { // Schroedinger
     n0p = 1; // Cut down so that below loop has i0p=0 and i1p=0/
     n1p = 1;
     n2p = 1;
@@ -1800,7 +1814,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
                          + H_selfkerr(xi0, xi1, xi2, i0, i1, i2)
                          + H_crosskerr(xi01, xi02, xi12, i0, i1, i2);
               double hdp =0.0;
-              if (shellctx->lindbladtype != LindbladType::NONE) {
+              if (shellctx->decoherence_type != DecoherenceType::NONE) {
                 hdp = H_detune(detuning_freq0, detuning_freq1, detuning_freq2, i0p, i1p, i2p)
                       + H_selfkerr(xi0, xi1, xi2, i0p, i1p, i2p)
                       + H_crosskerr(xi01, xi02, xi12, i0p, i1p, i2p);
@@ -1810,7 +1824,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
 
               // Decay l1, diagonal part: xout += l1diag xin
               // Dephasing l2: xout += l2(ik, ikp) xin
-              if (shellctx->lindbladtype != LindbladType::NONE) {
+              if (shellctx->decoherence_type != DecoherenceType::NONE) {
                 double l1diag = L1diag(decay0, decay1, decay2, i0, i1, i2, i0p, i1p, i2p);
                 double l2 = L2(dephase0, dephase1, dephase2, i0, i1, i2, i0p, i1p, i2p);
                 yre += (l2 + l1diag) * xre;
@@ -1826,7 +1840,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
               Jkl_coupling(shellctx->dim, it, n1, n2, n1p, n2p, i1, i1p, i2, i2p, stridei1, stridei1p, stridei2, stridei2p, xptr, J12, cos12, sin12, &yre, &yim);
 
               /* --- Offdiagonal part of decay L1 */
-              if (shellctx->lindbladtype != LindbladType::NONE) {
+              if (shellctx->decoherence_type != DecoherenceType::NONE) {
                 // Oscillators 0
                 L1decay(shellctx->dim, it, n0, i0, i0p, stridei0, stridei0p, xptr, decay0, &yre, &yim);
                 // Oscillator 1
@@ -1929,7 +1943,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
   int n0p = n0;
   int n1p = n1;
   int n2p = n2;
-  if (shellctx->lindbladtype == LindbladType::NONE) { // Schroedinger
+  if (shellctx->decoherence_type == DecoherenceType::NONE) { // Schroedinger
     n0p = 1; // Cut down so that below loop has i0p=0 and i1p=0/
     n1p = 1;
     n2p = 1;
@@ -1954,7 +1968,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
                          + H_selfkerr(xi0, xi1, xi2, i0, i1, i2)
                          + H_crosskerr(xi01, xi02, xi12, i0, i1, i2);
               double hdp = 0.0;
-              if (shellctx->lindbladtype != LindbladType::NONE) {
+              if (shellctx->decoherence_type != DecoherenceType::NONE) {
                 hdp = H_detune(detuning_freq0, detuning_freq1, detuning_freq2, i0p, i1p, i2p)
                     + H_selfkerr(xi0, xi1, xi2, i0p, i1p, i2p)
                     + H_crosskerr(xi01, xi02, xi12, i0p, i1p, i2p);
@@ -1964,7 +1978,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
 
               // Decay l1^T, diagonal part: xout += l1diag xin
               // Dephasing l2^T: xout += l2(ik, ikp) xin
-              if (shellctx->lindbladtype != LindbladType::NONE) {
+              if (shellctx->decoherence_type != DecoherenceType::NONE) {
                 double l1diag = L1diag(decay0, decay1, decay2, i0, i1, i2, i0p, i1p, i2p);
                 double l2 = L2(dephase0, dephase1, dephase2, i0, i1, i2, i0p, i1p, i2p);
                 yre += (l2 + l1diag) * xre;
@@ -1981,7 +1995,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
               
 
               /* --- Offdiagonal part of decay L1^T */
-              if (shellctx->lindbladtype != LindbladType::NONE) {
+              if (shellctx->decoherence_type != DecoherenceType::NONE) {
                 // Oscillators 0
                 L1decay_T(shellctx->dim, it, i0, i0p, stridei0, stridei0p, xptr, decay0, &yre, &yim);
                 // Oscillator 1
@@ -2111,7 +2125,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
   int n1p = n1;
   int n2p = n2;
   int n3p = n3;
-  if (shellctx->lindbladtype == LindbladType::NONE) { // Schroedinger
+  if (shellctx->decoherence_type == DecoherenceType::NONE) { // Schroedinger
     n0p = 1; // Cut down so that below loop has i0p=0 and i1p=0/
     n1p = 1;
     n2p = 1;
@@ -2138,7 +2152,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
                              + H_selfkerr(xi0, xi1, xi2, xi3, i0, i1, i2, i3)
                              + H_crosskerr(xi01, xi02, xi03, xi12, xi13, xi23, i0, i1, i2, i3);
                   double hdp = 0.0;
-                  if (shellctx->lindbladtype != LindbladType::NONE) {
+                  if (shellctx->decoherence_type != DecoherenceType::NONE) {
                     hdp = H_detune(detuning_freq0, detuning_freq1, detuning_freq2, detuning_freq3, i0p, i1p, i2p, i3p)
                           + H_selfkerr(xi0, xi1, xi2, xi3, i0p, i1p, i2p, i3p)
                           + H_crosskerr(xi01, xi02, xi03, xi12, xi13, xi23, i0p, i1p, i2p, i3p);
@@ -2146,7 +2160,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
                   double yre = ( hd - hdp ) * xim;
                   double yim = (-hd + hdp ) * xre;
 
-                  if (shellctx->lindbladtype != LindbladType::NONE) {
+                  if (shellctx->decoherence_type != DecoherenceType::NONE) {
                     // Decay l1, diagonal part: xout += l1diag xin
                     // Dephasing l2: xout += l2(ik, ikp) xin
                     double l1diag = L1diag(decay0, decay1, decay2, decay3, i0, i1, i2, i3, i0p, i1p, i2p, i3p);
@@ -2170,7 +2184,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
                   Jkl_coupling(shellctx->dim, it, n2, n3, n2p, n3p, i2, i2p, i3, i3p, stridei2, stridei2p, stridei3, stridei3p, xptr, J23, cos23, sin23, &yre, &yim);
 
                   /* --- Offdiagonal part of decay L1 */
-                  if (shellctx->lindbladtype != LindbladType::NONE) {
+                  if (shellctx->decoherence_type != DecoherenceType::NONE) {
                     // Oscillators 0
                     L1decay(shellctx->dim, it, n0, i0, i0p, stridei0, stridei0p, xptr, decay0, &yre, &yim);
                     // Oscillator 1
@@ -2305,7 +2319,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
   int n1p = n1;
   int n2p = n2;
   int n3p = n3;
-  if (shellctx->lindbladtype == LindbladType::NONE) { // Schroedinger
+  if (shellctx->decoherence_type == DecoherenceType::NONE) { // Schroedinger
     n0p = 1; // Cut down so that below loop has i0p=0 and i1p=0/
     n1p = 1;
     n2p = 1;
@@ -2333,7 +2347,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
                              + H_selfkerr(xi0, xi1, xi2, xi3, i0, i1, i2, i3)
                              + H_crosskerr(xi01, xi02, xi03, xi12, xi13, xi23, i0, i1, i2, i3);
                   double hdp = 0.0;
-                  if (shellctx->lindbladtype != LindbladType::NONE) {
+                  if (shellctx->decoherence_type != DecoherenceType::NONE) {
                     hdp = H_detune(detuning_freq0, detuning_freq1, detuning_freq2, detuning_freq3, i0p, i1p, i2p, i3p)
                              + H_selfkerr(xi0, xi1, xi2, xi3, i0p, i1p, i2p, i3p)
                              + H_crosskerr(xi01, xi02, xi03, xi12, xi13, xi23, i0p, i1p, i2p, i3p);
@@ -2343,7 +2357,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
 
                   // Decay l1^T, diagonal part: xout += l1diag xin
                   // Dephasing l2^T: xout += l2(ik, ikp) xin
-                  if (shellctx->lindbladtype != LindbladType::NONE) {
+                  if (shellctx->decoherence_type != DecoherenceType::NONE) {
                     double l1diag = L1diag(decay0, decay1, decay2, decay3, i0, i1, i2, i3, i0p, i1p, i2p, i3p);
                     double l2 = L2(dephase0, dephase1, dephase2, dephase3, i0, i1, i2, i3, i0p, i1p, i2p, i3p);
                     yre += (l2 + l1diag) * xre;
@@ -2366,7 +2380,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
               
 
                   /* --- Offdiagonal part of decay L1^T */
-                  if (shellctx->lindbladtype != LindbladType::NONE) {
+                  if (shellctx->decoherence_type != DecoherenceType::NONE) {
                     // Oscillators 0
                     L1decay_T(shellctx->dim, it, i0, i0p, stridei0, stridei0p, xptr, decay0, &yre, &yim);
                     // Oscillator 1
@@ -2532,7 +2546,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
   int n2p = n2;
   int n3p = n3;
   int n4p = n4;
-  if (shellctx->lindbladtype == LindbladType::NONE) { // Schroedinger
+  if (shellctx->decoherence_type == DecoherenceType::NONE) { // Schroedinger
     n0p = 1; // Cut down so that below loop has i0p=0 and i1p=0/
     n1p = 1;
     n2p = 1;
@@ -2562,7 +2576,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
                                  + H_selfkerr(xi0, xi1, xi2, xi3, xi4, i0, i1, i2, i3, i4)
                                  + H_crosskerr(xi01, xi02, xi03, xi04, xi12, xi13, xi14, xi23, xi24, xi34, i0, i1, i2, i3, i4);
                       double hdp = 0.0;
-                      if (shellctx->lindbladtype != LindbladType::NONE) {
+                      if (shellctx->decoherence_type != DecoherenceType::NONE) {
                         hdp = H_detune(detuning_freq0, detuning_freq1, detuning_freq2, detuning_freq3, detuning_freq4, i0p, i1p, i2p, i3p, i4p)
                                  + H_selfkerr(xi0, xi1, xi2, xi3, xi4, i0p, i1p, i2p, i3p, i4p)
                                  + H_crosskerr(xi01, xi02, xi03, xi04, xi12, xi13, xi14, xi23, xi24, xi34, i0p, i1p, i2p, i3p, i4p);
@@ -2570,7 +2584,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
                       double yre = ( hd - hdp ) * xim;
                       double yim = (-hd + hdp ) * xre;
 
-                      if (shellctx->lindbladtype != LindbladType::NONE) {
+                      if (shellctx->decoherence_type != DecoherenceType::NONE) {
                         // Decay l1, diagonal part: xout += l1diag xin
                         // Dephasing l2: xout += l2(ik, ikp) xin
                         double l1diag = L1diag(decay0, decay1, decay2, decay3, decay4, i0, i1, i2, i3, i4, i0p, i1p, i2p, i3p, i4p);
@@ -2602,7 +2616,7 @@ int applyRHS_matfree(Mat RHS, Vec x, Vec y){
                       Jkl_coupling(shellctx->dim, it, n3, n4, n3p, n4p, i3, i3p, i4, i4p, stridei3, stridei3p, stridei4, stridei4p, xptr, J34, cos34, sin34, &yre, &yim);
 
                       /* --- Offdiagonal part of decay L1 */
-                      if (shellctx->lindbladtype != LindbladType::NONE) {
+                      if (shellctx->decoherence_type != DecoherenceType::NONE) {
                         // Oscillator 0
                         L1decay(shellctx->dim, it, n0, i0, i0p, stridei0, stridei0p, xptr, decay0, &yre, &yim);
                         // Oscillator 1
@@ -2774,7 +2788,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
   int n2p = n2;
   int n3p = n3;
   int n4p = n4;
-  if (shellctx->lindbladtype == LindbladType::NONE) { // Schroedinger
+  if (shellctx->decoherence_type == DecoherenceType::NONE) { // Schroedinger
     n0p = 1; // Cut down so that below loop has i0p=0 and i1p=0/
     n1p = 1;
     n2p = 1;
@@ -2805,7 +2819,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
                                  + H_selfkerr(xi0, xi1, xi2, xi3, xi4, i0, i1, i2, i3, i4)
                                  + H_crosskerr(xi01, xi02, xi03, xi04, xi12, xi13, xi14, xi23, xi24, xi34,i0, i1, i2, i3, i4);
                       double hdp = 0.0;
-                      if (shellctx->lindbladtype != LindbladType::NONE) { 
+                      if (shellctx->decoherence_type != DecoherenceType::NONE) { 
                         hdp = H_detune(detuning_freq0, detuning_freq1, detuning_freq2, detuning_freq3, detuning_freq4, i0p, i1p, i2p, i3p, i4p)
                                  + H_selfkerr(xi0, xi1, xi2, xi3, xi4, i0p, i1p, i2p, i3p, i4p)
                                  + H_crosskerr(xi01, xi02, xi03, xi04, xi12, xi13, xi14, xi23, xi24, xi34, i0p, i1p, i2p, i3p, i4p);
@@ -2815,7 +2829,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
 
                       // Decay l1^T, diagonal part: xout += l1diag xin
                       // Dephasing l2^T: xout += l2(ik, ikp) xin
-                      if (shellctx->lindbladtype != LindbladType::NONE) {
+                      if (shellctx->decoherence_type != DecoherenceType::NONE) {
                         double l1diag = L1diag(decay0, decay1, decay2, decay3, decay4, i0, i1, i2, i3, i4, i0p, i1p, i2p, i3p, i4p);
                         double l2 = L2(dephase0, dephase1, dephase2, dephase3, dephase4, i0, i1, i2, i3, i4, i0p, i1p, i2p, i3p, i4p);
                         yre += (l2 + l1diag) * xre;
@@ -2845,7 +2859,7 @@ int applyRHS_matfree_transpose(Mat RHS, Vec x, Vec y){
                       Jkl_coupling_T(shellctx->dim, it, n3, n4, n3p, n4p, i3, i3p, i4, i4p, stridei3, stridei3p, stridei4, stridei4p, xptr, J34, cos34, sin34, &yre, &yim);
               
                       /* --- Offdiagonal part of decay L1^T */
-                      if (shellctx->lindbladtype != LindbladType::NONE) { 
+                      if (shellctx->decoherence_type != DecoherenceType::NONE) { 
                         // Oscillators 0
                         L1decay_T(shellctx->dim, it, i0, i0p, stridei0, stridei0p, xptr, decay0, &yre, &yim);
                         // Oscillator 1
@@ -2905,7 +2919,7 @@ double MasterEq::expectedEnergy(const Vec x){
 
     /* Get diagonal element and sum up */
     double xdiag = 0.0;
-    if (lindbladtype != LindbladType::NONE){ // Lindblad solver: += i * rho_ii
+    if (decoherence_type != DecoherenceType::NONE){ // Lindblad solver: += i * rho_ii
       PetscInt ivec = getVecID(i,i,dim_rho); 
       if (ilow <= ivec && ivec < iupp) { // Picks the processor who owns u_ii, v_ii for i=0,...,dim_rho
         id_global_x =  ivec + mpirank_petsc*localsize_u; // Global index of u_ii in x=[u,v]
@@ -2948,7 +2962,7 @@ void MasterEq::population(const Vec x, std::vector<double> &pop){
   for (PetscInt i=0; i < dim_rho; i++) {
     double popi = 0.0;
     /* Get the diagonal element */
-    if (lindbladtype != LindbladType::NONE) { // Lindblad solver
+    if (decoherence_type != DecoherenceType::NONE) { // Lindblad solver
       PetscInt ivec = getVecID(i, i, dim_rho);  // Position in vectorized rho
       if (ilow <= ivec && ivec < iupp)  {
         id_global_x =  ivec + mpirank_petsc*localsize_u; // Global index of u_ii in x=[u,v]

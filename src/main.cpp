@@ -38,97 +38,20 @@ int main(int argc,char **argv)
   bool quietmode = args.quietmode;
   if (mpirank_world == 0 && !quietmode) printf("Running on %d cores.\n", mpisize_world);
 
-  std::stringstream log;
-  Config config(MPI_COMM_WORLD, log, quietmode);
-  config.ReadFile(args.config_filename);
+  MPILogger logger(mpirank_world, quietmode);
+  std::string config_file = args.config_filename;
+  Config config = Config::fromFile(config_file, logger);
+  std::stringstream config_log;
+  config.printConfig(config_log);
 
   /* Initialize random number generator: Check if rand_seed is provided from config file, otherwise set random. */
-  int rand_seed = config.GetIntParam("rand_seed", -1, false, false);
-  std::random_device rd;
-  if (rand_seed < 0){
-    rand_seed = rd();  // random non-reproducable seed
-  }
+  int rand_seed = config.getRandSeed();
   MPI_Bcast(&rand_seed, 1, MPI_INT, 0, MPI_COMM_WORLD); // Broadcast from rank 0 to all.
   std::mt19937 rand_engine{}; // Use Mersenne Twister for cross-platform reproducibility
   rand_engine.seed(rand_seed);
-  export_param(mpirank_world, *config.log, "rand_seed", rand_seed);
-
-  /* --- Get some options from the config file --- */
-  std::vector<int> nlevels_int;
-  config.GetVecIntParam("nlevels", nlevels_int, 0);
-  std::vector<size_t> nlevels(nlevels_int.begin(), nlevels_int.end());
-  int ntime = config.GetIntParam("ntime", 1000);
-  double dt    = config.GetDoubleParam("dt", 0.01);
-  RunType runtype;
-  std::string runtypestr = config.GetStrParam("runtype", "simulation");
-  if      (runtypestr.compare("simulation")      == 0) runtype = RunType::SIMULATION;
-  else if (runtypestr.compare("gradient")     == 0)    runtype = RunType::GRADIENT;
-  else if (runtypestr.compare("optimization")== 0)     runtype = RunType::OPTIMIZATION;
-  else if (runtypestr.compare("evalcontrols")== 0)     runtype = RunType::EVALCONTROLS;
-  else {
-    printf("\n\n WARNING: Unknown runtype: %s.\n\n", runtypestr.c_str());
-    runtype = RunType::NONE;
-  }
-
-  /* Get the number of essential levels per oscillator. 
-   * Default: same as number of levels */  
-  std::vector<size_t> nessential(nlevels.size());
-  for (size_t iosc = 0; iosc<nlevels.size(); iosc++) nessential[iosc] = nlevels[iosc];
-  /* Overwrite if config option is given */
-  std::vector<int> read_nessential;
-  config.GetVecIntParam("nessential", read_nessential, -1);
-  if (read_nessential[0] > -1) {
-    for (size_t iosc = 0; iosc<nlevels.size(); iosc++){
-      if (iosc < read_nessential.size()) nessential[iosc] = static_cast<size_t>(read_nessential[iosc]);
-      else                               nessential[iosc] = static_cast<size_t>(read_nessential[read_nessential.size()-1]);
-      if (nessential[iosc] > nlevels[iosc]) nessential[iosc] = nlevels[iosc];
-    }
-  }
-
 
   /* Get type and the total number of initial conditions */
-  int ninit = 1;
-  std::vector<std::string> initcondstr;
-  config.GetVecStrParam("initialcondition", initcondstr, "none");
-  assert (initcondstr.size() >= 1);
-  if      (initcondstr[0].compare("file") == 0 ) ninit = 1;
-  else if (initcondstr[0].compare("pure") == 0 ) ninit = 1;
-  else if (initcondstr[0].compare("performance") == 0 ) ninit = 1;
-  else if (initcondstr[0].compare("ensemble") == 0 ) ninit = 1;
-  else if (initcondstr[0].compare("3states") == 0 ) ninit = 3;
-  else if (initcondstr[0].compare("Nplus1") == 0 )  {
-    // compute system dimension N 
-    ninit = 1;
-    for (size_t i=0; i<nlevels.size(); i++){
-      ninit *= nlevels[i];
-    }
-    ninit +=1;
-  }
-  else if ( initcondstr[0].compare("diagonal") == 0 ||
-            initcondstr[0].compare("basis")    == 0  ) {
-    /* Compute ninit = dim(subsystem defined by list of oscil IDs) */
-    ninit = 1;
-    if (initcondstr.size() < 2) {
-      for (size_t j=0; j<nlevels.size(); j++)  initcondstr.push_back(std::to_string(j));
-    }
-    for (size_t i = 1; i<initcondstr.size(); i++){
-      size_t oscilID = atoi(initcondstr[i].c_str());
-      if (oscilID < nessential.size()) ninit *= nessential[oscilID];
-    }
-    if (initcondstr[0].compare("basis") == 0  ) {
-      // if Schroedinger solver: ninit = N, do nothing.
-      // else Lindblad solver: ninit = N^2
-      std::string tmpstr = config.GetStrParam("collapse_type", "none", false);
-      if (tmpstr.compare("none") != 0 ) ninit = (int) pow(ninit,2.0);
-    }
-  }
-  else {
-    printf("\n\n ERROR: Wrong setting for initial condition.\n");
-    exit(1);
-  }
-  if (mpirank_world == 0 && !quietmode) {
-    printf("Number of initial conditions: %d\n", ninit);
-  }
+  int ninit = config.getNInitialConditions();
 
   /* --- Split communicators for distributed initial conditions, distributed linear algebra, parallel optimization --- */
   int mpirank_init, mpisize_init;
@@ -184,152 +107,44 @@ int main(int argc,char **argv)
 #endif
   PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, 	PETSC_VIEWER_ASCII_MATLAB );
 
-
-
-  double total_time = ntime * dt;
+  size_t num_osc = config.getNumOsc();
 
   /* --- Initialize the Oscillators --- */
-  Oscillator** oscil_vec = new Oscillator*[nlevels.size()];
-  // Get fundamental and rotation frequencies from config file 
-  std::vector<double> trans_freq, rot_freq;
-  config.GetVecDoubleParam("transfreq", trans_freq, 1e20);
-  copyLast(trans_freq, nlevels.size());
-
-  config.GetVecDoubleParam("rotfreq", rot_freq, 1e20);
-  copyLast(rot_freq, nlevels.size());
-  // Get self kerr coefficient
-  std::vector<double> selfkerr;
-  config.GetVecDoubleParam("selfkerr", selfkerr, 0.0);   // self ker \xi_k 
-  copyLast(selfkerr, nlevels.size());
-  // Get lindblad type and collapse times
-  std::string lindblad = config.GetStrParam("collapse_type", "none");
-  std::vector<double> decay_time, dephase_time;
-  config.GetVecDoubleParam("decay_time", decay_time, 0.0, true, false);
-  config.GetVecDoubleParam("dephase_time", dephase_time, 0.0, true, false);
-  LindbladType lindbladtype;
-  if      (lindblad.compare("none")      == 0 ) lindbladtype = LindbladType::NONE;
-  else if (lindblad.compare("decay")     == 0 ) lindbladtype = LindbladType::DECAY;
-  else if (lindblad.compare("dephase")   == 0 ) lindbladtype = LindbladType::DEPHASE;
-  else if (lindblad.compare("both")      == 0 ) lindbladtype = LindbladType::BOTH;
-  else {
-    printf("\n\n ERROR: Unnown lindblad type: %s.\n", lindblad.c_str());
-    printf(" Choose either 'none', 'decay', 'dephase', or 'both'\n");
-    exit(1);
-  }
-  copyLast(decay_time, nlevels.size());
-  copyLast(dephase_time, nlevels.size());
-
-  // Get control segment types, carrierwaves and control initialization
-  std::string default_seg_str = "spline, 10, 0.0, "+std::to_string(total_time); // Default for first oscillator control segment
-  std::string default_init_str = "constant, 0.0";                               // Default for first oscillator initialization
-  for (size_t i = 0; i < nlevels.size(); i++){
-    // Get carrier wave frequencies 
-    std::vector<double> carrier_freq;
-    std::string key = "carrier_frequency" + std::to_string(i);
-    config.GetVecDoubleParam(key, carrier_freq, 0.0);
-
-    // Get control type. Default for second or larger oscillator is the previous one
-    std::vector<std::string> controltype_str;
-    config.GetVecStrParam("control_segments" + std::to_string(i), controltype_str,default_seg_str);
-
-    // Get control initialization
-    std::vector<std::string> controlinit_str;
-    config.GetVecStrParam("control_initialization" + std::to_string(i), controlinit_str, default_init_str);
-
-    // Create oscillator 
-    oscil_vec[i] = new Oscillator(config, i, nlevels, controltype_str, controlinit_str, trans_freq[i], selfkerr[i], rot_freq[i], decay_time[i], dephase_time[i], carrier_freq, total_time, lindbladtype, rand_engine);
-    
-    // Update the default for control type
-    default_seg_str = "";
-    default_init_str = "";
-    for (size_t l = 0; l<controltype_str.size(); l++) default_seg_str += controltype_str[l]+=", ";
-    for (size_t l = 0; l<controlinit_str.size(); l++) default_init_str += controlinit_str[l]+=", ";
+  Oscillator** oscil_vec = new Oscillator*[num_osc];
+  int param_offset = 0;
+  for (size_t i = 0; i < num_osc; i++){
+    oscil_vec[i] = new Oscillator(config, i, rand_engine, param_offset, quietmode);
+    param_offset += oscil_vec[i]->getNParams();
   }
 
-  // Get pi-pulses, if any
-  std::vector<std::string> pipulse_str;
-  config.GetVecStrParam("apply_pipulse", pipulse_str, "none", true, false);
-  if (pipulse_str[0].compare("none") != 0) { // There is at least one pipulse to be applied!
-    // sanity check
-    if (pipulse_str.size() % 4 != 0) {
-      printf("Wrong pi-pulse configuration. Number of elements must be multiple of 4!\n");
-      printf("apply_pipulse config option: <oscilID>, <tstart>, <tstop>, <amp>, <anotherOscilID>, <anotherTstart>, <anotherTstop>, <anotherAmp> ...\n");
-      exit(1);
-    }
-    size_t k=0;
-    while (k < pipulse_str.size()){
-      // Set pipulse for this oscillator
-      size_t pipulse_id = atoi(pipulse_str[k+0].c_str());
-      oscil_vec[pipulse_id]->pipulse.tstart.push_back(atof(pipulse_str[k+1].c_str()));
-      oscil_vec[pipulse_id]->pipulse.tstop.push_back(atof(pipulse_str[k+2].c_str()));
-      oscil_vec[pipulse_id]->pipulse.amp.push_back(atof(pipulse_str[k+3].c_str()));
-      if (mpirank_world==0) printf("Applying PiPulse to oscillator %zu in [%f,%f]: |p+iq|=%f\n", pipulse_id, oscil_vec[pipulse_id]->pipulse.tstart.back(), oscil_vec[pipulse_id]->pipulse.tstop.back(), oscil_vec[pipulse_id]->pipulse.amp.back());
-      // Set zero control for all other oscillators during this pipulse
-      for (size_t i=0; i<nlevels.size(); i++){
-        if (i != pipulse_id) {
-          oscil_vec[i]->pipulse.tstart.push_back(atof(pipulse_str[k+1].c_str()));
-          oscil_vec[i]->pipulse.tstop.push_back(atof(pipulse_str[k+2].c_str()));
-          oscil_vec[i]->pipulse.amp.push_back(0.0);
-        }
-      }
-      k+=4;
-    }
-  }
 
   /* --- Initialize the Master Equation  --- */
-  // Get self and cross kers and coupling terms 
-  std::vector<double> crosskerr, Jkl;
-  config.GetVecDoubleParam("crosskerr", crosskerr, 0.0);   // cross ker \xi_{kl}, zz-coupling
-  config.GetVecDoubleParam("Jkl", Jkl, 0.0); // Jaynes-Cummings (dipole-dipole) coupling coeff
-  copyLast(crosskerr, (nlevels.size()-1) * nlevels.size()/ 2);
-  copyLast(Jkl, (nlevels.size()-1) * nlevels.size()/ 2);
-  // If not enough elements are given, fill up with zeros!
-  // for (int i = crosskerr.size(); i < (noscillators-1) * noscillators / 2; i++)  crosskerr.push_back(0.0);
-  // for (int i = Jkl.size(); i < (noscillators-1) * noscillators / 2; i++) Jkl.push_back(0.0);
   // Sanity check for matrix free solver
-  bool usematfree = config.GetBoolParam("usematfree", false);
-  if (usematfree && nlevels.size() > 5){
-        printf("Warning: Matrix free solver is only implemented for systems with 2, 3, 4, or 5 oscillators. Switching to sparse-matrix solver now.\n");
-        usematfree = false;
-  }
-  if (usematfree && mpisize_petsc > 1) {
+  if (config.getUseMatFree() && mpisize_petsc > 1) {
     if (mpirank_world == 0) printf("ERROR: No Petsc-parallel version for the matrix free solver available!");
     exit(1);
   }
-  // Compute coupling rotation frequencies eta_ij = w^r_i - w^r_j
-  std::vector<double> eta(nlevels.size()*(nlevels.size()-1)/2.);
-  int idx = 0;
-  for (size_t iosc=0; iosc<nlevels.size(); iosc++){
-    for (size_t josc=iosc+1; josc<nlevels.size(); josc++){
-      eta[idx] = rot_freq[iosc] - rot_freq[josc];
-      idx++;
-    }
-  }
-  // Check if Hamiltonian should be read from file
-  std::string hamiltonian_file_Hsys = config.GetStrParam("hamiltonian_file_Hsys", "none", true, false);
-  std::string hamiltonian_file_Hc = config.GetStrParam("hamiltonian_file_Hc", "none", true, false);
-  if ((hamiltonian_file_Hsys.compare("none") != 0 ||hamiltonian_file_Hc.compare("none") != 0 ) && usematfree) {
-    if (mpirank_world==0 && !quietmode) printf("# Warning: Matrix-free solver can not be used when Hamiltonian is read fromfile. Switching to sparse-matrix version.\n");
-    usematfree = false;
-  }
-  // Initialize Master equation
-  MasterEq* mastereq = new MasterEq(nlevels, nessential, oscil_vec, crosskerr, Jkl, eta, lindbladtype, usematfree, hamiltonian_file_Hsys, hamiltonian_file_Hc, quietmode);
 
+  MasterEq* mastereq = new MasterEq(config, oscil_vec, quietmode);
 
   /* Output */
-  Output* output = new Output(config, comm_petsc, comm_init, nlevels.size(), quietmode);
+  Output* output = new Output(config, comm_petsc, comm_init, quietmode);
+
+  int ntime = config.getNTime();
+  double dt = config.getDt();
+  double total_time = config.getTotalTime();
 
   // Some screen output 
   if (mpirank_world == 0 && !quietmode) {
     std::cout<< "System: ";
-    for (size_t i=0; i<nlevels.size(); i++) {
-      std::cout<< nlevels[i];
-      if (i < nlevels.size()-1) std::cout<< "x";
+    for (size_t i=0; i<num_osc; i++) {
+      std::cout<< config.getNLevels(i);
+      if (i < num_osc-1) std::cout<< "x";
     }
     std::cout<<"  (essential levels: ";
-    for (size_t i=0; i<nlevels.size(); i++) {
-      std::cout<< nessential[i];
-      if (i < nlevels.size()-1) std::cout<< "x";
+    for (size_t i=0; i<num_osc; i++) {
+      std::cout<< config.getNEssential(i);
+      if (i < num_osc-1) std::cout<< "x";
     }
     std::cout << ") " << std::endl;
 
@@ -339,34 +154,36 @@ int main(int argc,char **argv)
   }
 
   /* --- Initialize the time-stepper --- */
-  LinearSolverType linsolvetype;
-  std::string linsolvestr = config.GetStrParam("linearsolver_type", "gmres");
-  int linsolve_maxiter = config.GetIntParam("linearsolver_maxiter", 10);
-  if      (linsolvestr.compare("gmres")   == 0) linsolvetype = LinearSolverType::GMRES;
-  else if (linsolvestr.compare("neumann") == 0) linsolvetype = LinearSolverType::NEUMANN;
-  else {
-    printf("\n\n ERROR: Unknown linear solver type: %s.\n\n", linsolvestr.c_str());
-    exit(1);
-  }
+  LinearSolverType linsolvetype = config.getLinearSolverType();
+  int linsolve_maxiter = config.getLinearSolverMaxiter();
 
   /* My time stepper */
   bool storeFWD = false;
-  if (mastereq->lindbladtype != LindbladType::NONE &&   
+  RunType runtype = config.getRuntype();
+  if (mastereq->decoherence_type != DecoherenceType::NONE &&   
      (runtype == RunType::GRADIENT || runtype == RunType::OPTIMIZATION) ) storeFWD = true;  // if NOT Schroedinger solver and running gradient optim: store forward states. Otherwise, they will be recomputed during gradient. 
 
-  std::string timesteppertypestr = config.GetStrParam("timestepper", "IMR");
-  TimeStepper* mytimestepper;
-  if (timesteppertypestr.compare("IMR")==0) mytimestepper = new ImplMidpoint(mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
-  else if (timesteppertypestr.compare("IMR4")==0) mytimestepper = new CompositionalImplMidpoint(4, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
-  else if (timesteppertypestr.compare("IMR8")==0) mytimestepper = new CompositionalImplMidpoint(8, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
-  else if (timesteppertypestr.compare("EE")==0) mytimestepper = new ExplEuler(mastereq, ntime, total_time, output, storeFWD);
-  else {
-    printf("\n\n ERROR: Unknow timestepping type: %s.\n\n", timesteppertypestr.c_str());
-    exit(1);
+  TimeStepperType timesteppertype = config.getTimestepperType();
+  TimeStepper* mytimestepper = nullptr;
+  switch (timesteppertype) {
+    case TimeStepperType::IMR:
+      mytimestepper = new ImplMidpoint(mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
+      break;
+    case TimeStepperType::IMR4:
+      mytimestepper = new CompositionalImplMidpoint(4, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
+      break;
+    case TimeStepperType::IMR8:
+      mytimestepper = new CompositionalImplMidpoint(8, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
+      break;
+    case TimeStepperType::EE:
+      mytimestepper = new ExplEuler(mastereq, ntime, total_time, output, storeFWD);
+      break;
+    default:
+      logger.exitWithError("Unknown timestepper type\n");
   }
 
   /* --- Initialize optimization --- */
-  OptimProblem* optimctx = new OptimProblem(config, mytimestepper, comm_init, comm_optim, ninit, output, quietmode);
+  OptimProblem* optimctx = new OptimProblem(config, mytimestepper, comm_init, comm_optim, output, quietmode);
 
   /* Set upt solution and gradient vector */
   Vec xinit;
@@ -382,10 +199,10 @@ int main(int argc,char **argv)
   if (mpirank_world == 0)
   {
     /* Print parameters to file */
-    snprintf(filename, 254, "%s/config_log.dat", output->datadir.c_str());
+    snprintf(filename, 254, "%s/config_log.toml", output->output_dir.c_str());
     std::ofstream logfile(filename);
     if (logfile.is_open()){
-      logfile << log.str();
+      logfile << config_log.str();
       logfile.close();
       if (!quietmode) printf("File written: %s\n", filename);
     }
@@ -443,7 +260,7 @@ int main(int argc,char **argv)
 
   /* Output */
   if (runtype != RunType::OPTIMIZATION) {
-    optimctx->output->writeOptimFile(0, optimctx->getObjective(), gnorm, 0.0, optimctx->getFidelity(), optimctx->getCostT(), optimctx->getRegul(), optimctx->getPenalty(), optimctx->getPenaltyDpDm(), optimctx->getPenaltyEnergy(), optimctx->getPenaltyVariation());
+    optimctx->output->writeOptimFile(0, optimctx->getObjective(), gnorm, 0.0, optimctx->getFidelity(), optimctx->getCostT(), optimctx->getRegul(), optimctx->getPenaltyLeakage(), optimctx->getPenaltyDpDm(), optimctx->getPenaltyEnergy(), optimctx->getPenaltyVariation(), optimctx->getPenaltyWeightedCost());
   }
 
   /* --- Finalize --- */
@@ -480,7 +297,7 @@ int main(int argc,char **argv)
 
   /* Print timing to file */
   if (mpirank_world == 0) {
-    snprintf(filename, 254, "%s/timing.dat", output->datadir.c_str());
+    snprintf(filename, 254, "%s/timing.dat", output->output_dir.c_str());
     FILE* timefile = fopen(filename, "w");
     fprintf(timefile, "%d  %1.8e\n", mpisize_world, UsedTime);
     fclose(timefile);
@@ -634,7 +451,7 @@ int main(int argc,char **argv)
 
   /* --- Print Hessian to file */
   
-  snprintf(filename, 254, "%s/hessian.dat", output->datadir.c_str());
+  snprintf(filename, 254, "%s/hessian.dat", output->output_dir.c_str());
   printf("File written: %s.\n", filename);
   PetscViewer viewer;
   PetscViewerCreate(MPI_COMM_WORLD, &viewer);
@@ -647,7 +464,7 @@ int main(int argc,char **argv)
   PetscViewerDestroy(&viewer);
 
   // write again in binary
-  snprintf(filename, 254, "%s/hessian_bin.dat", output->datadir.c_str());
+  snprintf(filename, 254, "%s/hessian_bin.dat", output->output_dir.c_str());
   printf("File written: %s.\n", filename);
   PetscViewerBinaryOpen(MPI_COMM_WORLD, filename, FILE_MODE_WRITE, &viewer);
   MatView(Hess, viewer);
@@ -666,7 +483,7 @@ int main(int argc,char **argv)
   /* Load Hessian from file */
   Mat Hess;
   MatCreate(PETSC_COMM_SELF, &Hess);
-  snprintf(filename, 254, "%s/hessian_bin.dat", output->datadir.c_str());
+  snprintf(filename, 254, "%s/hessian_bin.dat", output->output_dir.c_str());
   printf("Reading file: %s\n", filename);
   PetscViewer viewer;
   PetscViewerCreate(MPI_COMM_WORLD, &viewer);
@@ -693,7 +510,7 @@ int main(int argc,char **argv)
 
   /* Print eigenvalues to file. */
   FILE *file;
-  snprintf(filename, 254, "%s/eigvals.dat", output->datadir.c_str());
+  snprintf(filename, 254, "%s/eigvals.dat", output->output_dir.c_str());
   file =fopen(filename,"w");
   for (int i=0; i<eigvals.size(); i++){
       fprintf(file, "% 1.8e\n", eigvals[i]);  
@@ -702,7 +519,7 @@ int main(int argc,char **argv)
   printf("File written: %s.\n", filename);
 
   /* Print eigenvectors to file. Columns wise */
-  snprintf(filename, 254, "%s/eigvecs.dat", output->datadir.c_str());
+  snprintf(filename, 254, "%s/eigvecs.dat", output->output_dir.c_str());
   file =fopen(filename,"w");
   for (PetscInt j=0; j<nrows; j++){  // rows
     for (PetscInt i=0; i<eigvals.size(); i++){
@@ -723,7 +540,7 @@ int main(int argc,char **argv)
 #endif
 
   /* Clean up */
-  for (size_t i=0; i<nlevels.size(); i++){
+  for (size_t i=0; i<num_osc; i++){
     delete oscil_vec[i];
   }
   delete [] oscil_vec;

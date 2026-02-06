@@ -11,7 +11,7 @@ blt_add_library(
     SOURCES ${SRC_FILES}
     HEADERS ${HEADER_FILES}
     INCLUDES ${INC_DIR} ${CMAKE_BINARY_DIR}/include
-    DEPENDS_ON blt::mpi
+    DEPENDS_ON blt::mpi tomlplusplus::tomlplusplus
 )
 
 blt_add_executable(
@@ -19,6 +19,9 @@ blt_add_executable(
     SOURCES ${SRC_DIR}/main.cpp
     DEPENDS_ON quandary_lib
 )
+
+# Toml settings
+target_compile_definitions(quandary_lib PUBLIC TOML_ENABLE_UNRELEASED_FEATURES=1)
 
 # PETSc
 find_package(PkgConfig REQUIRED)

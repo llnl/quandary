@@ -113,9 +113,9 @@ In additional to installing dependencies, the `pip install` command also enables
 
 # Running
 The C++ code builds into the executable `quandary`,
-which takes one argument being the name of the test-case's configuration file. The file `config_template.cfg`, lists all possible configuration options and is filled with comments that should help users set up their own test case and match the options to the description in the user guide. 
-* `quandary config_template.cfg` (serial execution)
-* `mpirun -np 4 quandary config_template.cfg` (on 4 cores)
+which takes one argument being the name of the test-case's configuration file. The file `config_template.toml` lists all possible configuration options and is filled with comments that should help users set up their own test case and match the options to the description in the user guide.
+* `quandary config_template.toml` (serial execution)
+* `mpirun -np 4 quandary config_template.toml` (on 4 cores)
 
 You can silence Quandary output by adding the `--quiet` argument to the above commands.
 
@@ -179,6 +179,10 @@ See `tests/regression/README.md` for more information.
 Performance regression tests are defined in `tests/performance`.
 The latest results from `main` are shown on this [performance dashboard](https://software.llnl.gov/quandary/dev/bench/).
 See `tests/performance/README.md` for more information.
+
+## Unit tests
+Unit tests using google test are defined in `tests/unit`.
+They can be run with `make test` in the build folder.
 
 # Community and Contributing
 

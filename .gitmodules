@@ -10,3 +10,6 @@
 [submodule "examples"]
 	path = examples
 	url = https://github.com/LLNL/quandary-examples/
+[submodule "third_party/tomlplusplus"]
+	path = third_party/tomlplusplus
+	url = https://github.com/marzer/tomlplusplus.git

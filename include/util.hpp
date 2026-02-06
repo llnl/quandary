@@ -1,4 +1,10 @@
 #include <petscmat.h>
+
+#include <cctype>
+#include <cstring>
+#include <map>
+#include <optional>
+#include <string>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -277,3 +283,71 @@ void copyLast(std::vector<Tval>& fillme, int tosize){
       // std::cout<<std::endl;
     // }
 };
+
+
+/**
+ * @brief Returns a lowercase version of the input string.
+ *
+ * @param str String to convert to lowercase.
+ * @return std::string Lowercase string
+ */
+std::string toLower(std::string str);
+
+/**
+ * @brief Checks if string ends with specified suffix.
+ *
+ * @param str Input string to check.
+ * @param suffix Suffix to look for.
+ * @return bool True if string ends with suffix, false otherwise.
+ */
+bool hasSuffix(const std::string& str, const std::string& suffix);
+
+
+/**
+ * @brief Generic enum parsing utility with case-insensitive lookup.
+ *
+ * @param str String value to parse into enum
+ * @param enum_map Map from string to enum values
+ * @return std::optional<T> Parsed enum value or nullopt if not found
+ */
+template<typename T>
+std::optional<T> parseEnum(const std::string& str, const std::map<std::string, T>& enum_map) {
+  auto it = enum_map.find(toLower(str));
+  if (it != enum_map.end()) {
+    return it->second;
+  } else {
+    return std::nullopt;
+  }
+}
+
+/**
+ * @brief Converts enum value back to string.
+ *
+ * @param value Enum value to convert
+ * @param type_map Map from string to enum values
+ * @return std::string String representation of enum value
+ */
+template <typename EnumType>
+std::string enumToString(EnumType value, const std::map<std::string, EnumType>& type_map) {
+  for (const auto& [str, enum_val] : type_map) {
+    if (enum_val == value) return str;
+  }
+  return "unknown";
+}
+
+/**
+ * @brief Generic enum parsing utility with case-insensitive lookup and default fallback.
+ *
+ * @param opt_str Optional string value to parse into enum
+ * @param enum_map Map from string to enum values
+ * @param default_value Default enum value to return if string is missing or invalid
+ * @return T Parsed enum value or default_value if not found
+ */
+template<typename T>
+T parseEnum(const std::optional<std::string>& opt_str, const std::map<std::string, T>& enum_map, const T& default_value) {
+  if (!opt_str.has_value()) {
+    return default_value;
+  }
+  auto result = parseEnum(opt_str.value(), enum_map);
+  return result.value_or(default_value);
+}

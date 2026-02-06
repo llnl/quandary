@@ -1,0 +1,39 @@
+[system]
+nlevels = [4, 4, 4, 4]
+ntime = 500
+dt = 0.01
+transition_frequency = [4.1, 4.2, 4.3, 4.4]
+selfkerr = [0.2, 0.2, 0.2, 0.2]
+crosskerr_coupling = 0.001
+dipole_coupling = 0.001
+rotation_frequency = [4.1, 4.2, 4.3, 4.4]
+decoherence = { type = "none" }
+initial_condition = {type = "state", levels = [1, 0, 0, 0]}
+
+[control]
+parameterization = { type = "spline", num = 15 }
+carrier_frequency = [0.0, -0.2, -0.001]
+initialization = { type = "constant", amplitude = 0.005 }
+amplitude_bound = 0.008
+zero_boundary_condition = false
+
+[optimization]
+target = {type = "state", levels = [0, 0, 0, 0]}
+objective = "Jtrace"
+tolerance = { grad_abs = 1e-7, grad_rel = 1e-8, final_cost = 1e-5, infidelity = 1e-5 }
+maxiter = 200
+tikhonov = { coeff = 0.00001, use_x0 = false }
+penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0 }
+
+[output]
+directory = "./data_out"
+observables = []
+timestep_stride = 1
+optimization_stride = 1
+
+[solver]
+runtype = "simulation"
+usematfree = false
+linearsolver = { type = "gmres", maxiter = 20 }
+timestepper = "IMR"
+rand_seed = 1234

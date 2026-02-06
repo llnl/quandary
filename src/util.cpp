@@ -1,5 +1,7 @@
 #include "util.hpp"
 
+#include <algorithm>
+
 // Suppress compiler warnings about unused parameters in code with #ifdef
 #define UNUSED(expr) (void)(expr)
 
@@ -11,16 +13,16 @@ void printHelp() {
   printf("  quandary --version\n");
   printf("  quandary --help\n");
   printf("\nOPTIONS:\n");
-  printf("  <config_file>     Configuration file (.cfg) specifying system parameters\n");
+  printf("  <config_file>    Configuration file: .toml (preferred) or .cfg (deprecated) specifying system parameters\n");
   printf("  --quiet           Reduce output verbosity\n");
   printf("  --petsc-options   Pass options directly to PETSc/SLEPc (in quotes)\n");
   printf("  --version         Show version information\n");
   printf("  --help            Show this help message\n");
   printf("\nEXAMPLES:\n");
-  printf("  quandary config.cfg\n");
-  printf("  mpirun -np 4 quandary config.cfg --quiet\n");
-  printf("  quandary config.cfg --petsc-options \"-log_view -tao_view\"\n");
-  printf("  mpirun -np 4 quandary config.cfg --quiet --petsc-options \"-log_view -tao_view\"\n");
+  printf("  quandary config.toml\n");
+  printf("  mpirun -np 4 quandary config.toml --quiet\n");
+  printf("  quandary config.toml --petsc-options \"-log_view -tao_view\"\n");
+  printf("  mpirun -np 4 quandary config.toml --quiet --petsc-options \"-log_view -tao_view\"\n");
   printf("\n");
 }
 
@@ -729,4 +731,15 @@ bool isUnitary(const Mat V_re, const Mat V_im){
   MatDestroy(&D);
 
   return isunitary;
+}
+
+
+std::string toLower(std::string str) {
+  std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+  return str;
+}
+
+bool hasSuffix(const std::string& str, const std::string& suffix) {
+  return str.size() >= suffix.size() &&
+    str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }

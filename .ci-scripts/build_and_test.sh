@@ -263,10 +263,14 @@ then
 
     eval `${spack_cmd} env activate ${spack_env_path} --sh`
     python -m pip install -e . --prefer-binary
+    mpi_exe=$(grep 'MPIEXEC_EXECUTABLE' "${hostconfig_path}" | cut -d'"' -f2 | sed 's/;/ /g')
+
+    # TODO cfg: remove this later
+    timed_message "Run regression tests with deprecated cfg config (excluding python tests which are run below)"
+    cd tests/regression && pytest -v -s --mpi-exec="${mpi_exe}" --config-format=cfg .
+    cd ${project_dir}
 
     timed_message "Run regression tests"
-
-    mpi_exe=$(grep 'MPIEXEC_EXECUTABLE' "${hostconfig_path}" | cut -d'"' -f2 | sed 's/;/ /g')
     pytest -v -s -m "not performance" --mpi-exec="${mpi_exe}"
 
     timed_message "Quandary tests completed"

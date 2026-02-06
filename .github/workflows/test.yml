@@ -59,6 +59,13 @@ jobs:
         spack -e .spack_env add quandary@develop+test^openmpi
         spack -e .spack_env install --use-buildcache package:never
 
+    - name: Run cfg regression tests
+      shell: spack-sh {0}
+      run: |
+        spack env activate .spack_env
+        python -m pip install -e . --prefer-binary
+        pytest -v -s --mpi-opt="--oversubscribe" --config-format=cfg tests/regression
+
     - name: Run regression tests
       shell: spack-sh {0}
       run: |
