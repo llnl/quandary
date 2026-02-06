@@ -1,6 +1,9 @@
 """Quantum operator construction and analysis utilities."""
 
+import logging
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 def lowering(n):
@@ -55,10 +58,10 @@ def _eigen_and_reorder(H0, verbose=False):
         for k in range(row + 1, Ntot):
             if max_col[row] == max_col[k]:
                 Ndup_col += 1
-                print("Error: detected identical max_col =", max_col[row], "for rows", row, "and", k)
+                logger.error(f"Error: detected identical max_col = {max_col[row]} for rows {row} and {k}")
 
     if Ndup_col > 0:
-        print("Found", Ndup_col, "duplicate column indices in max_col array")
+        logger.error(f"Found {Ndup_col} duplicate column indices in max_col array")
         raise ValueError('Permutation of eigen-vector matrix failed')
 
     evects = evects[:, max_col]
@@ -80,8 +83,8 @@ def get_resonances(*, nessential, nguard, Hsys, Hc_re=[], Hc_im=[], rotation_fre
     """
 
     if verbose:
-        print("\nComputing carrier frequencies, ignoring growth rate slower than:", cw_amp_thres,
-              "and frequencies closer than:", cw_prox_thres, "[GHz])")
+        logger.info(f"\nComputing carrier frequencies, ignoring growth rate slower than: {cw_amp_thres} "
+                    f"and frequencies closer than: {cw_prox_thres} [GHz]")
 
     nqubits = len(nessential)
     n = Hsys.shape[0]
@@ -103,7 +106,7 @@ def get_resonances(*, nessential, nguard, Hsys, Hc_re=[], Hc_im=[], rotation_fre
         resonances_a = []
         speed_a = []
         if verbose:
-            print("  Resonances in oscillator #", q)
+            logger.info(f"  Resonances in oscillator # {q}")
 
         for Hc_trans in (Hsym_trans, Hanti_trans):
 
@@ -133,21 +136,21 @@ def get_resonances(*, nessential, nguard, Hsys, Hc_re=[], Hc_im=[], rotation_fre
                         # Ignore resonances that are too close by comparing to all previous resonances
                         if any(abs(delta_f - f) < cw_prox_thres for f in resonances_a):
                             if verbose:
-                                print("    Ignoring resonance from ", ids_j, "to ", ids_i, ", freq", delta_f,
-                                      ", growth rate=", abs(Hc_trans[i, j]),
-                                      "being too close to one that already exists.")
+                                logger.info(f"    Ignoring resonance from {ids_j} to {ids_i}, freq {delta_f}, "
+                                           f"growth rate= {abs(Hc_trans[i, j])} "
+                                           f"being too close to one that already exists.")
                         # Ignore resonances with growth rate smaller than user-defined threshold
                         elif abs(Hc_trans[i, j]) < cw_amp_thres:
                             if verbose:
-                                print("    Ignoring resonance from ", ids_j, "to ", ids_i, ", freq", delta_f,
-                                      ", growth rate=", abs(Hc_trans[i, j]), "growth rate is too slow.")
+                                logger.info(f"    Ignoring resonance from {ids_j} to {ids_i}, freq {delta_f}, "
+                                           f"growth rate= {abs(Hc_trans[i, j])} growth rate is too slow.")
                         # Otherwise, add resonance to the list
                         else:
                             resonances_a.append(delta_f)
                             speed_a.append(abs(Hc_trans[i, j]))
                             if verbose:
-                                print("    Resonance from ", ids_j, "to ", ids_i, ", freq", delta_f,
-                                      ", growth rate=", abs(Hc_trans[i, j]))
+                                logger.info(f"    Resonance from {ids_j} to {ids_i}, freq {delta_f}, "
+                                           f"growth rate= {abs(Hc_trans[i, j])}")
 
         # Append resonances for this qubit to overall list
         resonances.append(resonances_a)
@@ -253,9 +256,9 @@ def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=[], di
     Hc_im = [Amat[q] - Amat[q].T for q in range(nqubits)]
 
     if verbose:
-        print(f"*** {nqubits} coupled quantum systems setup ***")
-        print("System Hamiltonian frequencies [GHz]: f01 =", transition_frequency, "rot. freq =", rotation_frequency)
-        print("Selfkerr=", selfkerr)
-        print("Coupling: X-Kerr=", crosskerr_coupling, ", J-C=", dipole_coupling)
+        logger.info(f"*** {nqubits} coupled quantum systems setup ***")
+        logger.info(f"System Hamiltonian frequencies [GHz]: f01 = {transition_frequency}, rot. freq = {rotation_frequency}")
+        logger.info(f"Selfkerr= {selfkerr}")
+        logger.info(f"Coupling: X-Kerr= {crosskerr_coupling}, J-C= {dipole_coupling}")
 
     return Hsys, Hc_re, Hc_im
