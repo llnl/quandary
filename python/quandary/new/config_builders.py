@@ -27,6 +27,8 @@ def _setup_physics(
     nessential: List[int],
     transition_frequency: List[float],
     final_time: float,
+    ntime: Optional[int] = None,
+    dt: Optional[float] = None,
     selfkerr: Optional[List[float]] = None,
     nguard: Optional[List[int]] = None,
     rotation_frequency: Optional[List[float]] = None,
@@ -41,6 +43,10 @@ def _setup_physics(
 
     Computes Hamiltonians, timesteps, and carrier frequencies, then creates
     a QuandaryConfig with all common fields set. Runtype is not set here.
+
+    Time discretization: You can specify at most 2 of (final_time, ntime, dt).
+    If you specify all 3, they must be consistent (final_time ≈ ntime * dt).
+    If ntime and dt are not provided, ntime will be auto-computed from Hamiltonian.
 
     Returns:
         QuandaryConfig with physics parameters configured.
@@ -75,15 +81,36 @@ def _setup_physics(
         verbose=verbose,
     )
 
-    # Estimate timesteps
-    ntime = estimate_timesteps(
-        final_time=final_time,
-        Hsys=Hsys,
-        Hc_re=Hc_re,
-        Hc_im=Hc_im,
-        amplitude_bound=amplitude_bound,
-        Pmin=Pmin,
-    )
+    # Handle time discretization: final_time = ntime * dt
+    # User should specify at most 2 of the 3 parameters, unless they are consistent.
+    if ntime is None and dt is None:
+        # Neither specified - auto-compute ntime from Hamiltonian
+        ntime = estimate_timesteps(
+            final_time=final_time,
+            Hsys=Hsys,
+            Hc_re=Hc_re,
+            Hc_im=Hc_im,
+            amplitude_bound=amplitude_bound,
+            Pmin=Pmin,
+        )
+        dt = final_time / ntime
+    elif ntime is None and dt is not None:
+        # Only dt specified - compute ntime
+        # Note: actual final time will be ntime * dt (may differ slightly from requested final_time)
+        ntime = int(np.ceil(final_time / dt))
+    elif ntime is not None and dt is None:
+        # Only ntime specified - compute dt
+        dt = final_time / ntime
+    else:
+        # Both specified - check consistency
+        assert ntime is not None and dt is not None
+        computed_final_time = ntime * dt
+        if abs(computed_final_time - final_time) > 1e-10:
+            raise ValueError(
+                f"Inconsistent time parameters: final_time={final_time}, "
+                f"ntime={ntime}, dt={dt}. Must satisfy final_time = ntime * dt. "
+                f"Got ntime * dt = {computed_final_time}."
+            )
 
     # Compute carrier frequencies
     carrier_frequency, _ = get_resonances(
@@ -98,9 +125,9 @@ def _setup_physics(
 
     if verbose:
         logger.info("Configuration computed:")
-        logger.info(f"  Total time: {final_time} ns")
+        logger.info(f"  Total time: {ntime * dt:.6f} ns")
         logger.info(f"  Time steps: {ntime}")
-        logger.info(f"  dt: {final_time/ntime:.6f} ns")
+        logger.info(f"  dt: {dt:.6f} ns")
         logger.info(f"  Carrier frequencies: {carrier_frequency}")
 
     # Create config with common fields
@@ -108,7 +135,7 @@ def _setup_physics(
     config.nlevels = nlevels
     config.nessential = nessential
     config.ntime = ntime
-    config.dt = final_time / ntime
+    config.dt = dt
     config.transition_frequency = transition_frequency
     config.rotation_frequency = rotation_frequency
     config.selfkerr = selfkerr
@@ -127,6 +154,8 @@ def create_simulation_config(
     nessential: List[int],
     transition_frequency: List[float],
     final_time: float,
+    ntime: Optional[int] = None,
+    dt: Optional[float] = None,
     pcof = None,
     selfkerr: Optional[List[float]] = None,
     nguard: Optional[List[int]] = None,
@@ -157,6 +186,11 @@ def create_simulation_config(
 
     Optional Parameters:
     -------------------
+    ntime : int
+        Number of timesteps. If not provided, will be auto-computed from Hamiltonian.
+    dt : float
+        Timestep size [ns]. If not provided, will be auto-computed.
+        Note: Specify at most 2 of (final_time, ntime, dt). They must satisfy final_time = ntime * dt.
     selfkerr : List[float]
         Anharmonicities [GHz] per qubit. Default: zeros
     nguard : List[int]
@@ -184,14 +218,18 @@ def create_simulation_config(
 
     Example:
     -------
-    >>> # Simple simulation with random/default controls
+    >>> # Simple simulation with auto-computed timesteps
     >>> config = create_simulation_config(nessential=[2], transition_frequency=[4.1], final_time=50.0)
+    >>> # Or specify exact number of timesteps
+    >>> config = create_simulation_config(nessential=[2], transition_frequency=[4.1], final_time=50.0, ntime=1000)
     >>> results = run(config)
     """
     config = _setup_physics(
         nessential=nessential,
         transition_frequency=transition_frequency,
         final_time=final_time,
+        ntime=ntime,
+        dt=dt,
         selfkerr=selfkerr,
         nguard=nguard,
         rotation_frequency=rotation_frequency,
@@ -229,6 +267,8 @@ def create_optimization_config(
     nessential: List[int],
     transition_frequency: List[float],
     final_time: float,
+    ntime: Optional[int] = None,
+    dt: Optional[float] = None,
     targetgate = None,
     output_directory: str = "./run_dir",
     selfkerr: Optional[List[float]] = None,
@@ -260,6 +300,11 @@ def create_optimization_config(
 
     Optional Parameters:
     -------------------
+    ntime : int
+        Number of timesteps. If not provided, will be auto-computed from Hamiltonian.
+    dt : float
+        Timestep size [ns]. If not provided, will be auto-computed.
+        Note: Specify at most 2 of (final_time, ntime, dt). They must satisfy final_time = ntime * dt.
     output_directory : str
         Output directory for results and gate files. Default: "./run_dir"
     selfkerr : List[float]
@@ -294,12 +339,19 @@ def create_optimization_config(
     ...     nessential=[2], transition_frequency=[4.1], final_time=50.0,
     ...     targetgate=[[0, 1], [1, 0]]  # X gate
     ... )
+    >>> # Or with explicit timesteps:
+    >>> config = create_optimization_config(
+    ...     nessential=[2], transition_frequency=[4.1], final_time=50.0, ntime=1000,
+    ...     targetgate=[[0, 1], [1, 0]]
+    ... )
     >>> results = run(config)
     """
     config = _setup_physics(
         nessential=nessential,
         transition_frequency=transition_frequency,
         final_time=final_time,
+        ntime=ntime,
+        dt=dt,
         selfkerr=selfkerr,
         nguard=nguard,
         rotation_frequency=rotation_frequency,
