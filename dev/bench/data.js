@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770158035608,
+  "lastUpdate": 1770341907018,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -2375,6 +2375,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
             "value": 4313.77,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Tara Drwenski",
+            "username": "tdrwenski",
+            "email": "tdrwenski@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "74a59ec0f26e6ced7bf89eb9a3b110ad14b021c2",
+          "message": "Merge pull request #100 from llnl/refactor-config-toml\n\nRefactor cfg config parsing and add toml format",
+          "timestamp": "2026-02-06T00:48:36Z",
+          "url": "https://github.com/llnl/quandary/commit/74a59ec0f26e6ced7bf89eb9a3b110ad14b021c2"
+        },
+        "date": 1770341904720,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "value": 0.7583364709280431,
+            "range": "0.19192230562757437",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "value": 87.74,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "value": 5.42940926598385,
+            "range": "0.08356331623116013",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "value": 4340.13,
             "unit": "MB"
           }
         ]
