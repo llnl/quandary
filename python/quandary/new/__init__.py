@@ -32,7 +32,7 @@ from .._quandary_impl import (
 )
 
 # Functional API (primary interface)
-from .runner import run, run_mpi  # noqa: F401
+from .runner import run  # noqa: F401
 
 # Results
 from .results import QuandaryResults, get_results  # noqa: F401
@@ -98,7 +98,6 @@ __all__ = [
     "ControlInitializationSettings",
     # Runner functions
     "run",
-    "run_mpi",
     # Results
     "QuandaryResults",
     "get_results",

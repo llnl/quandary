@@ -17,6 +17,8 @@ import subprocess
 import sys
 from typing import TYPE_CHECKING, Optional
 
+from mpi4py import MPI
+
 from .. import _quandary_impl
 from .._quandary_impl import Config, QuandaryConfig
 from .results import get_results as _get_results, QuandaryResults
@@ -27,26 +29,47 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def run(config: QuandaryConfig, quiet: bool = False) -> QuandaryResults:
+def run(
+    config: QuandaryConfig,
+    n_procs: Optional[int] = None,
+    quiet: bool = False,
+    mpi_exec: str = "mpirun",
+    nproc_flag: str = "-np",
+    python_exec: Optional[str] = None,
+    working_dir: str = ".",
+) -> QuandaryResults:
     """Run a Quandary simulation or optimization.
 
     This function validates the configuration, runs the simulation/optimization,
     and returns results with the validated configuration attached.
 
-    If already running in an MPI context (launched with mpirun), MPI will be
-    used automatically. Otherwise runs serially.
+    If n_procs is specified and not already in an MPI context, spawns a subprocess
+    with the MPI launcher (useful for Jupyter notebooks). If already running in an
+    MPI context (launched with mpirun), MPI will be used automatically. Otherwise
+    runs serially.
 
     Args:
         config: A QuandaryConfig object with all required fields set.
+        n_procs: Number of MPI processes to use. If specified and not in MPI context,
+            spawns subprocess. If None, runs directly (serial or existing MPI context).
         quiet: If True, suppress console output.
+        mpi_exec: MPI launcher command (e.g., "mpirun", "srun", "flux run"). Default: "mpirun".
+            Only used when spawning subprocess.
+        nproc_flag: Flag for specifying number of processes (e.g., "-np", "-n"). Default: "-np".
+            Only used when spawning subprocess.
+        python_exec: Path to Python executable. Defaults to sys.executable.
+            Only used when spawning subprocess.
+        working_dir: Working directory for subprocess. Defaults to current directory.
+            Only used when spawning subprocess.
 
     Returns:
         QuandaryResults containing output data and the validated configuration.
 
     Raises:
         RuntimeError: If the configuration is invalid or execution fails.
+        subprocess.CalledProcessError: If spawned subprocess fails.
 
-    Example:
+    Examples:
         >>> config = QuandaryConfig()
         >>> config.nlevels = [2]
         >>> config.ntime = 1000
@@ -55,8 +78,40 @@ def run(config: QuandaryConfig, quiet: bool = False) -> QuandaryResults:
         >>> config.runtype = RunType.SIMULATION
         >>> results = run(config)
         >>> print(f"Infidelity: {results.infidelity}")
-        >>> print(results.config.to_toml())  # See validated config
+
+        >>> # Spawn MPI subprocess (e.g., in Jupyter)
+        >>> results = run(config, n_procs=4)
     """
+    # Check MPI context
+    comm = MPI.COMM_WORLD
+    size = comm.Get_size()
+
+    # If n_procs specified, handle subprocess spawning
+    if n_procs is not None:
+        if size > 1:
+            # Already in MPI context - can't spawn subprocess
+            raise RuntimeError(
+                f"Cannot spawn subprocess with n_procs={n_procs} - already running in MPI context with {size} processes.\n"
+                f"Either:\n"
+                f"  1. Remove n_procs parameter to use existing MPI context\n"
+                f"  2. Run without mpirun and let run() spawn the subprocess"
+            )
+        # Not in MPI context (size == 1), spawn subprocess
+        logger.info(f"Spawning subprocess with {n_procs} processes using {mpi_exec}")
+        return _run_subprocess(
+            config=config,
+            n_procs=n_procs,
+            quiet=quiet,
+            mpi_exec=mpi_exec,
+            nproc_flag=nproc_flag,
+            python_exec=python_exec,
+            working_dir=working_dir,
+        )
+
+    # Otherwise run directly (serial or using existing MPI context)
+    if size > 1:
+        logger.info(f"Running in existing MPI context with {size} processes")
+
     # Validate configuration
     validated_config = Config(config, quiet)
 
@@ -72,7 +127,7 @@ def run(config: QuandaryConfig, quiet: bool = False) -> QuandaryResults:
     return results
 
 
-def run_mpi(
+def _run_subprocess(
     config: QuandaryConfig,
     n_procs: int,
     quiet: bool = False,
@@ -81,36 +136,10 @@ def run_mpi(
     python_exec: Optional[str] = None,
     working_dir: str = ".",
 ) -> QuandaryResults:
-    """Run Quandary with MPI via subprocess.
+    """Internal: Spawn MPI subprocess to run Quandary.
 
-    This function is designed for Jupyter notebooks and other contexts where
-    the Python process cannot directly use MPI. It writes the configuration
-    to a TOML file, spawns a subprocess with the MPI launcher, and returns
-    the results.
-
-    For regular Python scripts, use mpirun to launch your script and call
-    run() directly instead.
-
-    Args:
-        config: A QuandaryConfig object with all required fields set.
-        n_procs: Number of MPI processes to use.
-        quiet: If True, suppress console output.
-        mpi_exec: MPI launcher command (e.g., "mpirun", "srun", "flux run"). Default: "mpirun".
-        nproc_flag: Flag for specifying number of processes (e.g., "-np", "-n"). Default: "-np".
-        python_exec: Path to Python executable. Defaults to sys.executable.
-        working_dir: Working directory for subprocess. Defaults to current directory.
-
-    Returns:
-        QuandaryResults containing output data and the validated configuration.
-
-    Raises:
-        subprocess.CalledProcessError: If the Quandary process fails.
-
-    Example:
-        >>> # In Jupyter notebook
-        >>> config = create_optimization_config(nessential=[2], transition_frequency=[4.1], final_time=50.0)
-        >>> results = run_mpi(config, n_procs=4)
-        >>> print(f"Infidelity: {results.infidelity}")
+    Called by run() when n_procs is specified. Writes config to TOML,
+    spawns subprocess with MPI launcher, and returns results.
     """
     # Validate configuration first
     validated_config = Config(config, quiet)
