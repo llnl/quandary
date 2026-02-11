@@ -132,84 +132,84 @@ NB_MODULE(_quandary_impl, m) {
     .def_rw("phase", &ControlInitializationSettings::phase, "Initial phase [rad]")
     .def_rw("filename", &ControlInitializationSettings::filename, "File path (for FILE type)");
 
-  // QuandaryConfig - mutable configuration with all fields optional
-  nb::class_<RawConfig>(m, "QuandaryConfig",
+  // Setup - mutable configuration with all fields optional
+  nb::class_<Setup>(m, "Setup",
     "Mutable configuration builder for Quandary simulations.\n\n"
     "Use this class to build a configuration by setting individual fields.\n"
     "All fields are optional and will use defaults if not specified.\n"
     "Pass to Config() or run() to validate and execute.\n\n"
     "Example:\n"
-    "    config = QuandaryConfig()\n"
+    "    config = Setup()\n"
     "    config.nlevels = [2, 2]\n"
     "    config.ntime = 100\n"
     "    config.dt = 0.01\n"
     "    results = run(config)")
     .def(nb::init<>())
     // System parameters
-    .def_rw("nlevels", &RawConfig::nlevels, "Number of levels per subsystem")
-    .def_rw("nessential", &RawConfig::nessential, "Number of essential levels per subsystem (default: same as nlevels)")
-    .def_rw("ntime", &RawConfig::ntime, "Number of time steps")
-    .def_rw("dt", &RawConfig::dt, "Time step size [ns]")
-    .def_rw("transition_frequency", &RawConfig::transition_frequency, "Fundamental transition frequencies [GHz]")
-    .def_rw("selfkerr", &RawConfig::selfkerr, "Self-Kerr frequencies [GHz]")
-    .def_rw("crosskerr_coupling", &RawConfig::crosskerr_coupling, "Cross-Kerr coupling frequencies [GHz]")
-    .def_rw("dipole_coupling", &RawConfig::dipole_coupling, "Dipole-dipole coupling frequencies [GHz]")
-    .def_rw("rotation_frequency", &RawConfig::rotation_frequency, "Rotating frame frequencies [GHz]")
-    .def_rw("decoherence_type", &RawConfig::decoherence_type, "Decoherence model type")
-    .def_rw("decay_time", &RawConfig::decay_time, "T1 decay times [ns]")
-    .def_rw("dephase_time", &RawConfig::dephase_time, "T2 dephasing times [ns]")
-    .def_rw("initial_condition", &RawConfig::initial_condition, "Initial quantum state configuration")
+    .def_rw("nlevels", &Setup::nlevels, "Number of levels per subsystem")
+    .def_rw("nessential", &Setup::nessential, "Number of essential levels per subsystem (default: same as nlevels)")
+    .def_rw("ntime", &Setup::ntime, "Number of time steps")
+    .def_rw("dt", &Setup::dt, "Time step size [ns]")
+    .def_rw("transition_frequency", &Setup::transition_frequency, "Fundamental transition frequencies [GHz]")
+    .def_rw("selfkerr", &Setup::selfkerr, "Self-Kerr frequencies [GHz]")
+    .def_rw("crosskerr_coupling", &Setup::crosskerr_coupling, "Cross-Kerr coupling frequencies [GHz]")
+    .def_rw("dipole_coupling", &Setup::dipole_coupling, "Dipole-dipole coupling frequencies [GHz]")
+    .def_rw("rotation_frequency", &Setup::rotation_frequency, "Rotating frame frequencies [GHz]")
+    .def_rw("decoherence_type", &Setup::decoherence_type, "Decoherence model type")
+    .def_rw("decay_time", &Setup::decay_time, "T1 decay times [ns]")
+    .def_rw("dephase_time", &Setup::dephase_time, "T2 dephasing times [ns]")
+    .def_rw("initial_condition", &Setup::initial_condition, "Initial quantum state configuration")
     // Inherently optional
-    .def_rw("hamiltonian_file_Hsys", &RawConfig::hamiltonian_file_Hsys, "Optional file path for system Hamiltonian")
-    .def_rw("hamiltonian_file_Hc", &RawConfig::hamiltonian_file_Hc, "Optional file path for control Hamiltonians")
+    .def_rw("hamiltonian_file_Hsys", &Setup::hamiltonian_file_Hsys, "Optional file path for system Hamiltonian")
+    .def_rw("hamiltonian_file_Hc", &Setup::hamiltonian_file_Hc, "Optional file path for control Hamiltonians")
     // Control parameters
-    .def_rw("control_zero_boundary_condition", &RawConfig::control_zero_boundary_condition, "Enforce zero control amplitude at boundaries")
-    .def_rw("control_parameterizations", &RawConfig::control_parameterizations, "Control parameterizations per oscillator")
-    .def_rw("control_initializations", &RawConfig::control_initializations, "Control initializations per oscillator")
-    .def_rw("control_amplitude_bounds", &RawConfig::control_amplitude_bounds, "Maximum control amplitude per oscillator [GHz]")
-    .def_rw("carrier_frequencies", &RawConfig::carrier_frequencies, "Carrier frequencies for each control [GHz]")
+    .def_rw("control_zero_boundary_condition", &Setup::control_zero_boundary_condition, "Enforce zero control amplitude at boundaries")
+    .def_rw("control_parameterizations", &Setup::control_parameterizations, "Control parameterizations per oscillator")
+    .def_rw("control_initializations", &Setup::control_initializations, "Control initializations per oscillator")
+    .def_rw("control_amplitude_bounds", &Setup::control_amplitude_bounds, "Maximum control amplitude per oscillator [GHz]")
+    .def_rw("carrier_frequencies", &Setup::carrier_frequencies, "Carrier frequencies for each control [GHz]")
     // Optimization parameters
-    .def_rw("optim_target", &RawConfig::optim_target, "Optimization target configuration")
-    .def_rw("optim_objective", &RawConfig::optim_objective, "Objective function type")
-    .def_rw("optim_weights", &RawConfig::optim_weights, "Weights for summing objective function")
-    .def_rw("optim_tol_grad_abs", &RawConfig::optim_tol_grad_abs, "Absolute gradient tolerance")
-    .def_rw("optim_tol_grad_rel", &RawConfig::optim_tol_grad_rel, "Relative gradient tolerance")
-    .def_rw("optim_tol_final_cost", &RawConfig::optim_tol_final_cost, "Final cost tolerance")
-    .def_rw("optim_tol_infidelity", &RawConfig::optim_tol_infidelity, "Infidelity tolerance")
-    .def_rw("optim_maxiter", &RawConfig::optim_maxiter, "Maximum optimization iterations")
-    .def_rw("optim_tikhonov_coeff", &RawConfig::optim_tikhonov_coeff, "Tikhonov regularization coefficient")
-    .def_rw("optim_tikhonov_use_x0", &RawConfig::optim_tikhonov_use_x0, "Use initial guess in Tikhonov regularization")
-    .def_rw("optim_penalty_leakage", &RawConfig::optim_penalty_leakage, "Leakage penalty coefficient")
-    .def_rw("optim_penalty_weightedcost", &RawConfig::optim_penalty_weightedcost, "Weighted cost penalty coefficient")
-    .def_rw("optim_penalty_weightedcost_width", &RawConfig::optim_penalty_weightedcost_width, "Weighted cost penalty width parameter")
-    .def_rw("optim_penalty_dpdm", &RawConfig::optim_penalty_dpdm, "Second derivative penalty coefficient")
-    .def_rw("optim_penalty_energy", &RawConfig::optim_penalty_energy, "Energy penalty coefficient")
-    .def_rw("optim_penalty_variation", &RawConfig::optim_penalty_variation, "Amplitude variation penalty coefficient")
+    .def_rw("optim_target", &Setup::optim_target, "Optimization target configuration")
+    .def_rw("optim_objective", &Setup::optim_objective, "Objective function type")
+    .def_rw("optim_weights", &Setup::optim_weights, "Weights for summing objective function")
+    .def_rw("optim_tol_grad_abs", &Setup::optim_tol_grad_abs, "Absolute gradient tolerance")
+    .def_rw("optim_tol_grad_rel", &Setup::optim_tol_grad_rel, "Relative gradient tolerance")
+    .def_rw("optim_tol_final_cost", &Setup::optim_tol_final_cost, "Final cost tolerance")
+    .def_rw("optim_tol_infidelity", &Setup::optim_tol_infidelity, "Infidelity tolerance")
+    .def_rw("optim_maxiter", &Setup::optim_maxiter, "Maximum optimization iterations")
+    .def_rw("optim_tikhonov_coeff", &Setup::optim_tikhonov_coeff, "Tikhonov regularization coefficient")
+    .def_rw("optim_tikhonov_use_x0", &Setup::optim_tikhonov_use_x0, "Use initial guess in Tikhonov regularization")
+    .def_rw("optim_penalty_leakage", &Setup::optim_penalty_leakage, "Leakage penalty coefficient")
+    .def_rw("optim_penalty_weightedcost", &Setup::optim_penalty_weightedcost, "Weighted cost penalty coefficient")
+    .def_rw("optim_penalty_weightedcost_width", &Setup::optim_penalty_weightedcost_width, "Weighted cost penalty width parameter")
+    .def_rw("optim_penalty_dpdm", &Setup::optim_penalty_dpdm, "Second derivative penalty coefficient")
+    .def_rw("optim_penalty_energy", &Setup::optim_penalty_energy, "Energy penalty coefficient")
+    .def_rw("optim_penalty_variation", &Setup::optim_penalty_variation, "Amplitude variation penalty coefficient")
     // Output parameters
-    .def_rw("output_directory", &RawConfig::output_directory, "Directory for output files")
-    .def_rw("output_observables", &RawConfig::output_observables, "Observable quantities to output")
-    .def_rw("output_timestep_stride", &RawConfig::output_timestep_stride, "Output frequency in time steps")
-    .def_rw("output_optimization_stride", &RawConfig::output_optimization_stride, "Output frequency in optimization iterations")
+    .def_rw("output_directory", &Setup::output_directory, "Directory for output files")
+    .def_rw("output_observables", &Setup::output_observables, "Observable quantities to output")
+    .def_rw("output_timestep_stride", &Setup::output_timestep_stride, "Output frequency in time steps")
+    .def_rw("output_optimization_stride", &Setup::output_optimization_stride, "Output frequency in optimization iterations")
     // Solver parameters
-    .def_rw("runtype", &RawConfig::runtype, "Type of computation to perform")
-    .def_rw("usematfree", &RawConfig::usematfree, "Use matrix-free solver")
-    .def_rw("linearsolver_type", &RawConfig::linearsolver_type, "Linear solver type")
-    .def_rw("linearsolver_maxiter", &RawConfig::linearsolver_maxiter, "Maximum linear solver iterations")
-    .def_rw("timestepper_type", &RawConfig::timestepper_type, "Time integration method")
-    .def_rw("rand_seed", &RawConfig::rand_seed, "Random seed for reproducibility");
+    .def_rw("runtype", &Setup::runtype, "Type of computation to perform")
+    .def_rw("usematfree", &Setup::usematfree, "Use matrix-free solver")
+    .def_rw("linearsolver_type", &Setup::linearsolver_type, "Linear solver type")
+    .def_rw("linearsolver_maxiter", &Setup::linearsolver_maxiter, "Maximum linear solver iterations")
+    .def_rw("timestepper_type", &Setup::timestepper_type, "Time integration method")
+    .def_rw("rand_seed", &Setup::rand_seed, "Random seed for reproducibility");
 
   // Config - validated configuration with computed values
   nb::class_<Config>(m, "Config",
     "Validated and immutable Quandary configuration.\n\n"
     "This class contains validated configuration parameters with all defaults applied.\n"
     "Instances are immutable after construction. All properties are read-only.\n\n"
-    "Create from QuandaryConfig, TOML file, or TOML string:\n"
-    "    config = Config(quandary_config)\n"
+    "Create from Setup, TOML file, or TOML string:\n"
+    "    config = Config(setup)\n"
     "    config = Config.from_toml('simulation.toml')\n"
     "    config = Config.from_toml_string(toml_content)")
-    .def(nb::init<const RawConfig&, bool>(),
+    .def(nb::init<const Setup&, bool>(),
       nb::arg("input"), nb::arg("quiet") = false,
-      "Create a validated Config from QuandaryConfig")
+      "Create a validated Config from Setup")
     .def(nb::init<const Config&>(),
       nb::arg("other"),
       "Copy constructor - creates a copy of another Config")
@@ -279,13 +279,13 @@ NB_MODULE(_quandary_impl, m) {
     nb::arg("config"), nb::arg("quiet") = false,
     "Run a Quandary simulation or optimization from a Config");
 
-  // Run function - accepts QuandaryConfig, creates Config internally
-  m.def("run", [](const RawConfig& input, bool quiet) {
+  // Run function - accepts Setup, creates Config internally
+  m.def("run", [](const Setup& input, bool quiet) {
       Config config(input, quiet);
       return runQuandary(config, quiet);
     },
     nb::arg("config"), nb::arg("quiet") = false,
-    "Run a Quandary simulation or optimization from a QuandaryConfig");
+    "Run a Quandary simulation or optimization from a Setup");
 
   // Run from file - loads TOML and runs directly
   m.def("run_from_file", [](const std::string& filename, bool quiet) {

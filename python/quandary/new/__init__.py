@@ -8,7 +8,7 @@ import petsc4py
 # Re-export the nanobind implementation from the parent package
 from .._quandary_impl import (
     # Configuration
-    QuandaryConfig,
+    Setup,
     Config,
     # Run function from C++ (used internally)
     run_from_file,
@@ -76,7 +76,7 @@ from .config_builders import (
 # Define public API
 __all__ = [
     # Configuration classes and types
-    "QuandaryConfig",
+    "Setup",
     "Config",
     "run_from_file",
     # Enums

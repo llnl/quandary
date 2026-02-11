@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Optional
 from mpi4py import MPI
 
 from .. import _quandary_impl
-from .._quandary_impl import Config, QuandaryConfig
+from .._quandary_impl import Config, Setup
 from .results import get_results as _get_results, QuandaryResults
 
 if TYPE_CHECKING:
@@ -29,14 +29,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def validate(config: QuandaryConfig, quiet: bool = False) -> Config:
-    """Validate a QuandaryConfig and return an immutable Config with all defaults applied.
+def validate(config: Setup, quiet: bool = False) -> Config:
+    """Validate a Setup and return an immutable Config with all defaults applied.
 
     This allows inspecting computed defaults, checking for errors, and
     serializing to TOML without running a simulation.
 
     Args:
-        config: A QuandaryConfig object with all required fields set.
+        config: A Setup object with all required fields set.
         quiet: If True, suppress console output during validation.
 
     Returns:
@@ -49,7 +49,7 @@ def validate(config: QuandaryConfig, quiet: bool = False) -> Config:
 
 
 def run(
-    config: QuandaryConfig | Config,
+    config: Setup | Config,
     n_procs: Optional[int] = None,
     quiet: bool = False,
     mpi_exec: str = "mpirun",
@@ -68,7 +68,7 @@ def run(
     runs serially.
 
     Args:
-        config: A QuandaryConfig or pre-validated Config object.
+        config: A Setup or pre-validated Config object.
         n_procs: Number of MPI processes to use. If specified and not in MPI context,
             spawns subprocess. If None, runs directly (serial or existing MPI context).
         quiet: If True, suppress console output.
@@ -89,7 +89,7 @@ def run(
         subprocess.CalledProcessError: If spawned subprocess fails.
 
     Examples:
-        >>> config = QuandaryConfig()
+        >>> config = Setup()
         >>> config.nlevels = [2]
         >>> config.ntime = 1000
         >>> config.dt = 0.01
@@ -150,7 +150,7 @@ def run(
 
 
 def _run_subprocess(
-    config: QuandaryConfig | Config,
+    config: Setup | Config,
     n_procs: int,
     quiet: bool = False,
     mpi_exec: str = "mpirun",

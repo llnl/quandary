@@ -34,7 +34,7 @@ using Identity = T;
  *
  * This template allows the same field definitions to be instantiated as:
  * - ValidatedConfig (Wrapper = Identity): All fields are concrete types (validated config)
- * - RawConfig (Wrapper = std::optional): All fields are optional (for input from TOML/Python)
+ * - Setup (Wrapper = std::optional): All fields are optional (for input from TOML/Python)
  *
  * Fields that are inherently optional (like hamiltonian files) don't use the Wrapper
  * and remain std::optional in both instantiations.
@@ -115,7 +115,7 @@ using ValidatedConfig = ConfigFieldsT<Identity>;
  * Used for receiving configuration from TOML parsing or Python bindings.
  * All fields are optional to allow partial specification with defaults.
  */
-using RawConfig = ConfigFieldsT<std::optional>;
+using Setup = ConfigFieldsT<std::optional>;
 
 /**
  * @brief Configuration class containing all validated settings.
@@ -157,7 +157,7 @@ class Config {
 
  public:
   /**
-   * @brief Constructs a Config from a RawConfig struct
+   * @brief Constructs a Config from a Setup struct
    *
    * This constructor performs the main validation and default value application for all
    * configuration parameters. It uses the validators framework to check constraints
@@ -166,7 +166,7 @@ class Config {
    * @param input The pre-parsed configuration input data
    * @param quiet_mode Whether to suppress logging output
    */
-  Config(const RawConfig& input, bool quiet_mode = false);
+  Config(const Setup& input, bool quiet_mode = false);
   Config(const toml::table& table, bool quiet_mode = false);
 
   // TODO cfg: delete this when .cfg format is removed.

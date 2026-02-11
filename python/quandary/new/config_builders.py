@@ -1,4 +1,4 @@
-"""Factory functions to create QuandaryConfig with automatic setup from physics parameters."""
+"""Factory functions to create Setup with automatic setup from physics parameters."""
 
 import logging
 import os
@@ -7,7 +7,7 @@ from typing import List, Optional
 import numpy as np
 
 from .._quandary_impl import (
-    QuandaryConfig,
+    Setup,
     RunType,
     InitialConditionType,
     InitialConditionSettings,
@@ -39,18 +39,18 @@ def _setup_physics(
     amplitude_bound: Optional[List[float]] = None,
     initialcondition: Optional[InitialConditionSettings] = None,
     verbose: bool = True,
-) -> QuandaryConfig:
+) -> Setup:
     """Internal: Build base config with common physics parameters.
 
     Computes Hamiltonians, timesteps, and carrier frequencies, then creates
-    a QuandaryConfig with all common fields set. Runtype is not set here.
+    a Setup with all common fields set. Runtype is not set here.
 
     Time discretization: You can specify at most 2 of (final_time, ntime, dt).
     If you specify all 3, they must be consistent (final_time ≈ ntime * dt).
     If ntime and dt are not provided, ntime will be auto-computed from Hamiltonian.
 
     Returns:
-        QuandaryConfig with physics parameters configured.
+        Setup with physics parameters configured.
     """
     # Set defaults
     nqubits = len(nessential)
@@ -132,7 +132,7 @@ def _setup_physics(
         logger.info(f"  Carrier frequencies: {carrier_frequency}")
 
     # Create config with common fields
-    config = QuandaryConfig()
+    config = Setup()
     config.nlevels = nlevels
     config.nessential = nessential
     config.ntime = ntime
@@ -171,7 +171,7 @@ def create_simulation_config(
     amplitude_bound: Optional[List[float]] = None,
     initialcondition: Optional[InitialConditionSettings] = None,
     verbose: bool = True,
-) -> QuandaryConfig:
+) -> Setup:
     """
     Create a simulation config with automatic Hamiltonian and timestep computation.
 
@@ -217,7 +217,7 @@ def create_simulation_config(
 
     Returns:
     -------
-    QuandaryConfig
+    Setup
         Configured config ready for simulation. User can modify any fields before
         passing to run().
 
@@ -285,7 +285,7 @@ def create_optimization_config(
     amplitude_bound: Optional[List[float]] = None,
     initialcondition: Optional[InitialConditionSettings] = None,
     verbose: bool = True,
-) -> QuandaryConfig:
+) -> Setup:
     """
     Create an optimization config with automatic Hamiltonian and timestep computation.
 
@@ -333,7 +333,7 @@ def create_optimization_config(
 
     Returns:
     -------
-    QuandaryConfig
+    Setup
         Configured config ready for optimization.
 
     Example:

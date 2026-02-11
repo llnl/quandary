@@ -279,7 +279,7 @@ OptimTargetSettings parseOptimTargetToml(const toml::table& toml, size_t num_osc
 }
 
 /**
- * @brief Extracts configuration from TOML into a RawConfig struct.
+ * @brief Extracts configuration from TOML into a Setup struct.
  *
  * This function handles all TOML-specific extraction:
  * - Scalar-to-vector expansion based on num_osc
@@ -287,11 +287,11 @@ OptimTargetSettings parseOptimTargetToml(const toml::table& toml, size_t num_osc
  * - Per-subsystem settings parsing
  * - Nested table handling
  *
- * Validation of values happens in the RawConfig constructor.
+ * Validation of values happens in the Setup constructor.
  */
-RawConfig extractRawConfig(const toml::table& toml, const MPILogger& logger) {
+Setup extractSetup(const toml::table& toml, const MPILogger& logger) {
   try {
-    RawConfig input;
+    Setup input;
 
     // Get section tables - only [system] is required
     const auto* system_table = toml["system"].as_table();
@@ -532,9 +532,9 @@ RawConfig extractRawConfig(const toml::table& toml, const MPILogger& logger) {
 } // namespace
 
 Config::Config(const toml::table& toml, bool quiet_mode)
-    : Config(extractRawConfig(toml, MPILogger(quiet_mode)), quiet_mode) {}
+    : Config(extractSetup(toml, MPILogger(quiet_mode)), quiet_mode) {}
 
-Config::Config(const RawConfig& input, bool quiet_mode) : logger(MPILogger(quiet_mode)) {
+Config::Config(const Setup& input, bool quiet_mode) : logger(MPILogger(quiet_mode)) {
   try {
     // System parameters
     data.nlevels = validators::vectorField<size_t>(input.nlevels, "nlevels").minLength(1).positive().value();
