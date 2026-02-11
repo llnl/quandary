@@ -16,6 +16,7 @@ from .._quandary_impl import (
     GateType,
     ControlInitializationSettings,
     ControlInitializationType,
+    OutputType,
 )
 from .quantum_operators import hamiltonians, get_resonances
 from .time_estimation import estimate_timesteps
@@ -143,9 +144,13 @@ def _setup_physics(
         config.crosskerr_coupling = crosskerr_coupling
     if len(dipole_coupling) > 0:
         config.dipole_coupling = dipole_coupling
+    config.control_amplitude_bounds = amplitude_bound
 
     config.carrier_frequencies = carrier_frequency
     config.initial_condition = initialcondition
+
+    # Set default output observables
+    config.output_observables = [OutputType.POPULATION, OutputType.EXPECTED_ENERGY, OutputType.FULLSTATE]
 
     return config
 
