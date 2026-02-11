@@ -143,8 +143,15 @@ NB_MODULE(_quandary_impl, m) {
     "    config.nlevels = [2, 2]\n"
     "    config.ntime = 100\n"
     "    config.dt = 0.01\n"
-    "    results = run(config)")
+    "    results = run(config)\n\n"
+    "Note: Use .copy() to create independent copies of Setup objects.")
     .def(nb::init<>())
+    .def(nb::init<const Setup&>(),
+      nb::arg("other"),
+      "Copy constructor - creates a copy of another Setup")
+    .def("copy", [](const Setup& self) {
+        return Setup(self);
+      }, "Create a copy of this Setup")
     // System parameters
     .def_rw("nlevels", &Setup::nlevels, "Number of levels per subsystem")
     .def_rw("nessential", &Setup::nessential, "Number of essential levels per subsystem (default: same as nlevels)")
