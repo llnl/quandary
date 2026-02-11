@@ -41,7 +41,7 @@ decoherence = { type = "none",              # "none", "decay", "dephase", or "bo
               }
 
 # Specify the initial conditions that are to be propagated
-# Avalable initial condition types:
+# Available initial condition types:
 # "basis" - all basis states of the full composite system, or of specified subsystems (subsystem = [...])
 # "state" - single initial state specified as levels of a product state (levels = [...])
 # "file" - read one initial state from file (filename = "...")
@@ -83,7 +83,7 @@ carrier_frequency = [
   {subsystem = 1, value = [0.0, -0.2252, -0.1]}
 ]
 # Option 2: Same array of frequencies for all subsystems using a table
-# carrier_frequency = { values = [0.0, -0.2252, -0.1] }
+# carrier_frequency = { value = [0.0, -0.2252, -0.1] }
 # Option 3: Same array of frequencies for all subsystems using shorthand
 # carrier_frequency = [0.0, -0.2252, -0.1]
 
@@ -151,7 +151,7 @@ penalty = { leakage = 0.0,                # Penalize leakage into guard levels
             dpdm = 0.0,                   # Penalize 2nd derivative of state populations
             variation = 0.0,              # Penalize control pulse variation (for 0-th order Bsplines)
             weightedcost = 0.0,           # Penalize time-weighted cost function integral
-            weightedcost_width = 0.0      # Width paramter for weighted cost function integral
+            weightedcost_width = 0.0      # Width parameter for weighted cost function integral
           }
 
 [output]
