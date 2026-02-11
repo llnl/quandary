@@ -139,7 +139,6 @@ def downsample_pulses(*, pt0=[], qt0=[], nsplines, spline_knot_spacing, ntime, d
 
             for iosc in range(Nsys):
                 Nelem = np.size(pt0[iosc])
-                dt_pulse = (ntime * dt) / (Nelem - 1)  # time step corresponding to (pt0, qt0)
                 p_seg = pt0[iosc]
                 q_seg = qt0[iosc]
 

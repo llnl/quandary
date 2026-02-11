@@ -9,17 +9,20 @@ import numpy as np
 from .._quandary_impl import (
     Setup,
     RunType,
+    ControlType,
     InitialConditionType,
     InitialConditionSettings,
     OptimTargetSettings,
     TargetType,
     GateType,
+    ControlParameterizationSettings,
     ControlInitializationSettings,
     ControlInitializationType,
     OutputType,
 )
 from .quantum_operators import hamiltonians, get_resonances
 from .time_estimation import estimate_timesteps
+from .utils import downsample_pulses
 
 logger = logging.getLogger(__name__)
 
@@ -249,11 +252,14 @@ def setup_optimization(
 def setup_simulation(
     setup: Setup,
     pcof=None,
+    pt0=None,
+    qt0=None,
 ):
     """Configure a Setup for simulation.
 
     Modifies setup in-place to set runtype to SIMULATION and optionally
-    configure control parameters from B-spline coefficients.
+    configure control parameters from B-spline coefficients or time-domain
+    pulses.
 
     Parameters:
     ----------
@@ -262,6 +268,13 @@ def setup_simulation(
     pcof : array-like, optional
         B-spline control coefficients. If provided, writes to file and
         configures control initialization to load from file.
+    pt0 : list of ndarray, optional
+        Real part of control pulses [MHz] per oscillator. Must be provided
+        together with qt0. Automatically downsampled to B-spline coefficients
+        using piecewise constant (order 0) representation.
+    qt0 : list of ndarray, optional
+        Imaginary part of control pulses [MHz] per oscillator. Must be
+        provided together with pt0.
 
     Example:
     -------
@@ -271,7 +284,37 @@ def setup_simulation(
     """
     setup.runtype = RunType.SIMULATION
 
-    if pcof is not None:
+    if pt0 is not None and qt0 is not None:
+        if pcof is not None:
+            raise ValueError("Cannot specify both pcof and pt0/qt0")
+
+        ntime = setup.ntime
+        dt = setup.dt
+        nsplines = max(2, ntime + 1)
+        spline_knot_spacing = dt
+
+        # Set control parameterization to piecewise constant (BSPLINE0)
+        control_params = []
+        for _ in range(len(setup.nessential)):
+            param = ControlParameterizationSettings()
+            param.control_type = ControlType.BSPLINE0
+            param.nspline = nsplines
+            control_params.append(param)
+        setup.control_parameterizations = control_params
+
+        # Zero out carrier frequencies (pulses already include carrier)
+        setup.carrier_frequencies = [[0.0] for _ in range(len(setup.nessential))]
+
+        # Downsample time-domain pulses to B-spline coefficients
+        pcof = downsample_pulses(
+            pt0=pt0, qt0=qt0,
+            nsplines=nsplines,
+            spline_knot_spacing=spline_knot_spacing,
+            ntime=ntime, dt=dt,
+            nessential=setup.nessential,
+        )
+
+    if pcof is not None and len(pcof) > 0:
         output_dir = setup.output_directory if setup.output_directory else "./run_dir"
         os.makedirs(output_dir, exist_ok=True)
         pcof_file = os.path.join(output_dir, "pcof_init.dat")
