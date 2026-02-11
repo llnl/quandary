@@ -593,6 +593,16 @@ Config::Config(const RawConfig& input, bool quiet_mode) : logger(MPILogger(quiet
     std::vector<double> default_carrier_freq = {ConfigDefaults::CARRIER_FREQ};
     data.carrier_frequencies = input.carrier_frequencies.value_or(std::vector<std::vector<double>>(num_osc, default_carrier_freq));
 
+    // Validate carrier frequencies
+    if (data.carrier_frequencies.size() != num_osc) {
+      throw validators::ValidationError("carrier_frequency", "must have exactly " + std::to_string(num_osc) + " entries (one per oscillator), got " + std::to_string(data.carrier_frequencies.size()));
+    }
+    for (size_t i = 0; i < data.carrier_frequencies.size(); i++) {
+      if (data.carrier_frequencies[i].empty()) {
+        throw validators::ValidationError("carrier_frequency", "oscillator " + std::to_string(i) + " has no carrier frequencies. Each oscillator must have at least one carrier frequency.");
+      }
+    }
+
     // Optimization parameters
     OptimTargetSettings default_target;
     data.optim_target = input.optim_target.value_or(default_target);
