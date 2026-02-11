@@ -76,7 +76,7 @@ def eval_controls(config, pcof, points_per_ns=1.0, output_directory=None, quiet=
         raise RuntimeError(f"eval_controls failed with return code {return_code}")
 
     # Load results
-    results = get_results(datadir=output_directory)
+    results = get_results(config)
 
     # Clean up temporary directory if we created one
     if cleanup_temp:
