@@ -29,14 +29,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def validate(config: Setup, quiet: bool = False) -> Config:
+def validate(setup: Setup, quiet: bool = False) -> Config:
     """Validate a Setup and return an immutable Config with all defaults applied.
 
     This allows inspecting computed defaults, checking for errors, and
     serializing to TOML without running a simulation.
 
     Args:
-        config: A Setup object with all required fields set.
+        setup: A Setup object with all required fields set.
         quiet: If True, suppress console output during validation.
 
     Returns:
@@ -45,11 +45,11 @@ def validate(config: Setup, quiet: bool = False) -> Config:
     Raises:
         RuntimeError: If the configuration is invalid.
     """
-    return Config(config, quiet)
+    return Config(setup, quiet)
 
 
 def run(
-    config: Setup | Config,
+    setup: Setup,
     n_procs: Optional[int] = None,
     quiet: bool = False,
     mpi_exec: str = "mpirun",
@@ -59,7 +59,7 @@ def run(
 ) -> QuandaryResults:
     """Run a Quandary simulation or optimization.
 
-    This function validates the configuration, runs the simulation/optimization,
+    This function validates the setup, runs the simulation/optimization,
     and returns results with the validated configuration attached.
 
     If n_procs is specified and not already in an MPI context, spawns a subprocess
@@ -68,7 +68,7 @@ def run(
     runs serially.
 
     Args:
-        config: A Setup or pre-validated Config object.
+        setup: A Setup object.
         n_procs: Number of MPI processes to use. If specified and not in MPI context,
             spawns subprocess. If None, runs directly (serial or existing MPI context).
         quiet: If True, suppress console output.
@@ -89,17 +89,17 @@ def run(
         subprocess.CalledProcessError: If spawned subprocess fails.
 
     Examples:
-        >>> config = Setup()
-        >>> config.nlevels = [2]
-        >>> config.ntime = 1000
-        >>> config.dt = 0.01
-        >>> config.transition_frequency = [4.1]
-        >>> config.runtype = RunType.SIMULATION
-        >>> results = run(config)
+        >>> setup = Setup()
+        >>> setup.nlevels = [2]
+        >>> setup.ntime = 1000
+        >>> setup.dt = 0.01
+        >>> setup.transition_frequency = [4.1]
+        >>> setup.runtype = RunType.SIMULATION
+        >>> results = run(setup)
         >>> print(f"Infidelity: {results.infidelity}")
 
         >>> # Spawn MPI subprocess (e.g., in Jupyter)
-        >>> results = run(config, n_procs=4)
+        >>> results = run(setup, n_procs=4)
     """
     # Check MPI context
     comm = MPI.COMM_WORLD
@@ -118,7 +118,7 @@ def run(
         # Not in MPI context (size == 1), spawn subprocess
         logger.info(f"Spawning subprocess with {n_procs} processes using {mpi_exec}")
         return _run_subprocess(
-            config=config,
+            setup=setup,
             n_procs=n_procs,
             quiet=quiet,
             mpi_exec=mpi_exec,
@@ -131,11 +131,8 @@ def run(
     if size > 1:
         logger.info(f"Running in existing MPI context with {size} processes")
 
-    # Validate configuration (skip if already validated)
-    if isinstance(config, Config):
-        validated_config = config
-    else:
-        validated_config = Config(config, quiet)
+    # Validate configuration
+    validated_config = Config(setup, quiet)
 
     # Run simulation/optimization
     return_code = _quandary_impl.run(validated_config, quiet)
@@ -150,7 +147,7 @@ def run(
 
 
 def _run_subprocess(
-    config: Setup | Config,
+    setup: Setup,
     n_procs: int,
     quiet: bool = False,
     mpi_exec: str = "mpirun",
@@ -163,11 +160,8 @@ def _run_subprocess(
     Called by run() when n_procs is specified. Writes config to TOML,
     spawns subprocess with MPI launcher, and returns results.
     """
-    # Validate configuration (skip if already validated)
-    if isinstance(config, Config):
-        validated_config = config
-    else:
-        validated_config = Config(config, quiet)
+    # Validate configuration
+    validated_config = Config(setup, quiet)
 
     # Use current Python interpreter if not specified
     if python_exec is None:
