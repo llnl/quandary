@@ -29,8 +29,27 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def validate(config: QuandaryConfig, quiet: bool = False) -> Config:
+    """Validate a QuandaryConfig and return an immutable Config with all defaults applied.
+
+    This allows inspecting computed defaults, checking for errors, and
+    serializing to TOML without running a simulation.
+
+    Args:
+        config: A QuandaryConfig object with all required fields set.
+        quiet: If True, suppress console output during validation.
+
+    Returns:
+        An immutable Config with all defaults computed and validation applied.
+
+    Raises:
+        RuntimeError: If the configuration is invalid.
+    """
+    return Config(config, quiet)
+
+
 def run(
-    config: QuandaryConfig,
+    config: QuandaryConfig | Config,
     n_procs: Optional[int] = None,
     quiet: bool = False,
     mpi_exec: str = "mpirun",
@@ -49,7 +68,7 @@ def run(
     runs serially.
 
     Args:
-        config: A QuandaryConfig object with all required fields set.
+        config: A QuandaryConfig or pre-validated Config object.
         n_procs: Number of MPI processes to use. If specified and not in MPI context,
             spawns subprocess. If None, runs directly (serial or existing MPI context).
         quiet: If True, suppress console output.
@@ -112,8 +131,11 @@ def run(
     if size > 1:
         logger.info(f"Running in existing MPI context with {size} processes")
 
-    # Validate configuration
-    validated_config = Config(config, quiet)
+    # Validate configuration (skip if already validated)
+    if isinstance(config, Config):
+        validated_config = config
+    else:
+        validated_config = Config(config, quiet)
 
     # Run simulation/optimization
     return_code = _quandary_impl.run(validated_config, quiet)
@@ -128,7 +150,7 @@ def run(
 
 
 def _run_subprocess(
-    config: QuandaryConfig,
+    config: QuandaryConfig | Config,
     n_procs: int,
     quiet: bool = False,
     mpi_exec: str = "mpirun",
@@ -141,8 +163,11 @@ def _run_subprocess(
     Called by run() when n_procs is specified. Writes config to TOML,
     spawns subprocess with MPI launcher, and returns results.
     """
-    # Validate configuration first
-    validated_config = Config(config, quiet)
+    # Validate configuration (skip if already validated)
+    if isinstance(config, Config):
+        validated_config = config
+    else:
+        validated_config = Config(config, quiet)
 
     # Use current Python interpreter if not specified
     if python_exec is None:
