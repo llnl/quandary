@@ -1,4 +1,4 @@
-"""Factory functions to create Setup with automatic setup from physics parameters."""
+"""Helper functions to create and configure Setup objects for simulation and optimization."""
 
 import logging
 import os
@@ -24,7 +24,7 @@ from .time_estimation import estimate_timesteps
 logger = logging.getLogger(__name__)
 
 
-def _setup_physics(
+def setup_physics(
     nessential: List[int],
     transition_frequency: List[float],
     final_time: float,
@@ -40,17 +40,61 @@ def _setup_physics(
     initialcondition: Optional[InitialConditionSettings] = None,
     verbose: bool = True,
 ) -> Setup:
-    """Internal: Build base config with common physics parameters.
+    """Create a Setup with physics parameters configured.
 
-    Computes Hamiltonians, timesteps, and carrier frequencies, then creates
-    a Setup with all common fields set. Runtype is not set here.
+    Automatically computes Hamiltonians, timesteps, and carrier frequencies.
+    Does NOT set the runtype - use setup_optimization() or setup_simulation()
+    to configure for a specific run type.
 
     Time discretization: You can specify at most 2 of (final_time, ntime, dt).
-    If you specify all 3, they must be consistent (final_time ≈ ntime * dt).
+    If you specify all 3, they must be consistent (final_time = ntime * dt).
     If ntime and dt are not provided, ntime will be auto-computed from Hamiltonian.
 
+    Required Parameters:
+    -------------------
+    nessential : List[int]
+        Number of essential energy levels per qubit
+    transition_frequency : List[float]
+        01-transition frequencies [GHz] per qubit
+    final_time : float
+        Pulse duration [ns]
+
+    Optional Parameters:
+    -------------------
+    ntime : int
+        Number of timesteps. If not provided, will be auto-computed from Hamiltonian.
+    dt : float
+        Timestep size [ns]. If not provided, will be auto-computed.
+    selfkerr : List[float]
+        Anharmonicities [GHz] per qubit. Default: zeros
+    nguard : List[int]
+        Number of guard levels per qubit. Default: zeros
+    rotation_frequency : List[float]
+        Frequency of rotations for computational frame [GHz] per qubit.
+        Default: transition_frequency
+    crosskerr_coupling : List[float]
+        ZZ coupling strength [GHz]. Format: [g01, g02, ..., g12, g13, ...]
+    dipole_coupling : List[float]
+        Dipole-dipole coupling strength [GHz]. Format: [J01, J02, ..., J12, J13, ...]
+    Pmin : int
+        Minimum points to resolve shortest period (determines timesteps). Default: 150
+    amplitude_bound : List[float]
+        Maximum control amplitudes [MHz] per qubit for timestep estimation
+    initialcondition : InitialConditionSettings
+        Initial state specification. Default: basis states
+    verbose : bool
+        Print setup information. Default: True
+
     Returns:
-        Setup with physics parameters configured.
+    -------
+    Setup
+        Setup with physics parameters configured (no runtype set).
+
+    Example:
+    -------
+    >>> setup = setup_physics(nessential=[3], transition_frequency=[4.1], final_time=100)
+    >>> setup_optimization(setup, targetgate=[[0,1],[1,0]])
+    >>> results = run(setup)
     """
     # Set defaults
     nqubits = len(nessential)
@@ -97,7 +141,6 @@ def _setup_physics(
         dt = final_time / ntime
     elif ntime is None and dt is not None:
         # Only dt specified - compute ntime
-        # Note: actual final time will be ntime * dt (may differ slightly from requested final_time)
         ntime = int(np.ceil(final_time / dt))
     elif ntime is not None and dt is None:
         # Only ntime specified - compute dt
@@ -131,255 +174,64 @@ def _setup_physics(
         logger.info(f"  dt: {dt:.6f} ns")
         logger.info(f"  Carrier frequencies: {carrier_frequency}")
 
-    # Create config with common fields
-    config = Setup()
-    config.nlevels = nlevels
-    config.nessential = nessential
-    config.ntime = ntime
-    config.dt = dt
-    config.transition_frequency = transition_frequency
-    config.rotation_frequency = rotation_frequency
-    config.selfkerr = selfkerr
+    # Create Setup with common fields
+    setup = Setup()
+    setup.nlevels = nlevels
+    setup.nessential = nessential
+    setup.ntime = ntime
+    setup.dt = dt
+    setup.transition_frequency = transition_frequency
+    setup.rotation_frequency = rotation_frequency
+    setup.selfkerr = selfkerr
     if len(crosskerr_coupling) > 0:
-        config.crosskerr_coupling = crosskerr_coupling
+        setup.crosskerr_coupling = crosskerr_coupling
     if len(dipole_coupling) > 0:
-        config.dipole_coupling = dipole_coupling
-    config.control_amplitude_bounds = amplitude_bound
+        setup.dipole_coupling = dipole_coupling
+    setup.control_amplitude_bounds = amplitude_bound
 
-    config.carrier_frequencies = carrier_frequency
-    config.initial_condition = initialcondition
+    setup.carrier_frequencies = carrier_frequency
+    setup.initial_condition = initialcondition
 
     # Set default output observables
-    config.output_observables = [OutputType.POPULATION, OutputType.EXPECTED_ENERGY, OutputType.FULLSTATE]
+    setup.output_observables = [OutputType.POPULATION, OutputType.EXPECTED_ENERGY, OutputType.FULLSTATE]
 
-    return config
-
-
-def create_simulation_config(
-    nessential: List[int],
-    transition_frequency: List[float],
-    final_time: float,
-    ntime: Optional[int] = None,
-    dt: Optional[float] = None,
-    pcof = None,
-    selfkerr: Optional[List[float]] = None,
-    nguard: Optional[List[int]] = None,
-    rotation_frequency: Optional[List[float]] = None,
-    crosskerr_coupling: Optional[List[float]] = None,
-    dipole_coupling: Optional[List[float]] = None,
-    Pmin: int = 150,
-    amplitude_bound: Optional[List[float]] = None,
-    initialcondition: Optional[InitialConditionSettings] = None,
-    verbose: bool = True,
-) -> Setup:
-    """
-    Create a simulation config with automatic Hamiltonian and timestep computation.
-
-    This factory function automatically:
-    - Builds Hamiltonians using hamiltonians()
-    - Estimates timesteps using estimate_timesteps()
-    - Computes carrier frequencies using get_resonances()
-
-    Required Parameters:
-    -------------------
-    nessential : List[int]
-        Number of essential energy levels per qubit
-    transition_frequency : List[float]
-        01-transition frequencies [GHz] per qubit
-    final_time : float
-        Pulse duration [ns]
-
-    Optional Parameters:
-    -------------------
-    ntime : int
-        Number of timesteps. If not provided, will be auto-computed from Hamiltonian.
-    dt : float
-        Timestep size [ns]. If not provided, will be auto-computed.
-        Note: Specify at most 2 of (final_time, ntime, dt). They must satisfy final_time = ntime * dt.
-    selfkerr : List[float]
-        Anharmonicities [GHz] per qubit. Default: zeros
-    nguard : List[int]
-        Number of guard levels per qubit. Default: zeros
-    rotation_frequency : List[float]
-        Frequency of rotations for computational frame [GHz] per qubit. Default: transition_frequency
-    crosskerr_coupling : List[float]
-        ZZ coupling strength [GHz]. Format: [g01, g02, ..., g12, g13, ...]
-    dipole_coupling : List[float]
-        Dipole-dipole coupling strength [GHz]. Format: [J01, J02, ..., J12, J13, ...]
-    Pmin : int
-        Minimum points to resolve shortest period (determines timesteps). Default: 150
-    amplitude_bound : List[float]
-        Maximum control amplitudes [MHz] per qubit for timestep estimation
-    initialcondition : InitialConditionSettings
-        Initial state specification. Default: basis states
-    verbose : bool
-        Print setup information. Default: True
-
-    Returns:
-    -------
-    Setup
-        Configured config ready for simulation. User can modify any fields before
-        passing to run().
-
-    Example:
-    -------
-    >>> # Simple simulation with auto-computed timesteps
-    >>> config = create_simulation_config(nessential=[2], transition_frequency=[4.1], final_time=50.0)
-    >>> # Or specify exact number of timesteps
-    >>> config = create_simulation_config(nessential=[2], transition_frequency=[4.1], final_time=50.0, ntime=1000)
-    >>> results = run(config)
-    """
-    config = _setup_physics(
-        nessential=nessential,
-        transition_frequency=transition_frequency,
-        final_time=final_time,
-        ntime=ntime,
-        dt=dt,
-        selfkerr=selfkerr,
-        nguard=nguard,
-        rotation_frequency=rotation_frequency,
-        crosskerr_coupling=crosskerr_coupling,
-        dipole_coupling=dipole_coupling,
-        Pmin=Pmin,
-        amplitude_bound=amplitude_bound,
-        initialcondition=initialcondition,
-        verbose=verbose,
-    )
-
-    config.runtype = RunType.SIMULATION
-
-    # If pcof is provided, write to file and set up control initialization
-    if pcof is not None:
-        # Write vector to temp file in output directory
-        output_dir = config.output_directory if hasattr(config, 'output_directory') and config.output_directory else "./run_dir"
-        os.makedirs(output_dir, exist_ok=True)
-        pcof_file = os.path.join(output_dir, "pcof_init.dat")
-        np.savetxt(pcof_file, pcof, fmt='%20.13e')
-
-        # Set up control initialization to load from file
-        control_inits = []
-        for iosc in range(len(nessential)):
-            init = ControlInitializationSettings()
-            init.init_type = ControlInitializationType.FILE
-            init.filename = pcof_file
-            control_inits.append(init)
-        config.control_initializations = control_inits
-
-    return config
+    return setup
 
 
-def create_optimization_config(
-    nessential: List[int],
-    transition_frequency: List[float],
-    final_time: float,
-    ntime: Optional[int] = None,
-    dt: Optional[float] = None,
-    targetgate = None,
-    output_directory: str = "./run_dir",
-    selfkerr: Optional[List[float]] = None,
-    nguard: Optional[List[int]] = None,
-    rotation_frequency: Optional[List[float]] = None,
-    crosskerr_coupling: Optional[List[float]] = None,
-    dipole_coupling: Optional[List[float]] = None,
-    Pmin: int = 150,
-    amplitude_bound: Optional[List[float]] = None,
-    initialcondition: Optional[InitialConditionSettings] = None,
-    verbose: bool = True,
-) -> Setup:
-    """
-    Create an optimization config with automatic Hamiltonian and timestep computation.
+def setup_optimization(
+    setup: Setup,
+    targetgate=None,
+):
+    """Configure a Setup for optimization.
 
-    Similar to create_simulation_config() but sets runtype to OPTIMIZATION.
+    Modifies setup in-place to set runtype to OPTIMIZATION and configure
+    the target gate.
 
-    Required Parameters:
-    -------------------
-    nessential : List[int]
-        Number of essential energy levels per qubit
-    transition_frequency : List[float]
-        01-transition frequencies [GHz] per qubit
-    final_time : float
-        Pulse duration [ns]
-    targetgate : array-like (list, numpy array, etc.)
-        Target unitary gate. Can be plain Python list like [[0,1],[1,0]]
+    Parameters:
+    ----------
+    setup : Setup
+        Setup object (e.g. from setup_physics()).
+    targetgate : array-like, optional
+        Target unitary gate. Can be a plain Python list like [[0,1],[1,0]]
         or numpy array. Will be converted to complex automatically.
 
-    Optional Parameters:
-    -------------------
-    ntime : int
-        Number of timesteps. If not provided, will be auto-computed from Hamiltonian.
-    dt : float
-        Timestep size [ns]. If not provided, will be auto-computed.
-        Note: Specify at most 2 of (final_time, ntime, dt). They must satisfy final_time = ntime * dt.
-    output_directory : str
-        Output directory for results and gate files. Default: "./run_dir"
-    selfkerr : List[float]
-        Anharmonicities [GHz] per qubit. Default: zeros
-    nguard : List[int]
-        Number of guard levels per qubit. Default: zeros
-    rotation_frequency : List[float]
-        Frequency of rotations for computational frame [GHz] per qubit. Default: transition_frequency
-    crosskerr_coupling : List[float]
-        ZZ coupling strength [GHz]
-    dipole_coupling : List[float]
-        Dipole-dipole coupling strength [GHz]
-    Pmin : int
-        Minimum points to resolve shortest period. Default: 150
-    amplitude_bound : List[float]
-        Maximum control amplitudes [MHz] per qubit
-    initialcondition : InitialConditionSettings
-        Initial state specification. Default: basis states
-    verbose : bool
-        Print setup information. Default: True
-
-    Returns:
-    -------
-    Setup
-        Configured config ready for optimization.
-
     Example:
     -------
-    >>> from quandary.new import create_optimization_config, run
-    >>>
-    >>> config = create_optimization_config(
-    ...     nessential=[2], transition_frequency=[4.1], final_time=50.0,
-    ...     targetgate=[[0, 1], [1, 0]]  # X gate
-    ... )
-    >>> # Or with explicit timesteps:
-    >>> config = create_optimization_config(
-    ...     nessential=[2], transition_frequency=[4.1], final_time=50.0, ntime=1000,
-    ...     targetgate=[[0, 1], [1, 0]]
-    ... )
-    >>> results = run(config)
+    >>> setup = setup_physics(nessential=[3], transition_frequency=[4.1], final_time=100)
+    >>> setup_optimization(setup, targetgate=[[0,0,1],[0,1,0],[1,0,0]])
+    >>> results = run(setup)
     """
-    config = _setup_physics(
-        nessential=nessential,
-        transition_frequency=transition_frequency,
-        final_time=final_time,
-        ntime=ntime,
-        dt=dt,
-        selfkerr=selfkerr,
-        nguard=nguard,
-        rotation_frequency=rotation_frequency,
-        crosskerr_coupling=crosskerr_coupling,
-        dipole_coupling=dipole_coupling,
-        Pmin=Pmin,
-        amplitude_bound=amplitude_bound,
-        initialcondition=initialcondition,
-        verbose=verbose,
-    )
+    setup.runtype = RunType.OPTIMIZATION
 
-    config.runtype = RunType.OPTIMIZATION
-    config.output_directory = output_directory
-
-    # Set up target gate if provided
     if targetgate is not None:
-        os.makedirs(output_directory, exist_ok=True)
+        output_dir = setup.output_directory if setup.output_directory else "./run_dir"
+        os.makedirs(output_dir, exist_ok=True)
 
         # Convert to numpy array with complex dtype
         gate_array = np.array(targetgate, dtype=complex)
 
         # Write gate to file (column-major order)
-        gate_file = os.path.join(output_directory, "targetgate.dat")
+        gate_file = os.path.join(output_dir, "targetgate.dat")
         gate_vec = np.concatenate((
             gate_array.real.ravel(order='F'),
             gate_array.imag.ravel(order='F')
@@ -391,6 +243,45 @@ def create_optimization_config(
         target.target_type = TargetType.GATE
         target.gate_type = GateType.FILE
         target.filename = gate_file
-        config.optim_target = target
+        setup.optim_target = target
 
-    return config
+
+def setup_simulation(
+    setup: Setup,
+    pcof=None,
+):
+    """Configure a Setup for simulation.
+
+    Modifies setup in-place to set runtype to SIMULATION and optionally
+    configure control parameters from B-spline coefficients.
+
+    Parameters:
+    ----------
+    setup : Setup
+        Setup object (e.g. from setup_physics()).
+    pcof : array-like, optional
+        B-spline control coefficients. If provided, writes to file and
+        configures control initialization to load from file.
+
+    Example:
+    -------
+    >>> setup = setup_physics(nessential=[3], transition_frequency=[4.1], final_time=100)
+    >>> setup_simulation(setup, pcof=results_opt.pcof)
+    >>> results = run(setup)
+    """
+    setup.runtype = RunType.SIMULATION
+
+    if pcof is not None:
+        output_dir = setup.output_directory if setup.output_directory else "./run_dir"
+        os.makedirs(output_dir, exist_ok=True)
+        pcof_file = os.path.join(output_dir, "pcof_init.dat")
+        np.savetxt(pcof_file, pcof, fmt='%20.13e')
+
+        # C++ expects one init per oscillator, all pointing to the same file
+        control_inits = []
+        for _ in range(len(setup.nessential)):
+            init = ControlInitializationSettings()
+            init.init_type = ControlInitializationType.FILE
+            init.filename = pcof_file
+            control_inits.append(init)
+        setup.control_initializations = control_inits

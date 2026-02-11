@@ -67,10 +67,11 @@ from .utils import (  # noqa: F401
     downsample_pulses,
 )
 
-# Config builders (factory functions)
-from .config_builders import (
-    create_simulation_config,
-    create_optimization_config,
+# Setup helpers (factory/configuration functions)
+from .setup_helpers import (
+    setup_physics,
+    setup_optimization,
+    setup_simulation,
 )
 
 # Define public API
@@ -120,9 +121,10 @@ __all__ = [
     "eval_controls",
     "infidelity_",
     "downsample_pulses",
-    # Config builders
-    "create_simulation_config",
-    "create_optimization_config",
+    # Setup helpers
+    "setup_physics",
+    "setup_optimization",
+    "setup_simulation",
 ]
 
 petsc4py.init()
