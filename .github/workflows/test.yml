@@ -61,6 +61,8 @@ jobs:
 
     - name: Run C++ unit tests
       shell: spack-sh {0}
+      env:
+        PRTE_MCA_rmaps_default_mapping_policy: :oversubscribe
       run: |
         spack env activate .spack_env
         cd $(spack -e .spack_env location -b quandary)
