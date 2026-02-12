@@ -307,6 +307,9 @@ def setup_physics(
 def setup_optimization(
     setup: Setup,
     targetgate=None,
+    targetstate=None,
+    target_levels: Optional[List[int]] = None,
+    gate_rot_freq: Optional[List[float]] = None,
     pcof=None,
     randomize_init_ctrl: bool = False,
     init_amplitude_ghz: Optional[float] = None,
@@ -314,60 +317,50 @@ def setup_optimization(
     """Configure a Setup for optimization.
 
     Modifies setup in-place to set runtype to OPTIMIZATION and configure
-    the target gate and control initialization.
+    the optimization target and control initialization.
 
     Parameters:
     ----------
     setup : Setup
         Setup object (e.g. from setup_physics()).
     targetgate : array-like, optional
-        Target unitary gate. Can be a plain Python list like [[0,1],[1,0]]
-        or numpy array. Will be converted to complex automatically.
+        Target unitary gate. Written to file automatically.
+    targetstate : array-like, optional
+        Target state vector (arbitrary superposition). Written to file automatically.
+    target_levels : List[int], optional
+        Target product state like |001⟩. Example: [0, 0, 1].
+    gate_rot_freq : List[float], optional
+        Gate rotation frequencies [GHz] per oscillator.
     pcof : array-like, optional
-        B-spline control coefficients to use as initial guess (warm-start).
-        If provided, writes to file and initializes from file, overriding
-        randomize_init_ctrl and init_amplitude_ghz. Useful for continuing
-        optimization from a previous result. Typically from results.pcof.
+        B-spline coefficients for warm-start. Overrides randomize_init_ctrl.
     randomize_init_ctrl : bool
-        Initialize controls randomly (True) or at constant value (False).
+        Initialize controls randomly (True) or constant (False).
         Only used if init_amplitude_ghz is provided. Default: False.
     init_amplitude_ghz : float, optional
         Initial control amplitude [GHz] per oscillator. Default: None.
 
-    Notes:
-    ------
-    Control initialization behavior:
-    - If pcof provided: initialize from file (warm-start)
-    - If init_amplitude_ghz provided: initialize with specified amplitude
-      (random or constant based on randomize_init_ctrl)
-    - If neither provided: don't set control_initializations, use C++ defaults
-
     Example:
     -------
-    >>> # Use C++ defaults for control initialization
-    >>> setup = setup_physics(nessential=[3], transition_frequency=[4.1], final_time=100)
+    >>> # Gate optimization
     >>> setup_optimization(setup, targetgate=[[0,0,1],[0,1,0],[1,0,0]])
-    >>> results = run(setup)
-
-    >>> # With explicit initial amplitude (in GHz, matching C++ interface):
-    >>> setup_optimization(setup, targetgate=gate, init_amplitude_ghz=0.01)
-
-    >>> # Constant initialization instead of random:
-    >>> setup_optimization(setup, targetgate=gate, randomize_init_ctrl=False, init_amplitude_ghz=0.01)
-
-    >>> # Warm-start optimization from previous result:
-    >>> setup_optimization(setup, targetgate=gate, pcof=previous_results.pcof)
+    >>> # State-to-state with superposition target
+    >>> setup_optimization(setup, targetstate=[1/np.sqrt(2), 1/np.sqrt(2)])
+    >>> # State-to-state with product state target
+    >>> setup_optimization(setup, target_levels=[0, 0, 1])
     """
     setup.runtype = RunType.OPTIMIZATION
 
+    # Validate: only one target type
+    num_targets = sum([targetgate is not None, targetstate is not None, target_levels is not None])
+    if num_targets > 1:
+        raise ValueError("Can only specify one of: targetgate, targetstate, target_levels")
+
+    output_dir = _get_output_dir(setup)
+    os.makedirs(output_dir, exist_ok=True)
+
     if targetgate is not None:
-        output_dir = _get_output_dir(setup)
-        os.makedirs(output_dir, exist_ok=True)
-
-        # Convert to numpy array with complex dtype
+        # Gate optimization: write gate to file
         gate_array = np.array(targetgate, dtype=complex)
-
-        # Write gate to file (column-major order)
         gate_file = os.path.join(output_dir, "targetgate.dat")
         gate_vec = np.concatenate((
             gate_array.real.ravel(order='F'),
@@ -375,18 +368,36 @@ def setup_optimization(
         ))
         np.savetxt(gate_file, gate_vec, fmt='%20.13e')
 
-        # Set up target settings
         target = OptimTargetSettings()
         target.target_type = TargetType.GATE
         target.gate_type = GateType.FILE
         target.filename = gate_file
+        if gate_rot_freq is not None:
+            target.gate_rot_freq = gate_rot_freq
+        setup.optim_target = target
+
+    elif targetstate is not None:
+        # State-to-state: write target state to file
+        target_array = np.array(targetstate, dtype=complex)
+        state_file = os.path.join(output_dir, "targetstate.dat")
+        state_vec = np.concatenate((target_array.real.ravel(), target_array.imag.ravel()))
+        np.savetxt(state_file, state_vec, fmt='%20.13e')
+
+        target = OptimTargetSettings()
+        target.target_type = TargetType.STATE
+        target.filename = state_file
+        setup.optim_target = target
+
+    elif target_levels is not None:
+        # State-to-state: product state target like |001⟩
+        target = OptimTargetSettings()
+        target.target_type = TargetType.STATE
+        target.levels = target_levels
         setup.optim_target = target
 
     # Set up control initialization (only if user explicitly provides parameters)
     if pcof is not None and len(pcof) > 0:
         # Warm-start from provided coefficients
-        output_dir = _get_output_dir(setup)
-        os.makedirs(output_dir, exist_ok=True)
         pcof_file = os.path.join(output_dir, "pcof_init.dat")
         np.savetxt(pcof_file, pcof, fmt='%20.13e')
 
