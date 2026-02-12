@@ -136,6 +136,10 @@ performance-test:
         inputs:
           job_cmd: $JOB_CMD
           perf_processing_cmd: "${CI_PROJECT_DIR}/tests/performance/convert_benchmark_format.py"
+          perf_artifact_dir: $PERF_ARTIFACT_DIR
+          perf_results_file: $PERF_RESULTS_FILE
+          perf_processed_file: "processed_results.json"
+          github_token: $GITHUB_WORKFLOW_TOKEN
           github_project_name: $GITHUB_PROJECT_NAME
           github_project_org: $GITHUB_PROJECT_ORG
           dane_perf_alloc: $DANE_PERF_ALLOC
@@ -145,3 +149,5 @@ performance-test:
       pipeline_variables: true
   variables:
     PERFORMANCE_TESTS: "true"
+    PERF_ARTIFACT_DIR: "performance-results"
+    PERF_RESULTS_FILE: "*_*-*.cali"
