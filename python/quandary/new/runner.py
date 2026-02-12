@@ -21,7 +21,7 @@ from mpi4py import MPI
 
 from .. import _quandary_impl
 from .._quandary_impl import Config, Setup
-from .results import get_results as _get_results, QuandaryResults
+from .results import get_results as _get_results, Results
 
 if TYPE_CHECKING:
     pass
@@ -56,7 +56,7 @@ def run(
     nproc_flag: str = "-np",
     python_exec: Optional[str] = None,
     working_dir: str = ".",
-) -> QuandaryResults:
+) -> Results:
     """Run a Quandary simulation or optimization.
 
     This function validates the setup, runs the simulation/optimization,
@@ -82,7 +82,7 @@ def run(
             Only used when spawning subprocess.
 
     Returns:
-        QuandaryResults containing output data and the validated configuration.
+        Results containing output data and the validated configuration.
 
     Raises:
         RuntimeError: If the configuration is invalid or execution fails.
@@ -154,7 +154,7 @@ def _run_subprocess(
     nproc_flag: str = "-np",
     python_exec: Optional[str] = None,
     working_dir: str = ".",
-) -> QuandaryResults:
+) -> Results:
     """Internal: Spawn MPI subprocess to run Quandary.
 
     Called by run() when n_procs is specified. Writes config to TOML,

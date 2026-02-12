@@ -8,7 +8,7 @@ def plot_pulse(results):
     """Plot the control pulse for all qubits.
 
     Args:
-        results: QuandaryResults object from run()
+        results: Results object from run()
     """
     Ne = results.config.nessential
     time = results.time
@@ -39,7 +39,7 @@ def plot_expectedEnergy(results):
     """Plot evolution of expected energy levels.
 
     Args:
-        results: QuandaryResults object from run()
+        results: Results object from run()
     """
     Ne = results.config.nessential
     time = results.time
@@ -79,7 +79,7 @@ def plot_population(results):
     """Plot evolution of population.
 
     Args:
-        results: QuandaryResults object from run()
+        results: Results object from run()
     """
     Ne = results.config.nessential
     time = results.time
@@ -119,7 +119,7 @@ def plot_results_1osc(results, oscillator=0):
     """Plot all results of one oscillator (pulses, FFT, populations, expected energy).
 
     Args:
-        results: QuandaryResults object from run()
+        results: Results object from run()
         oscillator: Index of oscillator to plot (default: 0)
     """
     t = results.time

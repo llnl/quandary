@@ -35,7 +35,7 @@ from .._quandary_impl import (
 from .runner import run, validate  # noqa: F401
 
 # Results
-from .results import QuandaryResults, get_results  # noqa: F401
+from .results import Results, get_results  # noqa: F401
 
 # Quantum operators and Hamiltonians
 from .quantum_operators import (  # noqa: F401
@@ -101,7 +101,7 @@ __all__ = [
     "run",
     "validate",
     # Results
-    "QuandaryResults",
+    "Results",
     "get_results",
     # Quantum operators
     "lowering",

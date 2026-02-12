@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class QuandaryResults:
+class Results:
     """Results from a Quandary simulation or optimization.
 
     Attributes:
@@ -52,7 +52,7 @@ class QuandaryResults:
     population: List[List[np.ndarray]] = field(default_factory=list)
 
 
-def get_results(config: Config) -> QuandaryResults:
+def get_results(config: Config) -> Results:
     """Load results from Quandary output files.
 
     This function parses output files from a Quandary run and returns them
@@ -62,7 +62,7 @@ def get_results(config: Config) -> QuandaryResults:
         config: Validated configuration object from the run.
 
     Returns:
-        QuandaryResults containing all parsed output data and config.
+        Results containing all parsed output data and config.
 
     Example:
         >>> # After running
@@ -79,7 +79,7 @@ def get_results(config: Config) -> QuandaryResults:
     n_init = config.n_initial_conditions
 
     # Create results object with the provided config
-    results = QuandaryResults(config=config)
+    results = Results(config=config)
 
     # Detect from files
     control_files = sorted(glob.glob(os.path.join(datadir, "control*.dat")))

@@ -38,7 +38,7 @@ def eval_controls(config, pcof, points_per_ns=1.0, output_directory=None, quiet=
 
     Returns
     -------
-    QuandaryResults
+    Results
         Results containing time, pt, qt, and the validated eval config.
 
     Example
