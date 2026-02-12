@@ -1199,25 +1199,6 @@ void Config::printConfig(std::stringstream& log) const {
   log << "rand_seed = " << data.rand_seed << "\n";
 }
 
-void Config::setupForEvalControls(double points_per_ns, const std::string& pcof_file, const std::string& output_dir) {
-  // Calculate new time grid while keeping total time constant
-  double total_time = getTotalTime();
-  data.ntime = static_cast<size_t>(std::floor(total_time * points_per_ns));
-  data.dt = total_time / data.ntime;
-
-  // Set run type to EVALCONTROLS
-  data.runtype = RunType::EVALCONTROLS;
-
-  // Set control initialization to read from file for all oscillators
-  for (auto& init : data.control_initializations) {
-    init.type = ControlInitializationType::FILE;
-    init.filename = pcof_file;
-  }
-
-  // Set output directory
-  data.output_directory = output_dir;
-}
-
 void Config::finalize() {
   // Hamiltonian file + matrix-free compatibility check
   if ((data.hamiltonian_file_Hsys.has_value() || data.hamiltonian_file_Hc.has_value()) && data.usematfree) {

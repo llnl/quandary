@@ -328,3 +328,54 @@ def setup_simulation(
             init.filename = pcof_file
             control_inits.append(init)
         setup.control_initializations = control_inits
+
+
+def setup_eval_controls(
+    setup: Setup,
+    pcof,
+    points_per_ns: float = 1.0,
+):
+    """Configure a Setup for evaluating control pulses at a specific sample rate.
+
+    Modifies setup in-place to set runtype to EVALCONTROLS with a new time grid
+    based on points_per_ns. Total pulse duration is preserved.
+
+    Parameters:
+    ----------
+    setup : Setup
+        Setup object (e.g. from setup_physics()). Typically a .copy() of the
+        optimization setup.
+    pcof : array-like
+        B-spline control coefficients. Typically from results.pcof.
+    points_per_ns : float
+        Sample rate for output [points per ns]. Default: 1.0 (1ns spacing).
+        Examples: 1.0 = 1ns, 10.0 = 0.1ns, 0.5 = 2ns spacing.
+
+    Example:
+    -------
+    >>> setup_eval = setup.copy()
+    >>> setup_eval_controls(setup_eval, pcof=results_opt.pcof, points_per_ns=64)
+    >>> eval_results = run(setup_eval)
+    """
+    # Recalculate time grid: keep total time, change resolution
+    total_time = setup.ntime * setup.dt
+    setup.ntime = int(np.floor(total_time * points_per_ns))
+    setup.dt = total_time / setup.ntime
+
+    setup.runtype = RunType.EVALCONTROLS
+
+    # Write pcof to file and set control initializations
+    if pcof is not None and len(pcof) > 0:
+        output_dir = setup.output_directory if setup.output_directory else "./run_dir"
+        os.makedirs(output_dir, exist_ok=True)
+        pcof_file = os.path.join(output_dir, "pcof_init.dat")
+        np.savetxt(pcof_file, pcof, fmt='%20.13e')
+
+        # C++ expects one init per oscillator, all pointing to the same file
+        control_inits = []
+        for _ in range(len(setup.nessential)):
+            init = ControlInitializationSettings()
+            init.init_type = ControlInitializationType.FILE
+            init.filename = pcof_file
+            control_inits.append(init)
+        setup.control_initializations = control_inits

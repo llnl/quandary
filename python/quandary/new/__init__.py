@@ -62,16 +62,16 @@ from .visualization import (  # noqa: F401
 
 # General utilities
 from .utils import (  # noqa: F401
-    eval_controls,
     infidelity_,
     downsample_pulses,
 )
 
 # Setup helpers (factory/configuration functions)
-from .setup_helpers import (
+from .setup_helpers import (  # noqa: F401
     setup_physics,
     setup_optimization,
     setup_simulation,
+    setup_eval_controls,
 )
 
 # Define public API
@@ -118,13 +118,13 @@ __all__ = [
     "plot_population",
     "plot_results_1osc",
     # Utilities
-    "eval_controls",
     "infidelity_",
     "downsample_pulses",
     # Setup helpers
     "setup_physics",
     "setup_optimization",
     "setup_simulation",
+    "setup_eval_controls",
 ]
 
 petsc4py.init()

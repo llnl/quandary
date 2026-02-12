@@ -1,85 +1,10 @@
 """General utility functions for Quandary."""
 
 import logging
-import os
-import shutil
-import tempfile
 
 import numpy as np
 
-from .._quandary_impl import Config, run
-from .results import get_results
-
 logger = logging.getLogger(__name__)
-
-
-def eval_controls(config, pcof, points_per_ns=1.0, output_directory=None, quiet=True):
-    """Evaluate B-spline control parameters at a specific sample rate.
-
-    This function evaluates B-spline coefficients (pcof) at a different time
-    resolution than the optimization/simulation used. Useful for deploying
-    optimized controls to hardware with different sample rates.
-
-    Parameters
-    ----------
-    config : Config
-        Validated configuration from a previous run. Contains all system and
-        control settings needed for B-spline evaluation. The original config
-        is not modified - a copy is made internally.
-    pcof : ndarray
-        B-spline coefficients to evaluate [rad/ns]. Typically from results.pcof.
-    points_per_ns : float
-        Sample rate for output [points per ns]. Default: 1.0 (1ns spacing).
-        Examples: 1.0 = 1ns, 10.0 = 0.1ns, 0.5 = 2ns spacing.
-    output_directory : str, optional
-        Directory for output files. If None, creates a temporary directory.
-    quiet : bool
-        Suppress console output. Default: True.
-
-    Returns
-    -------
-    Results
-        Results containing time, pt, qt, and the validated eval config.
-
-    Example
-    -------
-    >>> results = run(opt_setup)
-    >>> eval_results = eval_controls(results.config, results.pcof, points_per_ns=1.0)
-    >>> # Access: eval_results.time, eval_results.pt, eval_results.qt
-    """
-    # Set up output directory
-    cleanup_temp = False
-    if output_directory is None:
-        output_directory = tempfile.mkdtemp(prefix='quandary_eval_')
-        cleanup_temp = True
-    else:
-        os.makedirs(output_directory, exist_ok=True)
-
-    # Write pcof to file for C++ to read
-    pcof_file = os.path.join(output_directory, 'init_params.dat')
-    np.savetxt(pcof_file, pcof, fmt='%.14e')
-
-    # Create a copy of the config, then modify the copy
-    eval_config = Config(config)
-    eval_config.setup_for_eval_controls(points_per_ns, pcof_file, output_directory)
-
-    # Run in EVALCONTROLS mode (just evaluates and writes controls)
-    return_code = run(eval_config, quiet=quiet)
-
-    if return_code != 0:
-        raise RuntimeError(f"eval_controls failed with return code {return_code}")
-
-    # Load results with the eval config (what was actually run)
-    results = get_results(eval_config)
-
-    # Clean up temporary directory if we created one
-    if cleanup_temp:
-        try:
-            shutil.rmtree(output_directory)
-        except Exception as e:
-            logger.warning(f"Could not remove temporary directory {output_directory}: {e}")
-
-    return results
 
 
 def infidelity_(A, B):

@@ -184,19 +184,6 @@ class Config {
 
   void printConfig(std::stringstream& log) const;
 
-  /**
-   * @brief Configure this Config for control evaluation at a specific sample rate.
-   *
-   * Modifies time grid based on points_per_ns while keeping total time constant,
-   * sets run type to EVALCONTROLS, and configures control initialization to read
-   * from the specified file. Caution: this modifies the Config in-place.
-   *
-   * @param points_per_ns Sample rate [points per nanosecond]
-   * @param pcof_file Path to file containing control parameters
-   * @param output_dir Output directory for results
-   */
-  void setupForEvalControls(double points_per_ns, const std::string& pcof_file, const std::string& output_dir);
-
   // getters
   const std::vector<size_t>& getNLevels() const { return data.nlevels; }
   size_t getNLevels(size_t i_osc) const { return data.nlevels[i_osc]; }

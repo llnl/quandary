@@ -274,10 +274,7 @@ NB_MODULE(_quandary_impl, m) {
         std::stringstream ss;
         c.printConfig(ss);
         return ss.str();
-      }, "Serialize the configuration to TOML format")
-    .def("setup_for_eval_controls", &Config::setupForEvalControls,
-      nb::arg("points_per_ns"), nb::arg("pcof_file"), nb::arg("output_dir"),
-      "Configure for control evaluation at specified sample rate");
+      }, "Serialize the configuration to TOML format");
 
   // Run function - accepts Config
   m.def("run", [](const Config& config, bool quiet) {
