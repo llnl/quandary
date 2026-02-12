@@ -260,11 +260,14 @@ def setup_physics(
 def setup_optimization(
     setup: Setup,
     targetgate=None,
+    pcof=None,
+    randomize_init_ctrl: bool = False,
+    init_amplitude_ghz: Optional[float] = None,
 ):
     """Configure a Setup for optimization.
 
     Modifies setup in-place to set runtype to OPTIMIZATION and configure
-    the target gate.
+    the target gate and control initialization.
 
     Parameters:
     ----------
@@ -273,12 +276,40 @@ def setup_optimization(
     targetgate : array-like, optional
         Target unitary gate. Can be a plain Python list like [[0,1],[1,0]]
         or numpy array. Will be converted to complex automatically.
+    pcof : array-like, optional
+        B-spline control coefficients to use as initial guess (warm-start).
+        If provided, writes to file and initializes from file, overriding
+        randomize_init_ctrl and init_amplitude_ghz. Useful for continuing
+        optimization from a previous result. Typically from results.pcof.
+    randomize_init_ctrl : bool
+        Initialize controls randomly (True) or at constant value (False).
+        Only used if init_amplitude_ghz is provided. Default: False.
+    init_amplitude_ghz : float, optional
+        Initial control amplitude [GHz] per oscillator. Default: None.
+
+    Notes:
+    ------
+    Control initialization behavior:
+    - If pcof provided: initialize from file (warm-start)
+    - If init_amplitude_ghz provided: initialize with specified amplitude
+      (random or constant based on randomize_init_ctrl)
+    - If neither provided: don't set control_initializations, use C++ defaults
 
     Example:
     -------
+    >>> # Use C++ defaults for control initialization
     >>> setup = setup_physics(nessential=[3], transition_frequency=[4.1], final_time=100)
     >>> setup_optimization(setup, targetgate=[[0,0,1],[0,1,0],[1,0,0]])
     >>> results = run(setup)
+
+    >>> # With explicit initial amplitude (in GHz, matching C++ interface):
+    >>> setup_optimization(setup, targetgate=gate, init_amplitude_ghz=0.01)
+
+    >>> # Constant initialization instead of random:
+    >>> setup_optimization(setup, targetgate=gate, randomize_init_ctrl=False, init_amplitude_ghz=0.01)
+
+    >>> # Warm-start optimization from previous result:
+    >>> setup_optimization(setup, targetgate=gate, pcof=previous_results.pcof)
     """
     setup.runtype = RunType.OPTIMIZATION
 
@@ -303,6 +334,35 @@ def setup_optimization(
         target.gate_type = GateType.FILE
         target.filename = gate_file
         setup.optim_target = target
+
+    # Set up control initialization (only if user explicitly provides parameters)
+    if pcof is not None and len(pcof) > 0:
+        # Warm-start from provided coefficients
+        output_dir = setup.output_directory if setup.output_directory else "./run_dir"
+        os.makedirs(output_dir, exist_ok=True)
+        pcof_file = os.path.join(output_dir, "pcof_init.dat")
+        np.savetxt(pcof_file, pcof, fmt='%20.13e')
+
+        control_inits = []
+        for _ in range(len(setup.nessential)):
+            init = ControlInitializationSettings()
+            init.init_type = ControlInitializationType.FILE
+            init.filename = pcof_file
+            control_inits.append(init)
+        setup.control_initializations = control_inits
+    elif init_amplitude_ghz is not None:
+        # Fresh optimization with explicit amplitude (use randomize_init_ctrl to choose type)
+        control_inits = []
+        init_type = ControlInitializationType.RANDOM if randomize_init_ctrl else ControlInitializationType.CONSTANT
+
+        for _ in range(len(setup.nessential)):
+            init = ControlInitializationSettings()
+            init.init_type = init_type
+            init.amplitude = init_amplitude_ghz
+            control_inits.append(init)
+
+        setup.control_initializations = control_inits
+    # else: Don't set control_initializations, let C++ use its defaults
 
 
 def setup_simulation(
