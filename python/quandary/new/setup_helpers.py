@@ -26,6 +26,13 @@ from .utils import downsample_pulses
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_OUTPUT_DIR = "./run_dir"
+
+
+def _get_output_dir(setup):
+    """Get output directory from setup, falling back to default."""
+    return setup.output_directory or _DEFAULT_OUTPUT_DIR
+
 
 def setup_physics(
     nessential: List[int],
@@ -47,7 +54,7 @@ def setup_physics(
     initialcondition: Optional[InitialConditionSettings] = None,
     initial_levels: Optional[List[int]] = None,
     initial_state: Optional[List[complex]] = None,
-    output_directory: str = "./run_dir",
+    output_directory: str = _DEFAULT_OUTPUT_DIR,
     verbose: bool = True,
 ) -> Setup:
     """Create a Setup with physics parameters configured.
@@ -354,7 +361,7 @@ def setup_optimization(
     setup.runtype = RunType.OPTIMIZATION
 
     if targetgate is not None:
-        output_dir = setup.output_directory if setup.output_directory else "./run_dir"
+        output_dir = _get_output_dir(setup)
         os.makedirs(output_dir, exist_ok=True)
 
         # Convert to numpy array with complex dtype
@@ -378,7 +385,7 @@ def setup_optimization(
     # Set up control initialization (only if user explicitly provides parameters)
     if pcof is not None and len(pcof) > 0:
         # Warm-start from provided coefficients
-        output_dir = setup.output_directory if setup.output_directory else "./run_dir"
+        output_dir = _get_output_dir(setup)
         os.makedirs(output_dir, exist_ok=True)
         pcof_file = os.path.join(output_dir, "pcof_init.dat")
         np.savetxt(pcof_file, pcof, fmt='%20.13e')
@@ -471,7 +478,7 @@ def setup_simulation(
         )
 
     if pcof is not None and len(pcof) > 0:
-        output_dir = setup.output_directory if setup.output_directory else "./run_dir"
+        output_dir = _get_output_dir(setup)
         os.makedirs(output_dir, exist_ok=True)
         pcof_file = os.path.join(output_dir, "pcof_init.dat")
         np.savetxt(pcof_file, pcof, fmt='%20.13e')
@@ -518,7 +525,7 @@ def setup_eval_controls(
 
     # Write pcof to file and set control initializations
     if pcof is not None and len(pcof) > 0:
-        output_dir = setup.output_directory if setup.output_directory else "./run_dir"
+        output_dir = _get_output_dir(setup)
         os.makedirs(output_dir, exist_ok=True)
         pcof_file = os.path.join(output_dir, "pcof_init.dat")
         np.savetxt(pcof_file, pcof, fmt='%20.13e')
