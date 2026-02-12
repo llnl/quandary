@@ -40,6 +40,10 @@ def setup_physics(
     dipole_coupling: Optional[List[float]] = None,
     Pmin: int = 150,
     amplitude_bound: Optional[List[float]] = None,
+    nspline: Optional[int] = None,
+    spline_knot_spacing: Optional[float] = None,
+    spline_order: Optional[int] = None,
+    control_zero_boundary_condition: Optional[bool] = None,
     initialcondition: Optional[InitialConditionSettings] = None,
     verbose: bool = True,
 ) -> Setup:
@@ -52,6 +56,9 @@ def setup_physics(
     Time discretization: You can specify at most 2 of (final_time, ntime, dt).
     If you specify all 3, they must be consistent (final_time = ntime * dt).
     If ntime and dt are not provided, ntime will be auto-computed from Hamiltonian.
+
+    Spline configuration: You can specify at most one of (nspline, spline_knot_spacing).
+    If neither is given, the C++ default (10 splines) is used.
 
     Required Parameters:
     -------------------
@@ -84,6 +91,18 @@ def setup_physics(
     amplitude_bound : List[float]
         Maximum control amplitudes [GHz] per qubit. Used for timestep estimation
         and as optimization bounds. Default: 0.01 GHz (= 10 MHz)
+    nspline : int
+        Number of B-spline basis functions per oscillator. Cannot be combined
+        with spline_knot_spacing.
+    spline_knot_spacing : float
+        Spacing between B-spline knots [ns]. Computes nspline from
+        final_time and spacing. Cannot be combined with nspline.
+    spline_order : int
+        B-spline order: 2 (quadratic, default) or 0 (piecewise constant).
+        Affects the knot spacing formula and carrier frequency defaults.
+    control_zero_boundary_condition : bool
+        Force control pulses to start and end at zero.
+        Affects minimum nspline when using spline_knot_spacing.
     initialcondition : InitialConditionSettings
         Initial state specification. Default: basis states
     verbose : bool
@@ -171,12 +190,30 @@ def setup_physics(
         verbose=verbose,
     )
 
+    # Validate spline_order
+    if spline_order is not None and spline_order not in (0, 2):
+        raise ValueError(f"spline_order must be 0 or 2, got {spline_order}")
+
+    # Compute nspline from knot spacing if given
+    if nspline is not None and spline_knot_spacing is not None:
+        raise ValueError("Cannot specify both nspline and spline_knot_spacing")
+    if spline_knot_spacing is not None:
+        order = spline_order if spline_order is not None else 2
+        if order == 0:
+            nspline = int(np.max([np.rint(final_time / spline_knot_spacing + 1), 2]))
+        else:
+            enforce_bc = control_zero_boundary_condition if control_zero_boundary_condition is not None else True
+            minspline = 5 if enforce_bc else 3
+            nspline = int(np.max([np.ceil(final_time / spline_knot_spacing + 2), minspline]))
+
     if verbose:
         logger.info("Configuration computed:")
         logger.info(f"  Total time: {ntime * dt:.6f} ns")
         logger.info(f"  Time steps: {ntime}")
         logger.info(f"  dt: {dt:.6f} ns")
         logger.info(f"  Carrier frequencies: {carrier_frequency}")
+        if nspline is not None:
+            logger.info(f"  B-spline basis functions: {nspline}")
 
     # Create Setup with common fields
     setup = Setup()
@@ -195,6 +232,24 @@ def setup_physics(
 
     setup.carrier_frequencies = carrier_frequency
     setup.initial_condition = initialcondition
+    if control_zero_boundary_condition is not None:
+        setup.control_zero_boundary_condition = control_zero_boundary_condition
+
+    # Set control parameterizations if nspline or spline_order was specified
+    if nspline is not None or spline_order is not None:
+        order = spline_order if spline_order is not None else 2
+        control_type = ControlType.BSPLINE0 if order == 0 else ControlType.BSPLINE
+        control_params = []
+        for _ in range(nqubits):
+            param = ControlParameterizationSettings()
+            param.control_type = control_type
+            if nspline is not None:
+                param.nspline = nspline
+            control_params.append(param)
+        setup.control_parameterizations = control_params
+        # Order 0 uses zero carrier frequencies by default
+        if order == 0:
+            setup.carrier_frequencies = [[0.0] for _ in range(nqubits)]
 
     # Set default output observables
     setup.output_observables = [OutputType.POPULATION, OutputType.EXPECTED_ENERGY, OutputType.FULLSTATE]
