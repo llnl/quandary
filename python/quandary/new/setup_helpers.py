@@ -45,6 +45,9 @@ def setup_physics(
     spline_order: Optional[int] = None,
     control_zero_boundary_condition: Optional[bool] = None,
     initialcondition: Optional[InitialConditionSettings] = None,
+    initial_levels: Optional[List[int]] = None,
+    initial_state: Optional[List[complex]] = None,
+    output_directory: str = "./run_dir",
     verbose: bool = True,
 ) -> Setup:
     """Create a Setup with physics parameters configured.
@@ -102,9 +105,14 @@ def setup_physics(
         Affects the knot spacing formula and carrier frequency defaults.
     control_zero_boundary_condition : bool
         Force control pulses to start and end at zero.
-        Affects minimum nspline when using spline_knot_spacing.
-    initialcondition : InitialConditionSettings
-        Initial state specification. Default: basis states
+    initialcondition : InitialConditionSettings, optional
+        Direct struct specification (advanced). For convenience, use initial_levels or initial_state.
+    initial_levels : List[int], optional
+        Product state like |001⟩. Example: [0, 0, 1].
+    initial_state : List[complex], optional
+        Arbitrary superposition state. Written to file automatically.
+    output_directory : str
+        Output directory for files (initial state, etc.). Default: "./run_dir"
     verbose : bool
         Print setup information. Default: True
 
@@ -115,9 +123,12 @@ def setup_physics(
 
     Example:
     -------
+    >>> # Default: BASIS (all basis states)
     >>> setup = setup_physics(nessential=[3], transition_frequency=[4.1], final_time=100)
-    >>> setup_optimization(setup, targetgate=[[0,1],[1,0]])
-    >>> results = run(setup)
+    >>> # Product state |001⟩:
+    >>> setup = setup_physics(..., initial_levels=[0, 0, 1])
+    >>> # Superposition (|0⟩ + |1⟩)/√2:
+    >>> setup = setup_physics(..., initial_state=[1/np.sqrt(2), 1/np.sqrt(2)])
     """
     # Set defaults
     nqubits = len(nessential)
@@ -133,7 +144,35 @@ def setup_physics(
         dipole_coupling = []
     if amplitude_bound is None:
         amplitude_bound = [0.01] * nqubits
-    if initialcondition is None:
+
+    # Handle initial condition (only one of initialcondition, initial_levels, initial_state)
+    num_init_specs = sum([initialcondition is not None, initial_levels is not None, initial_state is not None])
+    if num_init_specs > 1:
+        raise ValueError("Can only specify one of: initialcondition, initial_levels, initial_state")
+
+    os.makedirs(output_directory, exist_ok=True)
+
+    if initial_levels is not None:
+        # Product state like |001⟩
+        if len(initial_levels) != nqubits:
+            raise ValueError(f"initial_levels must have length {nqubits}, got {len(initial_levels)}")
+        initialcondition = InitialConditionSettings()
+        initialcondition.condition_type = InitialConditionType.PRODUCT_STATE
+        initialcondition.levels = initial_levels
+    elif initial_state is not None:
+        # Arbitrary superposition, write to file
+        dim_ess = int(np.prod(nessential))
+        initial_state_array = np.array(initial_state, dtype=complex)
+        if len(initial_state_array) != dim_ess:
+            raise ValueError(f"initial_state must have length {dim_ess} (product of nessential), got {len(initial_state_array)}")
+        init_state_file = os.path.join(output_directory, "initial_state.dat")
+        state_vec = np.concatenate((initial_state_array.real, initial_state_array.imag))
+        np.savetxt(init_state_file, state_vec, fmt='%20.13e')
+        initialcondition = InitialConditionSettings()
+        initialcondition.condition_type = InitialConditionType.FROMFILE
+        initialcondition.filename = init_state_file
+    elif initialcondition is None:
+        # Default: BASIS
         initialcondition = InitialConditionSettings()
         initialcondition.condition_type = InitialConditionType.BASIS
 
@@ -232,6 +271,7 @@ def setup_physics(
 
     setup.carrier_frequencies = carrier_frequency
     setup.initial_condition = initialcondition
+    setup.output_directory = output_directory
     if control_zero_boundary_condition is not None:
         setup.control_zero_boundary_condition = control_zero_boundary_condition
 
