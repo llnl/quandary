@@ -436,14 +436,10 @@ def setup_simulation(
         pcof_file = os.path.join(output_dir, "pcof_init.dat")
         np.savetxt(pcof_file, pcof, fmt='%20.13e')
 
-        # C++ expects one init per oscillator, all pointing to the same file
-        control_inits = []
-        for _ in range(len(setup.nessential)):
-            init = ControlInitializationSettings()
-            init.init_type = ControlInitializationType.FILE
-            init.filename = pcof_file
-            control_inits.append(init)
-        setup.control_initializations = control_inits
+        init = ControlInitializationSettings()
+        init.init_type = ControlInitializationType.FILE
+        init.filename = pcof_file
+        setup.control_initializations = [init]
 
 
 def setup_eval_controls(
@@ -487,11 +483,7 @@ def setup_eval_controls(
         pcof_file = os.path.join(output_dir, "pcof_init.dat")
         np.savetxt(pcof_file, pcof, fmt='%20.13e')
 
-        # C++ expects one init per oscillator, all pointing to the same file
-        control_inits = []
-        for _ in range(len(setup.nessential)):
-            init = ControlInitializationSettings()
-            init.init_type = ControlInitializationType.FILE
-            init.filename = pcof_file
-            control_inits.append(init)
-        setup.control_initializations = control_inits
+        init = ControlInitializationSettings()
+        init.init_type = ControlInitializationType.FILE
+        init.filename = pcof_file
+        setup.control_initializations = [init]

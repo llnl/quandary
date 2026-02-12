@@ -581,6 +581,11 @@ Config::Config(const Setup& input, bool quiet_mode) : logger(MPILogger(quiet_mod
     ControlInitializationSettings default_init;
     data.control_initializations = input.control_initializations.value_or(std::vector<ControlInitializationSettings>(num_osc, default_init));
 
+    // If only one FILE-type initialization is provided, replicate it to all oscillators
+    if (data.control_initializations.size() == 1 && data.control_initializations[0].type == ControlInitializationType::FILE) {
+      data.control_initializations.resize(num_osc, data.control_initializations[0]);
+    }
+
     // Validate phase for each control initialization
     for (auto& init : data.control_initializations) {
       init.phase = validators::field<double>(init.phase, "phase")
