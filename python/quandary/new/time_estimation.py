@@ -11,20 +11,20 @@ def estimate_timesteps(*, final_time=1.0, Hsys=[], Hc_re=[], Hc_im=[], amplitude
     Double check that at least 2-3 points per spline are present to resolve control function.
     """
 
-    # Get estimated control pulse amplitude
+    # Get estimated control pulse amplitude [GHz]
     est_amplitude_bound = amplitude_bound[:]
     if len(amplitude_bound) == 0:
-        est_amplitude_bound = [10.0 for _ in range(max(len(Hc_re), len(Hc_im)))]
+        est_amplitude_bound = [0.01 for _ in range(max(len(Hc_re), len(Hc_im)))]
 
     # Set up Hsys +  maxctrl*Hcontrol
     K1 = np.copy(Hsys)
 
     for i in range(len(Hc_re)):
-        est_radns = est_amplitude_bound[i] * 2.0 * np.pi / 1e+3
+        est_radns = est_amplitude_bound[i] * 2.0 * np.pi
         if len(Hc_re[i]) > 0:
             K1 += est_radns * Hc_re[i]
     for i in range(len(Hc_im)):
-        est_radns = est_amplitude_bound[i] * 2.0 * np.pi / 1e+3
+        est_radns = est_amplitude_bound[i] * 2.0 * np.pi
         if len(Hc_im[i]) > 0:
             K1 = K1 + 1j * est_radns * Hc_im[i]  # can't use += due to type!
 

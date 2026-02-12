@@ -82,7 +82,8 @@ def setup_physics(
     Pmin : int
         Minimum points to resolve shortest period (determines timesteps). Default: 150
     amplitude_bound : List[float]
-        Maximum control amplitudes [MHz] per qubit for timestep estimation
+        Maximum control amplitudes [GHz] per qubit. Used for timestep estimation
+        and as optimization bounds. Default: 0.01 GHz (= 10 MHz)
     initialcondition : InitialConditionSettings
         Initial state specification. Default: basis states
     verbose : bool
@@ -112,7 +113,7 @@ def setup_physics(
     if dipole_coupling is None:
         dipole_coupling = []
     if amplitude_bound is None:
-        amplitude_bound = [10.0] * nqubits
+        amplitude_bound = [0.01] * nqubits
     if initialcondition is None:
         initialcondition = InitialConditionSettings()
         initialcondition.condition_type = InitialConditionType.BASIS
