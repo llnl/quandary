@@ -38,20 +38,14 @@ def eval_controls(config, pcof, points_per_ns=1.0, output_directory=None, quiet=
 
     Returns
     -------
-    time : ndarray
-        Time points [ns] at the specified sample rate.
-    pt : list of ndarray
-        Real part of control pulses [MHz] for each oscillator.
-    qt : list of ndarray
-        Imaginary part of control pulses [MHz] for each oscillator.
+    QuandaryResults
+        Results containing time, pt, qt, and the validated eval config.
 
     Example
     -------
-    >>> # Optimize at fine timestep
-    >>> results = run(opt_config)
-    >>> # Evaluate at hardware sample rate (1ns)
-    >>> time, pt, qt = eval_controls(results.config, results.pcof, points_per_ns=1.0)
-    >>> # Deploy pt, qt to hardware AWG
+    >>> results = run(opt_setup)
+    >>> eval_results = eval_controls(results.config, results.pcof, points_per_ns=1.0)
+    >>> # Access: eval_results.time, eval_results.pt, eval_results.qt
     """
     # Set up output directory
     cleanup_temp = False
@@ -75,8 +69,8 @@ def eval_controls(config, pcof, points_per_ns=1.0, output_directory=None, quiet=
     if return_code != 0:
         raise RuntimeError(f"eval_controls failed with return code {return_code}")
 
-    # Load results
-    results = get_results(config)
+    # Load results with the eval config (what was actually run)
+    results = get_results(eval_config)
 
     # Clean up temporary directory if we created one
     if cleanup_temp:
@@ -85,7 +79,7 @@ def eval_controls(config, pcof, points_per_ns=1.0, output_directory=None, quiet=
         except Exception as e:
             logger.warning(f"Could not remove temporary directory {output_directory}: {e}")
 
-    return results.time, results.pt, results.qt
+    return results
 
 
 def infidelity_(A, B):
