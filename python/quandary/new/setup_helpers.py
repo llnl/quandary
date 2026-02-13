@@ -263,7 +263,8 @@ def setup_physics(
             logger.info(f"  B-spline basis functions: {nspline}")
 
     # Create Setup with common fields
-    setup = Setup()
+    from . import Setup as _PythonSetup   # late import — avoids circular; __init__ is fully loaded by call time
+    setup = _PythonSetup()
     setup.nlevels = nlevels
     setup.nessential = nessential
     setup.ntime = ntime
@@ -380,7 +381,10 @@ def _setup_optimization(
     elif control_initialization_amplitude is not None:
         # Fresh optimization with explicit amplitude (use randomize_initial_control to choose type)
         control_inits = []
-        init_type = ControlInitializationType.RANDOM if randomize_initial_control else ControlInitializationType.CONSTANT
+        init_type = (
+            ControlInitializationType.RANDOM if randomize_initial_control
+            else ControlInitializationType.CONSTANT
+        )
 
         for _ in range(len(setup.nessential)):
             init = ControlInitializationSettings()

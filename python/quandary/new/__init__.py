@@ -2,7 +2,7 @@
 
 # Initialize MPI and PETSc via mpi4py/petsc4py before any C++ calls
 # This ensures both are initialized once and managed by Python's lifecycle
-import mpi4py.MPI  # noqa: F401
+import mpi4py.MPI  # noqa: F401, E402
 import petsc4py
 
 # Re-export the nanobind implementation from the parent package
@@ -33,6 +33,7 @@ from .._quandary_impl import (
     ControlInitializationSettings,
 )
 
+
 # Subclass Setup to improve TypeError messages: nanobind's default only says
 # "incompatible function arguments" without naming the property or showing the
 # value passed. __setattr__ catches those errors and re-raises with context.
@@ -46,19 +47,20 @@ class Setup(_CppSetup):
         try:
             super().__setattr__(name, value)
         except TypeError as e:
+            hint = " (must be a non-negative integer)" if isinstance(value, int) and value < 0 else ""
             raise TypeError(
-                f"Setup.{name} = {_fmt_val(value)} ({type(value).__name__}): {e}"
+                f"Setup.{name} = {_fmt_val(value)} ({type(value).__name__}){hint}: {e}"
             ) from None
 
 
 # Functional API (primary interface)
-from .runner import optimize, simulate, evaluate_controls  # noqa: F401
+from .runner import optimize, simulate, evaluate_controls  # noqa: F401, E402
 
 # Results
-from .results import Results, get_results  # noqa: F401
+from .results import Results, get_results  # noqa: F401, E402
 
 # Quantum operators and Hamiltonians
-from .quantum_operators import (  # noqa: F401
+from .quantum_operators import (  # noqa: F401, E402
     lowering,
     number,
     map_to_oscillators,
@@ -67,13 +69,13 @@ from .quantum_operators import (  # noqa: F401
 )
 
 # Time estimation utilities
-from .time_estimation import (  # noqa: F401
+from .time_estimation import (  # noqa: F401, E402
     estimate_timesteps,
     timestep_richardson_est,
 )
 
 # Visualization utilities
-from .visualization import (  # noqa: F401
+from .visualization import (  # noqa: F401, E402
     plot_pulse,
     plot_expectedEnergy,
     plot_population,
@@ -81,13 +83,13 @@ from .visualization import (  # noqa: F401
 )
 
 # General utilities
-from .utils import (  # noqa: F401
+from .utils import (  # noqa: F401, E402
     infidelity_,
     downsample_pulses,
 )
 
 # Setup helpers (factory/configuration functions)
-from .setup_helpers import (  # noqa: F401
+from .setup_helpers import (  # noqa: F401, E402
     setup_physics,
 )
 
