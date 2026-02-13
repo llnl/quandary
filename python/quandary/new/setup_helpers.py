@@ -171,7 +171,8 @@ def setup_physics(
         dim_ess = int(np.prod(nessential))
         initial_state_array = np.array(initial_state, dtype=complex)
         if len(initial_state_array) != dim_ess:
-            raise ValueError(f"initial_state must have length {dim_ess} (product of nessential), got {len(initial_state_array)}")
+            raise ValueError(f"initial_state must have length {dim_ess} (product of nessential), "
+                             f"got {len(initial_state_array)}")
         init_state_file = os.path.join(output_directory, "initial_state.dat")
         state_vec = np.concatenate((initial_state_array.real, initial_state_array.imag))
         np.savetxt(init_state_file, state_vec, fmt='%20.13e')

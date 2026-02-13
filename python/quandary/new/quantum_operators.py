@@ -137,20 +137,20 @@ def get_resonances(*, nessential, nguard, Hsys, Hc_re=[], Hc_im=[], rotation_fre
                         if any(abs(delta_f - f) < cw_prox_thres for f in resonances_a):
                             if verbose:
                                 logger.info(f"    Ignoring resonance from {ids_j} to {ids_i}, freq {delta_f}, "
-                                           f"growth rate= {abs(Hc_trans[i, j])} "
-                                           f"being too close to one that already exists.")
+                                            f"growth rate= {abs(Hc_trans[i, j])} "
+                                            f"being too close to one that already exists.")
                         # Ignore resonances with growth rate smaller than user-defined threshold
                         elif abs(Hc_trans[i, j]) < cw_amp_thres:
                             if verbose:
                                 logger.info(f"    Ignoring resonance from {ids_j} to {ids_i}, freq {delta_f}, "
-                                           f"growth rate= {abs(Hc_trans[i, j])} growth rate is too slow.")
+                                            f"growth rate= {abs(Hc_trans[i, j])} growth rate is too slow.")
                         # Otherwise, add resonance to the list
                         else:
                             resonances_a.append(delta_f)
                             speed_a.append(abs(Hc_trans[i, j]))
                             if verbose:
                                 logger.info(f"    Resonance from {ids_j} to {ids_i}, freq {delta_f}, "
-                                           f"growth rate= {abs(Hc_trans[i, j])}")
+                                            f"growth rate= {abs(Hc_trans[i, j])}")
 
         # Append resonances for this qubit to overall list
         resonances.append(resonances_a)
@@ -172,7 +172,8 @@ def get_resonances(*, nessential, nguard, Hsys, Hc_re=[], Hc_im=[], rotation_fre
     return om, growth_rate
 
 
-def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=[], dipole_coupling=[], rotation_frequency=[], verbose=True):
+def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=[], dipole_coupling=[],
+                 rotation_frequency=[], verbose=True):
     """
     Create standard Hamiltonian operators to model pulse-driven superconducting qubits.
 
@@ -257,7 +258,8 @@ def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=[], di
 
     if verbose:
         logger.info(f"*** {nqubits} coupled quantum systems setup ***")
-        logger.info(f"System Hamiltonian frequencies [GHz]: f01 = {transition_frequency}, rot. freq = {rotation_frequency}")
+        logger.info(f"System Hamiltonian frequencies [GHz]: f01 = {transition_frequency}, "
+                    f"rot. freq = {rotation_frequency}")
         logger.info(f"Selfkerr= {selfkerr}")
         logger.info(f"Coupling: X-Kerr= {crosskerr_coupling}, J-C= {dipole_coupling}")
 

@@ -65,11 +65,11 @@ def _compute_optimal_core_distribution(maxcores: int, ninit: int) -> int:
 
     if ncores != maxcores:
         logger.info(
-            f"Adjusted n_procs from {maxcores} to {ncores} for optimal parallelization across {ninit} initial conditions"
+            f"Adjusted n_procs from {maxcores} to {ncores} for optimal parallelization "
+            f"across {ninit} initial conditions"
         )
 
     return ncores
-
 
 
 def _run(
@@ -146,7 +146,8 @@ def _run(
 
     if max_n_procs is not None:
         logger.warning(
-            f"Already running in MPI context with {size} processes. Ignoring max_n_procs={max_n_procs} and using existing MPI context."
+            f"Already running in MPI context with {size} processes. "
+            f"Ignoring max_n_procs={max_n_procs} and using existing MPI context."
         )
 
     logger.info(f"Running directly in existing MPI context with {size} processes")
