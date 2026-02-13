@@ -29,6 +29,49 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _compute_optimal_core_distribution(maxcores: int, ninit: int) -> int:
+    """Compute optimal MPI core distribution for Quandary.
+
+    Quandary parallelizes over initial conditions (most efficient) and can also
+    use PETSc parallelism within each initial condition. This function finds the
+    best factorization: n_procs = ncores_init * ncores_petsc.
+
+    Args:
+        maxcores: Max number of MPI processes requested.
+        ninit: Number of initial conditions.
+
+    Returns:
+        ncores: Actual total cores used (= ncores_init * ncores_petsc)
+
+    """
+    # Set default number of cores to the number of initial conditions, unless otherwise specified. Make sure ncores is an integer divisible of ninit.
+    ncores_init = ninit
+    if maxcores > -1:
+        ncores_init = min(ninit, maxcores)
+    for i in range(ninit, 0, -1):
+        if ninit % i == 0:  # i is a factor of ninit
+            if i <= ncores_init:
+                ncores_init = i
+                break
+    # Set remaining number of cores for petsc
+    ncores_petsc = 1
+    if maxcores > ncores_init and maxcores % ncores_init == 0:
+        ncores_petsc = int(maxcores / ncores_init)
+    ncores = ncores_init * ncores_petsc
+
+    # Log the distribution
+    if ncores != maxcores:
+        logger.info(
+            f"Adjusted n_procs from {maxcores} to {ncores} for optimal parallelization across {ninit} initial conditions "
+        )
+    logger.info(
+        f"MPI distribution: {ncores_init} cores for initial conditions × "
+        f"{ncores_petsc} cores for PETSc = {ncores} total cores"
+    )
+
+    return ncores
+
+
 def validate(setup: Setup, quiet: bool = False) -> Config:
     """Validate a Setup and return an immutable Config with all defaults applied.
 
@@ -50,7 +93,7 @@ def validate(setup: Setup, quiet: bool = False) -> Config:
 
 def run(
     setup: Setup,
-    n_procs: Optional[int] = None,
+    max_n_procs: Optional[int] = None,
     quiet: bool = False,
     mpi_exec: str = "mpirun",
     nproc_flag: str = "-np",
@@ -69,8 +112,9 @@ def run(
 
     Args:
         setup: A Setup object.
-        n_procs: Number of MPI processes to use. If specified and not in MPI context,
-            spawns subprocess. If None, runs directly (serial or existing MPI context).
+        max_n_procs: Max number of MPI processes to use. If specified and not in MPI context,
+            spawns subprocess. The actual number of cores will be determined based on the number of initial conditions.
+            If None, runs directly (serial or existing MPI context).
         quiet: If True, suppress console output.
         mpi_exec: MPI launcher command (e.g., "mpirun", "srun", "flux run"). Default: "mpirun".
             Only used when spawning subprocess.
@@ -105,21 +149,21 @@ def run(
     comm = MPI.COMM_WORLD
     size = comm.Get_size()
 
-    # If n_procs specified, handle subprocess spawning
-    if n_procs is not None:
+    # If max_n_procs specified, handle subprocess spawning
+    if max_n_procs is not None:
         if size > 1:
             # Already in MPI context - can't spawn subprocess
             raise RuntimeError(
-                f"Cannot spawn subprocess with n_procs={n_procs} - already running in MPI context with {size} processes.\n"
+                f"Cannot spawn subprocess with max_n_procs={max_n_procs} - already running in MPI context with {size} processes.\n"
                 f"Either:\n"
-                f"  1. Remove n_procs parameter to use existing MPI context\n"
+                f"  1. Remove max_n_procs parameter to use existing MPI context\n"
                 f"  2. Run without mpirun and let run() spawn the subprocess"
             )
         # Not in MPI context (size == 1), spawn subprocess
-        logger.info(f"Spawning subprocess with {n_procs} processes using {mpi_exec}")
+        logger.info(f"Spawning subprocess with {max_n_procs} processes using {mpi_exec}")
         return _run_subprocess(
             setup=setup,
-            n_procs=n_procs,
+            max_n_procs=max_n_procs,
             quiet=quiet,
             mpi_exec=mpi_exec,
             nproc_flag=nproc_flag,
@@ -148,7 +192,7 @@ def run(
 
 def _run_subprocess(
     setup: Setup,
-    n_procs: int,
+    max_n_procs: int,
     quiet: bool = False,
     mpi_exec: str = "mpirun",
     nproc_flag: str = "-np",
@@ -157,11 +201,18 @@ def _run_subprocess(
 ) -> Results:
     """Internal: Spawn MPI subprocess to run Quandary.
 
-    Called by run() when n_procs is specified. Writes config to TOML,
+    Called by run() when max_n_procs is specified. Writes config to TOML,
     spawns subprocess with MPI launcher, and returns results.
+
+    The number of processes is automatically optimized based on the number of
+    initial conditions for efficient parallelization.
     """
     # Validate configuration
     validated_config = Config(setup, quiet)
+
+    # Compute optimal core distribution based on number of initial conditions
+    n_init = validated_config.n_initial_conditions
+    total_cores = _compute_optimal_core_distribution(max_n_procs, n_init)
 
     # Use current Python interpreter if not specified
     if python_exec is None:
@@ -183,10 +234,8 @@ def _run_subprocess(
     # Python code to run Quandary from the TOML file
     python_code = f'from quandary.new import run_from_file; run_from_file("{config_file}", quiet={quiet})'
 
-    # Build the command
-    cmd = [mpi_exec, nproc_flag, str(n_procs), python_exec, "-c", python_code]
-
-    logger.info(f"Running MPI with {n_procs} processes")
+    # Build the command with optimized core count
+    cmd = [mpi_exec, nproc_flag, str(total_cores), python_exec, "-c", python_code]
 
     # Run the subprocess
     result = subprocess.run(
