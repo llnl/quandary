@@ -166,14 +166,14 @@ std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, con
     auto* settings_array = toml[key].as_array();
     for (const auto& elem : *settings_array) {
       if (!elem.is_table()) {
-        logger.exitWithError(key + " array elements must be tables");
+        throw validators::ValidationError(key + " array elements must be tables");
       }
       auto* elem_table = elem.as_table();
 
       // Get the subsystem index, or pair of indices for coupling parameters
       const std::string subsystem_key = "subsystem";
       if (!elem_table->contains(subsystem_key)) {
-        logger.exitWithError(key + " array element must have 'subsystem' field");
+        throw validators::ValidationError(key + " array element must have 'subsystem' field");
       }
       // For coupling parameters, subsystem is a pair of indices, otherwise its a single index
       size_t index;
@@ -197,14 +197,14 @@ std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, con
         index = validators::field<size_t>(index_opt, subsystem_key).lessThan(num_subsystems).value();
         settings.resize(num_subsystems, default_settings);
       } else {
-        logger.exitWithError("subsystem field must be an integer index or an array of two indices");
+        throw validators::ValidationError("subsystem field must be an integer index or an array of two indices");
       }
       // Parse the settings for this entry
       settings[index] = parse_func(*elem_table);
     }
     return settings;
   } else {
-    logger.exitWithError(key + " must be a table (applies to all) or an array of tables (per-subsystem specification)");
+    throw validators::ValidationError(key + " must be a table (applies to all) or an array of tables (per-subsystem specification)");
   }
   return std::vector<SettingsType>();
 }
@@ -292,243 +292,239 @@ OptimTargetSettings parseOptimTargetToml(const toml::table& toml, size_t num_osc
  * Validation of values happens in the Setup constructor.
  */
 Setup extractSetup(const toml::table& toml, const MPILogger& logger) {
-  try {
-    Setup input;
+  Setup input;
 
-    // Get section tables - only [system] is required
-    const auto* system_table = toml["system"].as_table();
-    if (system_table == nullptr) {
-      throw validators::ValidationError("system", "table is required");
-    }
-
-    // Other tables are optional - use empty table as fallback
-    const auto control_table = toml["control"].is_table() ? *toml["control"].as_table() : toml::table{};
-    const auto optimization_table = toml["optimization"].is_table() ? *toml["optimization"].as_table() : toml::table{};
-    const auto output_table = toml["output"].is_table() ? *toml["output"].as_table() : toml::table{};
-    const auto solver_table = toml["solver"].is_table() ? *toml["solver"].as_table() : toml::table{};
-
-    // Extract nlevels first - needed for scalar-to-vector expansion
-    input.nlevels = extractTomlVector<size_t>(*system_table, "nlevels");
-    if (!input.nlevels.has_value() || input.nlevels->empty()) {
-      throw validators::ValidationError("nlevels", "field not found or empty");
-    }
-    size_t num_osc = input.nlevels->size();
-    size_t num_pairs = (num_osc - 1) * num_osc / 2;
-
-    // System parameters
-    input.nessential = extractScalarOrVector<size_t>(*system_table, "nessential", num_osc);
-    input.ntime = extractToml<size_t>(*system_table, "ntime");
-    input.dt = extractToml<double>(*system_table, "dt");
-    input.transition_frequency = extractScalarOrVector<double>(*system_table, "transition_frequency", num_osc);
-    input.selfkerr = extractScalarOrVector<double>(*system_table, "selfkerr", num_osc);
-
-    // Parse crosskerr coupling
-    if (system_table->contains("crosskerr_coupling")) {
-      if ((*system_table)["crosskerr_coupling"].is_value()) {
-        auto single_val = extractToml<double>(*system_table, "crosskerr_coupling");
-        if (single_val.has_value()) {
-          input.crosskerr_coupling = std::vector<double>(num_pairs, *single_val);
-        }
-      } else {
-        auto parseFunc = [](const toml::table& t) {
-          auto val_opt = extractToml<double>(t, "value");
-          return validators::field<double>(val_opt, "value").value();
-        };
-        input.crosskerr_coupling = parsePerSubsystemSettings<double>(*system_table, "crosskerr_coupling", num_osc, ConfigDefaults::CROSSKERR_COUPLING, parseFunc, logger);
-      }
-    }
-
-    // Parse dipole_coupling coupling
-    if (system_table->contains("dipole_coupling")) {
-      if ((*system_table)["dipole_coupling"].is_value()) {
-        auto single_val = extractToml<double>(*system_table, "dipole_coupling");
-        if (single_val.has_value()) {
-          input.dipole_coupling = std::vector<double>(num_pairs, *single_val);
-        }
-      } else {
-        auto parseFunc = [](const toml::table& t) {
-          auto val_opt = extractToml<double>(t, "value");
-          return validators::field<double>(val_opt, "value").value();
-        };
-        input.dipole_coupling = parsePerSubsystemSettings<double>(*system_table, "dipole_coupling", num_osc, ConfigDefaults::DIPOLE_COUPLING, parseFunc, logger);
-      }
-    }
-
-    input.rotation_frequency = extractScalarOrVector<double>(*system_table, "rotation_frequency", num_osc);
-
-    // Parse decoherence settings
-    if (system_table->contains("decoherence")) {
-      auto* decoherence_table = (*system_table)["decoherence"].as_table();
-      if (!decoherence_table) {
-        throw validators::ValidationError("decoherence", "must be a table");
-      }
-      auto type_str = extractToml<std::string>(*decoherence_table, "type").value_or("none");
-      input.decoherence_type = parseEnum(type_str, DECOHERENCE_TYPE_MAP, ConfigDefaults::DECOHERENCE_TYPE);
-      input.decay_time = extractScalarOrVector<double>(*decoherence_table, "decay_time", num_osc);
-      input.dephase_time = extractScalarOrVector<double>(*decoherence_table, "dephase_time", num_osc);
-    }
-
-    // Parse initial condition
-    if (system_table->contains("initial_condition")) {
-      auto* init_table = (*system_table)["initial_condition"].as_table();
-      if (!init_table) {
-        throw validators::ValidationError("initial_condition", "must be a table");
-      }
-      auto type_str = extractToml<std::string>(*init_table, "type");
-      if (!type_str.has_value()) {
-        throw validators::ValidationError("initial_condition.type", "field not found");
-      }
-      auto type_enum = parseEnum(*type_str, INITCOND_TYPE_MAP);
-      if (!type_enum.has_value()) {
-        throw validators::ValidationError("initial_condition.type", "unknown type: " + *type_str);
-      }
-      InitialConditionSettings init_cond;
-      init_cond.type = type_enum.value();
-      init_cond.levels = getOptionalVector<size_t>((*init_table)["levels"]);
-      init_cond.filename = getOptional<std::string>((*init_table)["filename"]);
-      init_cond.subsystem = getOptionalVector<size_t>((*init_table)["subsystem"]);
-      input.initial_condition = init_cond;
-    }
-
-    // Hamiltonian files (inherently optional)
-    input.hamiltonian_file_Hsys = getOptional<std::string>((*system_table)["hamiltonian_file_Hsys"]);
-    input.hamiltonian_file_Hc = getOptional<std::string>((*system_table)["hamiltonian_file_Hc"]);
-
-    // Control parameters
-    input.control_zero_boundary_condition = extractToml<bool>(control_table, "zero_boundary_condition");
-
-    if (control_table.contains("parameterization")) {
-      input.control_parameterizations = parsePerSubsystemSettings<ControlParameterizationSettings>(
-          control_table, "parameterization", num_osc, ControlParameterizationSettings{}, parseControlParamSpecsToml, logger);
-    }
-
-    if (control_table.contains("initialization")) {
-      input.control_initializations = parsePerSubsystemSettings<ControlInitializationSettings>(
-          control_table, "initialization", num_osc, ControlInitializationSettings{}, parseControlInitSpecsToml, logger);
-    }
-
-    input.control_amplitude_bounds = extractScalarOrVector<double>(control_table, "amplitude_bound", num_osc);
-
-    // Parse carrier frequencies
-    if (control_table.contains("carrier_frequency")) {
-      auto* carrier_freq_array = control_table["carrier_frequency"].as_array();
-      if (carrier_freq_array && !carrier_freq_array->empty() && !carrier_freq_array->front().is_table()) {
-        // Direct array format: carrier_frequency = [1.0, 2.0]
-        auto values = extractTomlVector<double>(control_table, "carrier_frequency");
-        if (values.has_value()) {
-          input.carrier_frequencies = std::vector<std::vector<double>>(num_osc, *values);
-        }
-      } else {
-        // Table or array of tables format
-        auto parseFunc = [](const toml::table& t) {
-          auto val_opt = extractTomlVector<double>(t, "value");
-          return validators::vectorField<double>(val_opt, "value").value();
-        };
-        std::vector<double> default_carrier_freq = {ConfigDefaults::CARRIER_FREQ};
-        input.carrier_frequencies = parsePerSubsystemSettings<std::vector<double>>(
-            control_table, "carrier_frequency", num_osc, default_carrier_freq, parseFunc, logger);
-      }
-    }
-
-    // Optimization parameters
-    input.optim_target = parseOptimTargetToml(optimization_table, num_osc);
-
-    auto objective_str = optimization_table["objective"].value<std::string>();
-    if (objective_str.has_value()) {
-      input.optim_objective = parseEnum(*objective_str, OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
-    }
-
-    input.optim_weights = extractTomlVector<double>(optimization_table, "weights");
-
-    // Tolerance table
-    if (optimization_table.contains("tolerance")) {
-      const auto* tol_table = optimization_table["tolerance"].as_table();
-      if (tol_table) {
-        input.optim_tol_grad_abs = extractToml<double>(*tol_table, "grad_abs");
-        input.optim_tol_grad_rel = extractToml<double>(*tol_table, "grad_rel");
-        input.optim_tol_final_cost = extractToml<double>(*tol_table, "final_cost");
-        input.optim_tol_infidelity = extractToml<double>(*tol_table, "infidelity");
-      }
-    }
-
-    input.optim_maxiter = extractToml<size_t>(optimization_table, "maxiter");
-
-    // Tikhonov table
-    if (optimization_table.contains("tikhonov")) {
-      const auto* regul_table = optimization_table["tikhonov"].as_table();
-      if (regul_table) {
-        input.optim_tikhonov_coeff = extractToml<double>(*regul_table, "coeff");
-        input.optim_tikhonov_use_x0 = extractToml<bool>(*regul_table, "use_x0");
-      }
-    }
-
-    // Penalty table
-    if (optimization_table.contains("penalty")) {
-      const auto* penalty_table = optimization_table["penalty"].as_table();
-      if (penalty_table) {
-        input.optim_penalty_leakage = extractToml<double>(*penalty_table, "leakage");
-        input.optim_penalty_weightedcost = extractToml<double>(*penalty_table, "weightedcost");
-        input.optim_penalty_weightedcost_width = extractToml<double>(*penalty_table, "weightedcost_width");
-        input.optim_penalty_dpdm = extractToml<double>(*penalty_table, "dpdm");
-        input.optim_penalty_energy = extractToml<double>(*penalty_table, "energy");
-        input.optim_penalty_variation = extractToml<double>(*penalty_table, "variation");
-      }
-    }
-
-    // Output parameters
-    input.output_directory = extractToml<std::string>(output_table, "directory");
-
-    // Parse observables (string array to enum vector)
-    if (auto observables_array = output_table["observables"].as_array()) {
-      std::vector<OutputType> observables;
-      for (auto&& elem : *observables_array) {
-        if (auto str = elem.value<std::string>()) {
-          auto enum_val = parseEnum(*str, OUTPUT_TYPE_MAP);
-          if (!enum_val.has_value()) {
-            throw validators::ValidationError("observables", "unknown output type: " + *str);
-          }
-          observables.push_back(enum_val.value());
-        } else {
-          throw validators::ValidationError("observables", "array must contain strings");
-        }
-      }
-      input.output_observables = observables;
-    }
-
-    input.output_timestep_stride = extractToml<size_t>(output_table, "timestep_stride");
-    input.output_optimization_stride = extractToml<size_t>(output_table, "optimization_stride");
-
-    // Solver parameters
-    auto runtype_str = solver_table["runtype"].value<std::string>();
-    if (runtype_str.has_value()) {
-      input.runtype = parseEnum(*runtype_str, RUN_TYPE_MAP, ConfigDefaults::RUNTYPE);
-    }
-
-    input.usematfree = extractToml<bool>(solver_table, "usematfree");
-
-    // Linearsolver table
-    if (solver_table.contains("linearsolver")) {
-      const auto* ls_table = solver_table["linearsolver"].as_table();
-      if (ls_table) {
-        auto type_str = extractToml<std::string>(*ls_table, "type");
-        if (type_str.has_value()) {
-          input.linearsolver_type = parseEnum(*type_str, LINEAR_SOLVER_TYPE_MAP, ConfigDefaults::LINEARSOLVER_TYPE);
-        }
-        input.linearsolver_maxiter = extractToml<size_t>(*ls_table, "maxiter");
-      }
-    }
-
-    auto timestepper_str = solver_table["timestepper"].value<std::string>();
-    if (timestepper_str.has_value()) {
-      input.timestepper_type = parseEnum(*timestepper_str, TIME_STEPPER_TYPE_MAP, ConfigDefaults::TIMESTEPPER_TYPE);
-    }
-
-    input.rand_seed = extractToml<int>(solver_table, "rand_seed");
-
-    return input;
-  } catch (const validators::ValidationError& e) {
-    logger.exitWithError(std::string(e.what()));
+  // Get section tables - only [system] is required
+  const auto* system_table = toml["system"].as_table();
+  if (system_table == nullptr) {
+    throw validators::ValidationError("system", "table is required");
   }
+
+  // Other tables are optional - use empty table as fallback
+  const auto control_table = toml["control"].is_table() ? *toml["control"].as_table() : toml::table{};
+  const auto optimization_table = toml["optimization"].is_table() ? *toml["optimization"].as_table() : toml::table{};
+  const auto output_table = toml["output"].is_table() ? *toml["output"].as_table() : toml::table{};
+  const auto solver_table = toml["solver"].is_table() ? *toml["solver"].as_table() : toml::table{};
+
+  // Extract nlevels first - needed for scalar-to-vector expansion
+  input.nlevels = extractTomlVector<size_t>(*system_table, "nlevels");
+  if (!input.nlevels.has_value() || input.nlevels->empty()) {
+    throw validators::ValidationError("nlevels", "field not found or empty");
+  }
+  size_t num_osc = input.nlevels->size();
+  size_t num_pairs = (num_osc - 1) * num_osc / 2;
+
+  // System parameters
+  input.nessential = extractScalarOrVector<size_t>(*system_table, "nessential", num_osc);
+  input.ntime = extractToml<size_t>(*system_table, "ntime");
+  input.dt = extractToml<double>(*system_table, "dt");
+  input.transition_frequency = extractScalarOrVector<double>(*system_table, "transition_frequency", num_osc);
+  input.selfkerr = extractScalarOrVector<double>(*system_table, "selfkerr", num_osc);
+
+  // Parse crosskerr coupling
+  if (system_table->contains("crosskerr_coupling")) {
+    if ((*system_table)["crosskerr_coupling"].is_value()) {
+      auto single_val = extractToml<double>(*system_table, "crosskerr_coupling");
+      if (single_val.has_value()) {
+        input.crosskerr_coupling = std::vector<double>(num_pairs, *single_val);
+      }
+    } else {
+      auto parseFunc = [](const toml::table& t) {
+        auto val_opt = extractToml<double>(t, "value");
+        return validators::field<double>(val_opt, "value").value();
+      };
+      input.crosskerr_coupling = parsePerSubsystemSettings<double>(*system_table, "crosskerr_coupling", num_osc, ConfigDefaults::CROSSKERR_COUPLING, parseFunc, logger);
+    }
+  }
+
+  // Parse dipole_coupling coupling
+  if (system_table->contains("dipole_coupling")) {
+    if ((*system_table)["dipole_coupling"].is_value()) {
+      auto single_val = extractToml<double>(*system_table, "dipole_coupling");
+      if (single_val.has_value()) {
+        input.dipole_coupling = std::vector<double>(num_pairs, *single_val);
+      }
+    } else {
+      auto parseFunc = [](const toml::table& t) {
+        auto val_opt = extractToml<double>(t, "value");
+        return validators::field<double>(val_opt, "value").value();
+      };
+      input.dipole_coupling = parsePerSubsystemSettings<double>(*system_table, "dipole_coupling", num_osc, ConfigDefaults::DIPOLE_COUPLING, parseFunc, logger);
+    }
+  }
+
+  input.rotation_frequency = extractScalarOrVector<double>(*system_table, "rotation_frequency", num_osc);
+
+  // Parse decoherence settings
+  if (system_table->contains("decoherence")) {
+    auto* decoherence_table = (*system_table)["decoherence"].as_table();
+    if (!decoherence_table) {
+      throw validators::ValidationError("decoherence", "must be a table");
+    }
+    auto type_str = extractToml<std::string>(*decoherence_table, "type").value_or("none");
+    input.decoherence_type = parseEnum(type_str, DECOHERENCE_TYPE_MAP, ConfigDefaults::DECOHERENCE_TYPE);
+    input.decay_time = extractScalarOrVector<double>(*decoherence_table, "decay_time", num_osc);
+    input.dephase_time = extractScalarOrVector<double>(*decoherence_table, "dephase_time", num_osc);
+  }
+
+  // Parse initial condition
+  if (system_table->contains("initial_condition")) {
+    auto* init_table = (*system_table)["initial_condition"].as_table();
+    if (!init_table) {
+      throw validators::ValidationError("initial_condition", "must be a table");
+    }
+    auto type_str = extractToml<std::string>(*init_table, "type");
+    if (!type_str.has_value()) {
+      throw validators::ValidationError("initial_condition.type", "field not found");
+    }
+    auto type_enum = parseEnum(*type_str, INITCOND_TYPE_MAP);
+    if (!type_enum.has_value()) {
+      throw validators::ValidationError("initial_condition.type", "unknown type: " + *type_str);
+    }
+    InitialConditionSettings init_cond;
+    init_cond.type = type_enum.value();
+    init_cond.levels = getOptionalVector<size_t>((*init_table)["levels"]);
+    init_cond.filename = getOptional<std::string>((*init_table)["filename"]);
+    init_cond.subsystem = getOptionalVector<size_t>((*init_table)["subsystem"]);
+    input.initial_condition = init_cond;
+  }
+
+  // Hamiltonian files (inherently optional)
+  input.hamiltonian_file_Hsys = getOptional<std::string>((*system_table)["hamiltonian_file_Hsys"]);
+  input.hamiltonian_file_Hc = getOptional<std::string>((*system_table)["hamiltonian_file_Hc"]);
+
+  // Control parameters
+  input.control_zero_boundary_condition = extractToml<bool>(control_table, "zero_boundary_condition");
+
+  if (control_table.contains("parameterization")) {
+    input.control_parameterizations = parsePerSubsystemSettings<ControlParameterizationSettings>(
+        control_table, "parameterization", num_osc, ControlParameterizationSettings{}, parseControlParamSpecsToml, logger);
+  }
+
+  if (control_table.contains("initialization")) {
+    input.control_initializations = parsePerSubsystemSettings<ControlInitializationSettings>(
+        control_table, "initialization", num_osc, ControlInitializationSettings{}, parseControlInitSpecsToml, logger);
+  }
+
+  input.control_amplitude_bounds = extractScalarOrVector<double>(control_table, "amplitude_bound", num_osc);
+
+  // Parse carrier frequencies
+  if (control_table.contains("carrier_frequency")) {
+    auto* carrier_freq_array = control_table["carrier_frequency"].as_array();
+    if (carrier_freq_array && !carrier_freq_array->empty() && !carrier_freq_array->front().is_table()) {
+      // Direct array format: carrier_frequency = [1.0, 2.0]
+      auto values = extractTomlVector<double>(control_table, "carrier_frequency");
+      if (values.has_value()) {
+        input.carrier_frequencies = std::vector<std::vector<double>>(num_osc, *values);
+      }
+    } else {
+      // Table or array of tables format
+      auto parseFunc = [](const toml::table& t) {
+        auto val_opt = extractTomlVector<double>(t, "value");
+        return validators::vectorField<double>(val_opt, "value").value();
+      };
+      std::vector<double> default_carrier_freq = {ConfigDefaults::CARRIER_FREQ};
+      input.carrier_frequencies = parsePerSubsystemSettings<std::vector<double>>(
+          control_table, "carrier_frequency", num_osc, default_carrier_freq, parseFunc, logger);
+    }
+  }
+
+  // Optimization parameters
+  input.optim_target = parseOptimTargetToml(optimization_table, num_osc);
+
+  auto objective_str = optimization_table["objective"].value<std::string>();
+  if (objective_str.has_value()) {
+    input.optim_objective = parseEnum(*objective_str, OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
+  }
+
+  input.optim_weights = extractTomlVector<double>(optimization_table, "weights");
+
+  // Tolerance table
+  if (optimization_table.contains("tolerance")) {
+    const auto* tol_table = optimization_table["tolerance"].as_table();
+    if (tol_table) {
+      input.optim_tol_grad_abs = extractToml<double>(*tol_table, "grad_abs");
+      input.optim_tol_grad_rel = extractToml<double>(*tol_table, "grad_rel");
+      input.optim_tol_final_cost = extractToml<double>(*tol_table, "final_cost");
+      input.optim_tol_infidelity = extractToml<double>(*tol_table, "infidelity");
+    }
+  }
+
+  input.optim_maxiter = extractToml<size_t>(optimization_table, "maxiter");
+
+  // Tikhonov table
+  if (optimization_table.contains("tikhonov")) {
+    const auto* regul_table = optimization_table["tikhonov"].as_table();
+    if (regul_table) {
+      input.optim_tikhonov_coeff = extractToml<double>(*regul_table, "coeff");
+      input.optim_tikhonov_use_x0 = extractToml<bool>(*regul_table, "use_x0");
+    }
+  }
+
+  // Penalty table
+  if (optimization_table.contains("penalty")) {
+    const auto* penalty_table = optimization_table["penalty"].as_table();
+    if (penalty_table) {
+      input.optim_penalty_leakage = extractToml<double>(*penalty_table, "leakage");
+      input.optim_penalty_weightedcost = extractToml<double>(*penalty_table, "weightedcost");
+      input.optim_penalty_weightedcost_width = extractToml<double>(*penalty_table, "weightedcost_width");
+      input.optim_penalty_dpdm = extractToml<double>(*penalty_table, "dpdm");
+      input.optim_penalty_energy = extractToml<double>(*penalty_table, "energy");
+      input.optim_penalty_variation = extractToml<double>(*penalty_table, "variation");
+    }
+  }
+
+  // Output parameters
+  input.output_directory = extractToml<std::string>(output_table, "directory");
+
+  // Parse observables (string array to enum vector)
+  if (auto observables_array = output_table["observables"].as_array()) {
+    std::vector<OutputType> observables;
+    for (auto&& elem : *observables_array) {
+      if (auto str = elem.value<std::string>()) {
+        auto enum_val = parseEnum(*str, OUTPUT_TYPE_MAP);
+        if (!enum_val.has_value()) {
+          throw validators::ValidationError("observables", "unknown output type: " + *str);
+        }
+        observables.push_back(enum_val.value());
+      } else {
+        throw validators::ValidationError("observables", "array must contain strings");
+      }
+    }
+    input.output_observables = observables;
+  }
+
+  input.output_timestep_stride = extractToml<size_t>(output_table, "timestep_stride");
+  input.output_optimization_stride = extractToml<size_t>(output_table, "optimization_stride");
+
+  // Solver parameters
+  auto runtype_str = solver_table["runtype"].value<std::string>();
+  if (runtype_str.has_value()) {
+    input.runtype = parseEnum(*runtype_str, RUN_TYPE_MAP, ConfigDefaults::RUNTYPE);
+  }
+
+  input.usematfree = extractToml<bool>(solver_table, "usematfree");
+
+  // Linearsolver table
+  if (solver_table.contains("linearsolver")) {
+    const auto* ls_table = solver_table["linearsolver"].as_table();
+    if (ls_table) {
+      auto type_str = extractToml<std::string>(*ls_table, "type");
+      if (type_str.has_value()) {
+        input.linearsolver_type = parseEnum(*type_str, LINEAR_SOLVER_TYPE_MAP, ConfigDefaults::LINEARSOLVER_TYPE);
+      }
+      input.linearsolver_maxiter = extractToml<size_t>(*ls_table, "maxiter");
+    }
+  }
+
+  auto timestepper_str = solver_table["timestepper"].value<std::string>();
+  if (timestepper_str.has_value()) {
+    input.timestepper_type = parseEnum(*timestepper_str, TIME_STEPPER_TYPE_MAP, ConfigDefaults::TIMESTEPPER_TYPE);
+  }
+
+  input.rand_seed = extractToml<int>(solver_table, "rand_seed");
+
+  return input;
 }
 
 } // namespace
@@ -537,139 +533,134 @@ Config::Config(const toml::table& toml, bool quiet_mode)
     : Config(extractSetup(toml, MPILogger(quiet_mode)), quiet_mode) {}
 
 Config::Config(const Setup& input, bool quiet_mode) : logger(MPILogger(quiet_mode)) {
-  try {
-    // System parameters
-    data.nlevels = validators::vectorField<size_t>(input.nlevels, "nlevels").minLength(1).positive().value();
-    size_t num_osc = data.nlevels.size();
+  // System parameters
+  data.nlevels = validators::vectorField<size_t>(input.nlevels, "nlevels").minLength(1).positive().value();
+  size_t num_osc = data.nlevels.size();
 
-    data.nessential = validators::vectorField<size_t>(input.nessential, "nessential").valueOr(data.nlevels);
+  data.nessential = validators::vectorField<size_t>(input.nessential, "nessential").valueOr(data.nlevels);
 
-    data.ntime = validators::field<size_t>(input.ntime, "ntime").positive().value();
+  data.ntime = validators::field<size_t>(input.ntime, "ntime").positive().value();
 
-    data.dt = validators::field<double>(input.dt, "dt").positive().value();
+  data.dt = validators::field<double>(input.dt, "dt").positive().value();
 
-    data.transition_frequency = validators::vectorField<double>(input.transition_frequency, "transition_frequency").hasLength(num_osc).value();
+  data.transition_frequency = validators::vectorField<double>(input.transition_frequency, "transition_frequency").hasLength(num_osc).value();
 
-    data.selfkerr = validators::vectorField<double>(input.selfkerr, "selfkerr").valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
+  data.selfkerr = validators::vectorField<double>(input.selfkerr, "selfkerr").valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
 
-    size_t num_pairs = (num_osc - 1) * num_osc / 2;
-    data.crosskerr_coupling = validators::vectorField<double>(input.crosskerr_coupling, "crosskerr_coupling").valueOr(std::vector<double>(num_pairs, ConfigDefaults::CROSSKERR_COUPLING));
+  size_t num_pairs = (num_osc - 1) * num_osc / 2;
+  data.crosskerr_coupling = validators::vectorField<double>(input.crosskerr_coupling, "crosskerr_coupling").valueOr(std::vector<double>(num_pairs, ConfigDefaults::CROSSKERR_COUPLING));
 
-    data.dipole_coupling = validators::vectorField<double>(input.dipole_coupling, "dipole_coupling").valueOr(std::vector<double>(num_pairs, ConfigDefaults::DIPOLE_COUPLING));
+  data.dipole_coupling = validators::vectorField<double>(input.dipole_coupling, "dipole_coupling").valueOr(std::vector<double>(num_pairs, ConfigDefaults::DIPOLE_COUPLING));
 
-    data.rotation_frequency = validators::vectorField<double>(input.rotation_frequency, "rotation_frequency").valueOr(std::vector<double>(num_osc, ConfigDefaults::ROTATION_FREQUENCY));
+  data.rotation_frequency = validators::vectorField<double>(input.rotation_frequency, "rotation_frequency").valueOr(std::vector<double>(num_osc, ConfigDefaults::ROTATION_FREQUENCY));
 
-    data.decoherence_type = input.decoherence_type.value_or(ConfigDefaults::DECOHERENCE_TYPE);
+  data.decoherence_type = input.decoherence_type.value_or(ConfigDefaults::DECOHERENCE_TYPE);
 
-    data.decay_time = validators::vectorField<double>(input.decay_time, "decay_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
+  data.decay_time = validators::vectorField<double>(input.decay_time, "decay_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
 
-    data.dephase_time = validators::vectorField<double>(input.dephase_time, "dephase_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
+  data.dephase_time = validators::vectorField<double>(input.dephase_time, "dephase_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
 
-    if (!input.initial_condition.has_value()) {
-      throw validators::ValidationError("initial_condition", "field not found");
-    }
-    data.initial_condition = input.initial_condition.value();
-
-    // Inherently optional fields
-    data.hamiltonian_file_Hsys = input.hamiltonian_file_Hsys;
-    data.hamiltonian_file_Hc = input.hamiltonian_file_Hc;
-
-    // Control parameters
-    data.control_zero_boundary_condition = input.control_zero_boundary_condition.value_or(ConfigDefaults::CONTROL_ZERO_BOUNDARY_CONDITION);
-
-    ControlParameterizationSettings default_param;
-    data.control_parameterizations = input.control_parameterizations.value_or(std::vector<ControlParameterizationSettings>(num_osc, default_param));
-
-    ControlInitializationSettings default_init;
-    data.control_initializations = input.control_initializations.value_or(std::vector<ControlInitializationSettings>(num_osc, default_init));
-
-    // If only one FILE-type initialization is provided, replicate it to all oscillators
-    if (data.control_initializations.size() == 1 && data.control_initializations[0].type == ControlInitializationType::FILE) {
-      data.control_initializations.resize(num_osc, data.control_initializations[0]);
-    }
-
-    // Validate phase for each control initialization
-    for (auto& init : data.control_initializations) {
-      init.phase = validators::field<double>(init.phase, "phase")
-        .greaterThanEqual(0.0)
-        .valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
-    }
-
-    data.control_amplitude_bounds = validators::vectorField<double>(input.control_amplitude_bounds, "control_amplitude_bounds").valueOr(std::vector<double>(num_osc, ConfigDefaults::CONTROL_AMPLITUDE_BOUND));
-
-    std::vector<double> default_carrier_freq = {ConfigDefaults::CARRIER_FREQ};
-    data.carrier_frequencies = input.carrier_frequencies.value_or(std::vector<std::vector<double>>(num_osc, default_carrier_freq));
-
-    // Validate carrier frequencies
-    if (data.carrier_frequencies.size() != num_osc) {
-      throw validators::ValidationError("carrier_frequency", "must have exactly " + std::to_string(num_osc) + " entries (one per oscillator), got " + std::to_string(data.carrier_frequencies.size()));
-    }
-    for (size_t i = 0; i < data.carrier_frequencies.size(); i++) {
-      if (data.carrier_frequencies[i].empty()) {
-        throw validators::ValidationError("carrier_frequency", "oscillator " + std::to_string(i) + " has no carrier frequencies. Each oscillator must have at least one carrier frequency.");
-      }
-    }
-
-    // Optimization parameters
-    OptimTargetSettings default_target;
-    data.optim_target = input.optim_target.value_or(default_target);
-
-    data.optim_objective = input.optim_objective.value_or(ConfigDefaults::OPTIM_OBJECTIVE);
-
-    data.optim_weights = validators::vectorField<double>(input.optim_weights, "optim_weights").valueOr(std::vector<double>{ConfigDefaults::OPTIM_WEIGHT});
-
-    data.optim_tol_grad_abs = validators::field<double>(input.optim_tol_grad_abs, "optim_tol_grad_abs").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_ABS);
-
-    data.optim_tol_grad_rel = validators::field<double>(input.optim_tol_grad_rel, "optim_tol_grad_rel").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_REL);
-
-    data.optim_tol_final_cost = validators::field<double>(input.optim_tol_final_cost, "optim_tol_finalcost").positive().valueOr(ConfigDefaults::OPTIM_TOL_FINAL_COST);
-
-    data.optim_tol_infidelity = validators::field<double>(input.optim_tol_infidelity, "optim_tol_infidelity").positive().valueOr(ConfigDefaults::OPTIM_TOL_INFIDELITY);
-
-    data.optim_maxiter = input.optim_maxiter.value_or(ConfigDefaults::OPTIM_MAXITER);
-
-    data.optim_tikhonov_coeff = validators::field<double>(input.optim_tikhonov_coeff, "optim_tikhonov_coeff").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_TIKHONOV_COEFF);
-
-    data.optim_tikhonov_use_x0 = input.optim_tikhonov_use_x0.value_or(ConfigDefaults::OPTIM_TIKHONOV_USE_X0);
-
-    data.optim_penalty_leakage = validators::field<double>(input.optim_penalty_leakage, "optim_penalty_leakage").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
-
-    data.optim_penalty_weightedcost = validators::field<double>(input.optim_penalty_weightedcost, "optim_penalty_weightedcost").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
-
-    data.optim_penalty_weightedcost_width = validators::field<double>(input.optim_penalty_weightedcost_width, "optim_penalty_weightedcost_width").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH);
-
-    data.optim_penalty_dpdm = validators::field<double>(input.optim_penalty_dpdm, "optim_penalty_dpdm").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
-
-    data.optim_penalty_energy = validators::field<double>(input.optim_penalty_energy, "optim_penalty_energy").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
-
-    data.optim_penalty_variation = validators::field<double>(input.optim_penalty_variation, "optim_penalty_variation").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
-
-    // Output parameters
-    data.output_directory = input.output_directory.value_or(ConfigDefaults::OUTPUT_DIRECTORY);
-
-    data.output_observables = input.output_observables.value_or(std::vector<OutputType>{});
-
-    data.output_timestep_stride = input.output_timestep_stride.value_or(ConfigDefaults::OUTPUT_TIMESTEP_STRIDE);
-
-    data.output_optimization_stride = input.output_optimization_stride.value_or(ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE);
-
-    // Solver parameters
-    data.runtype = input.runtype.value_or(ConfigDefaults::RUNTYPE);
-
-    data.usematfree = input.usematfree.value_or(ConfigDefaults::USEMATFREE);
-
-    data.linearsolver_type = input.linearsolver_type.value_or(ConfigDefaults::LINEARSOLVER_TYPE);
-
-    data.linearsolver_maxiter = validators::field<size_t>(input.linearsolver_maxiter, "linearsolver_maxiter").positive().valueOr(ConfigDefaults::LINEARSOLVER_MAXITER);
-
-    data.timestepper_type = input.timestepper_type.value_or(ConfigDefaults::TIMESTEPPER_TYPE);
-
-    int rand_seed_val = input.rand_seed.value_or(ConfigDefaults::RAND_SEED);
-    setRandSeed(rand_seed_val);
-
-  } catch (const validators::ValidationError& e) {
-    logger.exitWithError(std::string(e.what()));
+  if (!input.initial_condition.has_value()) {
+    throw validators::ValidationError("initial_condition", "field not found");
   }
+  data.initial_condition = input.initial_condition.value();
+
+  // Inherently optional fields
+  data.hamiltonian_file_Hsys = input.hamiltonian_file_Hsys;
+  data.hamiltonian_file_Hc = input.hamiltonian_file_Hc;
+
+  // Control parameters
+  data.control_zero_boundary_condition = input.control_zero_boundary_condition.value_or(ConfigDefaults::CONTROL_ZERO_BOUNDARY_CONDITION);
+
+  ControlParameterizationSettings default_param;
+  data.control_parameterizations = input.control_parameterizations.value_or(std::vector<ControlParameterizationSettings>(num_osc, default_param));
+
+  ControlInitializationSettings default_init;
+  data.control_initializations = input.control_initializations.value_or(std::vector<ControlInitializationSettings>(num_osc, default_init));
+
+  // If only one FILE-type initialization is provided, replicate it to all oscillators
+  if (data.control_initializations.size() == 1 && data.control_initializations[0].type == ControlInitializationType::FILE) {
+    data.control_initializations.resize(num_osc, data.control_initializations[0]);
+  }
+
+  // Validate phase for each control initialization
+  for (auto& init : data.control_initializations) {
+    init.phase = validators::field<double>(init.phase, "phase")
+      .greaterThanEqual(0.0)
+      .valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
+  }
+
+  data.control_amplitude_bounds = validators::vectorField<double>(input.control_amplitude_bounds, "control_amplitude_bounds").valueOr(std::vector<double>(num_osc, ConfigDefaults::CONTROL_AMPLITUDE_BOUND));
+
+  std::vector<double> default_carrier_freq = {ConfigDefaults::CARRIER_FREQ};
+  data.carrier_frequencies = input.carrier_frequencies.value_or(std::vector<std::vector<double>>(num_osc, default_carrier_freq));
+
+  // Validate carrier frequencies
+  if (data.carrier_frequencies.size() != num_osc) {
+    throw validators::ValidationError("carrier_frequency", "must have exactly " + std::to_string(num_osc) + " entries (one per oscillator), got " + std::to_string(data.carrier_frequencies.size()));
+  }
+  for (size_t i = 0; i < data.carrier_frequencies.size(); i++) {
+    if (data.carrier_frequencies[i].empty()) {
+      throw validators::ValidationError("carrier_frequency", "oscillator " + std::to_string(i) + " has no carrier frequencies. Each oscillator must have at least one carrier frequency.");
+    }
+  }
+
+  // Optimization parameters
+  OptimTargetSettings default_target;
+  data.optim_target = input.optim_target.value_or(default_target);
+
+  data.optim_objective = input.optim_objective.value_or(ConfigDefaults::OPTIM_OBJECTIVE);
+
+  data.optim_weights = validators::vectorField<double>(input.optim_weights, "optim_weights").valueOr(std::vector<double>{ConfigDefaults::OPTIM_WEIGHT});
+
+  data.optim_tol_grad_abs = validators::field<double>(input.optim_tol_grad_abs, "optim_tol_grad_abs").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_ABS);
+
+  data.optim_tol_grad_rel = validators::field<double>(input.optim_tol_grad_rel, "optim_tol_grad_rel").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_REL);
+
+  data.optim_tol_final_cost = validators::field<double>(input.optim_tol_final_cost, "optim_tol_finalcost").positive().valueOr(ConfigDefaults::OPTIM_TOL_FINAL_COST);
+
+  data.optim_tol_infidelity = validators::field<double>(input.optim_tol_infidelity, "optim_tol_infidelity").positive().valueOr(ConfigDefaults::OPTIM_TOL_INFIDELITY);
+
+  data.optim_maxiter = input.optim_maxiter.value_or(ConfigDefaults::OPTIM_MAXITER);
+
+  data.optim_tikhonov_coeff = validators::field<double>(input.optim_tikhonov_coeff, "optim_tikhonov_coeff").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_TIKHONOV_COEFF);
+
+  data.optim_tikhonov_use_x0 = input.optim_tikhonov_use_x0.value_or(ConfigDefaults::OPTIM_TIKHONOV_USE_X0);
+
+  data.optim_penalty_leakage = validators::field<double>(input.optim_penalty_leakage, "optim_penalty_leakage").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
+
+  data.optim_penalty_weightedcost = validators::field<double>(input.optim_penalty_weightedcost, "optim_penalty_weightedcost").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
+
+  data.optim_penalty_weightedcost_width = validators::field<double>(input.optim_penalty_weightedcost_width, "optim_penalty_weightedcost_width").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH);
+
+  data.optim_penalty_dpdm = validators::field<double>(input.optim_penalty_dpdm, "optim_penalty_dpdm").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
+
+  data.optim_penalty_energy = validators::field<double>(input.optim_penalty_energy, "optim_penalty_energy").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
+
+  data.optim_penalty_variation = validators::field<double>(input.optim_penalty_variation, "optim_penalty_variation").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
+
+  // Output parameters
+  data.output_directory = input.output_directory.value_or(ConfigDefaults::OUTPUT_DIRECTORY);
+
+  data.output_observables = input.output_observables.value_or(std::vector<OutputType>{});
+
+  data.output_timestep_stride = input.output_timestep_stride.value_or(ConfigDefaults::OUTPUT_TIMESTEP_STRIDE);
+
+  data.output_optimization_stride = input.output_optimization_stride.value_or(ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE);
+
+  // Solver parameters
+  data.runtype = input.runtype.value_or(ConfigDefaults::RUNTYPE);
+
+  data.usematfree = input.usematfree.value_or(ConfigDefaults::USEMATFREE);
+
+  data.linearsolver_type = input.linearsolver_type.value_or(ConfigDefaults::LINEARSOLVER_TYPE);
+
+  data.linearsolver_maxiter = validators::field<size_t>(input.linearsolver_maxiter, "linearsolver_maxiter").positive().valueOr(ConfigDefaults::LINEARSOLVER_MAXITER);
+
+  data.timestepper_type = input.timestepper_type.value_or(ConfigDefaults::TIMESTEPPER_TYPE);
+
+  int rand_seed_val = input.rand_seed.value_or(ConfigDefaults::RAND_SEED);
+  setRandSeed(rand_seed_val);
 
   // Finalize interdependent settings, then validate
   finalize();
@@ -679,7 +670,7 @@ Config::Config(const Setup& input, bool quiet_mode) : logger(MPILogger(quiet_mod
 Config::Config(const ParsedConfigData& settings, bool quiet_mode) : logger(MPILogger(quiet_mode)) {
 
   if (!settings.nlevels.has_value()) {
-    logger.exitWithError("nlevels cannot be empty");
+    throw validators::ValidationError("nlevels cannot be empty");
   }
   data.nlevels = settings.nlevels.value();
   size_t num_osc = data.nlevels.size();
@@ -688,23 +679,23 @@ Config::Config(const ParsedConfigData& settings, bool quiet_mode) : logger(MPILo
   copyLast(data.nessential, num_osc);
 
   if (!settings.ntime.has_value()) {
-    logger.exitWithError("ntime cannot be empty");
+    throw validators::ValidationError("ntime cannot be empty");
   }
   data.ntime = settings.ntime.value();
   if (data.ntime <= 0) {
-    logger.exitWithError("ntime must be positive, got " + std::to_string(data.ntime));
+    throw validators::ValidationError("ntime must be positive, got " + std::to_string(data.ntime));
   }
 
   if (!settings.dt.has_value()) {
-    logger.exitWithError("dt cannot be empty");
+    throw validators::ValidationError("dt cannot be empty");
   }
   data.dt = settings.dt.value();
   if (data.dt <= 0) {
-    logger.exitWithError("dt must be positive, got " + std::to_string(data.dt));
+    throw validators::ValidationError("dt must be positive, got " + std::to_string(data.dt));
   }
 
   if (!settings.transfreq.has_value()) {
-    logger.exitWithError("transition_frequency cannot be empty");
+    throw validators::ValidationError("transition_frequency cannot be empty");
   }
 
   data.transition_frequency = settings.transfreq.value();
@@ -737,7 +728,7 @@ Config::Config(const ParsedConfigData& settings, bool quiet_mode) : logger(MPILo
   copyLast(data.dephase_time, num_osc);
 
   if (!settings.initialcondition.has_value()) {
-    logger.exitWithError("initialcondition cannot be empty");
+    throw validators::ValidationError("initialcondition cannot be empty");
   }
   data.initial_condition.type = settings.initialcondition.value().type;
   data.initial_condition.filename = settings.initialcondition.value().filename;
@@ -1256,13 +1247,13 @@ void Config::finalize() {
     // TODO remove this when removing cfg format
     copyLast(data.optim_weights, n_initial_conditions);
   } else if (data.optim_weights.size() != n_initial_conditions) {
-    logger.exitWithError("optim_weights vector has length " + std::to_string(data.optim_weights.size()) + " but must have length " + std::to_string(n_initial_conditions) + " (number of initial conditions)");
+    throw validators::ValidationError("optim_weights vector has length " + std::to_string(data.optim_weights.size()) + " but must have length " + std::to_string(n_initial_conditions) + " (number of initial conditions)");
   }
   // Scale the weights so that they sum up to 1
   double scaleweights = 0.0;
   for (size_t i = 0; i < data.optim_weights.size(); i++) scaleweights += data.optim_weights[i];
   if (scaleweights == 0.0) {
-    logger.exitWithError("optim_weights sum to zero; at least one weight must be positive");
+    throw validators::ValidationError("optim_weights sum to zero; at least one weight must be positive");
   }
   for (size_t i = 0; i < data.optim_weights.size(); i++) data.optim_weights[i] = data.optim_weights[i] / scaleweights;
 
@@ -1308,11 +1299,11 @@ void Config::validate() const {
 
   // Validate essential levels don't exceed total levels
   if (data.nessential.size() != data.nlevels.size()) {
-    logger.exitWithError("nessential size must match nlevels size");
+    throw validators::ValidationError("nessential size must match nlevels size");
   }
   for (size_t i = 0; i < data.nlevels.size(); i++) {
     if (data.nessential[i] > data.nlevels[i]) {
-      logger.exitWithError("nessential[" + std::to_string(i) + "] = " + std::to_string(data.nessential[i]) + " cannot exceed nlevels[" + std::to_string(i) + "] = " + std::to_string(data.nlevels[i]));
+      throw validators::ValidationError("nessential[" + std::to_string(i) + "] = " + std::to_string(data.nessential[i]) + " cannot exceed nlevels[" + std::to_string(i) + "] = " + std::to_string(data.nlevels[i]));
     }
   }
 
@@ -1323,12 +1314,12 @@ void Config::validate() const {
         param.type == ControlType::BSPLINE0 ||
         param.type == ControlType::BSPLINEAMP) {
       if (!param.nspline.has_value()) {
-        logger.exitWithError("control parameterization[" + std::to_string(i) + "] of type BSPLINE/BSPLINE0/BSPLINEAMP requires 'num'");
+        throw validators::ValidationError("control parameterization[" + std::to_string(i) + "] of type BSPLINE/BSPLINE0/BSPLINEAMP requires 'num'");
       }
     }
     if (param.type == ControlType::BSPLINEAMP) {
       if (!param.scaling.has_value()) {
-        logger.exitWithError("control parameterization[" + std::to_string(i) + "] of type BSPLINEAMP requires 'scaling'");
+        throw validators::ValidationError("control parameterization[" + std::to_string(i) + "] of type BSPLINEAMP requires 'scaling'");
       }
     }
   }
@@ -1338,7 +1329,7 @@ void Config::validate() const {
     const auto& init = data.control_initializations[i];
     if (init.type == ControlInitializationType::FILE) {
       if (!init.filename.has_value()) {
-        logger.exitWithError("control initialization[" + std::to_string(i) + "] of type FILE requires 'filename'");
+        throw validators::ValidationError("control initialization[" + std::to_string(i) + "] of type FILE requires 'filename'");
       }
     }
   }
@@ -1346,20 +1337,20 @@ void Config::validate() const {
   // Validate optimization target settings
   if (data.optim_target.type == TargetType::GATE) {
     if (!data.optim_target.gate_type.has_value() && !data.optim_target.filename.has_value()) {
-      logger.exitWithError("optimization target of type GATE requires 'gate_type' or 'filename'");
+      throw validators::ValidationError("optimization target of type GATE requires 'gate_type' or 'filename'");
     }
   } else if (data.optim_target.type == TargetType::STATE) {
     if (!data.optim_target.levels.has_value() && !data.optim_target.filename.has_value()) {
-      logger.exitWithError("optimization target of type STATE requires 'levels' or 'filename'");
+      throw validators::ValidationError("optimization target of type STATE requires 'levels' or 'filename'");
     }
     // Validate levels size and values if provided
     if (data.optim_target.levels.has_value()) {
       if (data.optim_target.levels->size() != data.nlevels.size()) {
-        logger.exitWithError("optimization target levels size (" + std::to_string(data.optim_target.levels->size()) + ") must match number of oscillators (" + std::to_string(data.nlevels.size()) + ")");
+        throw validators::ValidationError("optimization target levels size (" + std::to_string(data.optim_target.levels->size()) + ") must match number of oscillators (" + std::to_string(data.nlevels.size()) + ")");
       }
       for (size_t i = 0; i < data.optim_target.levels->size(); i++) {
         if (data.optim_target.levels->at(i) >= data.nlevels[i]) {
-          logger.exitWithError("optimization target levels[" + std::to_string(i) + "] = " + std::to_string(data.optim_target.levels->at(i)) + " exceeds number of modeled levels (" + std::to_string(data.nlevels[i]) + ")");
+          throw validators::ValidationError("optimization target levels[" + std::to_string(i) + "] = " + std::to_string(data.optim_target.levels->at(i)) + " exceeds number of modeled levels (" + std::to_string(data.nlevels[i]) + ")");
         }
       }
     }
@@ -1370,7 +1361,7 @@ void Config::validate() const {
     if (data.initial_condition.type == InitialConditionType::ENSEMBLE ||
         data.initial_condition.type == InitialConditionType::THREESTATES ||
         data.initial_condition.type == InitialConditionType::NPLUSONE) {
-      logger.exitWithError(
+      throw validators::ValidationError(
           "\n\n ERROR for initial condition setting: \n When running Schroedingers solver,"
           " the initial condition needs to be either 'state' or 'file' or 'diagonal' or "
           "'basis'."
@@ -1381,26 +1372,26 @@ void Config::validate() const {
   // Validate control bounds are positive
   for (size_t i = 0; i < data.control_amplitude_bounds.size(); i++) {
     if (data.control_amplitude_bounds[i] <= 0.0) {
-      logger.exitWithError("control_amplitude_bounds[" + std::to_string(i) + "] must be positive");
+      throw validators::ValidationError("control_amplitude_bounds[" + std::to_string(i) + "] must be positive");
     }
   }
 
   // Validate initial condition settings
   if (data.initial_condition.type == InitialConditionType::FROMFILE) {
     if (!data.initial_condition.filename.has_value()) {
-      logger.exitWithError("initialcondition of type FROMFILE must have a filename");
+      throw validators::ValidationError("initialcondition of type FROMFILE must have a filename");
     }
   }
   if (data.initial_condition.type == InitialConditionType::PRODUCT_STATE) {
     if (!data.initial_condition.levels.has_value()) {
-      logger.exitWithError("initialcondition of type PRODUCT_STATE must have 'levels'");
+      throw validators::ValidationError("initialcondition of type PRODUCT_STATE must have 'levels'");
     }
     if (data.initial_condition.levels->size() != data.nlevels.size()) {
-      logger.exitWithError("initialcondition of type PRODUCT_STATE must have exactly " + std::to_string(data.nlevels.size()) + " parameters, got " + std::to_string(data.initial_condition.levels->size()));
+      throw validators::ValidationError("initialcondition of type PRODUCT_STATE must have exactly " + std::to_string(data.nlevels.size()) + " parameters, got " + std::to_string(data.initial_condition.levels->size()));
     }
     for (size_t k = 0; k < data.initial_condition.levels->size(); k++) {
       if (data.initial_condition.levels->at(k) >= data.nlevels[k]) {
-        logger.exitWithError("ERROR in config setting. The requested product state initialization " + std::to_string(data.initial_condition.levels->at(k)) + " exceeds the number of allowed levels for that oscillator (" + std::to_string(data.nlevels[k]) + ").\n");
+        throw validators::ValidationError("ERROR in config setting. The requested product state initialization " + std::to_string(data.initial_condition.levels->at(k)) + " exceeds the number of allowed levels for that oscillator (" + std::to_string(data.nlevels[k]) + ").\n");
       }
     }
   }
@@ -1408,14 +1399,14 @@ void Config::validate() const {
       data.initial_condition.type == InitialConditionType::DIAGONAL ||
       data.initial_condition.type == InitialConditionType::ENSEMBLE) {
     if (!data.initial_condition.subsystem.has_value()) {
-      logger.exitWithError("initialcondition of type BASIS, DIAGONAL, or ENSEMBLE must have 'subsystem'");
+      throw validators::ValidationError("initialcondition of type BASIS, DIAGONAL, or ENSEMBLE must have 'subsystem'");
     }
     if (data.initial_condition.subsystem->back() >= data.nlevels.size()) {
-      logger.exitWithError("Last element in initialcondition params exceeds number of oscillators");
+      throw validators::ValidationError("Last element in initialcondition params exceeds number of oscillators");
     }
     for (size_t i = 1; i < data.initial_condition.subsystem->size() - 1; i++) {
       if (data.initial_condition.subsystem->at(i) + 1 != data.initial_condition.subsystem->at(i + 1)) {
-        logger.exitWithError("List of oscillators for ensemble initialization should be consecutive!\n");
+        throw validators::ValidationError("List of oscillators for ensemble initialization should be consecutive!\n");
       }
     }
   }
@@ -1444,7 +1435,7 @@ size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_se
     case InitialConditionType::DIAGONAL:
       /* Compute ninit = dim(subsystem defined by list of oscil IDs) */
       if (!init_cond_settings.subsystem.has_value()) {
-        logger.exitWithError("expected diagonal initial condition to have list of subsystems ");
+        throw validators::ValidationError("expected diagonal initial condition to have list of subsystems ");
       }
       n_initial_conditions = 1;
       for (size_t oscilID : init_cond_settings.subsystem.value()) {
@@ -1454,7 +1445,7 @@ size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_se
     case InitialConditionType::BASIS:
       /* Compute ninit = dim(subsystem defined by list of oscil IDs) */
       if (!init_cond_settings.subsystem.has_value()) {
-        logger.exitWithError("expected diagonal initial condition to have list of subsystems");
+        throw validators::ValidationError("expected diagonal initial condition to have list of subsystems");
       }
       n_initial_conditions = 1;
       for (size_t oscilID : init_cond_settings.subsystem.value()) {

@@ -16,6 +16,10 @@ NB_MODULE(_quandary_impl, m) {
             "Low-level C++ interface for quantum optimal control simulations.\n"
             "Most users should use the high-level interface from quandary.new instead.";
 
+  // Exceptions
+  static nb::exception<validators::ValidationError> validation_exc(
+    m, "ValidationError", PyExc_RuntimeError);
+
   // Enums
   nb::enum_<DecoherenceType>(m, "DecoherenceType", "Decoherence model type for Lindblad master equation")
     .value("NONE", DecoherenceType::NONE, "No decoherence (Schrodinger equation)")

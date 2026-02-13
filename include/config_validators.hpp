@@ -58,6 +58,8 @@ class ValidationError : public std::runtime_error {
  public:
   ValidationError(const std::string& field, const std::string& message)
       : std::runtime_error("Validation error for field '" + field + "': " + message) {}
+  explicit ValidationError(const std::string& message)
+      : std::runtime_error(message) {}
 };
 
 /**

@@ -7,6 +7,8 @@ import petsc4py
 
 # Re-export the nanobind implementation from the parent package
 from .._quandary_impl import (
+    # Exceptions
+    ValidationError as ValidationError,
     # Configuration
     Setup,
     Config,
@@ -73,6 +75,8 @@ from .setup_helpers import (  # noqa: F401
 
 # Define public API
 __all__ = [
+    # Exceptions
+    "ValidationError",
     # Configuration classes and types
     "Setup",
     "Config",
