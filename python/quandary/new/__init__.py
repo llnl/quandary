@@ -32,7 +32,7 @@ from .._quandary_impl import (
 )
 
 # Functional API (primary interface)
-from .runner import validate, optimize, simulate, evaluate_controls  # noqa: F401
+from .runner import optimize, simulate, evaluate_controls  # noqa: F401
 
 # Results
 from .results import Results, get_results  # noqa: F401
@@ -95,7 +95,6 @@ __all__ = [
     "ControlParameterizationSettings",
     "ControlInitializationSettings",
     # Runner functions
-    "validate",
     "optimize",
     "simulate",
     "evaluate_controls",

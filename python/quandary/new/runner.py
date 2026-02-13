@@ -83,24 +83,6 @@ def _compute_optimal_core_distribution(maxcores: int, ninit: int) -> int:
     return ncores
 
 
-def validate(setup: Setup, quiet: bool = False) -> Config:
-    """Validate a Setup and return an immutable Config with all defaults applied.
-
-    This allows inspecting computed defaults, checking for errors, and
-    serializing to TOML without running a simulation.
-
-    Args:
-        setup: A Setup object with all required fields set.
-        quiet: If True, suppress console output during validation.
-
-    Returns:
-        An immutable Config with all defaults computed and validation applied.
-
-    Raises:
-        RuntimeError: If the configuration is invalid.
-    """
-    return Config(setup, quiet)
-
 
 def _run(
     setup: Setup,
@@ -276,6 +258,7 @@ def optimize(
     pcof=None,
     randomize_init_ctrl: bool = False,
     init_amplitude_ghz=None,
+    dry_run: bool = False,
     max_n_procs: Optional[int] = None,
     quiet: bool = False,
     mpi_exec: str = "mpirun",
@@ -305,6 +288,10 @@ def optimize(
         Initialize controls randomly. Default: False.
     init_amplitude_ghz : float, optional
         Initial control amplitude [GHz].
+    dry_run : bool
+        If True, validate and return Results with config populated but do not
+        run. Inspect results.config.to_toml() to see the full configuration.
+        Default: False.
     max_n_procs : int, optional
         Max MPI processes. Spawns subprocess if set.
     quiet : bool
@@ -321,6 +308,7 @@ def optimize(
     Returns:
     -------
     Results
+        If dry_run=True, only results.config is populated.
     """
     configured = _setup_optimization(
         setup,
@@ -332,6 +320,8 @@ def optimize(
         randomize_init_ctrl=randomize_init_ctrl,
         init_amplitude_ghz=init_amplitude_ghz,
     )
+    if dry_run:
+        return Results(config=Config(configured, quiet))
     return _run(
         configured,
         max_n_procs=max_n_procs,
@@ -348,6 +338,7 @@ def simulate(
     pcof=None,
     pt0=None,
     qt0=None,
+    dry_run: bool = False,
     max_n_procs: Optional[int] = None,
     quiet: bool = False,
     mpi_exec: str = "mpirun",
@@ -370,6 +361,10 @@ def simulate(
         Auto-downsampled to B-splines. Must be paired with qt0.
     qt0 : list of ndarray, optional
         Imaginary part of control pulses [MHz] per oscillator.
+    dry_run : bool
+        If True, validate and return Results with config populated but do not
+        run. Inspect results.config.to_toml() to see the full configuration.
+        Default: False.
     max_n_procs : int, optional
         Max MPI processes. Spawns subprocess if set.
     quiet : bool
@@ -386,8 +381,11 @@ def simulate(
     Returns:
     -------
     Results
+        If dry_run=True, only results.config is populated.
     """
     configured = _setup_simulation(setup, pcof=pcof, pt0=pt0, qt0=qt0)
+    if dry_run:
+        return Results(config=Config(configured, quiet))
     return _run(
         configured,
         max_n_procs=max_n_procs,
@@ -403,6 +401,7 @@ def evaluate_controls(
     setup: Setup,
     pcof,
     points_per_ns: float = 1.0,
+    dry_run: bool = False,
     max_n_procs: Optional[int] = None,
     quiet: bool = False,
     mpi_exec: str = "mpirun",
@@ -422,6 +421,10 @@ def evaluate_controls(
         B-spline control coefficients.
     points_per_ns : float
         Sample rate [points per ns]. Default: 1.0.
+    dry_run : bool
+        If True, validate and return Results with config populated but do not
+        run. Inspect results.config.to_toml() to see the full configuration.
+        Default: False.
     max_n_procs : int, optional
         Max MPI processes. Spawns subprocess if set.
     quiet : bool
@@ -438,8 +441,11 @@ def evaluate_controls(
     Returns:
     -------
     Results
+        If dry_run=True, only results.config is populated.
     """
     configured = _setup_eval_controls(setup, pcof=pcof, points_per_ns=points_per_ns)
+    if dry_run:
+        return Results(config=Config(configured, quiet))
     return _run(
         configured,
         max_n_procs=max_n_procs,
