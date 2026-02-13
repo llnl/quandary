@@ -3,7 +3,7 @@
 import numpy as np
 
 
-def estimate_timesteps(*, final_time=1.0, Hsys=[], Hc_re=[], Hc_im=[], amplitude_bound=[], Pmin=40):
+def estimate_timesteps(*, final_time=1.0, Hsys=[], Hc_re=[], Hc_im=[], control_amplitude_bounds=[], Pmin=40):
     """
     Estimate the number of time steps based on eigenvalues of Hamiltonians.
 
@@ -12,19 +12,19 @@ def estimate_timesteps(*, final_time=1.0, Hsys=[], Hc_re=[], Hc_im=[], amplitude
     """
 
     # Get estimated control pulse amplitude [GHz]
-    est_amplitude_bound = amplitude_bound[:]
-    if len(amplitude_bound) == 0:
-        est_amplitude_bound = [0.01 for _ in range(max(len(Hc_re), len(Hc_im)))]
+    est_control_amplitude_bounds = control_amplitude_bounds[:]
+    if len(control_amplitude_bounds) == 0:
+        est_control_amplitude_bounds = [0.01 for _ in range(max(len(Hc_re), len(Hc_im)))]
 
     # Set up Hsys +  maxctrl*Hcontrol
     K1 = np.copy(Hsys)
 
     for i in range(len(Hc_re)):
-        est_radns = est_amplitude_bound[i] * 2.0 * np.pi
+        est_radns = est_control_amplitude_bounds[i] * 2.0 * np.pi
         if len(Hc_re[i]) > 0:
             K1 += est_radns * Hc_re[i]
     for i in range(len(Hc_im)):
-        est_radns = est_amplitude_bound[i] * 2.0 * np.pi
+        est_radns = est_control_amplitude_bounds[i] * 2.0 * np.pi
         if len(Hc_im[i]) > 0:
             K1 = K1 + 1j * est_radns * Hc_im[i]  # can't use += due to type!
 

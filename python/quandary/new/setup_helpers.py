@@ -46,7 +46,7 @@ def setup_physics(
     crosskerr_coupling: Optional[List[float]] = None,
     dipole_coupling: Optional[List[float]] = None,
     Pmin: int = 150,
-    amplitude_bound: Optional[List[float]] = None,
+    control_amplitude_bounds: Optional[List[float]] = None,
     nspline: Optional[int] = None,
     spline_knot_spacing: Optional[float] = None,
     spline_order: Optional[int] = None,
@@ -98,7 +98,7 @@ def setup_physics(
         Dipole-dipole coupling strength [GHz]. Format: [J01, J02, ..., J12, J13, ...]
     Pmin : int
         Minimum points to resolve shortest period (determines timesteps). Default: 150
-    amplitude_bound : List[float]
+    control_amplitude_bounds : List[float]
         Maximum control amplitudes [GHz] per qubit. Used for timestep estimation
         and as optimization bounds. Default: 0.01 GHz (= 10 MHz)
     nspline : int
@@ -149,8 +149,8 @@ def setup_physics(
         crosskerr_coupling = []
     if dipole_coupling is None:
         dipole_coupling = []
-    if amplitude_bound is None:
-        amplitude_bound = [0.01] * nqubits
+    if control_amplitude_bounds is None:
+        control_amplitude_bounds = [0.01] * nqubits
 
     # Handle initial condition (only one of initialcondition, initial_levels, initial_state)
     num_init_specs = sum([initialcondition is not None, initial_levels is not None, initial_state is not None])
@@ -205,7 +205,7 @@ def setup_physics(
             Hsys=Hsys,
             Hc_re=Hc_re,
             Hc_im=Hc_im,
-            amplitude_bound=amplitude_bound,
+            control_amplitude_bounds=control_amplitude_bounds,
             Pmin=Pmin,
         )
         dt = final_time / ntime
@@ -275,7 +275,7 @@ def setup_physics(
         setup.crosskerr_coupling = crosskerr_coupling
     if len(dipole_coupling) > 0:
         setup.dipole_coupling = dipole_coupling
-    setup.control_amplitude_bounds = amplitude_bound
+    setup.control_amplitude_bounds = control_amplitude_bounds
 
     setup.carrier_frequencies = carrier_frequency
     setup.initial_condition = initialcondition
@@ -312,8 +312,8 @@ def _setup_optimization(
     target_levels: Optional[List[int]] = None,
     gate_rot_freq: Optional[List[float]] = None,
     pcof=None,
-    randomize_init_ctrl: bool = False,
-    init_amplitude_ghz: Optional[float] = None,
+    randomize_initial_control: bool = False,
+    control_initialization_amplitude: Optional[float] = None,
 ) -> Setup:
     """Return a copy of setup configured for optimization."""
     setup = setup.copy()
@@ -377,15 +377,15 @@ def _setup_optimization(
             init.filename = pcof_file
             control_inits.append(init)
         setup.control_initializations = control_inits
-    elif init_amplitude_ghz is not None:
-        # Fresh optimization with explicit amplitude (use randomize_init_ctrl to choose type)
+    elif control_initialization_amplitude is not None:
+        # Fresh optimization with explicit amplitude (use randomize_initial_control to choose type)
         control_inits = []
-        init_type = ControlInitializationType.RANDOM if randomize_init_ctrl else ControlInitializationType.CONSTANT
+        init_type = ControlInitializationType.RANDOM if randomize_initial_control else ControlInitializationType.CONSTANT
 
         for _ in range(len(setup.nessential)):
             init = ControlInitializationSettings()
             init.init_type = init_type
-            init.amplitude = init_amplitude_ghz
+            init.amplitude = control_initialization_amplitude
             control_inits.append(init)
 
         setup.control_initializations = control_inits
