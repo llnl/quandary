@@ -29,6 +29,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _is_interactive():
+    """Detect if running in an interactive environment (e.g., Jupyter notebook)."""
+    import __main__ as main
+    return not hasattr(main, '__file__')
+
+
 def _compute_optimal_core_distribution(maxcores: int, ninit: int) -> int:
     """Compute optimal MPI core distribution for Quandary.
 
@@ -149,18 +155,10 @@ def run(
     comm = MPI.COMM_WORLD
     size = comm.Get_size()
 
-    # If max_n_procs specified, handle subprocess spawning
-    if max_n_procs is not None:
-        if size > 1:
-            # Already in MPI context - can't spawn subprocess
-            raise RuntimeError(
-                f"Cannot spawn subprocess with max_n_procs={max_n_procs} - already running in MPI context with {size} processes.\n"
-                f"Either:\n"
-                f"  1. Remove max_n_procs parameter to use existing MPI context\n"
-                f"  2. Run without mpirun and let run() spawn the subprocess"
-            )
-        # Not in MPI context (size == 1), spawn subprocess
-        logger.info(f"Spawning subprocess with {max_n_procs} processes using {mpi_exec}")
+    if _is_interactive():
+        # In interactive environment without MPI, spawn subprocess with MPI launcher for better performance
+        if max_n_procs is None:
+            max_n_procs = 4  # Default to 4 processes if not specified
         return _run_subprocess(
             setup=setup,
             max_n_procs=max_n_procs,
@@ -171,10 +169,20 @@ def run(
             working_dir=working_dir,
         )
 
-    # Otherwise run directly (serial or using existing MPI context)
-    if size > 1:
-        logger.info(f"Running in existing MPI context with {size} processes")
+    if max_n_procs is not None:
+        logger.warning(
+            f"Already running in MPI context with {size} processes. Ignoring max_n_procs={max_n_procs} and using existing MPI context."
+        )
 
+    logger.info(f"Running directly in existing MPI context with {size} processes")
+    return _run_directly(setup, quiet)
+
+
+def _run_directly(setup: Setup, quiet: bool = False) -> Results:
+    """Internal: Run Quandary directly without spawning subprocess.
+
+    This is used when max_n_procs is not specified, or when already in an MPI context.
+    """
     # Validate configuration
     validated_config = Config(setup, quiet)
 
@@ -218,10 +226,6 @@ def _run_subprocess(
     if python_exec is None:
         python_exec = sys.executable
 
-    # Ensure working_dir is a string
-    if not isinstance(working_dir, str):
-        raise ValueError(f"working_dir must be a string, got {type(working_dir)}")
-
     # Create the output directory if it doesn't exist
     os.makedirs(validated_config.output_directory, exist_ok=True)
 
@@ -238,6 +242,8 @@ def _run_subprocess(
     cmd = [mpi_exec, nproc_flag, str(total_cores), python_exec, "-c", python_code]
 
     # Run the subprocess
+    logger.info(f"Spawning subprocess with {total_cores} processes using {mpi_exec}")
+    logger.debug(f"Subprocess command: {' '.join(cmd)}")
     result = subprocess.run(
         cmd,
         cwd=working_dir,
