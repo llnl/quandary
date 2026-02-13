@@ -274,7 +274,12 @@ NB_MODULE(_quandary_impl, m) {
         std::stringstream ss;
         c.printConfig(ss);
         return ss.str();
-      }, "Serialize the configuration to TOML format");
+      }, "Serialize the configuration to TOML format")
+    .def("__str__", [](const Config& c) {
+        std::stringstream ss;
+        c.printConfig(ss);
+        return ss.str();
+      });
 
   // Run function - accepts Config
   m.def("run", [](const Config& config, bool quiet) {

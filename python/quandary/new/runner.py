@@ -172,6 +172,7 @@ def _run_directly(setup: Setup, quiet: bool = False) -> Results:
     """
     # Validate configuration
     validated_config = Config(setup, quiet)
+    logger.debug("Configuration:\n%s", validated_config)
 
     # Run simulation/optimization
     return_code = _quandary_impl.run(validated_config, quiet)
@@ -204,6 +205,7 @@ def _run_subprocess(
     """
     # Validate configuration
     validated_config = Config(setup, quiet)
+    logger.debug("Configuration:\n%s", validated_config)
 
     # Compute optimal core distribution based on number of initial conditions
     n_init = validated_config.n_initial_conditions
@@ -290,7 +292,7 @@ def optimize(
         Initial control amplitude [GHz].
     dry_run : bool
         If True, validate and return Results with config populated but do not
-        run. Inspect results.config.to_toml() to see the full configuration.
+        run. Use print(results.config) to inspect the full configuration.
         Default: False.
     max_n_procs : int, optional
         Max MPI processes. Spawns subprocess if set.
@@ -363,7 +365,7 @@ def simulate(
         Imaginary part of control pulses [MHz] per oscillator.
     dry_run : bool
         If True, validate and return Results with config populated but do not
-        run. Inspect results.config.to_toml() to see the full configuration.
+        run. Use print(results.config) to inspect the full configuration.
         Default: False.
     max_n_procs : int, optional
         Max MPI processes. Spawns subprocess if set.
@@ -423,7 +425,7 @@ def evaluate_controls(
         Sample rate [points per ns]. Default: 1.0.
     dry_run : bool
         If True, validate and return Results with config populated but do not
-        run. Inspect results.config.to_toml() to see the full configuration.
+        run. Use print(results.config) to inspect the full configuration.
         Default: False.
     max_n_procs : int, optional
         Max MPI processes. Spawns subprocess if set.

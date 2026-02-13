@@ -69,7 +69,7 @@ def get_results(config: Config) -> Results:
         >>> validated_config = Config(my_config, quiet=False)
         >>> results = get_results(validated_config)
         >>> print(f"Infidelity: {results.infidelity}")
-        >>> print(results.config.to_toml())
+        >>> print(results.config)
     """
     # Get output directory from config
     datadir = config.output_directory
