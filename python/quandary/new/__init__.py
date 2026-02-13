@@ -10,7 +10,7 @@ from .._quandary_impl import (
     # Exceptions
     ValidationError as ValidationError,
     # Configuration
-    Setup,
+    Setup as _CppSetup,
     Config,
     # Run function from C++ (used internally)
     run_from_file,
@@ -32,6 +32,24 @@ from .._quandary_impl import (
     ControlParameterizationSettings,
     ControlInitializationSettings,
 )
+
+# Subclass Setup to improve TypeError messages: nanobind's default only says
+# "incompatible function arguments" without naming the property or showing the
+# value passed. __setattr__ catches those errors and re-raises with context.
+def _fmt_val(v):
+    r = repr(v).replace('\n', ' ')
+    return r[:77] + '...' if len(r) > 80 else r
+
+
+class Setup(_CppSetup):
+    def __setattr__(self, name, value):
+        try:
+            super().__setattr__(name, value)
+        except TypeError as e:
+            raise TypeError(
+                f"Setup.{name} = {_fmt_val(value)} ({type(value).__name__}): {e}"
+            ) from None
+
 
 # Functional API (primary interface)
 from .runner import optimize, simulate, evaluate_controls  # noqa: F401
