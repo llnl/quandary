@@ -985,22 +985,22 @@ TEST_F(TomlParserTest, CarrierFrequencies_AllOscillatorsShorthand) {
 }
 
 TEST_F(TomlParserTest, CarrierFrequency_InvalidID) {
-  ASSERT_DEATH({
-    Config config = Config::fromTomlString(
-        R"(
-          [system]
-          nlevels = [2]
-          transition_frequency = [4.1]
-          ntime = 1000
-          dt = 0.1
-          rotation_frequency = [0.0]
-          initial_condition = {type = "basis"}
+  ASSERT_THROW(
+      Config::fromTomlString(
+          R"(
+            [system]
+            nlevels = [2]
+            transition_frequency = [4.1]
+            ntime = 1000
+            dt = 0.1
+            rotation_frequency = [0.0]
+            initial_condition = {type = "basis"}
 
-          [control]
-          carrier_frequency = [{subsystem = 5, value = [4.0]}]
-        )",
-        false);
-  }, "ERROR: Validation error for field 'subsystem': must be < 1, got 5");
+            [control]
+            carrier_frequency = [{subsystem = 5, value = [4.0]}]
+          )",
+          false),
+      validators::ValidationError);
 }
 
 
@@ -1177,7 +1177,7 @@ TEST_F(TomlParserTest, OptimWeightsVectorNormalization) {
 
 TEST_F(TomlParserTest, OptimWeightsScalarNotAllowed) {
   // Single value format is no longer allowed - must use array notation
-  EXPECT_DEATH(
+  ASSERT_THROW(
       Config::fromTomlString(
           R"(
             [system]
@@ -1192,7 +1192,7 @@ TEST_F(TomlParserTest, OptimWeightsScalarNotAllowed) {
             weights = 1.0
           )",
           false),
-      "wrong type");
+      validators::ValidationError);
 }
 
 TEST_F(TomlParserTest, OptimWeightsDefault) {
@@ -1311,60 +1311,54 @@ TEST_F(TomlParserTest, Transfreq_ArrayValue) {
 }
 
 TEST_F(TomlParserTest, Transfreq_WrongSizeError) {
-  EXPECT_DEATH(
-      {
-        Config config = Config::fromTomlString(
-            R"(
-              [system]
-              nlevels = [2, 3, 4]
-              ntime = 1000
-              dt = 0.1
-              transition_frequency = [4.1, 4.8]
-              initial_condition = {type = "basis"}
-            )",
-            false);
-      },
-      "array must have exactly 3 elements");
+  ASSERT_THROW(
+      Config::fromTomlString(
+          R"(
+            [system]
+            nlevels = [2, 3, 4]
+            ntime = 1000
+            dt = 0.1
+            transition_frequency = [4.1, 4.8]
+            initial_condition = {type = "basis"}
+          )",
+          false),
+      validators::ValidationError);
 }
 
 // Test that hasLength validator correctly rejects arrays with wrong number of elements.
 // The subsystem field for coupling parameters (dipole_coupling, crosskerr_coupling) must have exactly 2 elements.
 TEST_F(TomlParserTest, CouplingSubsystem_HasLength_TooManyElements) {
-  EXPECT_DEATH(
-      {
-        Config config = Config::fromTomlString(
-            R"(
-              [system]
-              nlevels = [2, 2, 2, 2]
-              transition_frequency = [4.1, 4.8, 5.2, 5.5]
-              ntime = 1000
-              dt = 0.1
-              initial_condition = {type = "basis"}
-              dipole_coupling = [
-                { subsystem = [0, 1, 2], value = 0.5 }
-              ]
-            )",
-            false);
-      },
-      "must have exactly 2 elements");
+  ASSERT_THROW(
+      Config::fromTomlString(
+          R"(
+            [system]
+            nlevels = [2, 2, 2, 2]
+            transition_frequency = [4.1, 4.8, 5.2, 5.5]
+            ntime = 1000
+            dt = 0.1
+            initial_condition = {type = "basis"}
+            dipole_coupling = [
+              { subsystem = [0, 1, 2], value = 0.5 }
+            ]
+          )",
+          false),
+      validators::ValidationError);
 }
 
 TEST_F(TomlParserTest, CouplingSubsystem_HasLength_TooFewElements) {
-  EXPECT_DEATH(
-      {
-        Config config = Config::fromTomlString(
-            R"(
-              [system]
-              nlevels = [2, 2, 2, 2]
-              transition_frequency = [4.1, 4.8, 5.2, 5.5]
-              ntime = 1000
-              dt = 0.1
-              initial_condition = {type = "basis"}
-              crosskerr_coupling = [
-                { subsystem = [1], value = 0.5 }
-              ]
-            )",
-            false);
-      },
-      "must have exactly 2 elements");
+  ASSERT_THROW(
+      Config::fromTomlString(
+          R"(
+            [system]
+            nlevels = [2, 2, 2, 2]
+            transition_frequency = [4.1, 4.8, 5.2, 5.5]
+            ntime = 1000
+            dt = 0.1
+            initial_condition = {type = "basis"}
+            crosskerr_coupling = [
+              { subsystem = [1], value = 0.5 }
+            ]
+          )",
+          false),
+      validators::ValidationError);
 }
