@@ -388,7 +388,6 @@ def _setup_optimization(
             control_inits.append(init)
 
         setup.control_initializations = control_inits
-    # else: Don't set control_initializations, let C++ use its defaults
 
     return setup
 
