@@ -224,14 +224,15 @@ def _run_subprocess(
     result = subprocess.run(
         cmd,
         cwd=working_dir,
-        capture_output=quiet,
+        stdout=subprocess.PIPE if quiet else None,
+        stderr=subprocess.PIPE,
         text=True,
     )
 
     if result.returncode != 0:
-        if quiet and result.stderr:
-            logger.error(f"Quandary failed: {result.stderr}")
-        result.check_returncode()
+        if result.stderr:
+            raise RuntimeError(f"Quandary failed:\n{result.stderr.strip()}")
+        raise RuntimeError("Quandary failed (see output above)")
 
     # Load results with validated config
     results = _get_results(validated_config)
