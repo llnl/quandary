@@ -380,7 +380,7 @@ def setup_optimization(
         # State-to-state: write target state to file
         target_array = np.array(targetstate, dtype=complex)
         state_file = os.path.join(output_dir, "targetstate.dat")
-        state_vec = np.concatenate((target_array.real.ravel(), target_array.imag.ravel()))
+        state_vec = np.concatenate((target_array.real.ravel(order='F'), target_array.imag.ravel(order='F')))
         np.savetxt(state_file, state_vec, fmt='%20.13e')
 
         target = OptimTargetSettings()
