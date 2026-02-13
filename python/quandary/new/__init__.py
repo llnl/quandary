@@ -32,7 +32,7 @@ from .._quandary_impl import (
 )
 
 # Functional API (primary interface)
-from .runner import run, validate  # noqa: F401
+from .runner import validate, optimize, simulate, evaluate_controls  # noqa: F401
 
 # Results
 from .results import Results, get_results  # noqa: F401
@@ -69,9 +69,6 @@ from .utils import (  # noqa: F401
 # Setup helpers (factory/configuration functions)
 from .setup_helpers import (  # noqa: F401
     setup_physics,
-    setup_optimization,
-    setup_simulation,
-    setup_eval_controls,
 )
 
 # Define public API
@@ -98,8 +95,10 @@ __all__ = [
     "ControlParameterizationSettings",
     "ControlInitializationSettings",
     # Runner functions
-    "run",
     "validate",
+    "optimize",
+    "simulate",
+    "evaluate_controls",
     # Results
     "Results",
     "get_results",
@@ -122,9 +121,6 @@ __all__ = [
     "downsample_pulses",
     # Setup helpers
     "setup_physics",
-    "setup_optimization",
-    "setup_simulation",
-    "setup_eval_controls",
 ]
 
 petsc4py.init()

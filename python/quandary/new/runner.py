@@ -2,7 +2,7 @@
 
 MPI Lifecycle Management:
     MPI initialization and finalization are managed by mpi4py, which is imported
-    in __init__.py. This allows multiple run() calls in the same Python process
+    in __init__.py. This allows multiple optimize()/simulate() calls in the same Python process
     (e.g., Jupyter notebooks, parameter sweeps) without MPI re-initialization errors.
 
     The C++ runQuandary function is called with finalize=false to prevent it from
@@ -22,6 +22,11 @@ from mpi4py import MPI
 from .. import _quandary_impl
 from .._quandary_impl import Config, Setup
 from .results import get_results as _get_results, Results
+from .setup_helpers import (
+    _setup_optimization,
+    _setup_simulation,
+    _setup_eval_controls,
+)
 
 if TYPE_CHECKING:
     pass
@@ -97,7 +102,7 @@ def validate(setup: Setup, quiet: bool = False) -> Config:
     return Config(setup, quiet)
 
 
-def run(
+def _run(
     setup: Setup,
     max_n_procs: Optional[int] = None,
     quiet: bool = False,
@@ -260,3 +265,187 @@ def _run_subprocess(
     results = _get_results(validated_config)
 
     return results
+
+
+def optimize(
+    setup: Setup,
+    targetgate=None,
+    targetstate=None,
+    target_levels=None,
+    gate_rot_freq=None,
+    pcof=None,
+    randomize_init_ctrl: bool = False,
+    init_amplitude_ghz=None,
+    max_n_procs: Optional[int] = None,
+    quiet: bool = False,
+    mpi_exec: str = "mpirun",
+    nproc_flag: str = "-np",
+    python_exec: Optional[str] = None,
+    working_dir: str = ".",
+) -> Results:
+    """Run an optimization.
+
+    Copies the setup internally; the original is not modified.
+
+    Parameters:
+    ----------
+    setup : Setup
+        Physics setup from setup_physics(). Not modified.
+    targetgate : array-like, optional
+        Target unitary gate.
+    targetstate : array-like, optional
+        Target state vector.
+    target_levels : List[int], optional
+        Target product state, e.g. [0, 0, 1].
+    gate_rot_freq : List[float], optional
+        Gate rotation frequencies [GHz].
+    pcof : array-like, optional
+        B-spline coefficients for warm-start.
+    randomize_init_ctrl : bool
+        Initialize controls randomly. Default: False.
+    init_amplitude_ghz : float, optional
+        Initial control amplitude [GHz].
+    max_n_procs : int, optional
+        Max MPI processes. Spawns subprocess if set.
+    quiet : bool
+        Suppress output. Default: False.
+    mpi_exec : str
+        MPI launcher. Default: "mpirun".
+    nproc_flag : str
+        Flag for process count. Default: "-np".
+    python_exec : str, optional
+        Python executable path. Default: sys.executable.
+    working_dir : str
+        Working directory. Default: ".".
+
+    Returns:
+    -------
+    Results
+    """
+    configured = _setup_optimization(
+        setup,
+        targetgate=targetgate,
+        targetstate=targetstate,
+        target_levels=target_levels,
+        gate_rot_freq=gate_rot_freq,
+        pcof=pcof,
+        randomize_init_ctrl=randomize_init_ctrl,
+        init_amplitude_ghz=init_amplitude_ghz,
+    )
+    return _run(
+        configured,
+        max_n_procs=max_n_procs,
+        quiet=quiet,
+        mpi_exec=mpi_exec,
+        nproc_flag=nproc_flag,
+        python_exec=python_exec,
+        working_dir=working_dir,
+    )
+
+
+def simulate(
+    setup: Setup,
+    pcof=None,
+    pt0=None,
+    qt0=None,
+    max_n_procs: Optional[int] = None,
+    quiet: bool = False,
+    mpi_exec: str = "mpirun",
+    nproc_flag: str = "-np",
+    python_exec: Optional[str] = None,
+    working_dir: str = ".",
+) -> Results:
+    """Run a simulation.
+
+    Copies the setup internally; the original is not modified.
+
+    Parameters:
+    ----------
+    setup : Setup
+        Physics setup from setup_physics(). Not modified.
+    pcof : array-like, optional
+        B-spline control coefficients.
+    pt0 : list of ndarray, optional
+        Real part of control pulses [MHz] per oscillator.
+        Auto-downsampled to B-splines. Must be paired with qt0.
+    qt0 : list of ndarray, optional
+        Imaginary part of control pulses [MHz] per oscillator.
+    max_n_procs : int, optional
+        Max MPI processes. Spawns subprocess if set.
+    quiet : bool
+        Suppress output. Default: False.
+    mpi_exec : str
+        MPI launcher. Default: "mpirun".
+    nproc_flag : str
+        Flag for process count. Default: "-np".
+    python_exec : str, optional
+        Python executable path. Default: sys.executable.
+    working_dir : str
+        Working directory. Default: ".".
+
+    Returns:
+    -------
+    Results
+    """
+    configured = _setup_simulation(setup, pcof=pcof, pt0=pt0, qt0=qt0)
+    return _run(
+        configured,
+        max_n_procs=max_n_procs,
+        quiet=quiet,
+        mpi_exec=mpi_exec,
+        nproc_flag=nproc_flag,
+        python_exec=python_exec,
+        working_dir=working_dir,
+    )
+
+
+def evaluate_controls(
+    setup: Setup,
+    pcof,
+    points_per_ns: float = 1.0,
+    max_n_procs: Optional[int] = None,
+    quiet: bool = False,
+    mpi_exec: str = "mpirun",
+    nproc_flag: str = "-np",
+    python_exec: Optional[str] = None,
+    working_dir: str = ".",
+) -> Results:
+    """Evaluate control pulses at a specific sample rate.
+
+    Copies the setup internally; the original is not modified.
+
+    Parameters:
+    ----------
+    setup : Setup
+        Physics setup from setup_physics(). Not modified.
+    pcof : array-like
+        B-spline control coefficients.
+    points_per_ns : float
+        Sample rate [points per ns]. Default: 1.0.
+    max_n_procs : int, optional
+        Max MPI processes. Spawns subprocess if set.
+    quiet : bool
+        Suppress output. Default: False.
+    mpi_exec : str
+        MPI launcher. Default: "mpirun".
+    nproc_flag : str
+        Flag for process count. Default: "-np".
+    python_exec : str, optional
+        Python executable path. Default: sys.executable.
+    working_dir : str
+        Working directory. Default: ".".
+
+    Returns:
+    -------
+    Results
+    """
+    configured = _setup_eval_controls(setup, pcof=pcof, points_per_ns=points_per_ns)
+    return _run(
+        configured,
+        max_n_procs=max_n_procs,
+        quiet=quiet,
+        mpi_exec=mpi_exec,
+        nproc_flag=nproc_flag,
+        python_exec=python_exec,
+        working_dir=working_dir,
+    )

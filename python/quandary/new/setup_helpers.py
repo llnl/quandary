@@ -60,7 +60,7 @@ def setup_physics(
     """Create a Setup with physics parameters configured.
 
     Automatically computes Hamiltonians, timesteps, and carrier frequencies.
-    Does NOT set the runtype - use setup_optimization() or setup_simulation()
+    Does NOT set the runtype - use optimize() or simulate()
     to configure for a specific run type.
 
     Time discretization: You can specify at most 2 of (final_time, ntime, dt).
@@ -304,7 +304,7 @@ def setup_physics(
     return setup
 
 
-def setup_optimization(
+def _setup_optimization(
     setup: Setup,
     targetgate=None,
     targetstate=None,
@@ -313,41 +313,9 @@ def setup_optimization(
     pcof=None,
     randomize_init_ctrl: bool = False,
     init_amplitude_ghz: Optional[float] = None,
-):
-    """Configure a Setup for optimization.
-
-    Modifies setup in-place to set runtype to OPTIMIZATION and configure
-    the optimization target and control initialization.
-
-    Parameters:
-    ----------
-    setup : Setup
-        Setup object (e.g. from setup_physics()).
-    targetgate : array-like, optional
-        Target unitary gate. Written to file automatically.
-    targetstate : array-like, optional
-        Target state vector (arbitrary superposition). Written to file automatically.
-    target_levels : List[int], optional
-        Target product state like |001⟩. Example: [0, 0, 1].
-    gate_rot_freq : List[float], optional
-        Gate rotation frequencies [GHz] per oscillator.
-    pcof : array-like, optional
-        B-spline coefficients for warm-start. Overrides randomize_init_ctrl.
-    randomize_init_ctrl : bool
-        Initialize controls randomly (True) or constant (False).
-        Only used if init_amplitude_ghz is provided. Default: False.
-    init_amplitude_ghz : float, optional
-        Initial control amplitude [GHz] per oscillator. Default: None.
-
-    Example:
-    -------
-    >>> # Gate optimization
-    >>> setup_optimization(setup, targetgate=[[0,0,1],[0,1,0],[1,0,0]])
-    >>> # State-to-state with superposition target
-    >>> setup_optimization(setup, targetstate=[1/np.sqrt(2), 1/np.sqrt(2)])
-    >>> # State-to-state with product state target
-    >>> setup_optimization(setup, target_levels=[0, 0, 1])
-    """
+) -> Setup:
+    """Return a copy of setup configured for optimization."""
+    setup = setup.copy()
     setup.runtype = RunType.OPTIMIZATION
 
     # Validate: only one target type
@@ -422,40 +390,17 @@ def setup_optimization(
         setup.control_initializations = control_inits
     # else: Don't set control_initializations, let C++ use its defaults
 
+    return setup
 
-def setup_simulation(
+
+def _setup_simulation(
     setup: Setup,
     pcof=None,
     pt0=None,
     qt0=None,
-):
-    """Configure a Setup for simulation.
-
-    Modifies setup in-place to set runtype to SIMULATION and optionally
-    configure control parameters from B-spline coefficients or time-domain
-    pulses.
-
-    Parameters:
-    ----------
-    setup : Setup
-        Setup object (e.g. from setup_physics()).
-    pcof : array-like, optional
-        B-spline control coefficients. If provided, writes to file and
-        configures control initialization to load from file.
-    pt0 : list of ndarray, optional
-        Real part of control pulses [MHz] per oscillator. Must be provided
-        together with qt0. Automatically downsampled to B-spline coefficients
-        using piecewise constant (order 0) representation.
-    qt0 : list of ndarray, optional
-        Imaginary part of control pulses [MHz] per oscillator. Must be
-        provided together with pt0.
-
-    Example:
-    -------
-    >>> setup = setup_physics(nessential=[3], transition_frequency=[4.1], final_time=100)
-    >>> setup_simulation(setup, pcof=results_opt.pcof)
-    >>> results = run(setup)
-    """
+) -> Setup:
+    """Return a copy of setup configured for simulation."""
+    setup = setup.copy()
     setup.runtype = RunType.SIMULATION
 
     if pt0 is not None and qt0 is not None:
@@ -499,34 +444,16 @@ def setup_simulation(
         init.filename = pcof_file
         setup.control_initializations = [init]
 
+    return setup
 
-def setup_eval_controls(
+
+def _setup_eval_controls(
     setup: Setup,
     pcof,
     points_per_ns: float = 1.0,
-):
-    """Configure a Setup for evaluating control pulses at a specific sample rate.
-
-    Modifies setup in-place to set runtype to EVALCONTROLS with a new time grid
-    based on points_per_ns. Total pulse duration is preserved.
-
-    Parameters:
-    ----------
-    setup : Setup
-        Setup object (e.g. from setup_physics()). Typically a .copy() of the
-        optimization setup.
-    pcof : array-like
-        B-spline control coefficients. Typically from results.pcof.
-    points_per_ns : float
-        Sample rate for output [points per ns]. Default: 1.0 (1ns spacing).
-        Examples: 1.0 = 1ns, 10.0 = 0.1ns, 0.5 = 2ns spacing.
-
-    Example:
-    -------
-    >>> setup_eval = setup.copy()
-    >>> setup_eval_controls(setup_eval, pcof=results_opt.pcof, points_per_ns=64)
-    >>> eval_results = run(setup_eval)
-    """
+) -> Setup:
+    """Return a copy of setup configured for control evaluation at a given sample rate."""
+    setup = setup.copy()
     # Recalculate time grid: keep total time, change resolution
     total_time = setup.ntime * setup.dt
     setup.ntime = int(np.floor(total_time * points_per_ns))
@@ -545,3 +472,5 @@ def setup_eval_controls(
         init.init_type = ControlInitializationType.FILE
         init.filename = pcof_file
         setup.control_initializations = [init]
+
+    return setup
