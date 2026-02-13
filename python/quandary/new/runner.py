@@ -43,42 +43,30 @@ def _is_interactive():
 def _compute_optimal_core_distribution(maxcores: int, ninit: int) -> int:
     """Compute optimal MPI core distribution for Quandary.
 
-    Quandary parallelizes over initial conditions (most efficient) and can also
-    use PETSc parallelism within each initial condition. This function finds the
-    best factorization: n_procs = ncores_init * ncores_petsc.
+    Parallelization over initial conditions is the most efficient strategy.
+    This function finds the largest divisor of ninit that fits within maxcores.
+    PETSc parallelism within each initial condition is not used here — for HPC
+    runs requiring it, launch with mpirun directly.
 
     Args:
         maxcores: Max number of MPI processes requested.
         ninit: Number of initial conditions.
 
     Returns:
-        ncores: Actual total cores used (= ncores_init * ncores_petsc)
+        ncores: Actual total cores used (<= min(maxcores, ninit))
 
     """
-    # Set default number of cores to the number of initial conditions, unless otherwise specified. Make sure ncores is an integer divisible of ninit.
-    ncores_init = ninit
-    if maxcores > -1:
-        ncores_init = min(ninit, maxcores)
-    for i in range(ninit, 0, -1):
-        if ninit % i == 0:  # i is a factor of ninit
-            if i <= ncores_init:
-                ncores_init = i
-                break
-    # Set remaining number of cores for petsc
-    ncores_petsc = 1
-    if maxcores > ncores_init and maxcores % ncores_init == 0:
-        ncores_petsc = int(maxcores / ncores_init)
-    ncores = ncores_init * ncores_petsc
+    ncores = min(ninit, maxcores) if maxcores > -1 else ninit
+    # Round down to nearest divisor of ninit
+    for i in range(ncores, 0, -1):
+        if ninit % i == 0:
+            ncores = i
+            break
 
-    # Log the distribution
     if ncores != maxcores:
         logger.info(
-            f"Adjusted n_procs from {maxcores} to {ncores} for optimal parallelization across {ninit} initial conditions "
+            f"Adjusted n_procs from {maxcores} to {ncores} for optimal parallelization across {ninit} initial conditions"
         )
-    logger.info(
-        f"MPI distribution: {ncores_init} cores for initial conditions × "
-        f"{ncores_petsc} cores for PETSc = {ncores} total cores"
-    )
 
     return ncores
 
