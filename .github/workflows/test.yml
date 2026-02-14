@@ -59,6 +59,15 @@ jobs:
         spack -e .spack_env add quandary@develop+test^openmpi
         spack -e .spack_env install --use-buildcache package:never
 
+    - name: Run C++ unit tests
+      shell: spack-sh {0}
+      env:
+        PRTE_MCA_rmaps_default_mapping_policy: :oversubscribe
+      run: |
+        spack env activate .spack_env
+        cd $(spack -e .spack_env location -b quandary)
+        ctest --output-on-failure --no-compress-output
+
     - name: Run cfg regression tests
       shell: spack-sh {0}
       run: |

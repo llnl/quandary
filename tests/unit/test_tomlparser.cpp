@@ -1220,29 +1220,47 @@ TEST_F(TomlParserTest, OptimWeightsDefault) {
 
 TEST_F(TomlParserTest, ComprehensiveNonDefaultSettings_PrintConfigValidation) {
   // Create a comprehensive configuration with non-default settings
+  // Uses multi-oscillator system with per-subsystem settings to test output formatting
   std::string input_toml = R"(
 [system]
-nlevels = [3]
-nessential = [2]
+nlevels = [3, 4]
+nessential = [2, 3]
 ntime = 2500
 dt = 0.02
-transition_frequency = [5.5]
-selfkerr = [-0.2]
-rotation_frequency = [2.1]
-decoherence = {type = "decay", decay_time = [25.0], dephase_time = [0.0]}
-initial_condition = {type = "state", levels = [1]}
+transition_frequency = [5.5, 6.2]
+selfkerr = [-0.2, -0.25]
+rotation_frequency = [2.1, 2.5]
+crosskerr_coupling = [
+  {subsystem = [0, 1], value = 0.05}
+]
+dipole_coupling = [
+  {subsystem = [0, 1], value = 0.01}
+]
+decoherence = {type = "decay", decay_time = [25.0, 30.0], dephase_time = [0.0, 0.0]}
+initial_condition = {type = "diagonal", subsystem = [0, 1]}
+hamiltonian_file_Hsys = "/path/to/system_hamiltonian.dat"
+hamiltonian_file_Hc = "/path/to/control_hamiltonian.dat"
 
 [control]
-parameterization = { type = "spline", num = 25, tstart = 0.5, tstop = 1.5 }
-carrier_frequency = [2.5, 3.0]
-initialization = { type = "random", amplitude = 1.5, phase = 0.5 }
-amplitude_bound = 5.0
+parameterization = [
+  {subsystem = 0, type = "spline", num = 25, tstart = 0.5, tstop = 1.5},
+  {subsystem = 1, type = "spline0", num = 30}
+]
+carrier_frequency = [
+  {subsystem = 0, value = [2.5, 3.0]},
+  {subsystem = 1, value = [1.5, 2.0, 2.5]}
+]
+initialization = [
+  {subsystem = 0, type = "random", amplitude = 1.5, phase = 0.5},
+  {subsystem = 1, type = "constant", amplitude = 0.1}
+]
+amplitude_bound = [5.0, 6.0]
 zero_boundary_condition = false
 
 [optimization]
-target = {type = "gate", gate_type = "hadamard", gate_rot_freq = [1.5]}
+target = {type = "gate", gate_type = "cnot", gate_rot_freq = [1.5, 2.0]}
 objective = "jtrace"
-weights = [1.0]
+weights = [0.5, 0.3, 0.1, 0.05, 0.03, 0.02]
 tolerance = { grad_abs = 1e-06, grad_rel = 0.001, final_cost = 1e-07, infidelity = 0.0001 }
 maxiter = 150
 tikhonov = { coeff = 0.002, use_x0 = true }
