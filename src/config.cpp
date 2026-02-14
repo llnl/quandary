@@ -950,28 +950,25 @@ std::string Config::toString(const InitialConditionSettings& initial_condition) 
   auto type_str = "type = \"" + enumToString(initial_condition.type, INITCOND_TYPE_MAP) + "\"";
   switch (initial_condition.type) {
     case InitialConditionType::FROMFILE:
-      return "{" + type_str + ", filename = \"" + initial_condition.filename.value() + "\"}";
+      if (initial_condition.filename.has_value()) {
+        return "{" + type_str + ", filename = \"" + initial_condition.filename.value() + "\"}";
+      }
+      return "{" + type_str + "}";
     case InitialConditionType::PRODUCT_STATE: {
-      std::string out = "{" + type_str + ", levels = ";
-      out += printVector(initial_condition.levels.value());
+      std::string out = "{" + type_str;
+      if (initial_condition.levels.has_value()) {
+        out += ", levels = " + printVector(initial_condition.levels.value());
+      }
       out += "}";
       return out;
     }
-    case InitialConditionType::ENSEMBLE: {
-      std::string out = "{" + type_str + ", subsystem = ";
-      out += printVector(initial_condition.subsystem.value());
-      out += "}";
-      return out;
-    }
-    case InitialConditionType::DIAGONAL: {
-      std::string out = "{" + type_str + ", subsystem = ";
-      out += printVector(initial_condition.subsystem.value());
-      out += "}";
-      return out;
-    }
+    case InitialConditionType::ENSEMBLE:
+    case InitialConditionType::DIAGONAL:
     case InitialConditionType::BASIS: {
-      std::string out = "{" + type_str + ", subsystem = ";
-      out += printVector(initial_condition.subsystem.value());
+      std::string out = "{" + type_str;
+      if (initial_condition.subsystem.has_value()) {
+        out += ", subsystem = " + printVector(initial_condition.subsystem.value());
+      }
       out += "}";
       return out;
     }
