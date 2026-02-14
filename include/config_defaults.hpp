@@ -42,7 +42,7 @@ const double OPTIM_WEIGHT = 1.0; ///< Default optimization weight per initial co
 
 const double OPTIM_TIKHONOV_COEFF = 1e-4; ///< Default Tikhonov regularization coefficient
 const bool OPTIM_TIKHONOV_USE_X0 = false; ///< Default Tikhonov regularization type
-const double OPTIM_TOL_GRAD_ABS = 1e-8; ///< Default absolute gradient tolerance
+const double OPTIM_TOL_GRAD_ABS = 1e-4; ///< Default absolute gradient tolerance
 const double OPTIM_TOL_GRAD_REL = 1e-4; ///< Default relative gradient tolerance
 const double OPTIM_TOL_FINAL_COST = 1e-8; ///< Default final time cost tolerance
 const double OPTIM_TOL_INFIDELITY = 1e-5; ///< Default infidelity tolerance
@@ -61,7 +61,7 @@ const size_t OUTPUT_TIMESTEP_STRIDE = 1; ///< Default output frequency
 const size_t OUTPUT_OPTIMIZATION_STRIDE = 10; ///< Default optimization monitoring frequency
 
 const RunType RUNTYPE = RunType::SIMULATION; ///< Default run type
-const bool USEMATFREE = false; ///< Default matrix-free solver setting
+const bool USEMATFREE = true; ///< Default matrix-free solver setting
 const LinearSolverType LINEARSOLVER_TYPE = LinearSolverType::GMRES; ///< Default linear solver type
 const size_t LINEARSOLVER_MAXITER = 10; ///< Default linear solver max iterations
 const TimeStepperType TIMESTEPPER_TYPE = TimeStepperType::IMR; ///< Default time stepper type
