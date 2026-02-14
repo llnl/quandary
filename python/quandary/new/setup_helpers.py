@@ -7,18 +7,20 @@ from typing import List, Optional
 import numpy as np
 
 from .._quandary_impl import (
-    Setup,
     RunType,
     ControlType,
     InitialConditionType,
-    InitialConditionSettings,
-    OptimTargetSettings,
     TargetType,
     GateType,
-    ControlParameterizationSettings,
-    ControlInitializationSettings,
     ControlInitializationType,
     OutputType,
+)
+from ._structs import (
+    Setup,
+    InitialConditionSettings,
+    OptimTargetSettings,
+    ControlParameterizationSettings,
+    ControlInitializationSettings,
 )
 from .quantum_operators import hamiltonians, get_resonances
 from .time_estimation import estimate_timesteps
@@ -263,8 +265,7 @@ def setup_physics(
             logger.info(f"  B-spline basis functions: {nspline}")
 
     # Create Setup with common fields
-    from . import Setup as _PythonSetup   # late import — avoids circular; __init__ is fully loaded by call time
-    setup = _PythonSetup()
+    setup = Setup()
     setup.nlevels = nlevels
     setup.nessential = nessential
     setup.ntime = ntime

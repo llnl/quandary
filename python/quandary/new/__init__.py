@@ -10,7 +10,6 @@ from .._quandary_impl import (
     # Exceptions
     ValidationError as ValidationError,
     # Configuration
-    Setup as _CppSetup,
     Config,
     # Run function from C++ (used internally)
     run_from_file,
@@ -26,43 +25,16 @@ from .._quandary_impl import (
     TimeStepperType,
     GateType,
     OutputType,
-    # Structs
+)
+
+# Python subclasses with __repr__ and improved TypeError messages
+from ._structs import (
+    Setup,
     InitialConditionSettings,
     OptimTargetSettings,
     ControlParameterizationSettings,
     ControlInitializationSettings,
 )
-
-
-# Subclass Setup to improve TypeError messages: nanobind's default only says
-# "incompatible function arguments" without naming the property or showing the
-# value passed. __setattr__ catches those errors and re-raises with context.
-def _fmt_val(v):
-    r = repr(v).replace('\n', ' ')
-    return r[:77] + '...' if len(r) > 80 else r
-
-
-class Setup(_CppSetup):
-    def __setattr__(self, name, value):
-        try:
-            super().__setattr__(name, value)
-        except TypeError as e:
-            hint = " (must be a non-negative integer)" if isinstance(value, int) and value < 0 else ""
-            raise TypeError(
-                f"Setup.{name} = {_fmt_val(value)} ({type(value).__name__}){hint}: {e}"
-            ) from None
-
-    def __repr__(self):
-        fields = {
-            name: getattr(self, name)
-            for name, val in _CppSetup.__dict__.items()
-            if not name.startswith('_') and hasattr(val, '__get__') and hasattr(val, '__set__')
-        }
-        lines = ["Setup("]
-        for k, v in fields.items():
-            lines.append(f"  {k}={v!r},")
-        lines.append(")")
-        return "\n".join(lines)
 
 
 # Functional API (primary interface)
