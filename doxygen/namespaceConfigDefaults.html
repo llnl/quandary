@@ -153,7 +153,7 @@ Variables</h2></td></tr>
 <tr class="memitem:a99443dd1e8540675e13e9f4a2f33f7e0" id="r_a99443dd1e8540675e13e9f4a2f33f7e0"><td class="memItemLeft" align="right" valign="top">const bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceConfigDefaults.html#a99443dd1e8540675e13e9f4a2f33f7e0">OPTIM_TIKHONOV_USE_X0</a> = false</td></tr>
 <tr class="memdesc:a99443dd1e8540675e13e9f4a2f33f7e0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default Tikhonov regularization type.  <br /></td></tr>
 <tr class="separator:a99443dd1e8540675e13e9f4a2f33f7e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a811d56ffe51e2dadc83447c78c5d03aa" id="r_a811d56ffe51e2dadc83447c78c5d03aa"><td class="memItemLeft" align="right" valign="top">const double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceConfigDefaults.html#a811d56ffe51e2dadc83447c78c5d03aa">OPTIM_TOL_GRAD_ABS</a> = 1e-8</td></tr>
+<tr class="memitem:a811d56ffe51e2dadc83447c78c5d03aa" id="r_a811d56ffe51e2dadc83447c78c5d03aa"><td class="memItemLeft" align="right" valign="top">const double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceConfigDefaults.html#a811d56ffe51e2dadc83447c78c5d03aa">OPTIM_TOL_GRAD_ABS</a> = 1e-4</td></tr>
 <tr class="memdesc:a811d56ffe51e2dadc83447c78c5d03aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default absolute gradient tolerance.  <br /></td></tr>
 <tr class="separator:a811d56ffe51e2dadc83447c78c5d03aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8d566cefb9fe7045d6223242b53e32b7" id="r_a8d566cefb9fe7045d6223242b53e32b7"><td class="memItemLeft" align="right" valign="top">const double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceConfigDefaults.html#a8d566cefb9fe7045d6223242b53e32b7">OPTIM_TOL_GRAD_REL</a> = 1e-4</td></tr>
@@ -198,7 +198,7 @@ Variables</h2></td></tr>
 <tr class="memitem:ad27bbffaad91b2f8af5b6a9f91846391" id="r_ad27bbffaad91b2f8af5b6a9f91846391"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4">RunType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceConfigDefaults.html#ad27bbffaad91b2f8af5b6a9f91846391">RUNTYPE</a> = <a class="el" href="defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4a64c71603ed31477ee4757ae9af42f7e9">RunType::SIMULATION</a></td></tr>
 <tr class="memdesc:ad27bbffaad91b2f8af5b6a9f91846391"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default run type.  <br /></td></tr>
 <tr class="separator:ad27bbffaad91b2f8af5b6a9f91846391"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac03ab10369bc7149ab82443d9b369592" id="r_ac03ab10369bc7149ab82443d9b369592"><td class="memItemLeft" align="right" valign="top">const bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceConfigDefaults.html#ac03ab10369bc7149ab82443d9b369592">USEMATFREE</a> = false</td></tr>
+<tr class="memitem:ac03ab10369bc7149ab82443d9b369592" id="r_ac03ab10369bc7149ab82443d9b369592"><td class="memItemLeft" align="right" valign="top">const bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceConfigDefaults.html#ac03ab10369bc7149ab82443d9b369592">USEMATFREE</a> = true</td></tr>
 <tr class="memdesc:ac03ab10369bc7149ab82443d9b369592"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default matrix-free solver setting.  <br /></td></tr>
 <tr class="separator:ac03ab10369bc7149ab82443d9b369592"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7b4a429078a79fbc1a3ddf268b14d22d" id="r_a7b4a429078a79fbc1a3ddf268b14d22d"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="defs_8hpp.html#acb811991285b406a5a2880a4893bffb4">LinearSolverType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceConfigDefaults.html#a7b4a429078a79fbc1a3ddf268b14d22d">LINEARSOLVER_TYPE</a> = <a class="el" href="defs_8hpp.html#acb811991285b406a5a2880a4893bffb4ac1bfd84e7215afa3204b8e1cdb21a2bd">LinearSolverType::GMRES</a></td></tr>
@@ -689,7 +689,7 @@ Variables</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">const double ConfigDefaults::OPTIM_TOL_GRAD_ABS = 1e-8</td>
+          <td class="memname">const double ConfigDefaults::OPTIM_TOL_GRAD_ABS = 1e-4</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -889,7 +889,7 @@ Variables</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">const bool ConfigDefaults::USEMATFREE = false</td>
+          <td class="memname">const bool ConfigDefaults::USEMATFREE = true</td>
         </tr>
       </table>
 </div><div class="memdoc">
