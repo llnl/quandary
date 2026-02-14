@@ -184,6 +184,12 @@ class Config {
 
   void printConfig(std::stringstream& log) const;
 
+  // toString functions for settings structs (used for printing and Python __repr__)
+  static std::string toString(const InitialConditionSettings& initial_condition);
+  static std::string toString(const OptimTargetSettings& optim_target);
+  static std::string toString(const ControlParameterizationSettings& control_param);
+  static std::string toString(const ControlInitializationSettings& control_init);
+
   // getters
   const std::vector<size_t>& getNLevels() const { return data.nlevels; }
   size_t getNLevels(size_t i_osc) const { return data.nlevels[i_osc]; }

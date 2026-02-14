@@ -104,7 +104,8 @@ NB_MODULE(_quandary_impl, m) {
     .def_rw("condition_type", &InitialConditionSettings::type, "(InitialConditionType) Type of initial condition")
     .def_rw("filename", &InitialConditionSettings::filename, "(str | None) File path (for FROMFILE type)")
     .def_rw("levels", &InitialConditionSettings::levels, "(list[int] | None) Level occupations per oscillator (for PRODUCT_STATE)")
-    .def_rw("subsystem", &InitialConditionSettings::subsystem, "(list[int] | None) Oscillator IDs (for ENSEMBLE, DIAGONAL, BASIS)");
+    .def_rw("subsystem", &InitialConditionSettings::subsystem, "(list[int] | None) Oscillator IDs (for ENSEMBLE, DIAGONAL, BASIS)")
+    .def("__repr__", [](const InitialConditionSettings& s) { return Config::toString(s); });
 
   nb::class_<OptimTargetSettings>(m, "OptimTargetSettings",
     "Settings for optimization target (gate or state).\n\n"
@@ -115,7 +116,8 @@ NB_MODULE(_quandary_impl, m) {
     .def_rw("gate_type", &OptimTargetSettings::gate_type, "(GateType | None) Predefined gate type (for GATE target)")
     .def_rw("gate_rot_freq", &OptimTargetSettings::gate_rot_freq, "(list[float] | None) Gate rotation frequencies [GHz] (for GATE target)")
     .def_rw("levels", &OptimTargetSettings::levels, "(list[int] | None) Target level occupations (for STATE target)")
-    .def_rw("filename", &OptimTargetSettings::filename, "(str | None) File path to custom gate or state");
+    .def_rw("filename", &OptimTargetSettings::filename, "(str | None) File path to custom gate or state")
+    .def("__repr__", [](const OptimTargetSettings& s) { return Config::toString(s); });
 
   nb::class_<ControlParameterizationSettings>(m, "ControlParameterizationSettings",
     "Settings for control pulse parameterization.\n\n"
@@ -125,7 +127,8 @@ NB_MODULE(_quandary_impl, m) {
     .def_rw("nspline", &ControlParameterizationSettings::nspline, "(int | None) Number of B-spline basis functions")
     .def_rw("tstart", &ControlParameterizationSettings::tstart, "(float | None) Start time of parameterization [ns]")
     .def_rw("tstop", &ControlParameterizationSettings::tstop, "(float | None) Stop time of parameterization [ns]")
-    .def_rw("scaling", &ControlParameterizationSettings::scaling, "(float | None) Amplitude scaling factor (BSPLINEAMP only)");
+    .def_rw("scaling", &ControlParameterizationSettings::scaling, "(float | None) Amplitude scaling factor (BSPLINEAMP only)")
+    .def("__repr__", [](const ControlParameterizationSettings& s) { return Config::toString(s); });
 
   nb::class_<ControlInitializationSettings>(m, "ControlInitializationSettings",
     "Settings for initial control pulse values.\n\n"
@@ -134,7 +137,8 @@ NB_MODULE(_quandary_impl, m) {
     .def_rw("init_type", &ControlInitializationSettings::type, "(ControlInitializationType) Initialization method")
     .def_rw("amplitude", &ControlInitializationSettings::amplitude, "(float | None) Initial amplitude [GHz] (for CONSTANT)")
     .def_rw("phase", &ControlInitializationSettings::phase, "(float | None) Initial phase [rad]")
-    .def_rw("filename", &ControlInitializationSettings::filename, "(str | None) File path (for FILE type)");
+    .def_rw("filename", &ControlInitializationSettings::filename, "(str | None) File path (for FILE type)")
+    .def("__repr__", [](const ControlInitializationSettings& s) { return Config::toString(s); });
 
   // Setup - mutable configuration with all fields optional
   nb::class_<Setup>(m, "Setup",

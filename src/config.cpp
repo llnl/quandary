@@ -943,8 +943,10 @@ std::string printVector(const std::vector<T>& vec) {
   return result;
 }
 
+} // namespace
 
-std::string toString(const InitialConditionSettings& initial_condition) {
+// toString functions for settings structs (static members of Config, used for printing and Python bindings)
+std::string Config::toString(const InitialConditionSettings& initial_condition) {
   auto type_str = "type = \"" + enumToString(initial_condition.type, INITCOND_TYPE_MAP) + "\"";
   switch (initial_condition.type) {
     case InitialConditionType::FROMFILE:
@@ -981,7 +983,7 @@ std::string toString(const InitialConditionSettings& initial_condition) {
   return "unknown";
 }
 
-std::string toString(const OptimTargetSettings& optim_target) {
+std::string Config::toString(const OptimTargetSettings& optim_target) {
   auto type_str = "type = \"" + enumToString(optim_target.type, TARGET_TYPE_MAP) + "\"";
   switch (optim_target.type) {
     case TargetType::GATE: {
@@ -1014,6 +1016,29 @@ std::string toString(const OptimTargetSettings& optim_target) {
   }
   return "unknown";
 }
+
+std::string Config::toString(const ControlParameterizationSettings& param) {
+  std::string out = "{";
+  out += "type = \"" + enumToString(param.type, CONTROL_TYPE_MAP) + "\"";
+  out += param.nspline.has_value() ? ", num = " + std::to_string(param.nspline.value()) : "";
+  out += param.tstart.has_value() ? ", tstart = " + formatDouble(param.tstart.value()) : "";
+  out += param.tstop.has_value() ? ", tstop = " + formatDouble(param.tstop.value()) : "";
+  out += param.scaling.has_value() ? ", scaling = " + formatDouble(param.scaling.value()) : "";
+  out += "}";
+  return out;
+}
+
+std::string Config::toString(const ControlInitializationSettings& init) {
+  std::string out = "{";
+  out += "type = \"" + enumToString(init.type, CONTROL_INITIALIZATION_TYPE_MAP) + "\"";
+  out += init.filename.has_value() ? ", filename = \"" + init.filename.value() + "\"" : "";
+  out += init.amplitude.has_value() ? ", amplitude = " + formatDouble(init.amplitude.value()) : "";
+  out += init.phase.has_value() ? ", phase = " + formatDouble(init.phase.value()) : "";
+  out += "}";
+  return out;
+}
+
+namespace {
 
 // Template helper for toString functions that output either a single item or an array with per-item overrides
 template <typename T, typename PrintFunc, typename CompareFunc>
@@ -1049,12 +1074,7 @@ std::string toStringWithOptionalPerSubsystem(const std::vector<T>& items, PrintF
 std::string toString(const std::vector<ControlInitializationSettings>& control_initializations) {
   // Helper function to print all items of a single ControlInitializationSettings
   auto printItems = [](const ControlInitializationSettings& init) {
-    std::string out = "";
-    out += "type = \"" + enumToString(init.type, CONTROL_INITIALIZATION_TYPE_MAP) + "\"";
-    out += init.filename.has_value() ? ", filename = \"" + init.filename.value() + "\"" : "";
-    out += init.amplitude.has_value() ? ", amplitude = " + formatDouble(init.amplitude.value()) : "";
-    out += init.phase.has_value() ? ", phase = " + formatDouble(init.phase.value()) : "";
-    return out;
+    return Config::toString(init);
   };
 
   // Helper function to compare two ControlInitializationSettings items
@@ -1068,13 +1088,7 @@ std::string toString(const std::vector<ControlInitializationSettings>& control_i
 std::string toString(const std::vector<ControlParameterizationSettings>& control_parameterizations) {
   // Helper function to print all items of a single ControlParameterizationSetting
   auto printItems = [](const ControlParameterizationSettings& param) {
-    std::string out = "";
-    out += "type = \"" + enumToString(param.type, CONTROL_TYPE_MAP) + "\"";
-    out += param.nspline.has_value() ? ", num = " + std::to_string(param.nspline.value()) : "";
-    out += param.tstart.has_value() ? ", tstart = " + formatDouble(param.tstart.value()) : "";
-    out += param.tstop.has_value() ? ", tstop = " + formatDouble(param.tstop.value()) : "";
-    out += param.scaling.has_value() ? ", scaling = " + formatDouble(param.scaling.value()) : "";
-    return out;
+    return Config::toString(param);
   };
 
   // Helper function to compare two ControlParameterizationSettings items
@@ -1134,7 +1148,7 @@ void Config::printConfig(std::stringstream& log) const {
   log << "  decay_time = " << printVector(data.decay_time) << ",\n";
   log << "  dephase_time = " << printVector(data.dephase_time) << "\n";
   log << "}\n";
-  log << "initial_condition = " << toString(data.initial_condition) << "\n";
+  log << "initial_condition = " << Config::toString(data.initial_condition) << "\n";
   if (data.hamiltonian_file_Hsys.has_value()) {
     log << "hamiltonian_file_Hsys = \"" << data.hamiltonian_file_Hsys.value() << "\"\n";
   }
@@ -1145,16 +1159,16 @@ void Config::printConfig(std::stringstream& log) const {
   log << "\n";
   log << "[control]\n";
 
-  log << "parameterization = " << toString(data.control_parameterizations) << "\n";
-  log << "carrier_frequency = " << toString(data.carrier_frequencies) << "\n";
-  log << "initialization = " << toString(data.control_initializations) << "\n";
-  log << "amplitude_bound = " << toString(data.control_amplitude_bounds) << "\n";
+  log << "parameterization = " << ::toString(data.control_parameterizations) << "\n";
+  log << "carrier_frequency = " << ::toString(data.carrier_frequencies) << "\n";
+  log << "initialization = " << ::toString(data.control_initializations) << "\n";
+  log << "amplitude_bound = " << ::toString(data.control_amplitude_bounds) << "\n";
   log << "zero_boundary_condition = " << (data.control_zero_boundary_condition ? "true" : "false") << "\n";
 
   log << "\n";
   log << "[optimization]\n";
 
-  log << "target = " << toString(data.optim_target) << "\n";
+  log << "target = " << Config::toString(data.optim_target) << "\n";
   log << "objective = \"" << enumToString(data.optim_objective, OBJECTIVE_TYPE_MAP) << "\"\n";
   bool uniform_weights = std::adjacent_find(data.optim_weights.begin(), data.optim_weights.end(), std::not_equal_to<double>{}) == data.optim_weights.end();
   if (!uniform_weights) {
