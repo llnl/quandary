@@ -52,6 +52,18 @@ class Setup(_CppSetup):
                 f"Setup.{name} = {_fmt_val(value)} ({type(value).__name__}){hint}: {e}"
             ) from None
 
+    def __repr__(self):
+        fields = {
+            name: getattr(self, name)
+            for name, val in _CppSetup.__dict__.items()
+            if not name.startswith('_') and hasattr(val, '__get__') and hasattr(val, '__set__')
+        }
+        lines = ["Setup("]
+        for k, v in fields.items():
+            lines.append(f"  {k}={v!r},")
+        lines.append(")")
+        return "\n".join(lines)
+
 
 # Functional API (primary interface)
 from .runner import optimize, simulate, evaluate_controls  # noqa: F401, E402
