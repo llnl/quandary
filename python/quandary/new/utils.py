@@ -13,7 +13,7 @@ def infidelity_(A, B):
     return 1.0 - np.abs(np.trace(A.conj().transpose() @ B))**2 / dim**2
 
 
-def downsample_pulses(*, pt0=[], qt0=[], nsplines, spline_knot_spacing, ntime, dt, nessential):
+def downsample_pulses(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, ntime, dt, nessential):
     """
     Downsample control pulses from high-resolution (pt0, qt0) to B-spline coefficients.
 
@@ -42,6 +42,11 @@ def downsample_pulses(*, pt0=[], qt0=[], nsplines, spline_knot_spacing, ntime, d
     pcof0 : ndarray
         Control parameter vector (B-spline coefficients) in rad/ns.
     """
+    if pt0 is None:
+        pt0 = []
+    if qt0 is None:
+        qt0 = []
+
     Nsys = len(nessential)
     if len(pt0) == Nsys and len(qt0) == Nsys:
         sizes_ok = True
