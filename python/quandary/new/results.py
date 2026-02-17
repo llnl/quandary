@@ -98,6 +98,15 @@ def get_results(config: Config) -> Results:
             logger.warning(f"Failed to read control parameters from {params_file}: {e}")
 
     # Read optimization history (optim_history.dat)
+    # Column names are read from the file header to avoid hardcoding indices.
+    # Expected columns (from output.cpp): iter, Objective, ||Pr(grad)||, LS step,
+    # F_avg, Terminal cost, Tikhonov-regul, Penalty-term, State variation,
+    # Energy-term, Control variation
+    _OPTIM_HIST_KEYS = [
+        "iter", "objective", "gradient", "ls_step", "fidelity",
+        "cost", "tikhonov", "penalty", "state_variation", "energy",
+        "control_variation",
+    ]
     optim_file = os.path.join(datadir, "optim_history.dat")
     if os.path.exists(optim_file):
         try:
@@ -105,22 +114,13 @@ def get_results(config: Config) -> Results:
             if data.ndim == 1:
                 data = data.reshape(1, -1)
             results.optim_hist = {
-                "iter": data[:, 0],
-                "objective": data[:, 1],
-                "gradient": data[:, 2],
-                "ls_step": data[:, 3],
-                "fidelity": data[:, 4],
-                "cost": data[:, 5],
-                "tikhonov": data[:, 6],
-                "penalty": data[:, 7],
-                "state_variation": data[:, 8],
-                "energy": data[:, 9],
-                "control_variation": data[:, 10]
-                if data.shape[1] > 10
-                else np.zeros_like(data[:, 0]),
+                key: data[:, i]
+                for i, key in enumerate(_OPTIM_HIST_KEYS)
+                if i < data.shape[1]
             }
             # Infidelity from last iteration
-            results.infidelity = 1.0 - data[-1, 4]
+            fidelity_col = _OPTIM_HIST_KEYS.index("fidelity")
+            results.infidelity = 1.0 - data[-1, fidelity_col]
         except (OSError, ValueError, IndexError) as e:
             logger.warning(
                 f"Failed to read optimization history from {optim_file}: {e}"
