@@ -35,9 +35,21 @@ logger = logging.getLogger(__name__)
 
 
 def _is_interactive():
-    """Detect if running in an interactive environment (e.g., Jupyter notebook)."""
-    import __main__ as main
-    return not hasattr(main, '__file__')
+    """Detect if running in an interactive Python session (Jupyter, IPython, or plain REPL)."""
+    # Check for IPython/Jupyter
+    try:
+        from IPython import get_ipython
+        shell = get_ipython()
+        if shell is not None and shell.__class__.__name__ in (
+            'ZMQInteractiveShell',       # Jupyter notebook/lab
+            'TerminalInteractiveShell',  # IPython terminal
+        ):
+            return True
+    except ImportError:
+        pass
+    # Check for plain Python REPL
+    import __main__
+    return not hasattr(__main__, '__file__')
 
 
 def _compute_optimal_core_distribution(maxcores: int, ninit: int) -> int:
