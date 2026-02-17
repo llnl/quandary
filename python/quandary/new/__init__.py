@@ -75,7 +75,7 @@ from .utils import (  # noqa: F401, E402
 
 # Setup helpers (factory/configuration functions)
 from .setup_helpers import (  # noqa: F401, E402
-    setup_physics,
+    setup_quandary,
 )
 
 # Define public API
@@ -128,7 +128,7 @@ __all__ = [
     "infidelity_",
     "downsample_pulses",
     # Setup helpers
-    "setup_physics",
+    "setup_quandary",
 ]
 
 petsc4py.init()

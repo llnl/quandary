@@ -36,7 +36,7 @@ def _get_output_dir(setup):
     return setup.output_directory or _DEFAULT_OUTPUT_DIR
 
 
-def setup_physics(
+def setup_quandary(
     nessential: List[int],
     transition_frequency: List[float],
     final_time: float,
@@ -133,11 +133,11 @@ def setup_physics(
     Example:
     -------
     >>> # Default: BASIS (all basis states)
-    >>> setup = setup_physics(nessential=[3], transition_frequency=[4.1], final_time=100)
+    >>> setup = setup_quandary(nessential=[3], transition_frequency=[4.1], final_time=100)
     >>> # Product state |001⟩:
-    >>> setup = setup_physics(..., initial_levels=[0, 0, 1])
+    >>> setup = setup_quandary(..., initial_levels=[0, 0, 1])
     >>> # Superposition (|0⟩ + |1⟩)/√2:
-    >>> setup = setup_physics(..., initial_state=[1/np.sqrt(2), 1/np.sqrt(2)])
+    >>> setup = setup_quandary(..., initial_state=[1/np.sqrt(2), 1/np.sqrt(2)])
     """
     # Set defaults
     nqubits = len(nessential)

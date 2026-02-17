@@ -265,7 +265,7 @@ def optimize(
     Parameters:
     ----------
     setup : Setup
-        Physics setup from setup_physics(). Not modified.
+        Physics setup from setup_quandary().
     targetgate : array-like, optional
         Target unitary gate.
     targetstate : array-like, optional
@@ -345,7 +345,7 @@ def simulate(
     Parameters:
     ----------
     setup : Setup
-        Physics setup from setup_physics(). Not modified.
+        Physics setup from setup_quandary().
     pcof : array-like, optional
         B-spline control coefficients.
     pt0 : list of ndarray, optional
@@ -408,7 +408,7 @@ def evaluate_controls(
     Parameters:
     ----------
     setup : Setup
-        Physics setup from setup_physics(). Not modified.
+        Physics setup from setup_quandary().
     pcof : array-like
         B-spline control coefficients.
     points_per_ns : float
