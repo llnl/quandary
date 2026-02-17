@@ -83,10 +83,14 @@ def downsample_pulses(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, ntim
             # print("simulation(): downsampling of (pt0, qt0) completed")
             return pcof0
         else:
-            logger.warning("downsample_pulses: size mismatch in pt0/qt0 for one or more oscillators")
-            return np.array([])
+            raise ValueError(
+                "downsample_pulses: size mismatch in pt0/qt0 — each oscillator must have "
+                "matching arrays of length >= 2."
+            )
     elif len(pt0) > 0 or len(qt0) > 0:
-        logger.warning("downsample_pulses: len(pt0) or len(qt0) != number of oscillators (%d)", Nsys)
-        return np.array([])
+        raise ValueError(
+            f"downsample_pulses: pt0 and qt0 must each have one entry per oscillator "
+            f"(expected {Nsys}, got pt0={len(pt0)}, qt0={len(qt0)})."
+        )
     else:
         return np.array([])
