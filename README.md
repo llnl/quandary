@@ -96,19 +96,27 @@ sudo cmake --install . --prefix /your/install/path
 
 ### Python dependencies and interface
 
-Create a virtual environment (e.g. with conda, venv, ...) and then use `pip install -e .` to install the python dependencies and activate Quandary's python interface. For example, for Conda environments, do:
+Create a virtual environment (e.g. with conda, venv, ...) and use `pip` to install Quandary's Python interface and its dependencies. For example, for Conda environments, do:
 ```
 conda create --name myenv
 conda activate myenv
-pip install -e .
+pip install .
 ```
 Or for venv, do:
 ```
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e .
+pip install .
 ```
-In additional to installing dependencies, the `pip install` command also enables that your python scripts can find Quandary's python interface functions, which are defined in `quandary.py`.
+
+The `pip install .` command invokes CMake under the hood (via [scikit-build-core](https://scikit-build-core.readthedocs.io/)) to compile the nanobind C++ extension. This requires:
+
+- **PETSc**: visible via `PKG_CONFIG_PATH` (see above)
+- **MPI**: MPI compiler wrappers (`mpicc`, `mpicxx`) must be in your `PATH`, or set `MPI_ROOT` to your MPI installation prefix
+
+Both the classic interface (`quandary.py`) and the new nanobind-based interface (`quandary.new`) are installed, along with generated type stubs for IDE autocompletion.
+
+Use `pip install -e .` instead if you want to edit the Python source files without reinstalling on every change. In editable mode the C++ extension is still compiled, but the generated type stubs may not be visible to IDEs.
 
 
 # Running
