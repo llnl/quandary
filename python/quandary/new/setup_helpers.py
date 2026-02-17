@@ -53,7 +53,7 @@ def setup_quandary(
     spline_knot_spacing: Optional[float] = None,
     spline_order: Optional[int] = None,
     control_zero_boundary_condition: Optional[bool] = None,
-    initialcondition: Optional[InitialConditionSettings] = None,
+    initial_condition: Optional[InitialConditionSettings] = None,
     initial_levels: Optional[List[int]] = None,
     initial_state: Optional[List[complex]] = None,
     output_directory: str = _DEFAULT_OUTPUT_DIR,
@@ -114,7 +114,7 @@ def setup_quandary(
         Affects the knot spacing formula and carrier frequency defaults.
     control_zero_boundary_condition : bool
         Force control pulses to start and end at zero.
-    initialcondition : InitialConditionSettings, optional
+    initial_condition : InitialConditionSettings, optional
         Direct struct specification (advanced). For convenience, use initial_levels or initial_state.
     initial_levels : List[int], optional
         Product state like |001⟩. Example: [0, 0, 1].
@@ -154,10 +154,10 @@ def setup_quandary(
     if control_amplitude_bounds is None:
         control_amplitude_bounds = [0.01] * nqubits
 
-    # Handle initial condition (only one of initialcondition, initial_levels, initial_state)
-    num_init_specs = sum([initialcondition is not None, initial_levels is not None, initial_state is not None])
+    # Handle initial condition (only one of initial_condition, initial_levels, initial_state)
+    num_init_specs = sum([initial_condition is not None, initial_levels is not None, initial_state is not None])
     if num_init_specs > 1:
-        raise ValueError("Can only specify one of: initialcondition, initial_levels, initial_state")
+        raise ValueError("Can only specify one of: initial_condition, initial_levels, initial_state")
 
     os.makedirs(output_directory, exist_ok=True)
 
@@ -165,9 +165,9 @@ def setup_quandary(
         # Product state like |001⟩
         if len(initial_levels) != nqubits:
             raise ValueError(f"initial_levels must have length {nqubits}, got {len(initial_levels)}")
-        initialcondition = InitialConditionSettings()
-        initialcondition.condition_type = InitialConditionType.PRODUCT_STATE
-        initialcondition.levels = initial_levels
+        initial_condition = InitialConditionSettings()
+        initial_condition.condition_type = InitialConditionType.PRODUCT_STATE
+        initial_condition.levels = initial_levels
     elif initial_state is not None:
         # Arbitrary superposition, write to file
         dim_ess = int(np.prod(nessential))
@@ -178,13 +178,13 @@ def setup_quandary(
         init_state_file = os.path.join(output_directory, "initial_state.dat")
         state_vec = np.concatenate((initial_state_array.real, initial_state_array.imag))
         np.savetxt(init_state_file, state_vec, fmt='%20.13e')
-        initialcondition = InitialConditionSettings()
-        initialcondition.condition_type = InitialConditionType.FROMFILE
-        initialcondition.filename = init_state_file
-    elif initialcondition is None:
+        initial_condition = InitialConditionSettings()
+        initial_condition.condition_type = InitialConditionType.FROMFILE
+        initial_condition.filename = init_state_file
+    elif initial_condition is None:
         # Default: BASIS
-        initialcondition = InitialConditionSettings()
-        initialcondition.condition_type = InitialConditionType.BASIS
+        initial_condition = InitialConditionSettings()
+        initial_condition.condition_type = InitialConditionType.BASIS
 
     # Build Hamiltonians
     nlevels = [nessential[i] + nguard[i] for i in range(nqubits)]
@@ -280,7 +280,7 @@ def setup_quandary(
     setup.control_amplitude_bounds = control_amplitude_bounds
 
     setup.carrier_frequencies = carrier_frequency
-    setup.initial_condition = initialcondition
+    setup.initial_condition = initial_condition
     setup.output_directory = output_directory
     if control_zero_boundary_condition is not None:
         setup.control_zero_boundary_condition = control_zero_boundary_condition
