@@ -6,9 +6,9 @@ from .quandary import *
 from . import new
 
 warnings.warn(
-    "The legacy Quandary interface is deprecated and will be removed in a "
-    "future version. Please migrate to the new interface, for example: "
-    "'from quandary.new import *'",
+    "The legacy Quandary class interface is deprecated and will be removed in a "
+    "future version. If you are using 'from quandary.new import *', you can safely "
+    "ignore this warning.",
     DeprecationWarning,
     stacklevel=2
 )
