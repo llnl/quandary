@@ -124,7 +124,7 @@ NB_MODULE(_quandary_impl, m) {
     "Configure how control pulses are represented and parameterized during optimization.")
     .def(nb::init<>())
     .def_rw("control_type", &ControlParameterizationSettings::type, "(ControlType) Parameterization type (BSPLINE, etc.)")
-    .def_rw("nspline", &ControlParameterizationSettings::nspline, "(int | None) Number of B-spline basis functions")
+    .def_rw("nspline", &ControlParameterizationSettings::nspline, "(int >= 1 | None) Number of B-spline basis functions")
     .def_rw("tstart", &ControlParameterizationSettings::tstart, "(float | None) Start time of parameterization [ns]")
     .def_rw("tstop", &ControlParameterizationSettings::tstop, "(float | None) Stop time of parameterization [ns]")
     .def_rw("scaling", &ControlParameterizationSettings::scaling, "(float | None) Amplitude scaling factor (BSPLINEAMP only)")
