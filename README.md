@@ -118,6 +118,11 @@ Both the classic interface (`quandary.py`) and the new nanobind-based interface 
 
 Use `pip install -e .` instead if you want to edit the Python source files without reinstalling on every change. In editable mode the C++ extension is still compiled, but the generated type stubs may not be visible to IDEs.
 
+To also install development dependencies (required for running tests):
+```
+pip install -e ".[dev]"
+```
+
 
 # Running
 The C++ code builds into the executable `quandary`,
