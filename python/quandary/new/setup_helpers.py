@@ -159,8 +159,6 @@ def setup_quandary(
     if num_init_specs > 1:
         raise ValueError("Can only specify one of: initial_condition, initial_levels, initial_state")
 
-    os.makedirs(output_directory, exist_ok=True)
-
     if initial_levels is not None:
         # Product state like |001⟩
         if len(initial_levels) != nqubits:
@@ -175,6 +173,7 @@ def setup_quandary(
         if len(initial_state_array) != dim_ess:
             raise ValueError(f"initial_state must have length {dim_ess} (product of nessential), "
                              f"got {len(initial_state_array)}")
+        os.makedirs(output_directory, exist_ok=True)
         init_state_file = os.path.join(output_directory, "initial_state.dat")
         state_vec = np.concatenate((initial_state_array.real, initial_state_array.imag))
         np.savetxt(init_state_file, state_vec, fmt='%20.13e')
