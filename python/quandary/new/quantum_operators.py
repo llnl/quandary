@@ -215,8 +215,6 @@ def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=[], di
             ai = np.kron(np.identity(N[j]), ai)
         for j in range(i + 1, len(N)):
             ai = np.kron(ai, np.identity(N[j]))
-        # print("Amat i =", i)
-        # print(ai)
         Amat.append(ai)
 
     # Set up system Hamiltonian: Duffing oscillators

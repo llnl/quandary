@@ -55,7 +55,6 @@ def downsample_pulses(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, ntim
                 sizes_ok = True
             else:
                 sizes_ok = False
-        # print("simulate(): sizes_ok = ", sizes_ok)
         if sizes_ok:
             # do the downsampling and construct pcof0
             pcof0 = np.zeros(0)  # to hold the downsampled numpy array for the control vector
@@ -80,7 +79,6 @@ def downsample_pulses(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, ntim
 
                 pcof0 = np.append(pcof0, seg_re)  # append segment to the global control vector
                 pcof0 = np.append(pcof0, seg_im)
-            # print("simulation(): downsampling of (pt0, qt0) completed")
             return pcof0
         else:
             raise ValueError(
