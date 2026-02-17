@@ -11,7 +11,8 @@ set(QUANDARY_GIT_SHA "")
 
 option(BUILD_QUANDARY "Build Quandary targets" ON)
 option(ENABLE_TESTS "Run unit tests" ON)
-option(BUILD_PYTHON_BINDINGS "Build Python bindings via nanobind" ON)
+include(CMakeDependentOption)
+cmake_dependent_option(BUILD_PYTHON_BINDINGS "Build Python bindings via nanobind" ON "BUILD_QUANDARY" OFF)
 
 # Set default build type to Release if not specified
 if(NOT CMAKE_BUILD_TYPE)
