@@ -71,7 +71,7 @@ from .visualization import (  # noqa: F401, E402
 
 # General utilities
 from .utils import (  # noqa: F401, E402
-    infidelity_,
+    infidelity,
     downsample_pulses,
 )
 
@@ -127,7 +127,7 @@ __all__ = [
     "plot_population",
     "plot_results_1osc",
     # Utilities
-    "infidelity_",
+    "infidelity",
     "downsample_pulses",
     # Setup helpers
     "setup_quandary",

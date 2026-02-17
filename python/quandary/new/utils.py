@@ -7,8 +7,19 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-def infidelity_(A, B):
-    """Calculate infidelity between quantum states."""
+def infidelity(A, B):
+    """Calculate infidelity between two unitary operators.
+
+    Parameters
+    ----------
+    A, B : ndarray of shape (n, n)
+        Square matrices of the same dimension representing unitary operators.
+
+    Returns
+    -------
+    float
+        Infidelity 1 - |Tr(A^H B)|^2 / n^2
+    """
     dim = int(np.sqrt(A.size))
     return 1.0 - np.abs(np.trace(A.conj().transpose() @ B))**2 / dim**2
 
