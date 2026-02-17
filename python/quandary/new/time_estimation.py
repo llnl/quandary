@@ -1,6 +1,9 @@
 """Time step estimation utilities for Quandary simulations."""
 
+import logging
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 def estimate_timesteps(*, final_time=1.0, Hsys=[], Hc_re=[], Hc_im=[], control_amplitude_bounds=[], Pmin=40):
@@ -39,52 +42,67 @@ def estimate_timesteps(*, final_time=1.0, Hsys=[], Hc_re=[], Hc_im=[], control_a
     return ntime
 
 
-def timestep_richardson_est(quandary, tol=1e-8, order=2, quandary_exec=""):
-    """Decrease timestep size until Richardson error estimate meets threshold."""
+def timestep_richardson_est(setup, pcof, tol=1e-8, order=2, **kwargs):
+    """Decrease timestep size until Richardson error estimate meets threshold.
 
-    # Factor by which timestep size is decreased
+    Parameters
+    ----------
+    setup : Setup
+        Quandary setup configuration. A copy is made internally; the caller's
+        setup is not modified.
+    pcof : array-like
+        B-spline control coefficients to evaluate at each refinement level.
+    tol : float
+        Richardson error tolerance on the infidelity. Default: 1e-8.
+    order : int
+        Time-stepping order for Richardson extrapolation. Default: 2.
+    **kwargs
+        Additional keyword arguments passed to simulate() (e.g. quiet, max_n_procs).
+
+    Returns
+    -------
+    errs_J : list of float
+        Richardson error estimates on the infidelity at each refinement step.
+    errs_u : list of float
+        Richardson error estimates on the propagator norm at each refinement step.
+    dts : list of float
+        Timestep sizes [ns] used at each refinement step.
+    """
+    from .runner import simulate
+
+    # Factor by which ntime is multiplied (dt halved) each step
     m = 2
 
-    # Initialize
-    quandary.verbose = False
-    t, pt, qt, infidelity, _, _ = quandary.simulate(quandary_exec=quandary_exec, datadir="TS_test")
+    setup = setup.copy()
+    kwargs.setdefault("quiet", True)
 
-    Jcurr = infidelity
-    uT = quandary.uT.copy()
+    results = simulate(setup, pcof=pcof, **kwargs)
+    Jcurr = results.infidelity
+    uT = results.uT.copy()
 
-    # Loop
     errs_J = []
     errs_u = []
     dts = []
     for i in range(10):
+        dt_org = setup.dt
+        setup.ntime = setup.ntime * m
+        setup.dt = setup.dt / m
 
-        # Update configuration number of timesteps. Note: dt will be set in dump()
-        dt_org = quandary.T / quandary.nsteps
-        quandary.nsteps = quandary.nsteps * m
-        quandary.dT = quandary.T / quandary.nsteps
+        results = simulate(setup, pcof=pcof, **kwargs)
 
-        # Get u(dt/m)
-        quandary.verbose = False
-        t, pt, qt, infidelity, _, _ = quandary.simulate(quandary_exec=quandary_exec, datadir="TS_test")
-
-        # Richardson error estimate
-        err_J = np.abs(Jcurr - infidelity) / (m**order - 1.0)
-        # err_u = np.abs(uT[1,1]- quandary.uT[1,1]) / (m**order - 1.0)
-        err_u = np.linalg.norm(np.subtract(uT, quandary.uT)) / (m**order - 1.0)
+        err_J = np.abs(Jcurr - results.infidelity) / (m**order - 1.0)
+        err_u = np.linalg.norm(np.subtract(uT, results.uT)) / (m**order - 1.0)
         errs_J.append(err_J)
         errs_u.append(err_u)
         dts.append(dt_org)
 
-        # Output
-        print(" -> Error at i=", i, ", dt = ", dt_org, ": err_J = ", err_J, " err_u=", err_u)
+        logger.info(f"  i={i}, dt={dt_org:.6f}: err_J={err_J:.3e}, err_u={err_u:.3e}")
 
-        # Stop if tolerance is reached
         if err_J < tol:
-            print("\n -> Tolerance reached. N=", quandary.nsteps, ", dt=", dt_org)
+            logger.info(f"  Tolerance reached: ntime={setup.ntime}, dt={setup.dt:.6f}")
             break
 
-        # Update
-        Jcurr = infidelity
-        uT = np.copy(quandary.uT)
+        Jcurr = results.infidelity
+        uT = results.uT.copy()
 
     return errs_J, errs_u, dts
