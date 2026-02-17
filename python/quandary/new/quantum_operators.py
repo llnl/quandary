@@ -78,7 +78,7 @@ def _eigen_and_reorder(H0, verbose=False):
 def get_resonances(*, nessential, nguard, Hsys, Hc_re=[], Hc_im=[], rotation_frequency=[], cw_amp_thres=1e-7,
                    cw_prox_thres=1e-2, verbose=True, stdmodel=True):
     """
-    Computes system resonances, to be used as carrier wave frequencie.
+    Computes system resonances, to be used as carrier wave frequencies.
     Returns resonance frequencies in GHz and corresponding growth rates.
     """
 
