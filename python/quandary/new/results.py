@@ -29,10 +29,11 @@ class Results:
         uT: Evolved states at final time T. This is the (unitary) solution operator if
             the initial conditions span the full basis. Access: uT[:, initial_condition].
         pcof: Control parameters (B-spline coefficients).
-        infidelity: Final infidelity (1 - fidelity).
+        infidelity: Final infidelity (1 - fidelity). Only meaningful for
+            optimization runs; defaults to 1.0 for simulations.
         optim_hist: Optimization history with keys: 'iter', 'objective', 'gradient',
             'ls_step', 'fidelity', 'cost', 'tikhonov', 'penalty', 'state_variation',
-            'energy', 'control_variation'.
+            'energy', 'control_variation'. Empty dict for simulation runs.
         expected_energy: Expected energy evolution for each oscillator and initial condition.
             Access: expected_energy[oscillator][initial_condition][time_index].
         population: Population evolution for each oscillator and initial condition.

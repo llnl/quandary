@@ -32,6 +32,14 @@ def _make_repr(cpp_cls):
 
 
 class Setup(_CppSetup):
+    """Python subclass of the C++ Setup struct.
+
+    Extends the nanobind-bound C++ base class with:
+    - A readable ``__repr__`` that shows all field values.
+    - Improved ``TypeError`` messages with a hint when a negative integer
+      is assigned to an unsigned field.
+    """
+
     def __setattr__(self, name, value):
         try:
             super().__setattr__(name, value)

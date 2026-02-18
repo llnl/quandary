@@ -57,16 +57,20 @@ def _compute_optimal_core_distribution(maxcores: int, ninit: int) -> int:
 
     Parallelization over initial conditions is the most efficient strategy.
     This function finds the largest divisor of ninit that fits within maxcores.
-    PETSc parallelism within each initial condition is not used here — for HPC
+    PETSc parallelism within each initial condition is not used here -- for HPC
     runs requiring it, launch with mpirun directly.
 
-    Args:
-        maxcores: Max number of MPI processes requested.
-        ninit: Number of initial conditions.
+    Parameters
+    ----------
+    maxcores : int
+        Max number of MPI processes requested.
+    ninit : int
+        Number of initial conditions.
 
-    Returns:
-        ncores: Actual total cores used (<= min(maxcores, ninit))
-
+    Returns
+    -------
+    ncores : int
+        Actual total cores used (<= min(maxcores, ninit)).
     """
     ncores = min(ninit, maxcores) if maxcores > -1 else ninit
     # Round down to nearest divisor of ninit
@@ -124,19 +128,6 @@ def _run(
     Raises:
         RuntimeError: If the configuration is invalid or execution fails.
         subprocess.CalledProcessError: If spawned subprocess fails.
-
-    Examples:
-        >>> setup = Setup()
-        >>> setup.nlevels = [2]
-        >>> setup.ntime = 1000
-        >>> setup.dt = 0.01
-        >>> setup.transition_frequency = [4.1]
-        >>> setup.runtype = RunType.SIMULATION
-        >>> results = run(setup)
-        >>> print(f"Infidelity: {results.infidelity}")
-
-        >>> # Spawn MPI subprocess (e.g., in Jupyter)
-        >>> results = run(setup, n_procs=4)
     """
     # Check MPI context
     comm = MPI.COMM_WORLD

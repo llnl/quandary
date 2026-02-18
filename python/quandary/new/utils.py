@@ -25,8 +25,8 @@ def infidelity(A, B):
 
 
 def downsample_pulses(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, ntime, dt, nessential):
-    """
-    Downsample control pulses from high-resolution (pt0, qt0) to B-spline coefficients.
+    """Downsample control pulses from high-resolution (pt0, qt0) to B-spline coefficients.
+
 
     This function is used to convert pulses defined at every time step to B-spline
     coefficients for piecewise constant (spline order 0) representation.
@@ -93,7 +93,7 @@ def downsample_pulses(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, ntim
             return pcof0
         else:
             raise ValueError(
-                "downsample_pulses: size mismatch in pt0/qt0 — each oscillator must have "
+                "downsample_pulses: size mismatch in pt0/qt0 -- each oscillator must have "
                 "matching arrays of length >= 2."
             )
     elif len(pt0) > 0 or len(qt0) > 0:

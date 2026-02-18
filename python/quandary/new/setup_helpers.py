@@ -62,82 +62,87 @@ def setup_quandary(
     """Create a Setup with physics parameters configured.
 
     Automatically computes Hamiltonians, timesteps, and carrier frequencies.
-    Does NOT set the runtype - use optimize() or simulate()
-    to configure for a specific run type.
+    Does NOT set the runtype -- use optimize() or simulate() to configure for
+    a specific run type.
 
-    Time discretization: You can specify at most 2 of (final_time, ntime, dt).
-    If you specify all 3, they must be consistent (final_time = ntime * dt).
-    If ntime and dt are not provided, ntime will be auto-computed from Hamiltonian.
+    **Time discretization:** specify at most 2 of (final_time, ntime, dt). If
+    all 3 are given they must satisfy ``final_time == ntime * dt``. When ntime
+    and dt are both omitted, ntime is auto-computed from the Hamiltonian
+    eigenvalues.
 
-    Spline configuration: You can specify at most one of (nspline, spline_knot_spacing).
-    If neither is given, the C++ default (10 splines) is used.
+    **Spline configuration:** specify at most one of (nspline, spline_knot_spacing).
+    If neither is given the C++ default (10 splines) is used.
 
-    Required Parameters:
-    -------------------
-    nessential : List[int]
-        Number of essential energy levels per qubit
-    transition_frequency : List[float]
-        01-transition frequencies [GHz] per qubit
+    Parameters
+    ----------
+    nessential : list of int
+        Number of essential energy levels per qubit.
+    transition_frequency : list of float
+        01-transition frequencies [GHz] per qubit.
     final_time : float
-        Pulse duration [ns]
-
-    Optional Parameters:
-    -------------------
-    ntime : int
-        Number of timesteps. If not provided, will be auto-computed from Hamiltonian.
-    dt : float
-        Timestep size [ns]. If not provided, will be auto-computed.
-    selfkerr : List[float]
-        Anharmonicities [GHz] per qubit. Default: zeros
-    nguard : List[int]
-        Number of guard levels per qubit. Default: zeros
-    rotation_frequency : List[float]
-        Frequency of rotations for computational frame [GHz] per qubit.
-        Default: transition_frequency
-    crosskerr_coupling : List[float]
-        ZZ coupling strength [GHz]. Format: [g01, g02, ..., g12, g13, ...]
-    dipole_coupling : List[float]
-        Dipole-dipole coupling strength [GHz]. Format: [J01, J02, ..., J12, J13, ...]
+        Pulse duration [ns].
+    ntime : int, optional
+        Number of timesteps. Auto-computed from the Hamiltonian if omitted.
+    dt : float, optional
+        Timestep size [ns]. Auto-computed if omitted.
+    selfkerr : list of float, optional
+        Anharmonicities [GHz] per qubit. Default: zeros.
+    nguard : list of int, optional
+        Number of guard levels per qubit. Default: zeros.
+    rotation_frequency : list of float, optional
+        Rotating frame frequencies [GHz] per qubit.
+        Default: transition_frequency.
+    crosskerr_coupling : list of float, optional
+        ZZ coupling strengths [GHz]. Format: [g01, g02, ..., g12, g13, ...].
+        Default: no coupling.
+    dipole_coupling : list of float, optional
+        Dipole-dipole coupling strengths [GHz]. Format: [J01, J02, ..., J12, ...].
+        Default: no coupling.
     Pmin : int
-        Minimum points to resolve shortest period (determines timesteps). Default: 150
-    control_amplitude_bounds : List[float]
-        Maximum control amplitudes [GHz] per qubit. Used for timestep estimation
-        and as optimization bounds. Default: 0.01 GHz (= 10 MHz)
-    nspline : int
+        Minimum time steps per period of the fastest oscillation (used for
+        auto-computing ntime). Default: 150.
+    control_amplitude_bounds : list of float, optional
+        Maximum control amplitudes [GHz] per qubit. Used for timestep
+        estimation and as optimization bounds. Default: 0.01 GHz (= 10 MHz).
+    nspline : int, optional
         Number of B-spline basis functions per oscillator. Cannot be combined
         with spline_knot_spacing.
-    spline_knot_spacing : float
-        Spacing between B-spline knots [ns]. Computes nspline from
-        final_time and spacing. Cannot be combined with nspline.
-    spline_order : int
+    spline_knot_spacing : float, optional
+        Spacing between B-spline knots [ns]. Derives nspline from final_time
+        and this spacing. Cannot be combined with nspline.
+    spline_order : int, optional
         B-spline order: 2 (quadratic, default) or 0 (piecewise constant).
         Affects the knot spacing formula and carrier frequency defaults.
-    control_zero_boundary_condition : bool
+    control_zero_boundary_condition : bool, optional
         Force control pulses to start and end at zero.
     initial_condition : InitialConditionSettings, optional
-        Direct struct specification (advanced). For convenience, use initial_levels or initial_state.
-    initial_levels : List[int], optional
-        Product state like |001⟩. Example: [0, 0, 1].
-    initial_state : List[complex], optional
-        Arbitrary superposition state. Written to file automatically.
+        Direct struct specification (advanced). For convenience, prefer
+        initial_levels or initial_state.
+    initial_levels : list of int, optional
+        Product-state initial condition, e.g. [0, 0, 1] for |001>.
+    initial_state : list of complex, optional
+        Arbitrary superposition initial state. Written to file automatically.
     output_directory : str
-        Output directory for files (initial state, etc.). Default: "./run_dir"
+        Output directory for generated files (initial state, etc.).
+        Default: "./run_dir".
     verbose : bool
-        Print setup information. Default: True
+        Print setup information. Default: True.
 
-    Returns:
+    Returns
     -------
     Setup
         Setup with physics parameters configured (no runtype set).
 
-    Example:
-    -------
+    Examples
+    --------
     >>> # Default: BASIS (all basis states)
     >>> setup = setup_quandary(nessential=[3], transition_frequency=[4.1], final_time=100)
-    >>> # Product state |001⟩:
-    >>> setup = setup_quandary(..., initial_levels=[0, 0, 1])
-    >>> # Superposition (|0⟩ + |1⟩)/√2:
-    >>> setup = setup_quandary(..., initial_state=[1/np.sqrt(2), 1/np.sqrt(2)])
+    >>> # Product state |001>:
+    >>> setup = setup_quandary(nessential=[2, 2, 2], transition_frequency=[4.1, 4.5, 4.9],
+    ...                        final_time=100, initial_levels=[0, 0, 1])
+    >>> # Superposition (|0> + |1>)/sqrt(2):
+    >>> setup = setup_quandary(nessential=[2], transition_frequency=[4.1],
+    ...                        final_time=100, initial_state=[1/np.sqrt(2), 1/np.sqrt(2)])
     """
     # Set defaults
     nqubits = len(nessential)
@@ -162,7 +167,7 @@ def setup_quandary(
         raise ValueError("Can only specify one of: initial_condition, initial_levels, initial_state")
 
     if initial_levels is not None:
-        # Product state like |001⟩
+        # Product state like |001>
         if len(initial_levels) != nqubits:
             raise ValueError(f"initial_levels must have length {nqubits}, got {len(initial_levels)}")
         initial_condition = InitialConditionSettings()
@@ -362,7 +367,7 @@ def _setup_optimization(
         setup.optim_target = target
 
     elif target_levels is not None:
-        # State-to-state: product state target like |001⟩
+        # State-to-state: product state target like |001>
         target = OptimTargetSettings()
         target.target_type = TargetType.STATE
         target.levels = target_levels

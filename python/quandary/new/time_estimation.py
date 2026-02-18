@@ -7,11 +7,34 @@ logger = logging.getLogger(__name__)
 
 
 def estimate_timesteps(*, final_time=1.0, Hsys=[], Hc_re=[], Hc_im=[], control_amplitude_bounds=[], Pmin=40):
-    """
-    Estimate the number of time steps based on eigenvalues of Hamiltonians.
+    """Estimate the number of time steps based on eigenvalues of Hamiltonians.
 
-    Note: The estimate does not account for quickly varying signals or a large number of splines.
-    Double check that at least 2-3 points per spline are present to resolve control function.
+    The estimate does not account for quickly varying signals or a large number
+    of splines. Verify that at least 2-3 time steps per spline are present to
+    resolve the control function.
+
+    Parameters
+    ----------
+    final_time : float
+        Total simulation time [ns]. Default: 1.0.
+    Hsys : ndarray
+        System Hamiltonian [rad/ns].
+    Hc_re : list of ndarray
+        Real parts of control Hamiltonian operators for each oscillator.
+    Hc_im : list of ndarray
+        Imaginary parts of control Hamiltonian operators for each oscillator.
+    control_amplitude_bounds : list of float
+        Estimated max control amplitudes [GHz] per oscillator. Used to scale
+        the control Hamiltonians when computing the largest eigenvalue.
+        Default: 0.01 GHz per oscillator.
+    Pmin : int
+        Minimum number of time steps per period of the fastest oscillation.
+        Default: 40.
+
+    Returns
+    -------
+    ntime : int
+        Estimated number of time steps.
     """
 
     # Get estimated control pulse amplitude [GHz]
