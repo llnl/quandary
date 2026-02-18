@@ -151,8 +151,10 @@ def setup_quandary(
         crosskerr_coupling = []
     if dipole_coupling is None:
         dipole_coupling = []
-    if control_amplitude_bounds is None:
-        control_amplitude_bounds = [0.01] * nqubits
+    # Use 0.01 GHz (= 10 MHz) as default amplitude for timestep estimation only.
+    # When user doesn't specify bounds, optimization bounds are left unset (C++ default: 1e12).
+    bounds_for_estimation = control_amplitude_bounds if control_amplitude_bounds is not None \
+        else [0.01] * nqubits
 
     # Handle initial condition (only one of initial_condition, initial_levels, initial_state)
     num_init_specs = sum([initial_condition is not None, initial_levels is not None, initial_state is not None])
@@ -206,7 +208,7 @@ def setup_quandary(
             Hsys=Hsys,
             Hc_re=Hc_re,
             Hc_im=Hc_im,
-            control_amplitude_bounds=control_amplitude_bounds,
+            control_amplitude_bounds=bounds_for_estimation,
             Pmin=Pmin,
         )
         dt = final_time / ntime
@@ -276,7 +278,8 @@ def setup_quandary(
         setup.crosskerr_coupling = crosskerr_coupling
     if len(dipole_coupling) > 0:
         setup.dipole_coupling = dipole_coupling
-    setup.control_amplitude_bounds = control_amplitude_bounds
+    if control_amplitude_bounds is not None:
+        setup.control_amplitude_bounds = control_amplitude_bounds
 
     setup.carrier_frequencies = carrier_frequency
     setup.initial_condition = initial_condition
