@@ -149,7 +149,7 @@ def clean_env_var():
 
 def assert_output_files(datadir):
     expected_output_files = [
-        "config.cfg",
+        "config.toml",
         "optim_history.dat",
         "params.dat",
         "control0.dat"
