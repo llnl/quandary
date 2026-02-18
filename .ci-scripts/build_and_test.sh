@@ -262,7 +262,11 @@ then
     timed_message "Install python test dependencies"
 
     eval `${spack_cmd} env activate ${spack_env_path} --sh`
-    python -m pip install -e . --prefer-binary
+    # TODO: Remove version pinning once py-petsc4py is a spack dependency of quandary.
+    # petsc4py must match the PETSc minor version (PETSc has no stable ABI across minors).
+    petsc_version=$(pkg-config --modversion PETSc | cut -d. -f1,2)
+    python -m pip install mpi4py "petsc4py~=${petsc_version}.0"
+    python -m pip install -e ".[dev]"
     mpi_exe=$(grep 'MPIEXEC_EXECUTABLE' "${hostconfig_path}" | cut -d'"' -f2 | sed 's/;/ /g')
 
     # TODO cfg: remove this later
@@ -287,7 +291,11 @@ then
     timed_message "Install python test dependencies"
 
     eval `${spack_cmd} env activate ${spack_env_path} --sh`
-    python -m pip install -e . --prefer-binary
+    # TODO: Remove version pinning once py-petsc4py is a spack dependency of quandary.
+    # petsc4py must match the PETSc minor version (PETSc has no stable ABI across minors).
+    petsc_version=$(pkg-config --modversion PETSc | cut -d. -f1,2)
+    python -m pip install mpi4py "petsc4py~=${petsc_version}.0"
+    python -m pip install -e ".[dev]"
 
     timed_message "Run performance tests"
 

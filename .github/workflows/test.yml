@@ -72,14 +72,14 @@ jobs:
       shell: spack-sh {0}
       run: |
         spack env activate .spack_env
-        python -m pip install -e . --prefer-binary
+        python -m pip install -e ".[dev]"
         pytest -v -s --mpi-opt="--oversubscribe" --config-format=cfg tests/regression
 
     - name: Run regression tests
       shell: spack-sh {0}
       run: |
         spack env activate .spack_env
-        python -m pip install -e . --prefer-binary
+        python -m pip install -e ".[dev]"
         pytest -v -s -m "not performance" --mpi-opt="--oversubscribe"
 
     - name: Push packages and update index

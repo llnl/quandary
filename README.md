@@ -96,16 +96,28 @@ sudo cmake --install . --prefix /your/install/path
 
 ### Python dependencies and interface
 
-Create a virtual environment (e.g. with conda, venv, ...) and use `pip` to install Quandary's Python interface and its dependencies. For example, for Conda environments, do:
+Create a virtual environment and use `pip` to install Quandary's Python interface.
+`PETSC_DIR` (and `PETSC_ARCH`, if applicable) must be set as described above.
+
+For Conda:
 ```
 conda create --name myenv
 conda activate myenv
-pip install .
 ```
-Or for venv, do:
+Or for venv:
 ```
 python3 -m venv .venv
 source .venv/bin/activate
+```
+
+Then install mpi4py and petsc4py, compiled against your system MPI and PETSc.
+petsc4py must match your PETSc minor version (PETSc has no stable ABI across minors):
+```
+# Auto-detect PETSc version, or set manually, e.g. PETSC_VERSION=3.22
+PETSC_VERSION=$(pkg-config --modversion PETSc | cut -d. -f1,2)
+pip install mpi4py "petsc4py~=${PETSC_VERSION}.0"
+
+# Install Quandary
 pip install .
 ```
 
