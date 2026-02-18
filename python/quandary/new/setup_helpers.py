@@ -81,6 +81,7 @@ def setup_quandary(
     rotation_frequency: Optional[List[float]] = None,
     crosskerr_coupling: Optional[List[float]] = None,
     dipole_coupling: Optional[List[float]] = None,
+    carrier_frequency: Optional[List[List[float]]] = None,
     Pmin: int = 150,
     control_amplitude_bounds: Optional[List[float]] = None,
     nspline: Optional[int] = None,
@@ -132,6 +133,11 @@ def setup_quandary(
     dipole_coupling : list of float, optional
         Dipole-dipole coupling strengths [GHz]. Format: [J01, J02, ..., J12, ...].
         Default: no coupling.
+    carrier_frequency : list of list of float, optional
+        Carrier frequencies [GHz] per oscillator. When provided, the
+        automatic eigenvalue-based computation (get_resonances) is skipped.
+        Useful when the Hamiltonian has degenerate eigenvalues that cause
+        the automatic computation to fail.
     Pmin : int
         Minimum time steps per period of the fastest oscillation (used for
         auto-computing ntime). Default: 150.
@@ -271,16 +277,17 @@ def setup_quandary(
                 f"Got ntime * dt = {computed_final_time}."
             )
 
-    # Compute carrier frequencies
-    carrier_frequency, _ = get_resonances(
-        nessential=nessential,
-        nguard=nguard,
-        Hsys=Hsys,
-        Hc_re=Hc_re,
-        Hc_im=Hc_im,
-        rotation_frequency=rotation_frequency,
-        verbose=verbose,
-    )
+    # Compute carrier frequencies (skip if user provided them)
+    if carrier_frequency is None:
+        carrier_frequency, _ = get_resonances(
+            nessential=nessential,
+            nguard=nguard,
+            Hsys=Hsys,
+            Hc_re=Hc_re,
+            Hc_im=Hc_im,
+            rotation_frequency=rotation_frequency,
+            verbose=verbose,
+        )
 
     # Validate spline_order
     if spline_order is not None and spline_order not in (0, 2):

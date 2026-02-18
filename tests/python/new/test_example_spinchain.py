@@ -183,15 +183,13 @@ def test_example_spinchain(tmp_path, request):
         rotation_frequency=list(np.zeros(N)),
         crosskerr_coupling=crosskerr,
         dipole_coupling=Jkl,
+        carrier_frequency=[[0.0] for _ in range(N)],
         initial_levels=[int(x) for x in initstate],
         final_time=T,
         dt=dT,
         output_directory=datadir_path,
         verbose=False,
     )
-
-    # Old test explicitly set carrier_frequency=[[0.0] for _ in range(N)]
-    setup.carrier_frequencies = [[0.0] for _ in range(N)]
 
     # Match old interface defaults (relevant for simulation)
     setup.output_optimization_stride = 1
