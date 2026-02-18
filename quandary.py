@@ -550,7 +550,7 @@ class Quandary:
         return time, pt, qt, infidelity, expectedEnergy, population
 
 
-    def __dump(self, *, pcof0=[], runtype="simulation", datadir="./run_dir"):
+    def __dump_CFG(self, *, pcof0=[], runtype="simulation", datadir="./run_dir"):
         """
         Internal helper function that dumps all configuration options (and target gate, pcof0, Hamiltonian operators) into files for Quandary C++ runs. Returns the name of the configuration file needed for executing Quandary. 
         """
@@ -766,6 +766,301 @@ class Quandary:
             print("Quandary config file written to:", outpath)
 
         return "./config.cfg"
+
+
+    def __dump(self, *, pcof0=[], runtype="simulation", datadir="./run_dir"):
+        """
+        Internal helper function that dumps all configuration options (and target gate, pcof0, Hamiltonian operators)
+        into files for Quandary C++ runs using the TOML configuration format. Returns the name of the configuration file.
+        """
+
+        def _toml_bool(val):
+            return "true" if val else "false"
+
+        def _toml_str(val):
+            safe = str(val).replace("\"", "\\\"")
+            return f"\"{safe}\""
+
+        def _toml_array(values):
+            return "[" + ", ".join([str(v) for v in values]) + "]"
+
+        def _pair_indices(nsub):
+            pairs = []
+            for i in range(nsub):
+                for j in range(i + 1, nsub):
+                    pairs.append((i, j))
+            return pairs
+
+        # If given, write the target gate to file
+        if len(self.targetgate) > 0:
+            gate_vectorized = np.concatenate((np.real(self.targetgate).ravel(order='F'), np.imag(self.targetgate).ravel(order='F')))
+            self._gatefilename = "targetgate.dat"
+            with open(os.path.join(datadir, self._gatefilename), "w", newline='\n') as f:
+                for value in gate_vectorized:
+                    f.write("{:20.13e}\n".format(value))
+            if self.verbose:
+                print("Target gate written to ", os.path.join(datadir, self._gatefilename))
+
+        # If given, write the target state to file
+        if len(self.targetstate) > 0:
+            if self._lindblad_solver:  # If Lindblad solver, make it a density matrix
+                state = np.outer(self.targetstate, np.array(self.targetstate).conj())
+            else:
+                state = self.targetstate
+            vectorized = np.concatenate((np.real(state).ravel(order='F'), np.imag(state).ravel(order='F')))
+            self._gatefilename = "targetstate.dat"
+            with open(os.path.join(datadir, self._gatefilename), "w", newline='\n') as f:
+                for value in vectorized:
+                    f.write("{:20.13e}\n".format(value))
+            if self.verbose:
+                print("Target state written to ", os.path.join(datadir, self._gatefilename))
+
+        # If given, write the initial state to file
+        if self.initialcondition[0:4] == "file":
+            if self._lindblad_solver:  # If Lindblad solver, make it a density matrix
+                state = np.outer(self._initialstate, np.array(self._initialstate).conj())
+            else:
+                state = self._initialstate
+            vectorized = np.concatenate((np.real(state).ravel(order='F'), np.imag(state).ravel(order='F')))
+            self._initstatefilename = "initialstate.dat"
+            with open(os.path.join(datadir, self._initstatefilename), "w", newline='\n') as f:
+                for value in vectorized:
+                    f.write("{:20.13e}\n".format(value))
+            if self.verbose:
+                print("Initial state written to ", os.path.join(datadir, self._initstatefilename))
+
+        # If not standard Hamiltonian model, write provided Hamiltonians to a file
+        if not self.standardmodel:
+            self._hamiltonian_filename_Hsys = "hamiltonian_Hsys.dat"
+            H = self.Hsys
+            with open(os.path.join(datadir, self._hamiltonian_filename_Hsys), "w", newline='\n') as f:
+                f.write("# row col Hsys_real Hsys_imag \n")
+                nz = np.nonzero(H)
+                for i, j in zip(*nz):
+                    v = H[i, j]
+                    f.write(f"{i} {j} {v.real:.13e} {v.imag:.13e}\n")
+            if len(self.Hc_re) > 0 or len(self.Hc_im) > 0:
+                self._hamiltonian_filename_Hc = "hamiltonian_Hc.dat"
+                with open(os.path.join(datadir, self._hamiltonian_filename_Hc), "w", newline='\n') as f:
+                    for iosc, (Hc_re, Hc_im) in enumerate(zip(self.Hc_re, self.Hc_im)):
+                        Hc = np.array(Hc_re) + 1j * np.array(Hc_im)
+                        nz = np.nonzero(Hc)
+                        f.write(f"# oscillator row col Hc_real Hc_imag \n")
+                        for i, j in zip(*nz):
+                            v = Hc[i, j]
+                            f.write(f"{iosc} {i} {j} {v.real:.13e} {v.imag:.13e}\n")
+            if self.verbose:
+                print("Hamiltonian operators written to ", os.path.join(datadir, self._hamiltonian_filename_Hsys), os.path.join(datadir, self._hamiltonian_filename_Hc))
+
+        # Initializing the control parameter vector 'pcof0'
+        read_pcof0_from_file = False
+        if len(self.pcof0) > 0 or len(pcof0) > 0:
+            if len(self.pcof0) > 0:
+                writeme = self.pcof0
+            if len(pcof0) > 0:
+                writeme = pcof0
+            if len(writeme) > 0:
+                self.pcof0_filename = "pcof0.dat"
+                with open(os.path.join(datadir, self.pcof0_filename), "w", newline='\n') as f:
+                    for value in writeme:
+                        f.write("{:20.13e}\n".format(value))
+                if self.verbose:
+                    print("Initial control parameters written to ", os.path.join(datadir, self.pcof0_filename))
+                read_pcof0_from_file = True
+        elif len(self.pcof0_filename) > 0:
+            print("Using the provided filename '", self.pcof0_filename, "' in the control_initialization command")
+            read_pcof0_from_file = True
+
+        nsub = len(self.Ne)
+        Nt = [self.Ne[i] + self.Ng[i] for i in range(len(self.Ng))]
+
+        # Build TOML configuration string
+        lines = []
+
+        # [system]
+        lines.append("[system]")
+        lines.append(f"nlevels = {_toml_array(Nt)}")
+        lines.append(f"nessential = {_toml_array(self.Ne)}")
+        lines.append(f"ntime = {self.nsteps}")
+        lines.append(f"dt = {self.dT}")
+        lines.append(f"transition_frequency = {_toml_array(self.freq01)}")
+        lines.append(f"selfkerr = {_toml_array(self.selfkerr)}")
+
+        # Cross-kerr coupling
+        pairs = _pair_indices(nsub)
+        if len(self.crosskerr) == 0:
+            lines.append("crosskerr_coupling = 0.0")
+        elif len(self.crosskerr) == 1:
+            lines.append(f"crosskerr_coupling = {self.crosskerr[0]}")
+        else:
+            lines.append("crosskerr_coupling = [")
+            for (i, j), val in zip(pairs, self.crosskerr):
+                lines.append(f"  {{ subsystem = [{i}, {j}], value = {val} }},")
+            lines.append("]")
+
+        # Dipole coupling
+        if len(self.Jkl) == 0:
+            lines.append("dipole_coupling = 0.0")
+        elif len(self.Jkl) == 1:
+            lines.append(f"dipole_coupling = {self.Jkl[0]}")
+        else:
+            lines.append("dipole_coupling = [")
+            for (i, j), val in zip(pairs, self.Jkl):
+                lines.append(f"  {{ subsystem = [{i}, {j}], value = {val} }},")
+            lines.append("]")
+
+        lines.append(f"rotation_frequency = {_toml_array(self.rotfreq)}")
+
+        # Decoherence
+        decay = len(self.T1) > 0
+        dephase = len(self.T2) > 0
+        if decay and dephase:
+            deco_type = "both"
+        elif decay:
+            deco_type = "decay"
+        elif dephase:
+            deco_type = "dephase"
+        else:
+            deco_type = "none"
+        if decay or dephase:
+            deco_fields = [f"type = {_toml_str(deco_type)}"]
+            if decay:
+                deco_fields.append(f"decay_time = {_toml_array(self.T1)}")
+            if dephase:
+                deco_fields.append(f"dephase_time = {_toml_array(self.T2)}")
+            lines.append(f"decoherence = {{ {', '.join(deco_fields)} }}")
+        else:
+            lines.append(f"decoherence = {{ type = {_toml_str('none')} }}")
+
+        # Initial condition
+        init_tokens = [t.strip() for t in self.initialcondition.split(",")]
+        init_type = init_tokens[0] if len(init_tokens) > 0 else "basis"
+        if init_type == "file":
+            lines.append(f"initial_condition = {{ type = {_toml_str('file')}, filename = {_toml_str(self._initstatefilename)} }}")
+        elif init_type == "pure":
+            levels = [int(t) for t in init_tokens[1:] if len(t) > 0]
+            lines.append(f"initial_condition = {{ type = {_toml_str('state')}, levels = {_toml_array(levels)} }}")
+        elif init_type in ["basis", "diagonal", "ensemble", "3states", "nplus1"]:
+            if len(init_tokens) > 1:
+                subsys = [int(t) for t in init_tokens[1:] if len(t) > 0]
+                lines.append(f"initial_condition = {{ type = {_toml_str(init_type)}, subsystem = {_toml_array(subsys)} }}")
+            else:
+                lines.append(f"initial_condition = {{ type = {_toml_str(init_type)} }}")
+        else:
+            lines.append(f"initial_condition = {{ type = {_toml_str(init_type)} }}")
+
+        # Hamiltonian files
+        if not self.standardmodel:
+            if len(self._hamiltonian_filename_Hsys) > 0:
+                lines.append(f"hamiltonian_file_Hsys = {_toml_str(self._hamiltonian_filename_Hsys)}")
+            if len(self._hamiltonian_filename_Hc) > 0:
+                lines.append(f"hamiltonian_file_Hc = {_toml_str(self._hamiltonian_filename_Hc)}")
+
+        # [control]
+        lines.append("\n[control]")
+        if self.spline_order == 0:
+            lines.append(f"parameterization = {{ type = {_toml_str('spline0')}, num = {self.nsplines} }}")
+        elif self.spline_order == 2:
+            lines.append(f"parameterization = {{ type = {_toml_str('spline')}, num = {self.nsplines} }}")
+        else:
+            print("Error: spline order = ", self.spline_order, " is currently not available. Choose 0 or 2.")
+            return -1
+
+        # Carrier frequencies per subsystem
+        if len(self.carrier_frequency) > 0:
+            lines.append("carrier_frequency = [")
+            for iosc, vals in enumerate(self.carrier_frequency):
+                lines.append(f"  {{ subsystem = {iosc}, value = {_toml_array(vals)} }},")
+            lines.append("]")
+
+        # Control initialization
+        if read_pcof0_from_file:
+            lines.append(f"initialization = {{ type = {_toml_str('file')}, filename = {_toml_str(self.pcof0_filename)} }}")
+        else:
+            init_type = "random" if self.randomize_init_ctrl else "constant"
+            if len(self.initctrl_MHz) <= 1:
+                initamp = self.initctrl_MHz[0] / 1000.0 / np.sqrt(2) / len(self.carrier_frequency[0])
+                lines.append(f"initialization = {{ type = {_toml_str(init_type)}, amplitude = {initamp} }}")
+            else:
+                lines.append("initialization = [")
+                for iosc in range(len(self.initctrl_MHz)):
+                    initamp = self.initctrl_MHz[iosc] / 1000.0 / np.sqrt(2) / len(self.carrier_frequency[iosc])
+                    lines.append(f"  {{ subsystem = {iosc}, type = {_toml_str(init_type)}, amplitude = {initamp} }},")
+                lines.append("]")
+
+        # Amplitude bounds
+        if len(self.maxctrl_MHz) == 0:
+            lines.append("amplitude_bound = 1.0e12")
+        elif len(self.maxctrl_MHz) == 1:
+            lines.append(f"amplitude_bound = {self.maxctrl_MHz[0] / 1000.0}")
+        else:
+            bounds = [v / 1000.0 for v in self.maxctrl_MHz]
+            lines.append(f"amplitude_bound = {_toml_array(bounds)}")
+
+        lines.append(f"zero_boundary_condition = {_toml_bool(self.control_enforce_BC)}")
+
+        # [optimization]
+        lines.append("\n[optimization]")
+        if len(self.targetgate) > 0:
+            gate_fields = [f"type = {_toml_str('gate')}", f"filename = {_toml_str(self._gatefilename)}"]
+            if len(self.gate_rot_freq) > 0:
+                gate_fields.append(f"gate_rot_freq = {_toml_array(self.gate_rot_freq)}")
+            lines.append(f"target = {{ {', '.join(gate_fields)} }}")
+        elif len(self.targetstate) > 0:
+            lines.append(f"target = {{ type = {_toml_str('state')}, filename = {_toml_str(self._gatefilename)} }}")
+        else:
+            target_tokens = [t.strip() for t in self.optim_target.split(",")]
+            target_type = target_tokens[0] if len(target_tokens) > 0 else "none"
+            if target_type == "gate" and len(target_tokens) > 1 and target_tokens[1] not in ["none", "file"]:
+                gate_fields = [f"type = {_toml_str('gate')}", f"gate_type = {_toml_str(target_tokens[1])}"]
+                if len(self.gate_rot_freq) > 0:
+                    gate_fields.append(f"gate_rot_freq = {_toml_array(self.gate_rot_freq)}")
+                lines.append(f"target = {{ {', '.join(gate_fields)} }}")
+            elif target_type == "state" and len(target_tokens) > 1:
+                levels = [int(t) for t in target_tokens[1:] if len(t) > 0]
+                lines.append(f"target = {{ type = {_toml_str('state')}, levels = {_toml_array(levels)} }}")
+            elif target_type in ["none", "gate", "state"]:
+                lines.append(f"target = {{ type = {_toml_str('none')} }}")
+            else:
+                lines.append(f"target = {{ type = {_toml_str('none')} }}")
+
+        lines.append(f"objective = {_toml_str(self.costfunction)}")
+        lines.append("tolerance = { grad_abs = " + str(self.tol_gnorm_abs) + ", grad_rel = " + str(self.tol_gnorm_rel) + ", final_cost = " + str(self.tol_costfunc) + ", infidelity = " + str(self.tol_infidelity) + " }")
+        lines.append(f"maxiter = {self.maxiter}")
+        if self.gamma_tik0_interpolate > 0.0:
+            lines.append(f"tikhonov = {{ coeff = {self.gamma_tik0_interpolate}, use_x0 = true }}")
+        else:
+            lines.append(f"tikhonov = {{ coeff = {self.gamma_tik0}, use_x0 = false }}")
+        lines.append("penalty = { leakage = " + str(self.gamma_leakage) + ", energy = " + str(self.gamma_energy) + ", dpdm = " + str(self.gamma_dpdm) + ", variation = " + str(self.gamma_variation) + ", weightedcost = 0.0, weightedcost_width = 0.0 }")
+
+        # [output]
+        lines.append("\n[output]")
+        lines.append("directory = \"./\"")
+        lines.append("observables = [\"population\", \"expectedEnergy\", \"fullstate\"]")
+        lines.append("timestep_stride = 1")
+        lines.append(f"optimization_stride = {self.print_frequency_iter}")
+
+        # [solver]
+        lines.append("\n[solver]")
+        lines.append(f"runtype = {_toml_str(runtype)}")
+        if len(self.Ne) < 6:
+            lines.append(f"usematfree = {_toml_bool(self.usematfree)}")
+        else:
+            lines.append("usematfree = false")
+        lines.append("linearsolver = { type = \"gmres\", maxiter = 20 }")
+        lines.append(f"timestepper = {_toml_str(self.timestepper)}")
+        if self.rand_seed is not None and self.rand_seed >= 0:
+            lines.append(f"rand_seed = {int(self.rand_seed)}")
+
+        # Write the file
+        outpath = os.path.join(datadir, "config.toml")
+        with open(outpath, "w", newline='\n') as file:
+            file.write("\n".join(lines) + "\n")
+
+        if self.verbose:
+            print("Quandary config file written to:", outpath)
+
+        return "./config.toml"
 
 
     def get_results(self, *, datadir="./", ignore_failure=False):
@@ -1415,14 +1710,14 @@ def timestep_richardson_est(quandary, tol=1e-8, order=2, quandary_exec=""):
     return errs_J, errs_u, dts
 
 
-def execute(*, runtype="simulation", ncores=1, config_filename="config.cfg", datadir=".", quandary_exec="", verbose=False, cygwinbash="", mpi_exec="mpirun -np ", batchargs=[]):
+def execute(*, runtype="simulation", ncores=1, config_filename="config.toml", datadir=".", quandary_exec="", verbose=False, cygwinbash="", mpi_exec="mpirun -np ", batchargs=[]):
     """ 
     Helper function to evoke a subprocess that executes Quandary.
 
     Optional Parameters:
     -----------
     ncores              (int)       : Number of cores to run on. Default: 1 
-    config_filename     (string)    : Name of Quandaries configuration file. Default: "config.cfg"
+    config_filename     (string)    : Name of Quandaries configuration file. Default: "config.toml"
     datadir             (string)    : Directory for running Quandary and output files. Default: "./"
     quandary_exec       (string)    : Absolute path to quandary's executable. Default: "" (expecting quandary to be in the $PATH)
     verbose             (Bool)      : Flag to print more output. Default: False
