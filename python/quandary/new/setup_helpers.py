@@ -31,6 +31,40 @@ logger = logging.getLogger(__name__)
 _DEFAULT_OUTPUT_DIR = "./run_dir"
 
 
+def resolve_output_dir(datadir: str) -> str:
+    """Resolve the output directory using the QUANDARY_BASE_DATADIR environment variable.
+
+    Parameters
+    ----------
+    datadir : str
+        Output directory path. If QUANDARY_BASE_DATADIR is set, relative paths
+        will be resolved against it.
+
+    Returns
+    -------
+    str
+        Resolved absolute or relative path for the data directory.
+
+    Raises
+    ------
+    ValueError
+        If QUANDARY_BASE_DATADIR is set but doesn't exist or isn't a directory.
+    """
+    if os.path.isabs(datadir):
+        return datadir
+
+    base_dir = os.environ.get("QUANDARY_BASE_DATADIR")
+    if base_dir:
+        if not os.path.exists(base_dir):
+            raise ValueError(f"Environment variable QUANDARY_BASE_DATADIR points to non-existent path: {base_dir}")
+        if not os.path.isdir(base_dir):
+            raise ValueError(f"Environment variable QUANDARY_BASE_DATADIR is not a directory: {base_dir}")
+
+        datadir = os.path.join(base_dir, datadir)
+
+    return os.path.normpath(datadir)
+
+
 def _get_output_dir(setup):
     """Get output directory from setup, falling back to default."""
     return setup.output_directory or _DEFAULT_OUTPUT_DIR
@@ -160,6 +194,9 @@ def setup_quandary(
     # When user doesn't specify bounds, optimization bounds are left unset (C++ default: 1e12).
     bounds_for_estimation = control_amplitude_bounds if control_amplitude_bounds is not None \
         else [0.01] * nqubits
+
+    # Resolve output directory against QUANDARY_BASE_DATADIR if set
+    output_directory = resolve_output_dir(output_directory)
 
     # Handle initial condition (only one of initial_condition, initial_levels, initial_state)
     num_init_specs = sum([initial_condition is not None, initial_levels is not None, initial_state is not None])
@@ -326,6 +363,7 @@ def _setup_optimization(
 ) -> Setup:
     """Return a copy of setup configured for optimization."""
     setup = setup.copy()
+    setup.output_directory = resolve_output_dir(setup.output_directory)
     setup.runtype = RunType.OPTIMIZATION
 
     # Validate: only one target type
@@ -413,6 +451,7 @@ def _setup_simulation(
 ) -> Setup:
     """Return a copy of setup configured for simulation."""
     setup = setup.copy()
+    setup.output_directory = resolve_output_dir(setup.output_directory)
     setup.runtype = RunType.SIMULATION
 
     if pt0 is not None and qt0 is not None:
@@ -466,6 +505,7 @@ def _setup_eval_controls(
 ) -> Setup:
     """Return a copy of setup configured for control evaluation at a given sample rate."""
     setup = setup.copy()
+    setup.output_directory = resolve_output_dir(setup.output_directory)
     # Recalculate time grid: keep total time, change resolution
     total_time = setup.ntime * setup.dt
     setup.ntime = int(np.floor(total_time * points_per_ns))

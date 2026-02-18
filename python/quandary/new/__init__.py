@@ -78,6 +78,7 @@ from .utils import (  # noqa: F401, E402
 # Setup helpers (factory/configuration functions)
 from .setup_helpers import (  # noqa: F401, E402
     setup_quandary,
+    resolve_output_dir,
 )
 
 # Define public API
@@ -131,4 +132,5 @@ __all__ = [
     "downsample_pulses",
     # Setup helpers
     "setup_quandary",
+    "resolve_output_dir",
 ]
