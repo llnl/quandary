@@ -1057,7 +1057,13 @@ std::string toStringWithOptionalPerSubsystem(const std::vector<T>& items, PrintF
     // Output as array with per-subsystem overrides
     std::string out = "[\n";
     for (size_t i = 0; i < items.size(); ++i) {
-      out += "  { subsystem = " + std::to_string(i) + ", " + printItems(items[i])+ "}";
+      std::string item_str = printItems(items[i]);
+      // Strip outer braces if present — printItems may return "{key = val, ...}"
+      // but we're already building our own outer braces with subsystem prepended.
+      if (item_str.size() >= 2 && item_str.front() == '{' && item_str.back() == '}') {
+        item_str = item_str.substr(1, item_str.size() - 2);
+      }
+      out += "  { subsystem = " + std::to_string(i) + ", " + item_str + "}";
       if (i < items.size() - 1) {
         out += ",";
       }
