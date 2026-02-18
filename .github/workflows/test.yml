@@ -37,9 +37,9 @@ jobs:
         python-version: "3.12"
 
     - name: Set up Spack
-      uses: spack/setup-spack@v2
+      uses: spack/setup-spack@v3
       with:
-        ref: v1.0.2
+        spack_ref: v1.1.1
 
     - name: Configure Spack
       run: |
