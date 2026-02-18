@@ -43,13 +43,18 @@ def test_eval(test_case: Case, request):
     exact = request.config.getoption("--exact")
     mpi_exec = request.config.getoption("--mpi-exec")
     mpi_opt = request.config.getoption("--mpi-opt")
+    config_format = request.config.getoption("--config-format")
 
     simulation_name = test_case.simulation_name
     files_to_compare = test_case.files_to_compare
     number_of_processes_list = test_case.number_of_processes
 
     simulation_dir = os.path.join(TEST_PATH, simulation_name)
-    config_file = os.path.join(simulation_dir, simulation_name + ".cfg")
+    config_file = os.path.join(simulation_dir, f"{simulation_name}.{config_format}")
+
+    # Verify config file exists
+    if not os.path.exists(config_file):
+        pytest.skip(f"Config file {config_file} not found for format '{config_format}'")
 
     for number_of_processes in number_of_processes_list:
         run_test(simulation_dir, number_of_processes, config_file, files_to_compare, exact, mpi_exec, mpi_opt)
@@ -65,8 +70,9 @@ def run_test(simulation_dir, number_of_processes, config_file, files_to_compare,
         quandary_path=QUANDARY_PATH,
         config_file=config_file)
     print(f"Running command: \"{' '.join(command)}\"")
-    result = subprocess.run(command, capture_output=True, text=True, check=True)
-    print(result.stdout)
+    result = subprocess.run(command, capture_output=True, text=True, check=False)
+    print("STDOUT:\n", result.stdout)
+    print("STDERR:\n", result.stderr)
     assert result.returncode == 0
 
     matching_files = [file for pattern in files_to_compare

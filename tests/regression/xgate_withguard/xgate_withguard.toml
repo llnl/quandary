@@ -1,0 +1,39 @@
+[system]
+nlevels = [3]
+nessential = [2]
+ntime = 700
+dt = 0.1
+transition_frequency = [4.0999999999999996]
+selfkerr = [0.2198]
+rotation_frequency = [4]
+decoherence = { type = "none" }
+initial_condition = {type = "basis"}
+
+[control]
+parameterization = { type = "spline", num = 150 }
+carrier_frequency = [0.10000000000000001]
+initialization = { type = "constant", amplitude = 0.010000 }
+amplitude_bound = 0.050000000000000003
+zero_boundary_condition = true
+
+[optimization]
+target = {type = "gate", gate_type = "xgate"}
+objective = "jfrobenius"
+weights = [0.5, 0.5]
+tolerance = { grad_abs = 0.0001, grad_rel = 1e-05, final_cost = 1e-05, infidelity = 1e-05 }
+maxiter = 100
+tikhonov = { coeff = 1e-05, use_x0 = false }
+penalty = { leakage = 0.01, weightedcost = 0.01, weightedcost_width = 0, dpdm = 0.01, energy = 0.01, variation = 0 }
+
+[output]
+directory = "./data_out"
+observables = ["expectedenergy", "population", "fullstate"]
+timestep_stride = 1
+optimization_stride = 1
+
+[solver]
+runtype = "optimization"
+usematfree = true
+linearsolver = { type = "gmres", maxiter = 20 }
+timestepper = "imr"
+rand_seed = 1234

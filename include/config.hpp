@@ -1,149 +1,232 @@
-#include <map>
-#include <string>
-#include <cstring>
-#include <petsc.h>
-#include <iostream>
-#include <fstream>
-#include <algorithm>
-#include <cstdio>
-#include <cctype>
-#include <vector>
-#include <sstream>
-
 #pragma once
 
-/**
- * @brief Configuration parameter management class.
- *
- * The `Config` class extends std::map to provide functionality for reading
- * configuration files and retrieving parameters with type conversion and default values.
- * It supports MPI communication and logging capabilities.
- */
-class Config : public std::map<std::string, std::string> {
-  protected:
-
-  MPI_Comm comm; ///< MPI communicator for parallel operations.
-  int mpi_rank; ///< MPI rank of the current process.
-  bool quietmode; ///< Flag to control verbose output.
-
-  public:
-  std::stringstream* log; ///< Pointer to log stream for output messages.
-
-  Config();
-
-  /**
-   * @brief Constructor with MPI communicator and logging.
-   *
-   * @param comm_ MPI communicator for parallel operations.
-   * @param logstream Reference to the log stream for output.
-   * @param quietmode Flag to enable quiet mode (default: false).
-   */
-  Config(MPI_Comm comm_, std::stringstream& logstream, bool quietmode=false);
-
-  ~Config();
-  
-  /**
-   * @brief Parses a configuration file and stores key-value pairs in the map.
-   *
-   * @param filename Path to the configuration file to be parsed.
-   */
-  void ReadFile(std::string filename);
-
-  /**
-   * @brief Retrieves the MPI rank of the current process.
-   *
-   * @return int MPI rank.
-   */
-  int GetMpiRank() const;
-
-  /**
-   * @brief Retrieves a double parameter from the configuration.
-   *
-   * @param key Parameter name to look up.
-   * @param default_val Default value if parameter is not found (default: -1.0).
-   * @param warnme Flag to enable warning if parameter is not found (default: true).
-   * @return double Parameter value or default value.
-   */
-  double GetDoubleParam(std::string key, double default_val = -1., bool warnme=true) const;
-  /**
-   * @brief Retrieves an integer parameter from the configuration.
-   *
-   * @param key Parameter name to look up.
-   * @param default_val Default value if parameter is not found (default: -1).
-   * @param warnme Flag to enable warning if parameter is not found (default: true).
-   * @param exportme Flag to enable logging of the parameter value (default: true).
-   * @return int Parameter value or default value.
-   */
-  int GetIntParam(std::string key, int default_val = -1, bool warnme=true, bool exportme = true) const;
-  /**
-   * @brief Retrieves a string parameter from the configuration.
-   *
-   * @param key Parameter name to look up.
-   * @param default_val Default value if parameter is not found (default: "").
-   * @param exportme Flag to enable logging of the parameter value (default: true).
-   * @param warnme Flag to enable warning if parameter is not found (default: true).
-   * @return std::string Parameter value or default value.
-   */
-  std::string GetStrParam(std::string key, std::string default_val = "", bool exportme = true, bool warnme=true) const;
-  /**
-   * @brief Retrieves a boolean parameter from the configuration.
-   *
-   * @param key Parameter name to look up.
-   * @param default_val Default value if parameter is not found (default: false).
-   * @param warnme Flag to enable warning if parameter is not found (default: true).
-   * @return bool Parameter value or default value.
-   */
-  bool GetBoolParam(std::string key, bool default_val = false, bool warnme=true) const;
-  /**
-   * @brief Retrieves a vector of double parameters from the configuration.
-   *
-   * @param key Parameter name to look up.
-   * @param fillme Reference to vector to be filled with parameter values.
-   * @param default_val Default value for each element if parameter is not found (default: 1e20).
-   * @param exportme Flag to enable logging of the parameter values (default: true).
-   * @param warnme Flag to enable warning if parameter is not found (default: true).
-   */
-  void GetVecDoubleParam(std::string key, std::vector<double> &fillme, double default_val = 1e20, bool exportme = true, bool warnme = true) const;
-  /**
-   * @brief Retrieves a vector of integer parameters from the configuration.
-   *
-   * @param key Parameter name to look up.
-   * @param fillme Reference to vector to be filled with parameter values.
-   * @param default_val Default value for each element if parameter is not found (default: -1).
-   * @param warnme Flag to enable warning if parameter is not found (default: true).
-   */
-  void GetVecIntParam(std::string key, std::vector<int> &fillme, int default_val = -1, bool warnme=true) const;
-  /**
-   * @brief Retrieves a vector of string parameters from the configuration.
-   *
-   * @param key Parameter name to look up.
-   * @param fillme Reference to vector to be filled with parameter values.
-   * @param default_val Default value for each element if parameter is not found (default: "none").
-   * @param exportme Flag to enable logging of the parameter values (default: true).
-   * @param warnme Flag to enable warning if parameter is not found (default: true).
-   */
-  void GetVecStrParam(std::string key, std::vector<std::string> &fillme, std::string default_val = "none", bool exportme = true, bool warnme=true) const;
-};
+#include <algorithm>
+#include <petsc.h>
+#include <cstddef>
+#include <optional>
+#include <set>
+#include <sstream>
+#include <string>
+#include <toml++/toml.hpp>
+#include <vector>
+#include <cassert>
+#include <iostream>
+#include <iomanip>
+#include <limits>
+#include <random>
+#include <type_traits>
+#include "cfgparser.hpp"
+#include "defs.hpp"
+#include "mpi_logger.hpp"
+#include "config_defaults.hpp"
+#include "config_validators.hpp"
 
 
 /**
- * @brief Template function to export parameter values to the log stream.
+ * @brief Configuration class containing all validated settings.
  *
- * This function logs parameter key-value pairs to the provided log stream,
- * but only from MPI rank 0 to avoid duplicate output in parallel runs.
+ * Contains validated, typed configuration parameters. All fields have been
+ * validated with defaults set. Handles parsing from TOML configuration files
+ * and deprecated CFG format, as well as printing log of used configuration.
+ * This class is immutable after construction.
  *
- * @tparam T Type of the parameter value.
- * @param mpi_rank MPI rank of the current process.
- * @param log Reference to the log stream.
- * @param key Parameter name.
- * @param value Parameter value to be logged.
+ * @note Adding a new toml configuration option:
+ *
+ * 1) Add new member variable to the Config class below
+ *
+ * 2) Add parsing logic in constructor Config::Config(toml::table) in src/config.cpp. Either access directly from toml table, or use chains of validators for type-safe extraction and validation. For example:
+ *
+ *    Parsing simple scalar fields (T foo):
+ *      - `foo = toml["foo"].value()`: required scalar field, no default, not validated)
+ *      - `foo = toml["foo"].value_or(default_value)`: optional scalar with default, not validated
+ *      - `foo = validators::field<T>(toml, "foo").<validation_chain>.value()`: validated required scalar
+ *      - `foo = validators::field<T>(toml, "foo").<validation_chain>.valueOr(default_value)`: validated optional scalar with default
+ *
+ *    Parsing vectors (std::vector<T> foo):
+ *      - `foo = toml["foo"].as_array()->as<T>().value_or(default_vector)`: vector with default, not validated
+ *      - `foo = validators::vectorField<T>(toml, "foo").<validation_chain>.value()`: validated required vector
+ *      - `foo = validators::vectorField<T>(toml, "foo").<validation_chain>.value(default_vector)`: validated optional vector with default
+ *
+ *    Available validation chain methods can found in include/config_validators.hpp, such as:
+ *      `.positive()`, `.greaterThan(val)`, `.lessThan(val)`, `.minLength(len)`, `.hasLength(len)`, etc.
+ *
+ * 3) Add a getter method to the Config class below (`T getFoo() const {return foo};`)
+ *
+ * 4) Add printing logic in Config::printConfig() in src/config.cpp
  */
-template <typename T>
-void export_param(int mpi_rank, std::stringstream& log, std::string key, T value)
-{
-  if (mpi_rank == 0)
-  {
-    log << key << " = " << value << std::endl;
+class Config {
+ private:
+  // Logging
+  MPILogger logger; ///< MPI-aware logger for output messages.
+
+  // General options
+  std::vector<size_t> nlevels; ///< Number of levels per subsystem
+  std::vector<size_t> nessential; ///< Number of essential levels per subsystem (Default: same as nlevels)
+  size_t ntime; ///< Number of time steps used for time-integration
+  double dt; ///< Time step size (ns). Determines final time: T=ntime*dt
+  std::vector<double> transition_frequency; ///< Fundamental transition frequencies for each oscillator (GHz)
+  std::vector<double> selfkerr; ///< Self-kerr frequencies for each oscillator (GHz)
+  std::vector<double> crosskerr_coupling; ///< Cross-kerr coupling frequencies for each oscillator coupling (GHz)
+  std::vector<double> dipole_coupling; ///< Dipole-dipole coupling frequencies for each oscillator coupling (GHz)
+  std::vector<double> rotation_frequency; ///< Rotational wave approximation frequencies for each subsystem (GHz)
+  DecoherenceType decoherence_type; ///< Switch between Schroedinger and Lindblad solver
+  std::vector<double> decay_time; ///< Time of decay operation (T1) per oscillator (for Lindblad solver)
+  std::vector<double> dephase_time; ///< Time of dephase operation (T2) per oscillator (for Lindblad solver)
+  size_t n_initial_conditions; ///< Number of initial conditions
+  InitialConditionSettings initial_condition; ///< Initial condition configuration
+  std::optional<std::string> hamiltonian_file_Hsys; ///< File to read the system Hamiltonian from
+  std::optional<std::string> hamiltonian_file_Hc; ///< File to read the control Hamiltonian from
+  // Transmon-resonator system
+  bool transmon_resonator; ///< Whether modelling transmon-resonator system for SPAM reduction
+  double charge_offset; ///< Charge offset for transmon qubits in charge basis
+  double Ec;  ///< Charging energy for transmon qubits
+  double Ej;  ///< Josephson energy for transmon qubits
+
+  // Optimization options
+  bool control_zero_boundary_condition; ///< Decide whether control pulses should start and end at zero
+  std::vector<ControlParameterizationSettings> control_parameterizations; ///< Control parameterizations for each oscillator
+  std::vector<ControlInitializationSettings> control_initializations; ///< Control initializations for each oscillator
+  std::vector<double> control_amplitude_bounds; ///< Control amplitude bounds for each oscillator
+  std::vector<std::vector<double>> carrier_frequencies; ///< Carrier frequencies for each oscillator
+  OptimTargetSettings optim_target; ///< Grouped optimization target configuration
+  ObjectiveType optim_objective; ///< Objective function measure
+  std::vector<double> optim_weights; ///< Weights for summing up the objective function
+  double optim_tol_grad_abs; ///< Absolute gradient tolerance
+  double optim_tol_grad_rel; ///< Relative gradient tolerance
+  double optim_tol_final_cost; ///< Final time cost tolerance
+  double optim_tol_infidelity; ///< Infidelity tolerance
+  size_t optim_maxiter; ///< Maximum iterations
+  double optim_tikhonov_coeff; ///< Coefficient of Tikhonov regularization for the design variables
+  bool optim_tikhonov_use_x0; ///< Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
+  double optim_penalty_leakage; ///< Leakage penalty coefficient
+  double optim_penalty_weightedcost; ///< Weighted cost penalty coefficient
+  double optim_penalty_weightedcost_width; ///< Width parameter for weighted cost penalty
+  double optim_penalty_dpdm; ///< Second derivative penalty coefficient
+  double optim_penalty_energy; ///< Energy penalty coefficient
+  double optim_penalty_variation; ///< Amplitude variation penalty coefficient
+
+  // Output and runtypes
+  std::string output_directory; ///< Directory for output files
+  std::vector<OutputType> output_observables; ///< Specify the desired observables.
+  size_t output_timestep_stride; ///< Output frequency in the time domain: write output every <num> time-step
+  size_t output_optimization_stride; ///< Frequency of writing output during optimization iterations
+  RunType runtype; ///< Runtype options: simulation, gradient, or optimization
+  bool usematfree; ///< Use matrix free solver, instead of sparse matrix implementation
+  LinearSolverType linearsolver_type; ///< Solver type for solving the linear system at each time step
+  size_t linearsolver_maxiter; ///< Set maximum number of iterations for the linear solver
+  TimeStepperType timestepper_type; ///< The time-stepping algorithm
+  int rand_seed; ///< Fixed seed for the random number generator for reproducibility
+
+ public:
+  Config(const MPILogger& logger, const toml::table& table);
+
+  // TODO cfg: delete this when .cfg format is removed.
+  Config(const MPILogger& logger, const ParsedConfigData& settings);
+
+  ~Config() = default;
+
+  static Config fromFile(const std::string& filename, const MPILogger& logger);
+  static Config fromToml(const std::string& toml_filename, const MPILogger& logger);
+  static Config fromTomlString(const std::string& toml_content, const MPILogger& logger);
+
+  // TODO cfg: delete these when .cfg format is removed.
+  static Config fromCfg(const std::string& cfg_filename, const MPILogger& logger);
+  static Config fromCfgString(const std::string& cfg_content, const MPILogger& logger);
+
+  void printConfig(std::stringstream& log) const;
+
+  // getters
+  const std::vector<size_t>& getNLevels() const { return nlevels; }
+  size_t getNLevels(size_t i_osc) const { return nlevels[i_osc]; }
+  size_t getNumOsc() const { return nlevels.size(); }
+  const std::vector<size_t>& getNEssential() const { return nessential; }
+  size_t getNEssential(size_t i_osc) const { return nessential[i_osc]; }
+  size_t getNTime() const { return ntime; }
+  double getDt() const { return dt; }
+  double getTotalTime() const { return ntime * dt; }
+
+  const std::vector<double>& getTransitionFrequency() const { return transition_frequency; }
+  const std::vector<double>& getSelfKerr() const { return selfkerr; }
+  const std::vector<double>& getCrossKerrCoupling() const { return crosskerr_coupling; }
+  const std::vector<double>& getDipoleCoupling() const { return dipole_coupling; }
+  const std::vector<double>& getRotationFrequency() const { return rotation_frequency; }
+  DecoherenceType getDecoherenceType() const { return decoherence_type; }
+  const std::vector<double>& getDecayTime() const { return decay_time; }
+  const std::vector<double>& getDephaseTime() const { return dephase_time; }
+  size_t getNInitialConditions() const { return n_initial_conditions; }
+  const InitialConditionSettings& getInitialCondition() const { return initial_condition; }
+  const std::optional<std::string>& getHamiltonianFileHsys() const { return hamiltonian_file_Hsys; }
+  const std::optional<std::string>& getHamiltonianFileHc() const { return hamiltonian_file_Hc; }
+
+  bool getTransmonResonator() const { return transmon_resonator; }
+  double getChargeOffset() const { return charge_offset; }
+  double getEc() const { return Ec; }
+  double getEj() const { return Ej; }
+
+  const ControlParameterizationSettings& getControlParameterizations(size_t i_osc) const { return control_parameterizations[i_osc]; }
+  bool getControlZeroBoundaryCondition() const { return control_zero_boundary_condition; }
+  const ControlInitializationSettings& getControlInitializations(size_t i_osc) const {
+    return control_initializations[i_osc];
   }
-};
+  double getControlAmplitudeBound(size_t i_osc) const { return control_amplitude_bounds[i_osc]; }
+  const std::vector<double>& getCarrierFrequencies(size_t i_osc) const { return carrier_frequencies[i_osc]; }
+  const OptimTargetSettings& getOptimTarget() const { return optim_target; }
+  ObjectiveType getOptimObjective() const { return optim_objective; }
+  const std::vector<double>& getOptimWeights() const { return optim_weights; }
+  double getOptimTolGradAbs() const { return optim_tol_grad_abs; }
+  double getOptimTolGradRel() const { return optim_tol_grad_rel; }
+  double getOptimTolFinalCost() const { return optim_tol_final_cost; }
+  double getOptimTolInfidelity() const { return optim_tol_infidelity; }
+  size_t getOptimMaxiter() const { return optim_maxiter; }
+  double getOptimTikhonovCoeff() const { return optim_tikhonov_coeff; }
+  bool getOptimTikhonovUseX0() const { return optim_tikhonov_use_x0; }
+  double getOptimPenaltyLeakage() const { return optim_penalty_leakage; }
+  double getOptimPenaltyWeightedCost() const { return optim_penalty_weightedcost; }
+  double getOptimPenaltyWeightedCostWidth() const { return optim_penalty_weightedcost_width; }
+  double getOptimPenaltyDpdm() const { return optim_penalty_dpdm; }
+  double getOptimPenaltyEnergy() const { return optim_penalty_energy; }
+  double getOptimPenaltyVariation() const { return optim_penalty_variation; }
 
+  const std::string& getOutputDirectory() const { return output_directory; }
+  const std::vector<OutputType>& getOutputObservables() const { return output_observables; }
+  size_t getOutputTimestepStride() const { return output_timestep_stride; }
+  size_t getOutputOptimizationStride() const { return output_optimization_stride; }
+  RunType getRuntype() const { return runtype; }
+  bool getUseMatFree() const { return usematfree; }
+  LinearSolverType getLinearSolverType() const { return linearsolver_type; }
+  size_t getLinearSolverMaxiter() const { return linearsolver_maxiter; }
+  TimeStepperType getTimestepperType() const { return timestepper_type; }
+  int getRandSeed() const { return rand_seed; }
+
+ private:
+  void finalize();
+  void validate() const;
+
+  size_t computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, DecoherenceType decoherence_type) const;
+
+  void setRandSeed(int rand_seed_);
+
+  // Helper function to parse a single control parameterization table
+  ControlParameterizationSettings parseControlParameterizationSpecs(const toml::table& param_table) const;
+
+  // Helper function to parse a single control initialization table
+  ControlInitializationSettings parseControlInitializationSpecs(const toml::table& table) const;
+
+  /**
+   * @brief Parses optimization target settings from TOML table
+   *
+   * @param table TOML table containing the configuration
+   * @param num_osc Number of oscillators
+   * @return Parsed optimization target settings
+   */
+  OptimTargetSettings parseOptimTarget(const toml::table& table, size_t num_osc) const;
+
+
+  // TODO cfg: delete these when .cfg format is removed.
+  template <typename T>
+  std::vector<std::vector<T>> parseOscillatorSettingsCfg(const std::optional<std::map<int, std::vector<T>>>& indexed, size_t num_entries, const std::vector<T>& default_values = {}) const;
+
+  std::vector<ControlParameterizationSettings> parseControlParameterizationsCfg(const std::optional<std::map<int, ControlParameterizationData>>& parameterizations_map) const;
+
+  std::vector<ControlInitializationSettings> parseControlInitializationsCfg(const std::optional<std::map<int, ControlInitializationSettings>>& init_configs) const;
+};

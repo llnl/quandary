@@ -15,17 +15,6 @@
 #pragma once
 
 /**
- * @brief Structure for storing pi-pulse parameters.
- *
- * Stores timing and amplitude information for pi-pulse sequences.
- */
-struct PiPulse {
-  std::vector<double> tstart; ///< Start times for each pulse segment
-  std::vector<double> tstop; ///< Stop times for each pulse segment
-  std::vector<double> amp; ///< Amplitudes for each pulse segment
-};
-
-/**
  * @brief Quantum oscillator (multi-level qubit) with control capabilities.
  *
  * This class represents a single quantum oscillator that is controlled by external 
@@ -53,13 +42,13 @@ class Oscillator {
     double selfkerr; ///< Self-Kerr frequency \f$\xi_k\f$, multiplies \f$a_k^\dagger a_k^\dagger a_k a_k\f$
 
     double detuning_freq; ///< Detuning frequency, detuning = ground_freq - rotational_freq, multiplies \f$a_k^\dagger a_k\f$
-    LindbladType lindbladtype; ///< Type of Lindblad collapse operators to include
-    double decay_time; ///< Characteristic time for T1 decay collapse operations
-    double dephase_time; ///< Characteristic time for T2 dephasing collapse operations
+    DecoherenceType decoherence_type; ///< Type of Lindblad decoherence operators to include
+    double decay_time; ///< Characteristic time for T1 decay operations
+    double dephase_time; ///< Characteristic time for T2 dephasing operations
 
     std::vector<double> params; ///< Control parameters for this oscillator
     double Tfinal; ///< Final evolution time
-    std::vector<ControlBasis *> basisfunctions; ///< Control parameterization basis functions for each time segment
+    std::vector<ControlBasis *> basisfunctions; ///< Basis functions for control parameterization foreach time parameterization. Note: Currently only one parameterization is supported!
     std::vector<double> carrier_freq; ///< Frequencies of the carrier waves
 
     int mpirank_world; ///< Rank of MPI_COMM_WORLD
@@ -69,34 +58,24 @@ class Oscillator {
     PetscInt ilow; ///< First index of the local sub vector u,v
     PetscInt iupp; ///< Last index (+1) of the local sub vector u,v
 
-    bool control_enforceBC; ///< Flag to enforce boundary conditions on controls
+    bool control_zero_boundary_condition; ///< Flag to enforce boundary conditions on controls
 
   public:
-    PiPulse pipulse; ///< Pi-pulse storage (dummy for compatibility)
     PetscInt dim_preOsc; ///< Dimension of coupled subsystems preceding this oscillator
     PetscInt dim_postOsc; ///< Dimension of coupled subsystems following this oscillator
 
     Oscillator();
 
     /**
-     * @brief Constructor with full oscillator specification.
+     * @brief Constructor with simplified configuration-based specification.
      *
-     * @param config Configuration parameters
+     * @param config Configuration parameters containing all oscillator settings
      * @param id Oscillator identifier
-     * @param nlevels_all_ Number of levels for all oscillators in system
-     * @param controlsegments Control segment specifications
-     * @param controlinitializations Control initialization specifications
-     * @param ground_freq_ Fundamental transition frequency
-     * @param selfkerr_ Self-Kerr coefficient
-     * @param rotational_freq_ Rotating frame frequency
-     * @param decay_time_ T1 decay time
-     * @param dephase_time_ T2 dephasing time
-     * @param carrier_freq_ Carrier wave frequencies
-     * @param Tfinal_ Final evolution time
-     * @param lindbladtype_ Type of Lindblad operators
      * @param rand_engine Random number generator engine
+     * @param param_offset Offset for global control parameter indexing
+     * @param quietmode Flag for quiet mode operation
      */
-    Oscillator(Config config, size_t id, const std::vector<size_t>& nlevels_all_, std::vector<std::string>& controlsegments, std::vector<std::string>& controlinitializations, double ground_freq_, double selfkerr_, double rotational_freq_, double decay_time_, double dephase_time_, const std::vector<double>& carrier_freq_, double Tfinal_, LindbladType lindbladtype_, std::mt19937 rand_engine);
+    Oscillator(const Config& config, size_t id, std::mt19937 rand_engine, int param_offset, bool quietmode);
 
     virtual ~Oscillator();
 
@@ -143,11 +122,11 @@ class Oscillator {
     double getDephaseTime() {return dephase_time; };
 
     /**
-     * @brief Retrieves the number of control segments (currently always 1).
+     * @brief Retrieves the number of control parameterizations in this oscillator (currently always 1).
      *
-     * @return size_t Number of time segments
+     * @return size_t Number of time parameterizations (currently always returns 1)
      */
-    size_t getNSegments() {return basisfunctions.size(); };
+    size_t getNParameterizations() {return basisfunctions.size(); };
 
     /**
      * @brief Retrieves the number of carrier frequencies.
@@ -178,12 +157,12 @@ class Oscillator {
     double getRotFreq() {return (ground_freq - detuning_freq) / (2.0*M_PI); };
 
     /**
-     * @brief Retrieves the number of parameters for a specific segment.
+     * @brief Retrieves the number of parameters for a specific parameterization.
      *
-     * @param segmentID Segment identifier
-     * @return int Number of parameters for the segment
+     * @param parameterizationID Segment identifier // Currently always 0!
+     * @return int Number of parameters for this parameterization
      */
-    int getNSegParams(int segmentID);
+    int getNSegParams(int parameterizationID);
 
     /**
      * @brief Sets control parameters from a global storage.

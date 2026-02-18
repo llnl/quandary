@@ -183,38 +183,6 @@ double BSpline2ndAmplitude::basisfunction(int id, double t){
     return val;
 }
 
-Step::Step(double step_amp1_, double step_amp2_, double t0, double t1, double tramp_, bool enforceZeroBoundary_) : ControlBasis(1, t0, t1, enforceZeroBoundary_) {
-    step_amp1 = step_amp1_;
-    step_amp2 = step_amp2_;
-    tramp = tramp_;
-    controltype = ControlType::STEP;
-}
-
-Step::~Step(){}
-
-void Step::evaluate(const double t, const std::vector<double>& coeff, int carrier_freq_id, double* Blt1, double*Blt2){
-    // Access the control
-    double alpha = coeff[skip + carrier_freq_id*2];
-
-    // The control enters as tstop for the ramping function
-    double tstepend = tstart + alpha*(tstop - tstart);
-    double ramp = 1.0;
-    if (tramp > 1e-13) ramp = getRampFactor(t, tstart, tstepend, tramp);
-
-    *Blt1 = ramp*step_amp1;
-    *Blt2 = ramp*step_amp2;
-}
-
-void Step::derivative(const double t, const std::vector<double>& coeff, double* coeff_diff, const double valbar1, const double valbar2, int carrier_freq_id) {
-
-    double alpha = coeff[skip + carrier_freq_id*2];    
-    double tstepend = tstart + alpha*(tstop - tstart);
-
-    double dramp = getRampFactor_diff(t, tstart, tstepend, tramp);
-    coeff_diff[skip + carrier_freq_id*2] += step_amp1*valbar1 * dramp * (tstop - tstart); 
-    coeff_diff[skip + carrier_freq_id*2] += step_amp2*valbar2 * dramp * (tstop - tstart); 
-}
-
 // Zeroth order B-splines, i.e., piecewise constant
 BSpline0::BSpline0(int nsplines_, double t0, double T, bool enforceZeroBoundary_) : ControlBasis(2*nsplines_, t0, T, enforceZeroBoundary_){
     nsplines = nsplines_;
