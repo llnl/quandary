@@ -72,6 +72,10 @@ jobs:
       shell: spack-sh {0}
       run: |
         spack env activate .spack_env
+        echo "CC=$CC CXX=$CXX"
+        which python
+        python --version
+        python -c "import sysconfig; print('sysconfig CC:', sysconfig.get_config_var('CC')); print('sysconfig CXX:', sysconfig.get_config_var('CXX'))"
         python -m pip install -e ".[dev]"
         pytest -v -s --mpi-opt="--oversubscribe" --config-format=cfg tests/regression
 
