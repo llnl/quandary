@@ -1037,7 +1037,7 @@ class Quandary:
         lines.append("\n[output]")
         lines.append("directory = \"./\"")
         lines.append("observables = [\"population\", \"expectedEnergy\", \"fullstate\"]")
-        lines.append("timestep_stride = 1")
+        lines.append(f"timestep_stride = {self.output_frequency}")
         lines.append(f"optimization_stride = {self.print_frequency_iter}")
 
         # [solver]
