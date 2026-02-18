@@ -90,7 +90,7 @@ struct ConfigFieldsT {
   // Output parameters
   Wrapper<std::string> output_directory; ///< Directory for output files
   Wrapper<std::vector<OutputType>> output_observables; ///< Specify the desired observables.
-  Wrapper<size_t> output_timestep_stride; ///< Output frequency in the time domain: write output every <num> time-step
+  Wrapper<size_t> output_timestep_stride; ///< Output frequency in the time domain: write output every N time-steps
   Wrapper<size_t> output_optimization_stride; ///< Frequency of writing output during optimization iterations
 
   // Solver parameters
