@@ -89,7 +89,7 @@ def _eigen_and_reorder(H0, verbose=False):
     return evals, evects
 
 
-def get_resonances(*, nessential, nguard, Hsys, Hc_re=[], Hc_im=[], rotation_frequency=[], cw_amp_thres=1e-7,
+def get_resonances(*, nessential, nguard, Hsys, Hc_re=None, Hc_im=None, rotation_frequency=None, cw_amp_thres=1e-7,
                    cw_prox_thres=1e-2, verbose=True, stdmodel=True):
     """Compute system resonances to use as carrier wave frequencies.
 
@@ -128,6 +128,13 @@ def get_resonances(*, nessential, nguard, Hsys, Hc_re=[], Hc_im=[], rotation_fre
         Coupling strengths (growth rates) corresponding to each carrier
         frequency, for each oscillator.
     """
+
+    if Hc_re is None:
+        Hc_re = []
+    if Hc_im is None:
+        Hc_im = []
+    if rotation_frequency is None:
+        rotation_frequency = []
 
     if verbose:
         logger.info(f"\nComputing carrier frequencies, ignoring growth rate slower than: {cw_amp_thres} "
@@ -219,8 +226,8 @@ def get_resonances(*, nessential, nguard, Hsys, Hc_re=[], Hc_im=[], rotation_fre
     return om, growth_rate
 
 
-def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=[], dipole_coupling=[],
-                 rotation_frequency=[], verbose=True):
+def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=None, dipole_coupling=None,
+                 rotation_frequency=None, verbose=True):
     """Create standard Hamiltonian operators for pulse-driven superconducting qubits.
 
     Parameters
@@ -254,6 +261,13 @@ def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=[], di
         Imaginary (anti-symmetric) control Hamiltonian operators for each
         qubit. Dimensionless; scaled by the control amplitude at runtime.
     """
+
+    if crosskerr_coupling is None:
+        crosskerr_coupling = []
+    if dipole_coupling is None:
+        dipole_coupling = []
+    if rotation_frequency is None:
+        rotation_frequency = []
 
     if len(rotation_frequency) == 0:
         rotation_frequency = np.zeros(len(N))

@@ -6,7 +6,7 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-def estimate_timesteps(*, final_time=1.0, Hsys=[], Hc_re=[], Hc_im=[], control_amplitude_bounds=[], Pmin=40):
+def estimate_timesteps(*, final_time=1.0, Hsys=None, Hc_re=None, Hc_im=None, control_amplitude_bounds=None, Pmin=40):
     """Estimate the number of time steps based on eigenvalues of Hamiltonians.
 
     The estimate does not account for quickly varying signals or a large number
@@ -19,11 +19,11 @@ def estimate_timesteps(*, final_time=1.0, Hsys=[], Hc_re=[], Hc_im=[], control_a
         Total simulation time [ns]. Default: 1.0.
     Hsys : ndarray
         System Hamiltonian [rad/ns].
-    Hc_re : list of ndarray
+    Hc_re : list of ndarray, optional
         Real parts of control Hamiltonian operators for each oscillator.
-    Hc_im : list of ndarray
+    Hc_im : list of ndarray, optional
         Imaginary parts of control Hamiltonian operators for each oscillator.
-    control_amplitude_bounds : list of float
+    control_amplitude_bounds : list of float, optional
         Estimated max control amplitudes [GHz] per oscillator. Used to scale
         the control Hamiltonians when computing the largest eigenvalue.
         Default: 0.01 GHz per oscillator.
@@ -36,6 +36,14 @@ def estimate_timesteps(*, final_time=1.0, Hsys=[], Hc_re=[], Hc_im=[], control_a
     ntime : int
         Estimated number of time steps.
     """
+    if Hsys is None:
+        Hsys = []
+    if Hc_re is None:
+        Hc_re = []
+    if Hc_im is None:
+        Hc_im = []
+    if control_amplitude_bounds is None:
+        control_amplitude_bounds = []
 
     # Get estimated control pulse amplitude [GHz]
     est_control_amplitude_bounds = control_amplitude_bounds[:]
