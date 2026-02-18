@@ -66,30 +66,39 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
   else if (initcond.type == InitialConditionType::FROMFILE) {
     /* Read initial condition from file */
     int nelems = 0;
-    if (mastereq->decoherence_type != DecoherenceType::NONE) nelems = 2*dim_ess*dim_ess;
-    else nelems = 2 * dim_ess;
+    // Always read the state vector; density matrix will be formed here for Lindblad.
+    nelems = 2 * dim_ess;
     double * vec = new double[nelems];
     if (mpirank_world == 0) {
       std::string filename = initcond.filename.value();
       read_vector(filename.c_str(), vec, nelems, quietmode);
     }
     MPI_Bcast(vec, nelems, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    if (decoherence_type != DecoherenceType::NONE) { // Lindblad solver, fill density matrix
-      for (PetscInt i = 0; i < dim_ess*dim_ess; i++) {
-        PetscInt k = i % dim_ess;
-        PetscInt j = i / dim_ess;
-        if (dim_ess*dim_ess < mastereq->getDim()) {
-          k = mapEssToFull(k, mastereq->nlevels, mastereq->nessential);
-          j = mapEssToFull(j, mastereq->nlevels, mastereq->nessential);
-        }
-        PetscInt elemid = getVecID(k,j,dim_rho);
-        if (ilow <= elemid && elemid < iupp) {
-          PetscInt id_global_x =  elemid + mpirank_petsc*localsize_u; // Global index of u_i in x=[u,v]
-          VecSetValue(rho_t0, id_global_x, vec[i], INSERT_VALUES);  // RealPart
-          VecSetValue(rho_t0, id_global_x + localsize_u, vec[i + dim_ess*dim_ess], INSERT_VALUES); // Imaginary Part
+    if (decoherence_type != DecoherenceType::NONE) { // Lindblad solver, build density matrix from state vector
+      for (PetscInt i = 0; i < dim_ess; i++) {
+        double psi_i_re = vec[i];
+        double psi_i_im = vec[i + dim_ess];
+        for (PetscInt j = 0; j < dim_ess; j++) {
+          double psi_j_re = vec[j];
+          double psi_j_im = vec[j + dim_ess];
+          // rho_ij = psi_i * conj(psi_j)
+          double rho_re = psi_i_re * psi_j_re + psi_i_im * psi_j_im;
+          double rho_im = psi_i_im * psi_j_re - psi_i_re * psi_j_im;
+          PetscInt k = i;
+          PetscInt l = j;
+          if (dim_ess*dim_ess < mastereq->getDim()) {
+            k = mapEssToFull(k, mastereq->nlevels, mastereq->nessential);
+            l = mapEssToFull(l, mastereq->nlevels, mastereq->nessential);
+          }
+          PetscInt elemid = getVecID(k, l, dim_rho);
+          if (ilow <= elemid && elemid < iupp) {
+            PetscInt id_global_x =  elemid + mpirank_petsc*localsize_u; // Global index of u_i in x=[u,v]
+            VecSetValue(rho_t0, id_global_x, rho_re, INSERT_VALUES);  // RealPart
+            VecSetValue(rho_t0, id_global_x + localsize_u, rho_im, INSERT_VALUES); // Imaginary Part
+          }
         }
       }
-    } else { // Schroedinger solver, fill vector 
+    } else { // Schroedinger solver, fill vector
       for (PetscInt i = 0; i < dim_ess; i++) {
         PetscInt k = i;
         if (dim_ess < mastereq->getDim()) 

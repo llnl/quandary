@@ -828,10 +828,8 @@ class Quandary:
 
         # If given, write the initial state to file
         if self.initialcondition[0:4] == "file":
-            if self._lindblad_solver:  # If Lindblad solver, make it a density matrix
-                state = np.outer(self._initialstate, np.array(self._initialstate).conj())
-            else:
-                state = self._initialstate
+            # Always write the state vector; Lindblad density matrix will be formed in C++.
+            state = self._initialstate
             vectorized = np.concatenate((np.real(state).ravel(order='F'), np.imag(state).ravel(order='F')))
             self._initstatefilename = "initialstate.dat"
             with open(os.path.join(datadir, self._initstatefilename), "w", newline='\n') as f:
