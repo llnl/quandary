@@ -1,7 +1,10 @@
 import os
 import pytest
 import numpy as np
-from quandary.new import setup_quandary, optimize, hamiltonians, get_resonances
+from quandary.new import (
+    setup_quandary, optimize, hamiltonians, get_resonances,
+    ControlInitializationSettings, ControlInitializationType,
+)
 from utils import assert_results_equal
 
 # Mark all tests in this file as regression tests
@@ -360,16 +363,25 @@ def test_example_qft(tmp_path, request):
     setup.optim_penalty_energy = gamma_energy   # 1e-4 (explicitly set in old test)
     setup.optim_tikhonov_coeff = gamma_tik0     # 1e-3
     setup.optim_penalty_dpdm = gamma_dpdm       # 0.0 (explicitly set in old test)
+    setup.optim_penalty_variation = 0.01        # old default (new default is 0.0)
     setup.optim_maxiter = 10                    # maxiter=10
 
-    # Match old initialization amplitude
-    num_carrier_freqs = len(setup.carrier_frequencies[0])
-    init_amplitude = 10.0 / 1000.0 / np.sqrt(2) / num_carrier_freqs
+    # Match old per-oscillator initialization amplitudes:
+    # amplitude = 10.0 / 1000.0 / sqrt(2) / num_carrier_freqs_for_this_oscillator
+    control_inits = []
+    for iosc in range(nqubits):
+        nfreqs = len(setup.carrier_frequencies[iosc])
+        amp = 10.0 / 1000.0 / np.sqrt(2) / nfreqs
+        init = ControlInitializationSettings()
+        init.init_type = ControlInitializationType.RANDOM
+        init.amplitude = amp
+        control_inits.append(init)
+    setup.control_initializations = control_inits
 
     results = optimize(
         setup,
         targetgate=unitary,
-        control_initialization_amplitude=init_amplitude,
+        control_initialization_amplitude=None,
         quiet=True,
     )
 
