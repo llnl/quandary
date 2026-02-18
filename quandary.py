@@ -31,6 +31,12 @@ class Quandary:
     T1           # Optional: T1-Decay time [ns] per qubit (invokes Lindblad solver). Default: 0
     T2           # Optional: T2-Dephasing time [ns] per qubit (invokes Lindblad solver). Default: 0
 
+    ## Transmon-Resonator specifics:
+    transmon_resonator  # Flag to switch on transmon-resonator system model
+    charge_offset   # Charge offset for transmon-resonator system. Default: 0.0
+    Ec             # Charging energy for transmon-resonator system [GHz]. Default: 0.0
+    Ej             # Josephson energy for transmon-resonator system [GHz]. Default: 0.0
+
     # Optional: User-defined system and control Hamiltonian operators. Default: Superconducting Hamiltonian model
     Hsys                # Optional: User specified system Hamiltonian model. Array. 
     Hc_re               # Optional: User specified control Hamiltonian operators for each qubit (real-parts). List of Arrays
@@ -114,6 +120,11 @@ class Quandary:
     crosskerr : List[float] = field(default_factory=list)
     T1        : List[float] = field(default_factory=list)
     T2        : List[float] = field(default_factory=list)
+    ## Transmon resonator specifics:
+    transmon_resonator  : bool  = False
+    charge_offset       : float = 0.0
+    Ec                  : float = 0.0
+    Ej                  : float = 0.0
     # Optiona: User-defined Hamiltonian model (Default = superconducting qubits model)
     Hsys                : List[complex]     = field(default_factory=list)
     Hc_re               : List[List[float]] = field(default_factory=list)
@@ -870,6 +881,10 @@ class Quandary:
         elif len(self.pcof0_filename) > 0:
             print("Using the provided filename '", self.pcof0_filename, "' in the control_initialization command")
             read_pcof0_from_file = True
+        
+        # Disable usematfree if transmon-resonator is used:
+        if self.transmon_resonator:
+            self.usematfree = False
 
         nsub = len(self.Ne)
         Nt = [self.Ne[i] + self.Ng[i] for i in range(len(self.Ng))]
@@ -931,6 +946,13 @@ class Quandary:
             lines.append(f"decoherence = {{ {', '.join(deco_fields)} }}")
         else:
             lines.append(f"decoherence = {{ type = {_toml_str('none')} }}")
+        
+        ## Transmon resonator specifics:
+        if self.transmon_resonator:
+            lines.append(f"transmon_resonator = true")
+            lines.append(f"charge_offset = {self.charge_offset}")
+            lines.append(f"Ec = {self.Ec}")
+            lines.append(f"Ej = {self.Ej}")
 
         # Initial condition
         init_tokens = [t.strip() for t in self.initialcondition.split(",")]
