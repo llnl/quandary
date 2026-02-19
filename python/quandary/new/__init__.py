@@ -1,11 +1,9 @@
 """New Quandary Python interface for quantum optimal control using nanobind."""
 
-# Initialize MPI and PETSc via mpi4py/petsc4py before loading the C++ extension.
-# This ensures both are initialized once and managed by Python's lifecycle.
-# To pass custom PETSc options, call petsc4py.init([...]) before importing this module.
+# Initialize MPI via mpi4py before loading the C++ extension.
+# This ensures MPI is initialized once and managed by Python's lifecycle.
+# MPI_Init called twice is undefined behavior, so this must happen before any C++ code.
 import mpi4py.MPI  # noqa: F401, E402
-import petsc4py
-petsc4py.init()
 
 # Re-export the nanobind implementation from the parent package
 from .._quandary_impl import (

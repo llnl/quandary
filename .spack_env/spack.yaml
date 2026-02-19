@@ -5,8 +5,6 @@
 spack:
   specs:
   - quandary@develop+test
-  - py-mpi4py
-  - py-petsc4py
   view: true
   concretizer:
     unify: true

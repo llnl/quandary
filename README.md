@@ -113,19 +113,9 @@ export PETSC_ARCH=                       # leave empty for system installs (Home
 export PKG_CONFIG_PATH=$PETSC_DIR/lib/pkgconfig:$PKG_CONFIG_PATH
 ```
 
-Install Quandary and petsc4py:
+Install Quandary:
 ```
-# Install Quandary
 pip install .
-
-# Install petsc4py build tools (workaround for petsc issue)
-pip install ".[petsc]"
-
-# Install petsc4py, version-matched to your system PETSc.
-# petsc4py must match your PETSc minor version (no stable ABI across minors).
-# When PETSC_DIR is set, petsc4py uses your existing PETSc instead of building from source.
-PETSC_VERSION=$(pkg-config --modversion PETSc | cut -d. -f1,2)
-pip install "petsc4py~=${PETSC_VERSION}.0" --no-build-isolation
 ```
 
 `pip install .` invokes CMake under the hood (via [scikit-build-core](https://scikit-build-core.readthedocs.io/)) to compile the nanobind C++ extension. It requires:

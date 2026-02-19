@@ -16,15 +16,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Workaround: petsc4py <= 3.24 passes a removed `dry_run` kwarg to setuptools'
-# execute(), which breaks with setuptools >= 76. Fixed in PETSc main (MR !9044)
-# but not yet released for 3.24.x. Remove this extra once petsc4py ships the fix.
-# See: https://gitlab.com/petsc/petsc/-/merge_requests/9044
-petsc = [
-    "setuptools<76",
-    "wheel",
-    "cython",
-]
 dev = [
     "pytest>=8.3.4,<9.0.0",
     "pytest-benchmark>=5.1.0,<6.0.0",
