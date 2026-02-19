@@ -97,7 +97,6 @@ sudo cmake --install . --prefix /your/install/path
 ### Python dependencies and interface
 
 Create a virtual environment and use `pip` to install Quandary's Python interface.
-`PETSC_DIR` (and `PETSC_ARCH`, if applicable) must be set as described above.
 
 For Conda:
 ```
@@ -110,25 +109,30 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-Then install Quandary with the `petsc` extra, which includes build tools needed to compile petsc4py:
+Ensure PETSc is discoverable by setting the following environment variables:
 ```
-pip install ".[petsc]"
+export PETSC_DIR=/path/to/petsc          # e.g. /opt/homebrew/opt/petsc
+export PETSC_ARCH=                       # leave empty for system installs (Homebrew, apt, etc.)
+export PKG_CONFIG_PATH=$PETSC_DIR/lib/pkgconfig:$PKG_CONFIG_PATH
 ```
 
-Then install petsc4py, compiled against your system PETSc.
-petsc4py must match your PETSc minor version (PETSc has no stable ABI across minors):
+Install petsc4py, compiled against your system PETSc.
+petsc4py must match your PETSc minor version (PETSc has no stable ABI across minors).
+When `PETSC_DIR` is set, petsc4py will automatically use your existing PETSc
+instead of building it from source:
 ```
-# Auto-detect PETSc version, or set manually, e.g. PETSC_VERSION=3.22
 PETSC_VERSION=$(pkg-config --modversion PETSc | cut -d. -f1,2)
-pip install "petsc4py~=${PETSC_VERSION}.0" --no-build-isolation
+pip install "petsc4py~=${PETSC_VERSION}.0"
 ```
 
-The `pip install .` command invokes CMake under the hood (via [scikit-build-core](https://scikit-build-core.readthedocs.io/)) to compile the nanobind C++ extension. This requires:
+Install Quandary:
+```
+pip install .
+```
 
+This invokes CMake under the hood (via [scikit-build-core](https://scikit-build-core.readthedocs.io/)) to compile the nanobind C++ extension. It requires:
 - **PETSc**: visible via `PKG_CONFIG_PATH` (see above)
 - **MPI**: MPI compiler wrappers (`mpicc`, `mpicxx`) must be in your `PATH`, or set `MPI_ROOT` to your MPI installation prefix
-
-Both the classic interface (`quandary.py`) and the new nanobind-based interface (`quandary.new`) are installed, along with generated type stubs for IDE autocompletion.
 
 Use `pip install -e .` instead if you want to edit the Python source files without reinstalling on every change. In editable mode the C++ extension is still compiled, but the generated type stubs may not be visible to IDEs.
 

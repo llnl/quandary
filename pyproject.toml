@@ -16,14 +16,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Build tools needed to compile petsc4py from source with --no-build-isolation.
-# petsc4py must match your PETSc minor version and is installed separately.
-# Install with: pip install ".[petsc]" then install petsc4py (see README).
-petsc = [
-    "setuptools<76",
-    "wheel",
-    "cython",
-]
 dev = [
     "pytest>=8.3.4,<9.0.0",
     "pytest-benchmark>=5.1.0,<6.0.0",
