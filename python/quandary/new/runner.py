@@ -252,7 +252,7 @@ def optimize(
     gate_rot_freq=None,
     pcof=None,
     randomize_initial_control: bool = True,
-    control_initialization_amplitude: float = 0.01,
+    control_initialization_amplitude: Optional[float] = None,
     dry_run: bool = False,
     max_n_procs: Optional[int] = None,
     quiet: bool = False,
@@ -281,8 +281,10 @@ def optimize(
         B-spline coefficients for warm-start.
     randomize_initial_control : bool
         Initialize controls randomly. Default: True.
-    control_initialization_amplitude : float
-        Initial control amplitude [GHz]. Default: 0.01 (= 10 MHz).
+    control_initialization_amplitude : float, optional
+        Initial control amplitude [GHz]. When omitted, uses
+        setup.control_initializations if set, otherwise defaults to
+        0.01 GHz (= 10 MHz).
     dry_run : bool
         If True, validate and return Results with config populated but do not
         run. Use print(results.config) to inspect the full configuration.

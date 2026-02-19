@@ -439,7 +439,8 @@ def _setup_optimization(
     output_dir = _get_output_dir(setup)
     os.makedirs(output_dir, exist_ok=True)
 
-    # Set up control initialization (only if user explicitly provides parameters)
+    # Set up control initialization.
+    # Priority: pcof > explicit amplitude > existing setup.control_initializations > default
     if pcof is not None and len(pcof) > 0:
         # Warm-start from provided coefficients
         pcof_file = os.path.join(output_dir, "pcof_init.dat")
@@ -453,7 +454,7 @@ def _setup_optimization(
             control_inits.append(init)
         setup.control_initializations = control_inits
     elif control_initialization_amplitude is not None:
-        # Fresh optimization with explicit amplitude (use randomize_initial_control to choose type)
+        # Explicit amplitude — create uniform per-oscillator inits
         control_inits = []
         init_type = (
             ControlInitializationType.RANDOM if randomize_initial_control
@@ -464,6 +465,21 @@ def _setup_optimization(
             init = ControlInitializationSettings()
             init.init_type = init_type
             init.amplitude = control_initialization_amplitude
+            control_inits.append(init)
+
+        setup.control_initializations = control_inits
+    elif not setup.control_initializations:
+        # Nothing set — apply default (0.01 GHz = 10 MHz, random)
+        control_inits = []
+        init_type = (
+            ControlInitializationType.RANDOM if randomize_initial_control
+            else ControlInitializationType.CONSTANT
+        )
+
+        for _ in range(len(setup.nessential)):
+            init = ControlInitializationSettings()
+            init.init_type = init_type
+            init.amplitude = 0.01
             control_inits.append(init)
 
         setup.control_initializations = control_inits
