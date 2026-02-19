@@ -358,25 +358,24 @@ def setup_quandary(
     return setup
 
 
-def _setup_optimization(
+def _set_target(
     setup: Setup,
     targetgate=None,
     targetstate=None,
     target_levels: Optional[List[int]] = None,
     gate_rot_freq: Optional[List[float]] = None,
-    pcof=None,
-    randomize_initial_control: bool = False,
-    control_initialization_amplitude: Optional[float] = None,
-) -> Setup:
-    """Return a copy of setup configured for optimization."""
-    setup = setup.copy()
-    setup.output_directory = resolve_output_dir(setup.output_directory)
-    setup.runtype = RunType.OPTIMIZATION
+) -> None:
+    """Set the optimization target on a Setup (in-place).
 
-    # Validate: only one target type
+    Validates that at most one target type is specified, writes any
+    gate/state data to files in the output directory, and sets
+    ``setup.optim_target``.
+    """
     num_targets = sum([targetgate is not None, targetstate is not None, target_levels is not None])
     if num_targets > 1:
         raise ValueError("Can only specify one of: targetgate, targetstate, target_levels")
+    if num_targets == 0:
+        return
 
     output_dir = _get_output_dir(setup)
     os.makedirs(output_dir, exist_ok=True)
@@ -418,6 +417,28 @@ def _setup_optimization(
         target.levels = target_levels
         setup.optim_target = target
 
+
+def _setup_optimization(
+    setup: Setup,
+    targetgate=None,
+    targetstate=None,
+    target_levels: Optional[List[int]] = None,
+    gate_rot_freq: Optional[List[float]] = None,
+    pcof=None,
+    randomize_initial_control: bool = False,
+    control_initialization_amplitude: Optional[float] = None,
+) -> Setup:
+    """Return a copy of setup configured for optimization."""
+    setup = setup.copy()
+    setup.output_directory = resolve_output_dir(setup.output_directory)
+    setup.runtype = RunType.OPTIMIZATION
+
+    _set_target(setup, targetgate=targetgate, targetstate=targetstate,
+                target_levels=target_levels, gate_rot_freq=gate_rot_freq)
+
+    output_dir = _get_output_dir(setup)
+    os.makedirs(output_dir, exist_ok=True)
+
     # Set up control initialization (only if user explicitly provides parameters)
     if pcof is not None and len(pcof) > 0:
         # Warm-start from provided coefficients
@@ -455,11 +476,18 @@ def _setup_simulation(
     pcof=None,
     pt0=None,
     qt0=None,
+    targetgate=None,
+    targetstate=None,
+    target_levels: Optional[List[int]] = None,
+    gate_rot_freq: Optional[List[float]] = None,
 ) -> Setup:
     """Return a copy of setup configured for simulation."""
     setup = setup.copy()
     setup.output_directory = resolve_output_dir(setup.output_directory)
     setup.runtype = RunType.SIMULATION
+
+    _set_target(setup, targetgate=targetgate, targetstate=targetstate,
+                target_levels=target_levels, gate_rot_freq=gate_rot_freq)
 
     if pt0 is not None and qt0 is not None:
         if pcof is not None:
