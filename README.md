@@ -110,15 +110,17 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-Then install mpi4py and petsc4py, compiled against your system MPI and PETSc.
+Then install Quandary with the `petsc` extra, which includes build tools needed to compile petsc4py:
+```
+pip install ".[petsc]"
+```
+
+Then install petsc4py, compiled against your system PETSc.
 petsc4py must match your PETSc minor version (PETSc has no stable ABI across minors):
 ```
 # Auto-detect PETSc version, or set manually, e.g. PETSC_VERSION=3.22
 PETSC_VERSION=$(pkg-config --modversion PETSc | cut -d. -f1,2)
-pip install mpi4py "petsc4py~=${PETSC_VERSION}.0"
-
-# Install Quandary
-pip install .
+pip install "petsc4py~=${PETSC_VERSION}.0" --no-build-isolation
 ```
 
 The `pip install .` command invokes CMake under the hood (via [scikit-build-core](https://scikit-build-core.readthedocs.io/)) to compile the nanobind C++ extension. This requires:

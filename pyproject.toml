@@ -12,14 +12,17 @@ dependencies = [
     "numpy>=1.26,<3.0.0",
     "matplotlib>=3.9.0,<4.0.0",
     "pandas>=2.2.3,<3.0.0",
+    "mpi4py>=3.1.0",
 ]
 
 [project.optional-dependencies]
-# mpi4py and petsc4py must be compiled against the system MPI and PETSc.
-# petsc4py must match your PETSc minor version. See README for install instructions.
-ext = [
-    "mpi4py>=3.1.0",
-    "petsc4py>=3.20.0",
+# Build tools needed to compile petsc4py from source with --no-build-isolation.
+# petsc4py must match your PETSc minor version and is installed separately.
+# Install with: pip install ".[petsc]" then install petsc4py (see README).
+petsc = [
+    "setuptools<76",
+    "wheel",
+    "cython",
 ]
 dev = [
     "pytest>=8.3.4,<9.0.0",
