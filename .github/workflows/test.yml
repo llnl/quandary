@@ -37,9 +37,9 @@ jobs:
         python-version: "3.12"
 
     - name: Set up Spack
-      uses: spack/setup-spack@v2
+      uses: spack/setup-spack@v3
       with:
-        ref: v1.0.2
+        spack_ref: v1.1.1
 
     - name: Configure Spack
       run: |
@@ -72,6 +72,7 @@ jobs:
       shell: spack-sh {0}
       run: |
         spack env activate .spack_env
+        export PATH=$(pwd):$PATH  # Use repo root binary (spack view has broken RPATH)
         python -m pip install -e . --prefer-binary
         pytest -v -s --mpi-opt="--oversubscribe" --config-format=cfg tests/regression
 
@@ -79,6 +80,7 @@ jobs:
       shell: spack-sh {0}
       run: |
         spack env activate .spack_env
+        export PATH=$(pwd):$PATH  # Use repo root binary (spack view has broken RPATH)
         python -m pip install -e . --prefer-binary
         pytest -v -s -m "not performance" --mpi-opt="--oversubscribe"
 
