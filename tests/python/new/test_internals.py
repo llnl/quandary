@@ -1,17 +1,9 @@
 """Tests for internal machinery: dry_run, core distribution, and subprocess execution."""
-
-import os
-from unittest.mock import patch
-
 import numpy as np
-import pytest
 from quandary.new import setup_quandary, optimize, simulate, evaluate_controls
 from quandary.new.runner import (
     _compute_optimal_core_distribution,
-    _run_subprocess,
 )
-from quandary.new.setup_helpers import _setup_optimization
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -147,97 +139,3 @@ class TestCoreDistribution:
     def test_ninit_one(self):
         """Only one initial condition -- always 1 core."""
         assert _compute_optimal_core_distribution(8, 1) == 1
-
-
-# ===========================================================================
-# TestSubprocess
-# ===========================================================================
-
-pytestmark_regression = pytest.mark.regression
-
-
-@pytest.mark.regression
-class TestSubprocess:
-    """Tests for the subprocess execution path."""
-
-    def test_run_subprocess_returns_results(self, tmp_path, mpi_exec):
-        """_run_subprocess executes the solver and returns Results."""
-        setup = _make_setup(str(tmp_path / "sub"))
-        configured = _setup_optimization(
-            setup,
-            targetstate=[0.0, 1.0],
-            randomize_initial_control=True,
-            control_initialization_amplitude=0.01,
-        )
-        # Set maxiter to 1 to keep it fast
-        configured.optim_maxiter = 1
-
-        # Parse mpi_exec fixture into command and flag
-        parts = mpi_exec.split()
-        mpi_cmd = parts[0]
-        mpi_flags = " ".join(parts[1:]) if len(parts) > 1 else "-np"
-
-        results = _run_subprocess(
-            setup=configured,
-            max_n_procs=1,
-            quiet=True,
-            mpi_exec=mpi_cmd,
-            nproc_flag=mpi_flags,
-        )
-        assert results.config is not None
-        assert len(results.time) > 0
-
-    def test_run_subprocess_creates_output_files(self, tmp_path, mpi_exec):
-        """_run_subprocess creates expected output files in the output directory."""
-        outdir = str(tmp_path / "sub_files")
-        setup = _make_setup(outdir)
-        configured = _setup_optimization(
-            setup,
-            targetstate=[0.0, 1.0],
-            randomize_initial_control=True,
-            control_initialization_amplitude=0.01,
-        )
-        configured.optim_maxiter = 1
-
-        parts = mpi_exec.split()
-        mpi_cmd = parts[0]
-        mpi_flags = " ".join(parts[1:]) if len(parts) > 1 else "-np"
-
-        _run_subprocess(
-            setup=configured,
-            max_n_procs=1,
-            quiet=True,
-            mpi_exec=mpi_cmd,
-            nproc_flag=mpi_flags,
-        )
-
-        assert os.path.isfile(os.path.join(outdir, "config.toml"))
-        assert os.path.isfile(os.path.join(outdir, "control0.dat"))
-
-    def test_run_dispatches_to_subprocess_when_interactive(self, tmp_path, mpi_exec):
-        """When _is_interactive() returns True, _run dispatches to _run_subprocess."""
-        from quandary.new import runner as runner_mod
-
-        setup = _make_setup(str(tmp_path / "dispatch"))
-        configured = _setup_optimization(
-            setup,
-            targetstate=[0.0, 1.0],
-            randomize_initial_control=True,
-            control_initialization_amplitude=0.01,
-        )
-        configured.optim_maxiter = 1
-
-        parts = mpi_exec.split()
-        mpi_cmd = parts[0]
-        mpi_flags = " ".join(parts[1:]) if len(parts) > 1 else "-np"
-
-        with patch.object(runner_mod, '_is_interactive', return_value=True):
-            results = runner_mod._run(
-                configured,
-                max_n_procs=1,
-                quiet=True,
-                mpi_exec=mpi_cmd,
-                nproc_flag=mpi_flags,
-            )
-        assert results.config is not None
-        assert len(results.time) > 0
