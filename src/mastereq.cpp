@@ -563,8 +563,8 @@ int MasterEq::assemble_RHS(const double t){
   // Evaluate and store time-dependent system coefficients (Jkl terms)
   if (transmon_resonator_system) {
     // Transmon-resonator specific coupling with sin(wdt), cos(wdt)
-    RHSctx.Bd_coeffs[0] = sin(eta[0]*t);
-    RHSctx.Ad_coeffs[0] = cos(eta[0]*t);
+    RHSctx.Bd_coeffs[0] = sin(eta[0]*t);  // + or - ??   
+    RHSctx.Ad_coeffs[0] = cos(eta[0]*t);  // + or - ??
 
   } else {
     // Standard Jkl coupling with cos(eta t), sin(eta t)
