@@ -44,10 +44,7 @@ Spack can be used to install Quandary, including the required dependency on Pets
     ```
     Note: This step could take a while the first time. The second time you run this is should be much faster, only looking for changes in the environment or local code.
 
-Note that `spack install` will build Quandary using CMake from your local source code and install the binary in your Spack environment. To install Quandary's python interface and the python dependencies, use
-```
-pip install -e .
-```
+Note that `spack install` will build Quandary using CMake from your local source code and install the binary in your Spack environment.
 
 #### Optional Spack environment variations
 The Spack environment used to build Quandary is defined in `.spack_env/spack.yaml`.
@@ -116,21 +113,22 @@ export PETSC_ARCH=                       # leave empty for system installs (Home
 export PKG_CONFIG_PATH=$PETSC_DIR/lib/pkgconfig:$PKG_CONFIG_PATH
 ```
 
-Install petsc4py, compiled against your system PETSc.
-petsc4py must match your PETSc minor version (PETSc has no stable ABI across minors).
-When `PETSC_DIR` is set, petsc4py will automatically use your existing PETSc
-instead of building it from source:
+Install Quandary and petsc4py:
 ```
-PETSC_VERSION=$(pkg-config --modversion PETSc | cut -d. -f1,2)
-pip install "petsc4py~=${PETSC_VERSION}.0"
-```
-
-Install Quandary:
-```
+# Install Quandary
 pip install .
+
+# Install petsc4py build tools (workaround for petsc issue)
+pip install ".[petsc]"
+
+# Install petsc4py, version-matched to your system PETSc.
+# petsc4py must match your PETSc minor version (no stable ABI across minors).
+# When PETSC_DIR is set, petsc4py uses your existing PETSc instead of building from source.
+PETSC_VERSION=$(pkg-config --modversion PETSc | cut -d. -f1,2)
+pip install "petsc4py~=${PETSC_VERSION}.0" --no-build-isolation
 ```
 
-This invokes CMake under the hood (via [scikit-build-core](https://scikit-build-core.readthedocs.io/)) to compile the nanobind C++ extension. It requires:
+`pip install .` invokes CMake under the hood (via [scikit-build-core](https://scikit-build-core.readthedocs.io/)) to compile the nanobind C++ extension. It requires:
 - **PETSc**: visible via `PKG_CONFIG_PATH` (see above)
 - **MPI**: MPI compiler wrappers (`mpicc`, `mpicxx`) must be in your `PATH`, or set `MPI_ROOT` to your MPI installation prefix
 
