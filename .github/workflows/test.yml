@@ -37,9 +37,9 @@ jobs:
         python-version: "3.12"
 
     - name: Set up Spack
-      uses: spack/setup-spack@v2
+      uses: spack/setup-spack@v3
       with:
-        ref: v1.0.2
+        spack_ref: v1.1.1
 
     - name: Configure Spack
       run: |
@@ -72,18 +72,16 @@ jobs:
       shell: spack-sh {0}
       run: |
         spack env activate .spack_env
-        echo "CC=$CC CXX=$CXX"
-        which python
-        python --version
-        python -c "import sysconfig; print('sysconfig CC:', sysconfig.get_config_var('CC')); print('sysconfig CXX:', sysconfig.get_config_var('CXX'))"
-        python -m pip install -e ".[dev]"
+        export PATH=$(pwd):$PATH  # Use repo root binary (spack view has broken RPATH)
+        python -m pip install -e . --prefer-binary
         pytest -v -s --mpi-opt="--oversubscribe" --config-format=cfg tests/regression
 
     - name: Run regression tests
       shell: spack-sh {0}
       run: |
         spack env activate .spack_env
-        python -m pip install -e ".[dev]"
+        export PATH=$(pwd):$PATH  # Use repo root binary (spack view has broken RPATH)
+        python -m pip install -e . --prefer-binary
         pytest -v -s -m "not performance" --mpi-opt="--oversubscribe"
 
     - name: Push packages and update index
