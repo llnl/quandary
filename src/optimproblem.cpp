@@ -536,7 +536,7 @@ void OptimProblem::getStartingPoint(Vec xinit){
   timestepper->mastereq->setControlAmplitudes(xinit);
   
   /* Write initial control functions to file */
-  output->writeControls(xinit, timestepper->mastereq, timestepper->ntime, timestepper->dt);
+  output->writeControls(xinit, timestepper->mastereq);
 
 }
 
@@ -610,7 +610,7 @@ PetscErrorCode TaoMonitor(Tao tao,void*ptr){
 
   /* Last iteration: Print solution, controls and trajectory data to files */
   if (lastIter) {
-    ctx->output->writeControls(params, ctx->timestepper->mastereq, ctx->timestepper->ntime, ctx->timestepper->dt);
+    ctx->output->writeControls(params, ctx->timestepper->mastereq);
 
     // do one last forward evaluation while writing trajectory files
     ctx->timestepper->writeTrajectoryDataFiles = true;
