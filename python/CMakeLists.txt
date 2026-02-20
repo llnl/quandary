@@ -1,3 +1,5 @@
+set(QUANDARY_PYTHON_INSTALL_DIR "quandary" CACHE PATH "Install destination for Python module")
+
 nanobind_add_module(_quandary_impl STABLE_ABI bindings.cpp)
 
 target_link_libraries(_quandary_impl PRIVATE quandary_lib)
@@ -12,9 +14,9 @@ nanobind_add_stub(
     MARKER_FILE py.typed
 )
 
-install(TARGETS _quandary_impl LIBRARY DESTINATION quandary)
+install(TARGETS _quandary_impl LIBRARY DESTINATION ${QUANDARY_PYTHON_INSTALL_DIR})
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/py.typed
     ${CMAKE_CURRENT_BINARY_DIR}/_quandary_impl.pyi
-    DESTINATION quandary
+    DESTINATION ${QUANDARY_PYTHON_INSTALL_DIR}
 )
