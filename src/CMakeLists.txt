@@ -2,7 +2,7 @@
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(INC_DIR ${PROJECT_SOURCE_DIR}/include)
 file(GLOB_RECURSE SRC_FILES ${SRC_DIR}/*.cpp)
-list(REMOVE_ITEM SRC_FILES ${SRC_DIR}/main.cpp)
+list(REMOVE_ITEM SRC_FILES ${SRC_DIR}/entry.cpp)
 file(GLOB_RECURSE HEADER_FILES ${INC_DIR}/*.hpp)
 
 # Target definition
@@ -16,7 +16,7 @@ blt_add_library(
 
 blt_add_executable(
     NAME quandary_bin
-    SOURCES ${SRC_DIR}/main.cpp
+    SOURCES ${SRC_DIR}/entry.cpp
     DEPENDS_ON quandary_lib
 )
 set_target_properties(quandary_bin PROPERTIES OUTPUT_NAME quandary)

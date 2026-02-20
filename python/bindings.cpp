@@ -6,7 +6,7 @@
 #include <sstream>
 
 #include "config.hpp"
-#include "quandary_core.hpp"
+#include "main.hpp"
 
 namespace nb = nanobind;
 
