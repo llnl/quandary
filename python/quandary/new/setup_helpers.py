@@ -506,9 +506,13 @@ def _setup_simulation(
     setup.output_directory = resolve_output_dir(setup.output_directory)
     setup.runtype = RunType.SIMULATION
 
-    if pt0 is not None and qt0 is not None:
+    if pt0 is not None or qt0 is not None:
         if pcof is not None:
             raise ValueError("Cannot specify both pcof and pt0/qt0")
+        if pt0 is None:
+            pt0 = np.zeros_like(qt0)
+        if qt0 is None:
+            qt0 = np.zeros_like(pt0)
 
         ntime = setup.ntime
         dt = setup.dt
