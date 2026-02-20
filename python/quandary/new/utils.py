@@ -7,21 +7,46 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-def infidelity(A, B):
-    """Calculate infidelity between two unitary operators.
+def gate_infidelity(A, B):
+    """Calculate infidelity between two unitary operators or propagators.
 
     Parameters
     ----------
-    A, B : ndarray of shape (n, n)
-        Square matrices of the same dimension representing unitary operators.
+    A, B : ndarray of shape (n, n) or (m, n) with m >= n
+        Unitary operators or propagators.  Rectangular matrices (e.g.
+        nlevels x nessential when guard levels are present) are supported;
+        the essential-level square block is extracted automatically.
 
     Returns
     -------
     float
-        Infidelity 1 - |Tr(A^H B)|^2 / n^2
+        Infidelity ``1 - |Tr(A^H B)|^2 / d^2`` where *d* is the number
+        of columns (essential-level dimension).
     """
-    dim = int(np.sqrt(A.size))
-    return 1.0 - np.abs(np.trace(A.conj().transpose() @ B))**2 / dim**2
+    A = np.asarray(A)
+    B = np.asarray(B)
+    d = min(A.shape[0], A.shape[1])
+    A = A[:d, :]
+    B = B[:d, :]
+    return 1.0 - np.abs(np.trace(A.conj().T @ B))**2 / d**2
+
+
+def state_infidelity(psi, phi):
+    """Calculate infidelity between two pure quantum states.
+
+    Parameters
+    ----------
+    psi, phi : array-like, 1-D
+        State vectors of the same dimension.
+
+    Returns
+    -------
+    float
+        Infidelity ``1 - |<psi|phi>|^2``.
+    """
+    psi = np.asarray(psi)
+    phi = np.asarray(phi)
+    return 1.0 - np.abs(np.vdot(psi, phi))**2
 
 
 def downsample_pulses(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, ntime, dt, nessential):
