@@ -696,11 +696,7 @@ Config::Config(const ParsedConfigData& settings, bool quiet_mode) : logger(MPILo
     throw validators::ValidationError("dt must be positive, got " + std::to_string(data.dt));
   }
 
-  if (!settings.transfreq.has_value()) {
-    throw validators::ValidationError("transition_frequency cannot be empty");
-  }
-
-  data.transition_frequency = settings.transfreq.value();
+  data.transition_frequency = settings.transfreq.value_or(std::vector<double>(num_osc, ConfigDefaults::TRANSITION_FREQUENCY));
   copyLast(data.transition_frequency, num_osc);
 
   data.selfkerr = settings.selfkerr.value_or(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));

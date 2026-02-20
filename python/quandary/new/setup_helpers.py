@@ -73,8 +73,8 @@ def _get_output_dir(setup):
 
 def setup_quandary(
     nessential: Sequence[int],
-    transition_frequency: Sequence[float],
     final_time: float,
+    transition_frequency: Optional[Sequence[float]] = None,
     ntime: Optional[int] = None,
     dt: Optional[float] = None,
     selfkerr: Optional[Sequence[float]] = None,
@@ -113,10 +113,11 @@ def setup_quandary(
     ----------
     nessential : sequence of int
         Number of essential energy levels per qubit.
-    transition_frequency : sequence of float
-        01-transition frequencies [GHz] per qubit.
     final_time : float
         Pulse duration [ns].
+    transition_frequency : sequence of float, optional
+        01-transition frequencies [GHz] per qubit. Default: zeros (suitable
+        for custom Hamiltonians).
     ntime : int, optional
         Number of timesteps. Auto-computed from the Hamiltonian if omitted.
     dt : float, optional
@@ -187,6 +188,8 @@ def setup_quandary(
     """
     # Set defaults
     nqubits = len(nessential)
+    if transition_frequency is None:
+        transition_frequency = [0.0] * nqubits
     if selfkerr is None:
         selfkerr = [0.0] * nqubits
     if nguard is None:
