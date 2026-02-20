@@ -335,10 +335,6 @@ def simulate(
     pcof=None,
     pt0=None,
     qt0=None,
-    targetgate=None,
-    targetstate=None,
-    target_levels=None,
-    gate_rot_freq=None,
     dry_run: bool = False,
     max_n_procs: Optional[int] = None,
     quiet: bool = False,
@@ -362,14 +358,6 @@ def simulate(
         Auto-downsampled to B-splines. Must be paired with qt0.
     qt0 : list of ndarray, optional
         Imaginary part of control pulses [MHz] per oscillator.
-    targetgate : array-like, optional
-        Target unitary gate for fidelity computation.
-    targetstate : array-like, optional
-        Target state vector for fidelity computation.
-    target_levels : List[int], optional
-        Target product state, e.g. [0, 0, 1].
-    gate_rot_freq : List[float], optional
-        Gate rotation frequencies [GHz].
     dry_run : bool
         If True, validate and return Results with config populated but do not
         run. Use print(results.config) to inspect the full configuration.
@@ -392,11 +380,7 @@ def simulate(
     Results
         If dry_run=True, only results.config is populated.
     """
-    configured = _setup_simulation(
-        setup, pcof=pcof, pt0=pt0, qt0=qt0,
-        targetgate=targetgate, targetstate=targetstate,
-        target_levels=target_levels, gate_rot_freq=gate_rot_freq,
-    )
+    configured = _setup_simulation(setup, pcof=pcof, pt0=pt0, qt0=qt0)
     if dry_run:
         return Results(config=Config(configured, quiet))
     return _run(

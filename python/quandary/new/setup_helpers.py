@@ -492,18 +492,11 @@ def _setup_simulation(
     pcof=None,
     pt0=None,
     qt0=None,
-    targetgate=None,
-    targetstate=None,
-    target_levels: Optional[List[int]] = None,
-    gate_rot_freq: Optional[List[float]] = None,
 ) -> Setup:
     """Return a copy of setup configured for simulation."""
     setup = setup.copy()
     setup.output_directory = resolve_output_dir(setup.output_directory)
     setup.runtype = RunType.SIMULATION
-
-    _set_target(setup, targetgate=targetgate, targetstate=targetstate,
-                target_levels=target_levels, gate_rot_freq=gate_rot_freq)
 
     if pt0 is not None and qt0 is not None:
         if pcof is not None:
