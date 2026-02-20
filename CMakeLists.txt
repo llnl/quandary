@@ -68,7 +68,10 @@ configure_file(
 )
 
 # Add tomlplusplus
-add_subdirectory(third_party/tomlplusplus)
+find_package(tomlplusplus CONFIG QUIET)
+if(NOT tomlplusplus_FOUND)
+  add_subdirectory(third_party/tomlplusplus)
+endif()
 
 if(BUILD_QUANDARY)
   add_subdirectory(src)
