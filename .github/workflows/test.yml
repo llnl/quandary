@@ -56,7 +56,7 @@ jobs:
       # explicitly use openmpi, since mpich causes rpath problems in binary
       run: |
         spack -e .spack_env rm quandary
-        spack -e .spack_env add quandary@develop+test^openmpi
+        spack -e .spack_env add quandary@develop+test+python^openmpi
         spack -e .spack_env install --use-buildcache package:never
 
     - name: Run C++ unit tests
