@@ -76,6 +76,7 @@ jobs:
         spack compiler list # TODO remove later
         echo "CC=$CC CXX=$CXX" # TODO remove later
         unset CC CXX  # TODO remove later
+        echo "After unset: CC=$CC CXX=$CXX" # TODO remove later
         python -m pip install -e ".[dev]" --prefer-binary
         pytest -v -s --mpi-opt="--oversubscribe" --config-format=cfg tests/regression
 
