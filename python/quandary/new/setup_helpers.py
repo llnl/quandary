@@ -298,16 +298,20 @@ def setup_quandary(
         raise ValueError(f"spline_order must be 0 or 2, got {spline_order}")
 
     # Compute nspline from knot spacing if given
-    if nspline is not None and spline_knot_spacing is not None:
-        raise ValueError("Cannot specify both nspline and spline_knot_spacing")
     if spline_knot_spacing is not None:
         order = spline_order if spline_order is not None else 2
         if order == 0:
-            nspline = int(np.max([np.rint(final_time / spline_knot_spacing + 1), 2]))
+            computed_nspline = int(np.max([np.rint(final_time / spline_knot_spacing + 1), 2]))
         else:
             enforce_bc = control_zero_boundary_condition if control_zero_boundary_condition is not None else True
             minspline = 5 if enforce_bc else 3
-            nspline = int(np.max([np.ceil(final_time / spline_knot_spacing + 2), minspline]))
+            computed_nspline = int(np.max([np.ceil(final_time / spline_knot_spacing + 2), minspline]))
+        if nspline is not None and nspline != computed_nspline:
+            raise ValueError(
+                f"Inconsistent spline parameters: nspline={nspline} but "
+                f"spline_knot_spacing={spline_knot_spacing} implies nspline={computed_nspline}"
+            )
+        nspline = computed_nspline
 
     if verbose:
         logger.info("Configuration computed:")
