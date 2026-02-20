@@ -77,7 +77,10 @@ if(BUILD_PYTHON_BINDINGS)
   find_package(Python 3.9
     REQUIRED COMPONENTS Interpreter Development.Module
     OPTIONAL_COMPONENTS Development.SABIModule)
-  add_subdirectory(third_party/nanobind)
+  find_package(nanobind CONFIG QUIET)
+  if(NOT nanobind_FOUND)
+    add_subdirectory(third_party/nanobind)
+  endif()
 endif()
 
 if(BUILD_QUANDARY)
