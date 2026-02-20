@@ -29,7 +29,7 @@ from .utils import downsample_pulses
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_OUTPUT_DIR = "./run_dir"
+_DEFAULT_OUTPUT_DIR = "./data_out"
 
 
 def resolve_output_dir(datadir: str) -> str:
