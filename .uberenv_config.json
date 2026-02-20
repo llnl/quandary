@@ -5,6 +5,8 @@
 "package_source_dir" : "../..",
 "spack_url": "https://github.com/spack/spack.git",
 "spack_branch": "v1.0.2",
+"spack_packages_url": "https://github.com/tdrwenski/spack-packages.git",
+"spack_packages_branch": "update-quandary",
 "spack_activate" : {},
 "spack_configs_path": ".ci-scripts/radiuss-spack-configs",
 "spack_packages_path": [".ci-scripts/radiuss-spack-configs/spack_repo/llnl_radiuss/packages"],
