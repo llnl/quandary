@@ -136,7 +136,7 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
   VecAssemblyBegin(xupper); VecAssemblyEnd(xupper);
 
   /* Create Petsc's optimization solver */
-  TaoCreate(PETSC_COMM_WORLD, &tao);
+  TaoCreate(PETSC_COMM_SELF, &tao);
   /* Set optimization type and parameters */
   TaoSetType(tao,TAOBQNLS);         // Optim type: taoblmvm vs BQNLS ??
   TaoSetMaximumIterations(tao, maxiter);
