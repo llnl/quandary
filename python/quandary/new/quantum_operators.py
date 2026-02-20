@@ -23,14 +23,14 @@ def map_to_oscillators(id, nessential, nguard):
     ----------
     id : int
         Global state index in the tensor-product Hilbert space.
-    nessential : list of int
+    nessential : sequence of int
         Number of essential levels per oscillator.
-    nguard : list of int
+    nguard : sequence of int
         Number of guard levels per oscillator.
 
     Returns
     -------
-    localIDs : list of int
+    localIDs : sequence of int
         Level index for each oscillator corresponding to the global index.
     """
     # len(nessential) = number of subsystems
@@ -95,17 +95,17 @@ def get_resonances(*, nessential, nguard, Hsys, Hc_re=None, Hc_im=None, rotation
 
     Parameters
     ----------
-    nessential : list of int
+    nessential : sequence of int
         Number of essential energy levels per oscillator.
-    nguard : list of int
+    nguard : sequence of int
         Number of guard levels per oscillator.
     Hsys : ndarray
         System Hamiltonian [rad/ns].
-    Hc_re : list of ndarray
+    Hc_re : sequence of ndarray
         Real parts of control Hamiltonian operators for each oscillator.
-    Hc_im : list of ndarray
+    Hc_im : sequence of ndarray
         Imaginary parts of control Hamiltonian operators for each oscillator.
-    rotation_frequency : list of float
+    rotation_frequency : sequence of float
         Rotating frame frequencies [GHz] per oscillator. Default: zeros.
     cw_amp_thres : float
         Minimum growth rate to include a resonance. Resonances with a
@@ -121,10 +121,10 @@ def get_resonances(*, nessential, nguard, Hsys, Hc_re=None, Hc_im=None, rotation
 
     Returns
     -------
-    om : list of ndarray
+    om : sequence of ndarray
         Carrier wave frequencies [GHz] for each oscillator. At least one
         frequency (0.0) is returned per oscillator.
-    growth_rate : list of ndarray
+    growth_rate : sequence of ndarray
         Coupling strengths (growth rates) corresponding to each carrier
         frequency, for each oscillator.
     """
@@ -232,19 +232,19 @@ def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=None, 
 
     Parameters
     ----------
-    N : list of int
+    N : sequence of int
         Total levels per oscillator (essential plus guard levels).
-    transition_frequency : list of float
+    transition_frequency : sequence of float
         Ground-state transition frequency for each qubit [GHz].
-    selfkerr : list of float
+    selfkerr : sequence of float
         Self-Kerr (anharmonicity) coefficient for each qubit [GHz].
-    crosskerr_coupling : list of float, optional
+    crosskerr_coupling : sequence of float, optional
         Cross-Kerr coupling strengths [GHz]. Format: [g01, g02, ..., g12, ...].
         Default: no coupling.
-    dipole_coupling : list of float, optional
+    dipole_coupling : sequence of float, optional
         Dipole-dipole (Jaynes-Cummings) coupling strengths [GHz].
         Format: [J01, J02, ..., J12, ...]. Default: no coupling.
-    rotation_frequency : list of float, optional
+    rotation_frequency : sequence of float, optional
         Rotating frame frequencies for each qubit [GHz]. Default: zeros
         (lab frame).
     verbose : bool
@@ -254,10 +254,10 @@ def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=None, 
     -------
     Hsys : ndarray
         System Hamiltonian (time-independent) [rad/ns].
-    Hc_re : list of ndarray
+    Hc_re : sequence of ndarray
         Real (symmetric) control Hamiltonian operators for each qubit.
         Dimensionless; scaled by the control amplitude at runtime.
-    Hc_im : list of ndarray
+    Hc_im : sequence of ndarray
         Imaginary (anti-symmetric) control Hamiltonian operators for each
         qubit. Dimensionless; scaled by the control amplitude at runtime.
     """

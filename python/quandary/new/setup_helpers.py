@@ -2,7 +2,8 @@
 
 import logging
 import os
-from typing import List, Optional
+from collections.abc import Sequence
+from typing import Optional
 
 import numpy as np
 
@@ -71,26 +72,26 @@ def _get_output_dir(setup):
 
 
 def setup_quandary(
-    nessential: List[int],
-    transition_frequency: List[float],
+    nessential: Sequence[int],
+    transition_frequency: Sequence[float],
     final_time: float,
     ntime: Optional[int] = None,
     dt: Optional[float] = None,
-    selfkerr: Optional[List[float]] = None,
-    nguard: Optional[List[int]] = None,
-    rotation_frequency: Optional[List[float]] = None,
-    crosskerr_coupling: Optional[List[float]] = None,
-    dipole_coupling: Optional[List[float]] = None,
-    carrier_frequency: Optional[List[List[float]]] = None,
+    selfkerr: Optional[Sequence[float]] = None,
+    nguard: Optional[Sequence[int]] = None,
+    rotation_frequency: Optional[Sequence[float]] = None,
+    crosskerr_coupling: Optional[Sequence[float]] = None,
+    dipole_coupling: Optional[Sequence[float]] = None,
+    carrier_frequency: Optional[Sequence[Sequence[float]]] = None,
     Pmin: int = 150,
-    control_amplitude_bounds: Optional[List[float]] = None,
+    control_amplitude_bounds: Optional[Sequence[float]] = None,
     nspline: Optional[int] = None,
     spline_knot_spacing: Optional[float] = None,
     spline_order: Optional[int] = None,
     control_zero_boundary_condition: Optional[bool] = None,
     initial_condition: Optional[InitialConditionSettings] = None,
-    initial_levels: Optional[List[int]] = None,
-    initial_state: Optional[List[complex]] = None,
+    initial_levels: Optional[Sequence[int]] = None,
+    initial_state: Optional[Sequence[complex]] = None,
     output_directory: str = _DEFAULT_OUTPUT_DIR,
     verbose: bool = True,
 ) -> Setup:
@@ -110,9 +111,9 @@ def setup_quandary(
 
     Parameters
     ----------
-    nessential : list of int
+    nessential : sequence of int
         Number of essential energy levels per qubit.
-    transition_frequency : list of float
+    transition_frequency : sequence of float
         01-transition frequencies [GHz] per qubit.
     final_time : float
         Pulse duration [ns].
@@ -120,20 +121,20 @@ def setup_quandary(
         Number of timesteps. Auto-computed from the Hamiltonian if omitted.
     dt : float, optional
         Timestep size [ns]. Auto-computed if omitted.
-    selfkerr : list of float, optional
+    selfkerr : sequence of float, optional
         Anharmonicities [GHz] per qubit. Default: zeros.
-    nguard : list of int, optional
+    nguard : sequence of int, optional
         Number of guard levels per qubit. Default: zeros.
-    rotation_frequency : list of float, optional
+    rotation_frequency : sequence of float, optional
         Rotating frame frequencies [GHz] per qubit.
         Default: transition_frequency.
-    crosskerr_coupling : list of float, optional
+    crosskerr_coupling : sequence of float, optional
         ZZ coupling strengths [GHz]. Format: [g01, g02, ..., g12, g13, ...].
         Default: no coupling.
-    dipole_coupling : list of float, optional
+    dipole_coupling : sequence of float, optional
         Dipole-dipole coupling strengths [GHz]. Format: [J01, J02, ..., J12, ...].
         Default: no coupling.
-    carrier_frequency : list of list of float, optional
+    carrier_frequency : sequence of sequence of float, optional
         Carrier frequencies [GHz] per oscillator. When provided, the
         automatic eigenvalue-based computation (get_resonances) is skipped.
         Useful when the Hamiltonian has degenerate eigenvalues that cause
@@ -141,7 +142,7 @@ def setup_quandary(
     Pmin : int
         Minimum time steps per period of the fastest oscillation (used for
         auto-computing ntime). Default: 150.
-    control_amplitude_bounds : list of float, optional
+    control_amplitude_bounds : sequence of float, optional
         Maximum control amplitudes [GHz] per qubit. Used for timestep
         estimation and as optimization bounds. Default: 0.01 GHz (= 10 MHz).
     nspline : int, optional
@@ -158,9 +159,9 @@ def setup_quandary(
     initial_condition : InitialConditionSettings, optional
         Direct struct specification (advanced). For convenience, prefer
         initial_levels or initial_state.
-    initial_levels : list of int, optional
+    initial_levels : sequence of int, optional
         Product-state initial condition, e.g. [0, 0, 1] for |001>.
-    initial_state : list of complex, optional
+    initial_state : sequence of complex, optional
         Arbitrary superposition initial state. Written to file automatically.
     output_directory : str
         Output directory for generated files (initial state, etc.).
@@ -362,8 +363,8 @@ def _set_target(
     setup: Setup,
     targetgate=None,
     targetstate=None,
-    target_levels: Optional[List[int]] = None,
-    gate_rot_freq: Optional[List[float]] = None,
+    target_levels: Optional[Sequence[int]] = None,
+    gate_rot_freq: Optional[Sequence[float]] = None,
 ) -> None:
     """Set the optimization target on a Setup (in-place).
 
@@ -422,8 +423,8 @@ def _setup_optimization(
     setup: Setup,
     targetgate=None,
     targetstate=None,
-    target_levels: Optional[List[int]] = None,
-    gate_rot_freq: Optional[List[float]] = None,
+    target_levels: Optional[Sequence[int]] = None,
+    gate_rot_freq: Optional[Sequence[float]] = None,
     pcof=None,
     randomize_initial_control: bool = False,
     control_initialization_amplitude: Optional[float] = None,

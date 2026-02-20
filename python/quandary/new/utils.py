@@ -58,9 +58,9 @@ def downsample_pulses(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, ntim
 
     Parameters:
     -----------
-    pt0 : List[ndarray]
+    pt0 : Sequence[ndarray]
         Real part of control pulses [MHz] for each oscillator. Size: (ntime+1,) per oscillator.
-    qt0 : List[ndarray]
+    qt0 : Sequence[ndarray]
         Imaginary part of control pulses [MHz] for each oscillator. Size: (ntime+1,) per oscillator.
     nsplines : int
         Number of B-spline basis functions.
@@ -70,7 +70,7 @@ def downsample_pulses(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, ntim
         Number of time steps.
     dt : float
         Time step size [ns].
-    nessential : List[int]
+    nessential : Sequence[int]
         Number of essential levels per oscillator.
 
     Returns:

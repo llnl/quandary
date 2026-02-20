@@ -273,9 +273,9 @@ def optimize(
         Target unitary gate.
     targetstate : array-like, optional
         Target state vector.
-    target_levels : List[int], optional
+    target_levels : Sequence[int], optional
         Target product state, e.g. [0, 0, 1].
-    gate_rot_freq : List[float], optional
+    gate_rot_freq : Sequence[float], optional
         Gate rotation frequencies [GHz].
     pcof : array-like, optional
         B-spline coefficients for warm-start.
@@ -353,10 +353,10 @@ def simulate(
         Physics setup from setup_quandary().
     pcof : array-like, optional
         B-spline control coefficients.
-    pt0 : list of ndarray, optional
+    pt0 : sequence of ndarray, optional
         Real part of control pulses [MHz] per oscillator.
         Auto-downsampled to B-splines. Must be paired with qt0.
-    qt0 : list of ndarray, optional
+    qt0 : sequence of ndarray, optional
         Imaginary part of control pulses [MHz] per oscillator.
     dry_run : bool
         If True, validate and return Results with config populated but do not

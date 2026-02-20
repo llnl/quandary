@@ -19,11 +19,11 @@ def estimate_timesteps(*, final_time=1.0, Hsys=None, Hc_re=None, Hc_im=None, con
         Total simulation time [ns]. Default: 1.0.
     Hsys : ndarray
         System Hamiltonian [rad/ns].
-    Hc_re : list of ndarray, optional
+    Hc_re : sequence of ndarray, optional
         Real parts of control Hamiltonian operators for each oscillator.
-    Hc_im : list of ndarray, optional
+    Hc_im : sequence of ndarray, optional
         Imaginary parts of control Hamiltonian operators for each oscillator.
-    control_amplitude_bounds : list of float, optional
+    control_amplitude_bounds : sequence of float, optional
         Estimated max control amplitudes [GHz] per oscillator. Used to scale
         the control Hamiltonians when computing the largest eigenvalue.
         Default: 0.01 GHz per oscillator.
@@ -91,11 +91,11 @@ def timestep_richardson_est(setup, pcof, tol=1e-8, order=2, **kwargs):
 
     Returns
     -------
-    errs_J : list of float
+    errs_J : sequence of float
         Richardson error estimates on the infidelity at each refinement step.
-    errs_u : list of float
+    errs_u : sequence of float
         Richardson error estimates on the propagator norm at each refinement step.
-    dts : list of float
+    dts : sequence of float
         Timestep sizes [ns] used at each refinement step.
     """
     from .runner import simulate
