@@ -144,8 +144,8 @@ def setup_quandary(
         Minimum time steps per period of the fastest oscillation (used for
         auto-computing ntime). Default: 150.
     control_amplitude_bounds : sequence of float, optional
-        Maximum control amplitudes [GHz] per qubit. Used for timestep
-        estimation and as optimization bounds. Default: 0.01 GHz (= 10 MHz).
+        Maximum control amplitudes [GHz] per qubit. Sets optimization bounds.
+        Default: unbounded.
     nspline : int, optional
         Number of B-spline basis functions per oscillator. Cannot be combined
         with spline_knot_spacing.
