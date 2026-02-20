@@ -238,9 +238,9 @@ NB_MODULE(_quandary_impl, m) {
       nb::arg("toml_content"), nb::arg("quiet") = false,
       "Load and validate a Config from a TOML string")
     // System configuration
-    .def_prop_ro("nlevels", [](const Config& c) { return c.getNLevels(); },
+    .def_prop_ro("nlevels", nb::overload_cast<>(&Config::getNLevels, nb::const_),
       "Number of total levels (essential + guard) per oscillator")
-    .def_prop_ro("nessential", [](const Config& c) { return c.getNEssential(); },
+    .def_prop_ro("nessential", nb::overload_cast<>(&Config::getNEssential, nb::const_),
       "Number of essential levels per oscillator")
     .def_prop_ro("num_osc", &Config::getNumOsc,
       "Number of oscillators")
@@ -252,27 +252,27 @@ NB_MODULE(_quandary_impl, m) {
     .def_prop_ro("total_time", &Config::getTotalTime,
       "Total simulation time [ns]")
     // Physical parameters
-    .def_prop_ro("transition_frequency", [](const Config& c) { return c.getTransitionFrequency(); },
+    .def_prop_ro("transition_frequency", &Config::getTransitionFrequency,
       "Transition frequencies [GHz]")
-    .def_prop_ro("selfkerr", [](const Config& c) { return c.getSelfKerr(); },
+    .def_prop_ro("selfkerr", &Config::getSelfKerr,
       "Self-Kerr coefficients [GHz]")
-    .def_prop_ro("crosskerr_coupling", [](const Config& c) { return c.getCrossKerrCoupling(); },
+    .def_prop_ro("crosskerr_coupling", &Config::getCrossKerrCoupling,
       "Cross-Kerr coefficients [GHz]")
-    .def_prop_ro("dipole_coupling", [](const Config& c) { return c.getDipoleCoupling(); },
+    .def_prop_ro("dipole_coupling", &Config::getDipoleCoupling,
       "Dipole-dipole coupling strengths [GHz]")
-    .def_prop_ro("rotation_frequency", [](const Config& c) { return c.getRotationFrequency(); },
+    .def_prop_ro("rotation_frequency", &Config::getRotationFrequency,
       "Rotating frame frequencies [GHz]")
     // Decoherence
     .def_prop_ro("decoherence_type", &Config::getDecoherenceType,
       "Decoherence type (NONE, DECAY, DEPHASE, or BOTH)")
-    .def_prop_ro("decay_time", [](const Config& c) { return c.getDecayTime(); },
+    .def_prop_ro("decay_time", &Config::getDecayTime,
       "T1 decay times [ns]")
-    .def_prop_ro("dephase_time", [](const Config& c) { return c.getDephaseTime(); },
+    .def_prop_ro("dephase_time", &Config::getDephaseTime,
       "T2 dephasing times [ns]")
     // Initial conditions
     .def_prop_ro("n_initial_conditions", &Config::getNInitialConditions,
       "Number of initial conditions")
-    .def_prop_ro("initial_condition", [](const Config& c) { return c.getInitialCondition(); },
+    .def_prop_ro("initial_condition", &Config::getInitialCondition,
       "Initial condition settings")
     // Output
     .def_prop_ro("output_directory", &Config::getOutputDirectory,
