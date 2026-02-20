@@ -3,7 +3,8 @@ name = "quandary"
 version = "4.4.dev0"
 description = "Optimal control for open quantum systems"
 authors = [
-    {name = "Stefanie Guenther", email = "guenther5@llnl.gov"}
+    {name = "Stefanie Guenther", email = "guenther5@llnl.gov"},
+    {name = "Tara Drwenski", email = "drwenski1@llnl.gov"},
 ]
 license = {text = "MIT"}
 readme = "README.md"
