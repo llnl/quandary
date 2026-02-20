@@ -573,7 +573,7 @@ Config::Config(const Setup& input, bool quiet_mode) : logger(MPILogger(quiet_mod
   data.control_zero_boundary_condition = input.control_zero_boundary_condition.value_or(ConfigDefaults::CONTROL_ZERO_BOUNDARY_CONDITION);
 
   ControlParameterizationSettings default_param;
-  data.control_parameterizations = input.control_parameterizations.value_or(std::vector<ControlParameterizationSettings>(num_osc, default_param));
+  data.control_parameterizations = validators::vectorField<ControlParameterizationSettings>(input.control_parameterizations, "control_parameterizations").hasLength(num_osc).valueOr(std::vector<ControlParameterizationSettings>(num_osc, default_param));
 
   ControlInitializationSettings default_init;
   data.control_initializations = input.control_initializations.value_or(std::vector<ControlInitializationSettings>(num_osc, default_init));
@@ -598,15 +598,12 @@ Config::Config(const Setup& input, bool quiet_mode) : logger(MPILogger(quiet_mod
   data.control_amplitude_bounds = validators::vectorField<double>(input.control_amplitude_bounds, "control_amplitude_bounds").hasLength(num_osc).valueOr(std::vector<double>(num_osc, ConfigDefaults::CONTROL_AMPLITUDE_BOUND));
 
   std::vector<double> default_carrier_freq = {ConfigDefaults::CARRIER_FREQ};
-  data.carrier_frequencies = input.carrier_frequencies.value_or(std::vector<std::vector<double>>(num_osc, default_carrier_freq));
+  data.carrier_frequencies = validators::vectorField<std::vector<double>>(input.carrier_frequencies, "carrier_frequencies").hasLength(num_osc).valueOr(std::vector<std::vector<double>>(num_osc, default_carrier_freq));
 
-  // Validate carrier frequencies
-  if (data.carrier_frequencies.size() != num_osc) {
-    throw validators::ValidationError("carrier_frequency", "must have exactly " + std::to_string(num_osc) + " entries (one per oscillator), got " + std::to_string(data.carrier_frequencies.size()));
-  }
+  // Validate each oscillator has at least one carrier frequency
   for (size_t i = 0; i < data.carrier_frequencies.size(); i++) {
     if (data.carrier_frequencies[i].empty()) {
-      throw validators::ValidationError("carrier_frequency", "oscillator " + std::to_string(i) + " has no carrier frequencies. Each oscillator must have at least one carrier frequency.");
+      throw validators::ValidationError("carrier_frequencies", "oscillator " + std::to_string(i) + " has no carrier frequencies. Each oscillator must have at least one carrier frequency.");
     }
   }
 

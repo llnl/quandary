@@ -4,6 +4,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 /**
@@ -276,13 +277,13 @@ class VectorValidator {
       throw ValidationError(key, oss.str());
     }
 
-    for (size_t i = 0; i < result.size(); ++i) {
-      T& element = result[i];
-
-      if (is_positive && element <= T{0}) {
-        std::ostringstream oss;
-        oss << "element [" << i << "] must be positive, got " << element;
-        throw ValidationError(key, oss.str());
+    if constexpr (std::is_arithmetic_v<T>) {
+      for (size_t i = 0; i < result.size(); ++i) {
+        if (is_positive && result[i] <= T{0}) {
+          std::ostringstream oss;
+          oss << "element [" << i << "] must be positive, got " << result[i];
+          throw ValidationError(key, oss.str());
+        }
       }
     }
 
