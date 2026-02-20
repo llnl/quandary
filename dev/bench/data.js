@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771521963288,
+  "lastUpdate": 1771614805327,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -2595,6 +2595,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
             "value": 4341.52,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Stefanie Guenther",
+            "username": "steffi7574",
+            "email": "guenther5@llnl.gov"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "448bf3c62889a49e4e83e48b8b3c21174dcc7fdf",
+          "message": "Merge pull request #117 from llnl/bugfix-petscparallel-tao\n\nCreate Tao solver with PETSC_COMM_SELF so it runs on all PETSC cores.",
+          "timestamp": "2026-02-20T18:33:48Z",
+          "url": "https://github.com/llnl/quandary/commit/448bf3c62889a49e4e83e48b8b3c21174dcc7fdf"
+        },
+        "date": 1771614803012,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "value": 0.7656423408770934,
+            "range": "0.4323864769327675",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "value": 87.69,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "value": 5.4543582340702415,
+            "range": "0.12772944473901168",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "value": 4338.04,
             "unit": "MB"
           }
         ]
