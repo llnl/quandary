@@ -128,6 +128,15 @@
         ]
     },
     {
+        "simulation_name": "xgate_petscparallel",
+        "files_to_compare": [
+            "optim_history.dat"
+        ],
+        "number_of_processes": [
+            4
+        ]
+    },
+    {
         "simulation_name": "state-to-state_spline0",
         "files_to_compare": [
             "optim_history.dat",
