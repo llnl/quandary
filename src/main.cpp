@@ -22,6 +22,8 @@
 #define HESSIAN_DECOMPOSITION 0 // Run eigenvalue analysis for Hessian
 #define EPS 1e-5          // Epsilon for Finite Differences
 
+// TODO: this no longer contains the main function, should be renamed to something like run_quandary.cpp
+// See entry.cpp for main function and command-line parsing.
 int runQuandary(const Config& config, bool quietmode, int argc, char** argv, int petsc_argc, char** petsc_argv)
 {
   char filename[255];
