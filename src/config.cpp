@@ -537,7 +537,7 @@ Config::Config(const Setup& input, bool quiet_mode) : logger(MPILogger(quiet_mod
   data.nlevels = validators::vectorField<size_t>(input.nlevels, "nlevels").minLength(1).positive().value();
   size_t num_osc = data.nlevels.size();
 
-  data.nessential = validators::vectorField<size_t>(input.nessential, "nessential").valueOr(data.nlevels);
+  data.nessential = validators::vectorField<size_t>(input.nessential, "nessential").hasLength(num_osc).valueOr(data.nlevels);
 
   data.ntime = validators::field<size_t>(input.ntime, "ntime").positive().value();
 
@@ -545,20 +545,20 @@ Config::Config(const Setup& input, bool quiet_mode) : logger(MPILogger(quiet_mod
 
   data.transition_frequency = validators::vectorField<double>(input.transition_frequency, "transition_frequency").hasLength(num_osc).value();
 
-  data.selfkerr = validators::vectorField<double>(input.selfkerr, "selfkerr").valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
+  data.selfkerr = validators::vectorField<double>(input.selfkerr, "selfkerr").hasLength(num_osc).valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
 
   size_t num_pairs = (num_osc - 1) * num_osc / 2;
-  data.crosskerr_coupling = validators::vectorField<double>(input.crosskerr_coupling, "crosskerr_coupling").valueOr(std::vector<double>(num_pairs, ConfigDefaults::CROSSKERR_COUPLING));
+  data.crosskerr_coupling = validators::vectorField<double>(input.crosskerr_coupling, "crosskerr_coupling").hasLength(num_pairs).valueOr(std::vector<double>(num_pairs, ConfigDefaults::CROSSKERR_COUPLING));
 
-  data.dipole_coupling = validators::vectorField<double>(input.dipole_coupling, "dipole_coupling").valueOr(std::vector<double>(num_pairs, ConfigDefaults::DIPOLE_COUPLING));
+  data.dipole_coupling = validators::vectorField<double>(input.dipole_coupling, "dipole_coupling").hasLength(num_pairs).valueOr(std::vector<double>(num_pairs, ConfigDefaults::DIPOLE_COUPLING));
 
-  data.rotation_frequency = validators::vectorField<double>(input.rotation_frequency, "rotation_frequency").valueOr(std::vector<double>(num_osc, ConfigDefaults::ROTATION_FREQUENCY));
+  data.rotation_frequency = validators::vectorField<double>(input.rotation_frequency, "rotation_frequency").hasLength(num_osc).valueOr(std::vector<double>(num_osc, ConfigDefaults::ROTATION_FREQUENCY));
 
   data.decoherence_type = input.decoherence_type.value_or(ConfigDefaults::DECOHERENCE_TYPE);
 
-  data.decay_time = validators::vectorField<double>(input.decay_time, "decay_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
+  data.decay_time = validators::vectorField<double>(input.decay_time, "decay_time").hasLength(num_osc).valueOr(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
 
-  data.dephase_time = validators::vectorField<double>(input.dephase_time, "dephase_time").valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
+  data.dephase_time = validators::vectorField<double>(input.dephase_time, "dephase_time").hasLength(num_osc).valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
 
   if (!input.initial_condition.has_value()) {
     throw validators::ValidationError("initial_condition", "field not found");
@@ -583,6 +583,11 @@ Config::Config(const Setup& input, bool quiet_mode) : logger(MPILogger(quiet_mod
     data.control_initializations.resize(num_osc, data.control_initializations[0]);
   }
 
+  // Validate after resize (can't use validator chain due to resize logic above)
+  if (data.control_initializations.size() != num_osc) {
+    throw validators::ValidationError("control_initializations", "must have exactly " + std::to_string(num_osc) + " elements (one per oscillator), got " + std::to_string(data.control_initializations.size()));
+  }
+
   // Validate phase for each control initialization
   for (auto& init : data.control_initializations) {
     init.phase = validators::field<double>(init.phase, "phase")
@@ -590,7 +595,7 @@ Config::Config(const Setup& input, bool quiet_mode) : logger(MPILogger(quiet_mod
       .valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
   }
 
-  data.control_amplitude_bounds = validators::vectorField<double>(input.control_amplitude_bounds, "control_amplitude_bounds").valueOr(std::vector<double>(num_osc, ConfigDefaults::CONTROL_AMPLITUDE_BOUND));
+  data.control_amplitude_bounds = validators::vectorField<double>(input.control_amplitude_bounds, "control_amplitude_bounds").hasLength(num_osc).valueOr(std::vector<double>(num_osc, ConfigDefaults::CONTROL_AMPLITUDE_BOUND));
 
   std::vector<double> default_carrier_freq = {ConfigDefaults::CARRIER_FREQ};
   data.carrier_frequencies = input.carrier_frequencies.value_or(std::vector<std::vector<double>>(num_osc, default_carrier_freq));
