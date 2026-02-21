@@ -20,7 +20,7 @@ variables:
 # Arguments for performance job allocation (dedicated allocation with no overlapping).
   DANE_PERF_ALLOC: "--exclusive --reservation=ci --time=15 --nodes=1"
 # Project specific variants for dane
-  PROJECT_DANE_VARIANTS: "+test"
+  PROJECT_DANE_VARIANTS: "+test +python"
 # Project specific deps for dane
   PROJECT_DANE_DEPS: ""
 
@@ -31,7 +31,7 @@ variables:
 # Arguments for job level allocation
   TIOGA_JOB_ALLOC: "--nodes=1 --begin-time=+5s"
 # Project specific variants for tioga
-  PROJECT_TIOGA_VARIANTS: "+test"
+  PROJECT_TIOGA_VARIANTS: "+test +python"
 # Project specific deps for tioga
 # Force use of petsc >= 3.23 as 3.22 doesn't seem to work with rocm 6.4.1
   PROJECT_TIOGA_DEPS: "^petsc@3.23:"

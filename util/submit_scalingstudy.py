@@ -3,6 +3,7 @@
 # Further, make sure that your quandary executable is in your $PATH variable. E.g. with
 #   > export PATH=/path/to/quandary/:$PATH
 from quandary import * 
+import numpy as np
 
 ## Two qubit test case: CNOT gate, two levels each, no guard levels, dipole-dipole coupling 5KHz ##
 

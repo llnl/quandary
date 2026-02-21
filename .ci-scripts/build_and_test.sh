@@ -262,7 +262,7 @@ then
     timed_message "Install python test dependencies"
 
     eval `${spack_cmd} env activate ${spack_env_path} --sh`
-    python -m pip install -e . --prefer-binary
+    python -m pip install -e ".[dev]"
     mpi_exe=$(grep 'MPIEXEC_EXECUTABLE' "${hostconfig_path}" | cut -d'"' -f2 | sed 's/;/ /g')
 
     # TODO cfg: remove this later
@@ -287,7 +287,7 @@ then
     timed_message "Install python test dependencies"
 
     eval `${spack_cmd} env activate ${spack_env_path} --sh`
-    python -m pip install -e . --prefer-binary
+    python -m pip install -e ".[dev]"
 
     timed_message "Run performance tests"
 

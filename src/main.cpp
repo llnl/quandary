@@ -1,3 +1,4 @@
+#include "main.hpp"
 #include "timestepper.hpp"
 #include "defs.hpp"
 #include <string>
@@ -21,26 +22,32 @@
 #define HESSIAN_DECOMPOSITION 0 // Run eigenvalue analysis for Hessian
 #define EPS 1e-5          // Epsilon for Finite Differences
 
-int main(int argc,char **argv)
+// TODO: this no longer contains the main function, should be renamed to something like run_quandary.cpp
+// See entry.cpp for main function and command-line parsing.
+int runQuandary(const Config& config, bool quietmode, int argc, char** argv, int petsc_argc, char** petsc_argv)
 {
-  /* Parse command line arguments */
-  ParsedArgs args = parseArguments(argc, argv);
-
   char filename[255];
   PetscErrorCode ierr;
 
-  /* Initialize MPI */
+  /* Track whether we initialized MPI/PETSc (for proper finalization).
+   * If MPI was already initialized (e.g., by mpi4py), we're in "external mode"
+   * and should not finalize either MPI or PETSc. */
+  bool external_initialization = false;
+  int mpi_already_initialized = 0;
+  MPI_Initialized(&mpi_already_initialized);
+  if (mpi_already_initialized) {
+    external_initialization = true;
+  } else {
+    MPI_Init(&argc, &argv);
+  }
+
   int mpisize_world, mpirank_world;
-  MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
   MPI_Comm_size(MPI_COMM_WORLD, &mpisize_world);
 
-  bool quietmode = args.quietmode;
   if (mpirank_world == 0 && !quietmode) printf("Running on %d cores.\n", mpisize_world);
 
   MPILogger logger(mpirank_world, quietmode);
-  std::string config_file = args.config_filename;
-  Config config = Config::fromFile(config_file, logger);
   std::stringstream config_log;
   config.printConfig(config_log);
 
@@ -99,12 +106,16 @@ int main(int argc,char **argv)
 
   if (mpirank_world == 0 && !quietmode)  std::cout<< "Parallel distribution: " << mpisize_init << " np_init  X  " << mpisize_petsc<< " np_petsc  " << std::endl;
 
-  char** petsc_argv = args.petsc_argv.data();
-#ifdef WITH_SLEPC
-  ierr = SlepcInitialize(&args.petsc_argc, &petsc_argv, (char*)0, NULL);if (ierr) return ierr;
-#else
-  ierr = PetscInitialize(&args.petsc_argc, &petsc_argv, (char*)0, NULL);if (ierr) return ierr;
-#endif
+  /* Initialize PETSc/SLEPc if not already done */
+  PetscBool petsc_already_initialized = PETSC_FALSE;
+  PetscInitialized(&petsc_already_initialized);
+  if (!petsc_already_initialized) {
+    #ifdef WITH_SLEPC
+      ierr = SlepcInitialize(&petsc_argc, &petsc_argv, (char*)0, NULL);if (ierr) return ierr;
+    #else
+      ierr = PetscInitialize(&petsc_argc, &petsc_argv, (char*)0, NULL);if (ierr) return ierr;
+    #endif
+  }
   PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, 	PETSC_VIEWER_ASCII_MATLAB );
 
   size_t num_osc = config.getNumOsc();
@@ -553,15 +564,17 @@ int main(int argc,char **argv)
   VecDestroy(&grad);
 
 
-  /* Finallize Petsc */
-#ifdef WITH_SLEPC
-  ierr = SlepcFinalize();
-#else
-  PetscOptionsSetValue(NULL, "-options_left", "no"); // Remove warning about unused options.
-  ierr = PetscFinalize();
-#endif
-
-
-  MPI_Finalize();
+  /* Finalize Petsc and MPI only if not in external mode.
+   * When called from Python with mpi4py, MPI and PETSc are managed externally,
+   * allowing multiple run() calls in the same process without reinitialization errors. */
+  if (!external_initialization) {
+    #ifdef WITH_SLEPC
+      ierr = SlepcFinalize();
+    #else
+      PetscOptionsSetValue(NULL, "-options_left", "no"); // Remove warning about unused options.
+      ierr = PetscFinalize();
+    #endif
+    MPI_Finalize();
+  }
   return ierr;
 }

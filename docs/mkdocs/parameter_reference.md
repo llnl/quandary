@@ -61,3 +61,20 @@ Note that the CFG format is deprecated in favor of the TOML format and will be r
 | `linearsolver` | N/A | `linearsolver_type` | Linear solver configuration |
 | `timestepper` | `timestepper` | `timestepper` | Time-stepping algorithm |
 | `rand_seed` | `rand_seed` | `rand_seed` | Random seed |
+
+## Defaults: Differences between Old and New Python Interface
+
+The following defaults differ between the old `Quandary` dataclass and the new Python nanobind API.
+
+| Old Python Name | Old Default | New Python Name | New Default | Notes |
+|-----------------|-------------|-----------------|-------------|-------|
+| `initctrl_MHz` | `10.0` MHz | `optimize(control_initialization_amplitude=)` | `0.01` GHz | Old: scaled by `1/1000/sqrt(2)/N_carriers`; New: passed directly |
+| `control_enforce_BC` | `False` | `setup_quandary(control_zero_boundary_condition=)` | `True` | |
+| `nsplines` | auto from `spline_knot_spacing=3.0` | `setup_quandary(control_parametrization_num=)` | `10` | |
+| `tol_costfunc` | `1e-4` | `Setup.optim_tol_final_cost` | `1e-8` | |
+| `gamma_leakage` | `0.1` | `Setup.optim_penalty_leakage` | `0.0` | |
+| `gamma_energy` | `0.1` | `Setup.optim_penalty_energy` | `0.0` | |
+| `gamma_dpdm` | `0.01` | `Setup.optim_penalty_dpdm` | `0.0` | |
+| `print_frequency_iter` | `1` | `Setup.output_optimization_stride` | `10` | |
+| n/a (hardcoded in `__dump`) | `20` | `Setup.linearsolver_maxiter` | `10` | |
+| `rand_seed` | `None` (random) | `Setup.rand_seed` | `1` (deterministic) | Only differs when not explicitly set |

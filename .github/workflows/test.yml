@@ -40,6 +40,8 @@ jobs:
       uses: spack/setup-spack@v3
       with:
         spack_ref: v1.1.1
+        packages_repository: tdrwenski/spack-packages
+        packages_ref: update-quandary
 
     - name: Configure Spack
       run: |
@@ -56,7 +58,7 @@ jobs:
       # explicitly use openmpi, since mpich causes rpath problems in binary
       run: |
         spack -e .spack_env rm quandary
-        spack -e .spack_env add quandary@develop+test^openmpi
+        spack -e .spack_env add quandary@develop+test+python^openmpi
         spack -e .spack_env install --use-buildcache package:never
 
     - name: Run C++ unit tests
@@ -73,7 +75,7 @@ jobs:
       run: |
         spack env activate .spack_env
         export PATH=$(pwd):$PATH  # Use repo root binary (spack view has broken RPATH)
-        python -m pip install -e . --prefer-binary
+        python -m pip install -e ".[dev]" --prefer-binary --config-settings=cmake.args="-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
         pytest -v -s --mpi-opt="--oversubscribe" --config-format=cfg tests/regression
 
     - name: Run regression tests
@@ -81,7 +83,7 @@ jobs:
       run: |
         spack env activate .spack_env
         export PATH=$(pwd):$PATH  # Use repo root binary (spack view has broken RPATH)
-        python -m pip install -e . --prefer-binary
+        python -m pip install -e ".[dev]" --prefer-binary --config-settings=cmake.args="-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
         pytest -v -s -m "not performance" --mpi-opt="--oversubscribe"
 
     - name: Push packages and update index
