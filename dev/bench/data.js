@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771614805327,
+  "lastUpdate": 1771633546104,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -2639,6 +2639,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
             "value": 4338.04,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Tara Drwenski",
+            "username": "tdrwenski",
+            "email": "tdrwenski@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "cd093645f179a3ae643bdf9f23910c02e8b2d04b",
+          "message": "Merge pull request #119 from llnl/fix-find-tomlplusplus\n\nImprove finding tomlplusplus library",
+          "timestamp": "2026-02-20T23:51:24Z",
+          "url": "https://github.com/llnl/quandary/commit/cd093645f179a3ae643bdf9f23910c02e8b2d04b"
+        },
+        "date": 1771633544111,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "value": 0.7667898054933175,
+            "range": "0.5475368211621803",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "value": 87.71,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "value": 5.320426422869787,
+            "range": "0.09834993516066386",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "value": 4339.86,
             "unit": "MB"
           }
         ]
