@@ -36,8 +36,12 @@ using Identity = T;
  * - ValidatedConfig (Wrapper = Identity): All fields are concrete types (validated config)
  * - Setup (Wrapper = std::optional): All fields are optional (for input from TOML/Python)
  *
+ * Example expansion for a field like `Wrapper<size_t> ntime`:
+ *   - Setup:           std::optional<size_t> ntime;  (user may or may not set it)
+ *   - ValidatedConfig: size_t ntime;                 (always has a validated value)
+ *
  * Fields that are inherently optional (like hamiltonian files) don't use the Wrapper
- * and remain std::optional in both instantiations.
+ * and remain std::optional in both instantiations (optional even after validation).
  *
  * @tparam Wrapper Type wrapper template - either Identity or std::optional
  */
