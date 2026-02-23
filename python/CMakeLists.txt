@@ -5,6 +5,13 @@ nanobind_add_module(_quandary_impl STABLE_ABI bindings.cpp)
 
 target_link_libraries(_quandary_impl PRIVATE quandary_lib)
 
+# Embed linked library directories in the installed .so rpath.
+# Without this, the module installed to site-packages/ can't find
+# libpetsc, libmpi, etc. on Linux (macOS dyld resolves these transitively).
+set_target_properties(_quandary_impl PROPERTIES
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+)
+
 # Generate type stubs for IDE autocomplete
 nanobind_add_stub(
     _quandary_impl_stub
