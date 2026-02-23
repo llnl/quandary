@@ -10,7 +10,9 @@
 
 namespace nb = nanobind;
 
-// Declare extension module "_quandary_impl" (must match name given in CMake)
+// Module name "_quandary_impl" must match the CMake target in nanobind_add_module().
+// The underscore prefix is a Python convention for internal modules -- users import
+// the public API through python/quandary/new/__init__.py instead.
 NB_MODULE(_quandary_impl, m) {
   m.doc() = "Quandary Python bindings.\n\n"
             "Low-level C++ interface for quantum optimal control simulations.\n"
