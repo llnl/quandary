@@ -301,7 +301,7 @@ NB_MODULE(_quandary_impl, m) {
       Config config(input, quiet);
       return runQuandary(config, quiet);
     },
-    nb::arg("config"), nb::arg("quiet") = false,
+    nb::arg("setup"), nb::arg("quiet") = false,
     "Run a Quandary simulation or optimization from a Setup");
 
   // Run from file - loads TOML and runs directly
