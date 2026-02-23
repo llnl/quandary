@@ -166,7 +166,7 @@ def setup_quandary(
         Arbitrary superposition initial state. Written to file automatically.
     output_directory : str
         Output directory for generated files (initial state, etc.).
-        Default: "./run_dir".
+        Default: "./data_out".
     verbose : bool
         Print setup information. Default: True.
 
