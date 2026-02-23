@@ -5,8 +5,8 @@ MPI Lifecycle Management:
     in __init__.py. This allows multiple optimize()/simulate() calls in the same Python process
     (e.g., Jupyter notebooks, parameter sweeps) without MPI re-initialization errors.
 
-    The C++ runQuandary function is called with finalize=false to prevent it from
-    calling MPI_Finalize, allowing mpi4py to manage finalization at process exit.
+    The C++ runQuandary function detects that MPI is already initialized (by mpi4py)
+    and skips MPI_Init/MPI_Finalize, letting mpi4py manage the MPI lifecycle.
 """
 
 from __future__ import annotations
