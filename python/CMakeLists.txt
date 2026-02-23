@@ -20,3 +20,11 @@ install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/_quandary_impl.pyi
     DESTINATION ${QUANDARY_PYTHON_INSTALL_DIR}
 )
+
+# Install pure Python source files (only for direct CMake builds, not scikit-build-core)
+if(NOT SKBUILD)
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/python/quandary/
+        DESTINATION ${QUANDARY_PYTHON_INSTALL_DIR}
+        FILES_MATCHING PATTERN "*.py"
+    )
+endif()
