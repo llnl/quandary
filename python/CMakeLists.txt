@@ -1,5 +1,6 @@
 set(QUANDARY_PYTHON_INSTALL_DIR "quandary" CACHE PATH "Install destination for Python module")
 
+# STABLE_ABI: extension works across Python minor versions without recompilation
 nanobind_add_module(_quandary_impl STABLE_ABI bindings.cpp)
 
 target_link_libraries(_quandary_impl PRIVATE quandary_lib)
