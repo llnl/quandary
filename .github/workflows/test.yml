@@ -70,20 +70,22 @@ jobs:
         cd $(spack -e .spack_env location -b quandary)
         ctest --output-on-failure --no-compress-output
 
+    - name: Install Python test dependencies
+      shell: spack-sh {0}
+      run: |
+        spack env activate .spack_env
+        python -m pip install pytest pytest-benchmark pydantic pandas matplotlib --prefer-binary
+
     - name: Run cfg regression tests
       shell: spack-sh {0}
       run: |
         spack env activate .spack_env
-        export PATH=$(pwd):$PATH  # Use repo root binary (spack view has broken RPATH)
-        python -m pip install -e ".[dev]" --prefer-binary --config-settings=cmake.args="-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
         pytest -v -s --mpi-opt="--oversubscribe" --config-format=cfg tests/regression
 
     - name: Run regression tests
       shell: spack-sh {0}
       run: |
         spack env activate .spack_env
-        export PATH=$(pwd):$PATH  # Use repo root binary (spack view has broken RPATH)
-        python -m pip install -e ".[dev]" --prefer-binary --config-settings=cmake.args="-DCMAKE_C_COMPILER=gcc;-DCMAKE_CXX_COMPILER=g++"
         pytest -v -s -m "not performance" --mpi-opt="--oversubscribe"
 
     - name: Push packages and update index
