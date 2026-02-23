@@ -161,19 +161,37 @@ class Config {
 
  public:
   /**
-   * @brief Constructs a Config from a Setup struct
+   * @brief Constructs a Config from a Setup struct (primary constructor).
    *
-   * This constructor performs the main validation and default value application for all
-   * configuration parameters. It uses the validators framework to check constraints
-   * and apply defaults in a consistent way.
+   * This is the main constructor that all other constructors delegate to.
+   * It validates all fields using the validator chains in config_validators.hpp,
+   * applies defaults for missing optional fields, and calls finalize()/validate()
+   * for cross-field consistency checks.
+   *
+   * Used directly from Python (nanobind) and programmatic C++ use, where the
+   * caller populates a Setup struct with std::optional fields.
    *
    * @param input The pre-parsed configuration input data
    * @param quiet_mode Whether to suppress logging output
    */
   Config(const Setup& input, bool quiet_mode = false);
+
+  /**
+   * @brief Constructs a Config from a TOML table.
+   *
+   * Extracts TOML values into a Setup struct (via extractSetup() in config.cpp),
+   * then delegates to Config(Setup). The extraction helpers convert TOML nodes
+   * into std::optional<T> to match the Setup field types.
+   *
+   * @param table Parsed TOML table
+   * @param quiet_mode Whether to suppress logging output
+   */
   Config(const toml::table& table, bool quiet_mode = false);
 
-  // TODO cfg: delete this when .cfg format is removed.
+  /**
+   * @brief Constructs a Config from legacy .cfg format (deprecated).
+   * @todo Delete this when .cfg format is removed.
+   */
   Config(const ParsedConfigData& settings, bool quiet_mode = false);
 
   ~Config() = default;
