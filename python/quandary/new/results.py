@@ -66,11 +66,10 @@ def get_results(config: Config) -> Results:
         Results containing all parsed output data and config.
 
     Example:
-        >>> # After running
-        >>> validated_config = Config(my_config, quiet=False)
-        >>> results = get_results(validated_config)
+        >>> # Re-load results from a previous run
+        >>> config = Config.from_toml("data_out/config_log.toml", quiet=True)
+        >>> results = get_results(config)
         >>> print(f"Infidelity: {results.infidelity}")
-        >>> print(results.config)
     """
     # Get output directory from config
     datadir = config.output_directory
