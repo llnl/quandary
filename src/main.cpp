@@ -31,7 +31,9 @@ int runQuandary(const Config& config, bool quietmode, int argc, char** argv, int
 
   /* Track whether we initialized MPI/PETSc (for proper finalization).
    * If MPI was already initialized (e.g., by mpi4py), we're in "external mode"
-   * and should not finalize either MPI or PETSc. */
+   * and should not finalize either MPI or PETSc. This means PETSc resources
+   * may not be explicitly cleaned up on process exit, but repeated calls are
+   * safe since PetscInitialized() guards re-initialization. */
   bool external_initialization = false;
   int mpi_already_initialized = 0;
   MPI_Initialized(&mpi_already_initialized);
