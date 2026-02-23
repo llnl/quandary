@@ -543,7 +543,7 @@ Config::Config(const Setup& input, bool quiet_mode) : logger(MPILogger(quiet_mod
 
   data.dt = validators::field<double>(input.dt, "dt").positive().value();
 
-  data.transition_frequency = validators::vectorField<double>(input.transition_frequency, "transition_frequency").hasLength(num_osc).value();
+  data.transition_frequency = validators::vectorField<double>(input.transition_frequency, "transition_frequency").hasLength(num_osc).valueOr(std::vector<double>(num_osc, ConfigDefaults::TRANSITION_FREQUENCY));
 
   data.selfkerr = validators::vectorField<double>(input.selfkerr, "selfkerr").hasLength(num_osc).valueOr(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
 
