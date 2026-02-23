@@ -297,7 +297,7 @@ def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=None, 
         Hsys += domega_radns * Amat[q].T @ Amat[q]
         Hsys -= selfkerr_radns / 2.0 * Amat[q].T @ Amat[q].T @ Amat[q] @ Amat[q]
 
-    # Add cross cerr coupling, if given
+    # Add cross-Kerr coupling, if given
     if len(crosskerr_coupling) > 0:
         idkl = 0
         for q in range(nqubits):

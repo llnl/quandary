@@ -102,7 +102,7 @@ def _run(
     This function validates the setup, runs the simulation/optimization,
     and returns results with the validated configuration attached.
 
-    If n_procs is specified and not already in an MPI context, spawns a subprocess
+    If max_n_procs is specified and not already in an MPI context, spawns a subprocess
     with the MPI launcher (useful for Jupyter notebooks). If already running in an
     MPI context (launched with mpirun), MPI will be used automatically. Otherwise
     runs serially.
