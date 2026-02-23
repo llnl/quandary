@@ -196,17 +196,50 @@ class Config {
 
   ~Config() = default;
 
+  /**
+   * @brief Load a Config from a file, auto-detecting TOML or legacy .cfg format.
+   * @param filename Path to the configuration file
+   * @param quiet_mode Whether to suppress logging output
+   */
   static Config fromFile(const std::string& filename, bool quiet_mode = false);
+
+  /**
+   * @brief Load a Config from a TOML file.
+   * @param toml_filename Path to the TOML configuration file
+   * @param quiet_mode Whether to suppress logging output
+   */
   static Config fromToml(const std::string& toml_filename, bool quiet_mode = false);
+
+  /**
+   * @brief Load a Config from a TOML-formatted string.
+   * @param toml_content String containing TOML configuration
+   * @param quiet_mode Whether to suppress logging output
+   */
   static Config fromTomlString(const std::string& toml_content, bool quiet_mode = false);
 
-  // TODO cfg: delete these when .cfg format is removed.
+  /**
+   * @brief Load a Config from a legacy .cfg file (deprecated).
+   * @todo Delete this when .cfg format is removed.
+   */
   static Config fromCfg(const std::string& cfg_filename, bool quiet_mode = false);
+
+  /**
+   * @brief Load a Config from a legacy .cfg-formatted string (deprecated).
+   * @todo Delete this when .cfg format is removed.
+   */
   static Config fromCfgString(const std::string& cfg_content, bool quiet_mode = false);
 
+  /**
+   * @brief Serialize the validated configuration to TOML format.
+   * @param log Output stream to write the TOML representation to
+   */
   void printConfig(std::stringstream& log) const;
 
-  // toString functions for settings structs (used for printing and Python __repr__)
+  /**
+   * @brief Convert settings structs to human-readable strings.
+   *
+   * Used for TOML config logging and Python __repr__ methods.
+   */
   static std::string toString(const InitialConditionSettings& initial_condition);
   static std::string toString(const OptimTargetSettings& optim_target);
   static std::string toString(const ControlParameterizationSettings& control_param);
