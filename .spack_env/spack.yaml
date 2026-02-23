@@ -4,7 +4,7 @@
 # configuration settings.
 spack:
   specs:
-  - quandary@develop+test
+  - quandary@develop+test+python
   view: true
   concretizer:
     unify: true
