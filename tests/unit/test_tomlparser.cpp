@@ -11,7 +11,6 @@ TEST_F(TomlParserTest, ParseBasicSettings) {
       R"(
         [system]
         nlevels = [2]
-        transition_frequency = [4.1]
         rotation_frequency = [0.0]
         ntime = 500
         dt = 0.05
@@ -54,7 +53,6 @@ TEST_F(TomlParserTest, ParseJklSettingsAllToAll) {
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
-        transition_frequency = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
@@ -76,7 +74,6 @@ TEST_F(TomlParserTest, ParseJklSettingsOneCoupling) {
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
-        transition_frequency = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
@@ -103,7 +100,6 @@ TEST_F(TomlParserTest, ParseJklSettingsPerPair) {
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
-        transition_frequency = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
@@ -135,7 +131,6 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsAllToAll) {
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
-        transition_frequency = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
@@ -157,7 +152,6 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsOneCoupling) {
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
-        transition_frequency = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
@@ -184,7 +178,6 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsPerPair) {
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
-        transition_frequency = [4.1, 4.8, 5.2, 5.5]
         ntime = 1000
         dt = 0.1
         initial_condition = {type = "basis"}
@@ -216,7 +209,6 @@ TEST_F(TomlParserTest, ParseOutputSettings_AllOscillators) {
       R"(
         [system]
         nlevels = [2, 2]
-        transition_frequency = [4.1, 4.8]
         ntime = 1000
         dt = 0.1
         rotation_frequency = [0.0, 0.0]
@@ -239,7 +231,6 @@ TEST_F(TomlParserTest, ParseStructSettings) {
       R"(
         [system]
         nlevels = [2]
-        transition_frequency = [4.1]
         ntime = 1000
         dt = 0.1
         rotation_frequency = [0.0]
@@ -266,7 +257,6 @@ TEST_F(TomlParserTest, ApplyDefaults) {
         nlevels = [2]
         ntime = 1000
         dt = 0.1
-        transition_frequency = [4.1]
         rotation_frequency = [0.0]
         initial_condition = {type = "basis"}
       )",
@@ -286,7 +276,6 @@ TEST_F(TomlParserTest, Decoherence_Decay) {
         nlevels = [3, 2]
         ntime = 1000
         dt = 0.1
-        transition_frequency = [4.1, 4.8]
         rotation_frequency = [0.0, 0.0]
         decoherence = {type = "decay", decay_time = [30.0, 40.0], dephase_time = [20.0, 25.0]}
         initial_condition = {type = "basis"}
@@ -306,7 +295,6 @@ TEST_F(TomlParserTest, Decoherence_Dephase) {
         nlevels = [3, 2]
         ntime = 1000
         dt = 0.1
-        transition_frequency = [4.1, 4.8]
         rotation_frequency = [0.0, 0.0]
         decoherence = {type = "dephase", decay_time = [30.0, 40.0], dephase_time = [20.0, 25.0]}
         initial_condition = {type = "basis"}
@@ -327,7 +315,6 @@ TEST_F(TomlParserTest, InitialCondition_FromFile) {
         nlevels = [2]
         ntime = 1000
         dt = 0.1
-        transition_frequency = [4.1]
         rotation_frequency = [0.0]
         initial_condition = {type = "file", filename = "test.dat"}
       )",
@@ -345,7 +332,6 @@ TEST_F(TomlParserTest, InitialCondition_ProductState) {
         nlevels = [3, 2]
         ntime = 1000
         dt = 0.1
-        transition_frequency = [4.1, 4.8]
         rotation_frequency = [0.0, 0.0]
         initial_condition = {type = "state", levels = [1, 0]}
       )",
@@ -363,7 +349,6 @@ TEST_F(TomlParserTest, InitialCondition_Performance) {
         nlevels = [2]
         ntime = 1000
         dt = 0.1
-        transition_frequency = [4.1]
         rotation_frequency = [0.0]
         initial_condition = {type = "performance"}
       )",
