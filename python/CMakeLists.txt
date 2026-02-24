@@ -5,16 +5,18 @@ nanobind_add_module(_quandary_impl STABLE_ABI bindings.cpp)
 
 target_link_libraries(_quandary_impl PRIVATE quandary_lib)
 
-# Embed linked library directories in the installed .so rpath.
-# Without this, the module installed to site-packages/ can't find
-# libpetsc, libmpi, etc. on Linux (macOS dyld resolves these transitively).
-# BLT only configures rpath when BUILD_SHARED_LIBS=ON, but quandary_lib
-# is static so we must set these properties on this target explicitly.
+set(_rpath_dirs "")
+if(PETSC_LIBRARY_DIRS)
+    list(APPEND _rpath_dirs "${PETSC_LIBRARY_DIRS}")
+endif()
+if(SLEPC_LIBRARY_DIRS AND WITH_SLEPC)
+    list(APPEND _rpath_dirs "${SLEPC_LIBRARY_DIRS}")
+endif()
+
 set_target_properties(_quandary_impl PROPERTIES
     SKIP_BUILD_RPATH FALSE
-    BUILD_WITH_INSTALL_RPATH FALSE
-    INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib"
-    INSTALL_RPATH_USE_LINK_PATH TRUE
+    BUILD_WITH_INSTALL_RPATH TRUE
+    INSTALL_RPATH "${_rpath_dirs}"
 )
 
 # Generate type stubs for IDE autocomplete (requires typing_extensions on Python < 3.11)
