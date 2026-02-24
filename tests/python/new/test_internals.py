@@ -5,9 +5,6 @@ from quandary.new.runner import (
     _compute_optimal_core_distribution,
 )
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _make_setup(output_directory="./run_dir"):
     """Create a minimal setup for testing."""
@@ -22,10 +19,6 @@ def _make_setup(output_directory="./run_dir"):
         verbose=False,
     )
 
-
-# ===========================================================================
-# TestDryRun
-# ===========================================================================
 
 class TestDryRun:
     """Validate that dry_run=True returns Results with config but no solver output."""
@@ -100,10 +93,6 @@ class TestDryRun:
         )
         assert results.config.output_directory == custom_dir
 
-
-# ===========================================================================
-# TestCoreDistribution
-# ===========================================================================
 
 class TestCoreDistribution:
     """Unit tests for _compute_optimal_core_distribution."""
