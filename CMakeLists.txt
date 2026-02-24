@@ -19,6 +19,9 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose build type" FORCE)
 endif()
 
+# Preserve RPATH to dependency libraries (e.g. PETSc, SLEPc) in installed binaries
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
 set(BLT_CXX_STD "c++17" CACHE STRING "Version of C++ standard")
 
 set(ENABLE_MPI ON CACHE BOOL "")
