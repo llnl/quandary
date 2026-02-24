@@ -40,8 +40,6 @@ jobs:
       uses: spack/setup-spack@v3
       with:
         spack_ref: v1.1.1
-        packages_repository: tdrwenski/spack-packages
-        packages_ref: update-quandary
 
     - name: Configure Spack
       run: |

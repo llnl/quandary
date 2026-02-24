@@ -3,6 +3,7 @@
 # It describes a set of packages to be installed, along with
 # configuration settings.
 spack:
+  repos: [../.ci-scripts/radiuss-spack-configs/spack_repo/llnl_radiuss]
   specs:
   - quandary@develop+test+python
   view: true
