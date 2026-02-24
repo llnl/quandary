@@ -19,25 +19,42 @@ logger = logging.getLogger(__name__)
 class Results:
     """Results from a Quandary simulation or optimization.
 
-    Attributes:
-        config: Validated configuration with all defaults applied. This is always present
-            and represents the exact configuration that was used to generate these results.
-        time: Array of time points [ns].
-        pt: Control pulses p(t) for each oscillator [MHz]. Access: pt[oscillator][time_index].
-        qt: Control pulses q(t) for each oscillator [MHz]. Access: qt[oscillator][time_index].
-        ft: Lab-frame control pulses f(t) for each oscillator [MHz]. Access: ft[oscillator][time_index].
-        uT: Evolved states at final time T. This is the (unitary) solution operator if
-            the initial conditions span the full basis. Access: uT[:, initial_condition].
-        pcof: Control parameters (B-spline coefficients).
-        infidelity: Final infidelity (1 - fidelity). Only meaningful for
-            optimization runs; defaults to 1.0 for simulations.
-        optim_hist: Optimization history with keys: 'iter', 'objective', 'gradient',
-            'ls_step', 'fidelity', 'cost', 'tikhonov', 'penalty', 'state_variation',
-            'energy', 'control_variation'. Empty dict for simulation runs.
-        expected_energy: Expected energy evolution for each oscillator and initial condition.
-            Access: expected_energy[oscillator][initial_condition][time_index].
-        population: Population evolution for each oscillator and initial condition.
-            Access: population[oscillator][initial_condition][level, time_index].
+    Attributes
+    ----------
+    config : Config
+        Validated configuration with all defaults applied. Always present;
+        represents the exact configuration used to generate these results.
+    time : ndarray
+        Time points [ns].
+    pt : list of ndarray
+        Control pulses p(t) [MHz] per oscillator.
+        Access: ``pt[oscillator][time_index]``.
+    qt : list of ndarray
+        Control pulses q(t) [MHz] per oscillator.
+        Access: ``qt[oscillator][time_index]``.
+    ft : list of ndarray
+        Lab-frame control pulses f(t) [MHz] per oscillator.
+        Access: ``ft[oscillator][time_index]``.
+    uT : ndarray
+        Evolved states at final time T. This is the (unitary) solution
+        operator if the initial conditions span the full basis.
+        Access: ``uT[:, initial_condition]``.
+    pcof : ndarray
+        Control parameters (B-spline coefficients).
+    infidelity : float
+        Final infidelity (1 - fidelity). Only meaningful for optimization
+        runs; defaults to 1.0 for simulations.
+    optim_hist : dict of str to ndarray
+        Optimization history. Keys: ``'iter'``, ``'objective'``,
+        ``'gradient'``, ``'ls_step'``, ``'fidelity'``, ``'cost'``,
+        ``'tikhonov'``, ``'penalty'``, ``'state_variation'``,
+        ``'energy'``, ``'control_variation'``. Empty dict for simulations.
+    expected_energy : list of list of ndarray
+        Expected energy evolution per oscillator and initial condition.
+        Access: ``expected_energy[oscillator][initial_condition][time_index]``.
+    population : list of list of ndarray
+        Population evolution per oscillator and initial condition.
+        Access: ``population[oscillator][initial_condition][level, time_index]``.
     """
 
     config: Config
@@ -56,20 +73,24 @@ class Results:
 def get_results(config: Config) -> Results:
     """Load results from Quandary output files.
 
-    This function parses output files from a Quandary run and returns them
-    in a structured format. The output directory is read from the config.
+    Parses output files from a Quandary run and returns them in a
+    structured format. The output directory is read from the config.
 
-    Args:
-        config: Validated configuration object from the run.
+    Parameters
+    ----------
+    config : Config
+        Validated configuration object from the run.
 
-    Returns:
-        Results containing all parsed output data and config.
+    Returns
+    -------
+    Results
+        All parsed output data and config.
 
-    Example:
-        >>> # Re-load results from a previous run
-        >>> config = Config.from_toml("data_out/config_log.toml", quiet=True)
-        >>> results = get_results(config)
-        >>> print(f"Infidelity: {results.infidelity}")
+    Examples
+    --------
+    >>> config = Config.from_toml("data_out/config_log.toml", quiet=True)
+    >>> results = get_results(config)
+    >>> print(f"Infidelity: {results.infidelity}")
     """
     # Get output directory from config
     datadir = config.output_directory

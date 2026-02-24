@@ -107,27 +107,41 @@ def _run(
     MPI context (launched with mpirun), MPI will be used automatically. Otherwise
     runs serially.
 
-    Args:
-        setup: A Setup object.
-        max_n_procs: Max number of MPI processes to use. If specified and not in MPI context,
-            spawns subprocess. The actual number of cores will be determined based on the number of initial conditions.
-            If None, runs directly (serial or existing MPI context).
-        quiet: If True, suppress console output.
-        mpi_exec: MPI launcher command (e.g., "mpirun", "srun", "flux run"). Default: "mpirun".
-            Only used when spawning subprocess.
-        nproc_flag: Flag for specifying number of processes (e.g., "-np", "-n"). Default: "-np".
-            Only used when spawning subprocess.
-        python_exec: Path to Python executable. Defaults to sys.executable.
-            Only used when spawning subprocess.
-        working_dir: Working directory for subprocess. Defaults to current directory.
-            Only used when spawning subprocess.
+    Parameters
+    ----------
+    setup : Setup
+        A Setup object.
+    max_n_procs : int, optional
+        Max number of MPI processes to use. If specified and not in MPI
+        context, spawns subprocess. The actual number of cores will be
+        determined based on the number of initial conditions. If None,
+        runs directly (serial or existing MPI context).
+    quiet : bool
+        Suppress console output. Default: False.
+    mpi_exec : str
+        MPI launcher command (e.g., "mpirun", "srun", "flux run").
+        Default: "mpirun". Only used when spawning subprocess.
+    nproc_flag : str
+        Flag for specifying number of processes (e.g., "-np", "-n").
+        Default: "-np". Only used when spawning subprocess.
+    python_exec : str, optional
+        Path to Python executable. Default: sys.executable.
+        Only used when spawning subprocess.
+    working_dir : str
+        Working directory for subprocess. Default: ".".
+        Only used when spawning subprocess.
 
-    Returns:
-        Results containing output data and the validated configuration.
+    Returns
+    -------
+    Results
+        Output data and the validated configuration.
 
-    Raises:
-        RuntimeError: If the configuration is invalid or execution fails.
-        subprocess.CalledProcessError: If spawned subprocess fails.
+    Raises
+    ------
+    RuntimeError
+        If the configuration is invalid or execution fails.
+    subprocess.CalledProcessError
+        If spawned subprocess fails.
     """
     # Check MPI context
     comm = MPI.COMM_WORLD
@@ -265,7 +279,7 @@ def optimize(
 
     Copies the setup internally; the original is not modified.
 
-    Parameters:
+    Parameters
     ----------
     setup : Setup
         Physics setup from setup_quandary().
@@ -273,9 +287,9 @@ def optimize(
         Target unitary gate.
     targetstate : array-like, optional
         Target state vector.
-    target_levels : Sequence[int], optional
+    target_levels : sequence of int, optional
         Target product state, e.g. [0, 0, 1].
-    gate_rot_freq : Sequence[float], optional
+    gate_rot_freq : sequence of float, optional
         Gate rotation frequencies [GHz].
     pcof : array-like, optional
         B-spline coefficients for warm-start.
@@ -287,7 +301,7 @@ def optimize(
         0.01 GHz (= 10 MHz).
     dry_run : bool
         If True, validate and return Results with config populated but do not
-        run. Use print(results.config) to inspect the full configuration.
+        run. Use ``print(results.config)`` to inspect the full configuration.
         Default: False.
     max_n_procs : int, optional
         Max MPI processes. Spawns subprocess if set.
@@ -302,7 +316,7 @@ def optimize(
     working_dir : str
         Working directory. Default: ".".
 
-    Returns:
+    Returns
     -------
     Results
         If dry_run=True, only results.config is populated.
@@ -347,7 +361,7 @@ def simulate(
 
     Copies the setup internally; the original is not modified.
 
-    Parameters:
+    Parameters
     ----------
     setup : Setup
         Physics setup from setup_quandary().
@@ -360,7 +374,7 @@ def simulate(
         Imaginary part of control pulses [MHz] per oscillator.
     dry_run : bool
         If True, validate and return Results with config populated but do not
-        run. Use print(results.config) to inspect the full configuration.
+        run. Use ``print(results.config)`` to inspect the full configuration.
         Default: False.
     max_n_procs : int, optional
         Max MPI processes. Spawns subprocess if set.
@@ -375,7 +389,7 @@ def simulate(
     working_dir : str
         Working directory. Default: ".".
 
-    Returns:
+    Returns
     -------
     Results
         If dry_run=True, only results.config is populated.
@@ -410,7 +424,7 @@ def evaluate_controls(
 
     Copies the setup internally; the original is not modified.
 
-    Parameters:
+    Parameters
     ----------
     setup : Setup
         Physics setup from setup_quandary().
@@ -420,7 +434,7 @@ def evaluate_controls(
         Sample rate [points per ns]. Default: 1.0.
     dry_run : bool
         If True, validate and return Results with config populated but do not
-        run. Use print(results.config) to inspect the full configuration.
+        run. Use ``print(results.config)`` to inspect the full configuration.
         Default: False.
     max_n_procs : int, optional
         Max MPI processes. Spawns subprocess if set.
@@ -435,7 +449,7 @@ def evaluate_controls(
     working_dir : str
         Working directory. Default: ".".
 
-    Returns:
+    Returns
     -------
     Results
         If dry_run=True, only results.config is populated.

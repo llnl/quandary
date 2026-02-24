@@ -56,12 +56,14 @@ def downsample_pulses(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, ntim
     This function is used to convert pulses defined at every time step to B-spline
     coefficients for piecewise constant (spline order 0) representation.
 
-    Parameters:
-    -----------
-    pt0 : Sequence[ndarray]
-        Real part of control pulses [MHz] for each oscillator. Size: (ntime+1,) per oscillator.
-    qt0 : Sequence[ndarray]
-        Imaginary part of control pulses [MHz] for each oscillator. Size: (ntime+1,) per oscillator.
+    Parameters
+    ----------
+    pt0 : sequence of ndarray
+        Real part of control pulses [MHz] per oscillator.
+        Shape: ``(ntime+1,)`` per oscillator.
+    qt0 : sequence of ndarray
+        Imaginary part of control pulses [MHz] per oscillator.
+        Shape: ``(ntime+1,)`` per oscillator.
     nsplines : int
         Number of B-spline basis functions.
     spline_knot_spacing : float
@@ -70,11 +72,11 @@ def downsample_pulses(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, ntim
         Number of time steps.
     dt : float
         Time step size [ns].
-    nessential : Sequence[int]
+    nessential : sequence of int
         Number of essential levels per oscillator.
 
-    Returns:
-    --------
+    Returns
+    -------
     pcof0 : ndarray
         Control parameter vector (B-spline coefficients) in rad/ns.
     """
