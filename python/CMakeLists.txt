@@ -17,22 +17,27 @@ set_target_properties(_quandary_impl PROPERTIES
     INSTALL_RPATH_USE_LINK_PATH TRUE
 )
 
-# Generate type stubs for IDE autocomplete
-nanobind_add_stub(
-    _quandary_impl_stub
-    MODULE _quandary_impl
-    OUTPUT _quandary_impl.pyi
-    PYTHON_PATH $<TARGET_FILE_DIR:_quandary_impl>
-    DEPENDS _quandary_impl
-    MARKER_FILE py.typed
-)
+# Generate type stubs for IDE autocomplete (requires typing_extensions on Python < 3.11)
+option(BUILD_PYTHON_STUBS "Generate Python type stubs (.pyi) for the nanobind module" ON)
+if(BUILD_PYTHON_STUBS)
+    nanobind_add_stub(
+        _quandary_impl_stub
+        MODULE _quandary_impl
+        OUTPUT _quandary_impl.pyi
+        PYTHON_PATH $<TARGET_FILE_DIR:_quandary_impl>
+        DEPENDS _quandary_impl
+        MARKER_FILE py.typed
+    )
+endif()
 
 install(TARGETS _quandary_impl LIBRARY DESTINATION ${QUANDARY_PYTHON_INSTALL_DIR})
-install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/py.typed
-    ${CMAKE_CURRENT_BINARY_DIR}/_quandary_impl.pyi
-    DESTINATION ${QUANDARY_PYTHON_INSTALL_DIR}
-)
+if(BUILD_PYTHON_STUBS)
+    install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/py.typed
+        ${CMAKE_CURRENT_BINARY_DIR}/_quandary_impl.pyi
+        DESTINATION ${QUANDARY_PYTHON_INSTALL_DIR}
+    )
+endif()
 
 # Install pure Python source files (only for direct CMake builds, not scikit-build-core)
 if(NOT SKBUILD)
