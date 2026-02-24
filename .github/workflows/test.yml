@@ -74,7 +74,7 @@ jobs:
       shell: spack-sh {0}
       run: |
         spack env activate .spack_env
-        python -m pip install pytest pytest-benchmark pydantic pandas matplotlib --prefer-binary
+        python -m pip install numpy mpi4py pytest pytest-benchmark pydantic pandas matplotlib --prefer-binary
 
     - name: Run cfg regression tests
       shell: spack-sh {0}
