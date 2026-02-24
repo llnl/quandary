@@ -70,7 +70,7 @@ The following defaults differ between the old `Quandary` dataclass and the new P
 |-----------------|-------------|-----------------|-------------|-------|
 | `initctrl_MHz` | `10.0` MHz | `optimize(control_initialization_amplitude=)` | `0.01` GHz | Old: scaled by `1/1000/sqrt(2)/N_carriers`; New: passed directly |
 | `control_enforce_BC` | `False` | `setup_quandary(control_zero_boundary_condition=)` | `True` | |
-| `nsplines` | auto from `spline_knot_spacing=3.0` | `setup_quandary(control_parametrization_num=)` | `10` | |
+| `nsplines` | auto from `spline_knot_spacing=3.0` | `setup_quandary(nspline=)` | `10` | |
 | `tol_costfunc` | `1e-4` | `Setup.optim_tol_final_cost` | `1e-8` | |
 | `gamma_leakage` | `0.1` | `Setup.optim_penalty_leakage` | `0.0` | |
 | `gamma_energy` | `0.1` | `Setup.optim_penalty_energy` | `0.0` | |
