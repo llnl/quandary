@@ -25,8 +25,6 @@ set_target_properties(quandary_bin PROPERTIES OUTPUT_NAME quandary)
 target_compile_definitions(quandary_lib PUBLIC TOML_ENABLE_UNRELEASED_FEATURES=1)
 
 # PETSc
-find_package(PkgConfig REQUIRED)
-pkg_search_module(PETSC REQUIRED IMPORTED_TARGET PETSc)
 target_link_libraries(quandary_lib PUBLIC PkgConfig::PETSC)
 
 # Put executable in root directory
@@ -43,10 +41,7 @@ if(SANITY_CHECK)
 endif()
 
 # Optional: Link to SLEPC
-option(WITH_SLEPC "Link to SLEPC" OFF)
 if(WITH_SLEPC)
-    find_package(PkgConfig REQUIRED)
-    pkg_search_module(SLEPC REQUIRED IMPORTED_TARGET SLEPc)
     target_link_libraries(quandary_lib PUBLIC PkgConfig::SLEPC)
     target_compile_options(quandary_lib PUBLIC -DWITH_SLEPC)
 endif()

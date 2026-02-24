@@ -69,6 +69,17 @@ configure_file(
     @ONLY
 )
 
+# PETSc
+find_package(PkgConfig REQUIRED)
+pkg_search_module(PETSC REQUIRED IMPORTED_TARGET PETSc)
+
+# Optional: SLEPC
+option(WITH_SLEPC "Link to SLEPC" OFF)
+if(WITH_SLEPC)
+    find_package(PkgConfig REQUIRED)
+    pkg_search_module(SLEPC REQUIRED IMPORTED_TARGET SLEPc)
+endif()
+
 # Add tomlplusplus
 find_package(tomlplusplus CONFIG QUIET)
 if(NOT tomlplusplus_FOUND)
