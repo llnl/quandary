@@ -98,8 +98,6 @@ def setup_quandary(
     """Create a Setup with physics parameters configured.
 
     Automatically computes Hamiltonians, timesteps, and carrier frequencies.
-    Does NOT set the runtype -- use optimize() or simulate() to configure for
-    a specific run type.
 
     **Time discretization:** specify at most 2 of (final_time, ntime, dt). If
     all 3 are given they must satisfy ``final_time == ntime * dt``. When ntime
