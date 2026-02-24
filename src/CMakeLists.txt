@@ -46,6 +46,18 @@ if(WITH_SLEPC)
     target_compile_options(quandary_lib PUBLIC -DWITH_SLEPC)
 endif()
 
+set(_bin_rpath_dirs "")
+if(PETSC_LIBRARY_DIRS)
+    list(APPEND _bin_rpath_dirs "${PETSC_LIBRARY_DIRS}")
+endif()
+if(SLEPC_LIBRARY_DIRS AND WITH_SLEPC)
+    list(APPEND _bin_rpath_dirs "${SLEPC_LIBRARY_DIRS}")
+endif()
+
+set_target_properties(quandary_bin PROPERTIES
+    INSTALL_RPATH "${_bin_rpath_dirs}"
+)
+
 install(
     TARGETS quandary_bin
     RUNTIME DESTINATION bin
