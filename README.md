@@ -93,6 +93,10 @@ sudo cmake --install . --prefix /your/install/path
 
 ### Python dependencies and interface
 
+Quandary has two Python interfaces:
+- **New (nanobind)**: `from quandary.new import *` — the recommended interface, built on nanobind C++ bindings.
+- **Old (deprecated)**: `from quandary import *` — the legacy class-based interface, which will be removed in a future version.
+
 Create a virtual environment and use `pip` to install Quandary's Python interface.
 
 For Conda:
@@ -138,8 +142,9 @@ which takes one argument being the name of the test-case's configuration file. T
 
 You can silence Quandary output by adding the `--quiet` argument to the above commands.
 
-The `examples/` folder exemplifies the usage of Quandary's Python interface. 
+The `examples/` folder exemplifies the usage of Quandary's Python interface.
 * `python example_cnot.py`
+* `QuandaryNewInterface_HowTo.ipynb` demonstrates the new nanobind-based Python interface
 
 # Building Documentation Locally
 
