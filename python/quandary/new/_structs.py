@@ -1,4 +1,17 @@
-"""Python subclasses of C++ structs with numpy-to-builtin conversion."""
+"""Python subclasses of C++ nanobind-bound structs.
+
+Each class in this module wraps a C++ configuration struct and adds:
+
+- **Numpy conversion**: numpy arrays, integers, and floats are automatically
+  converted to Python builtins before being passed to the C++ layer, so
+  ``setup.nlevels = np.array([2, 3])`` works seamlessly.
+- **Improved error messages**: ``TypeError`` messages include the field name,
+  the rejected value, and a hint when a negative integer is assigned to an
+  unsigned field.
+
+See the C++ docstrings on each field (accessible via ``help()``) for
+type information and allowed values.
+"""
 
 import numpy as np
 
@@ -12,7 +25,12 @@ from .._quandary_impl import (
 
 
 def _to_builtin(value):
-    """Convert numpy arrays/scalars to Python builtins for nanobind."""
+    """Recursively convert numpy types to Python builtins.
+
+    Nanobind's type-casters expect native Python types (``list``, ``int``,
+    ``float``), so this function converts numpy arrays and scalars before
+    they reach the C++ property setters.
+    """
     if isinstance(value, np.ndarray):
         return value.tolist()
     if isinstance(value, list):
@@ -25,12 +43,19 @@ def _to_builtin(value):
 
 
 def _fmt_val(v):
+    """Return a repr of *v* truncated to 80 characters for error messages."""
     r = repr(v).replace('\n', ' ')
     return r[:77] + '...' if len(r) > 80 else r
 
 
 def _make_repr(cpp_cls):
-    """Create a __repr__ method that discovers fields from the C++ base class."""
+    """Build a ``__repr__`` that introspects read-write fields on *cpp_cls*.
+
+    Fields are discovered by looking for descriptors that have both
+    ``__get__`` and ``__set__`` (i.e. nanobind ``def_rw`` properties).
+    Unset ``std::optional`` fields raise ``RuntimeError`` on access and
+    are silently skipped.
+    """
     def __repr__(self):
         fields = {}
         for name, val in cpp_cls.__dict__.items():
@@ -38,14 +63,12 @@ def _make_repr(cpp_cls):
                 try:
                     fields[name] = getattr(self, name)
                 except RuntimeError:
-                    # Skip unset optional fields (bad_optional_access)
                     pass
         lines = [f"{cpp_cls.__name__}("]
         for k, v in fields.items():
             try:
                 lines.append(f"  {k}={v!r},")
             except RuntimeError:
-                # Handle nested objects with unset optional fields
                 lines.append(f"  {k}=<{type(v).__name__}>,")
         lines.append(")")
         return "\n".join(lines)
@@ -53,7 +76,12 @@ def _make_repr(cpp_cls):
 
 
 def _numpy_setattr(cls_name):
-    """Create a __setattr__ that converts numpy types before delegating to C++."""
+    """Create a ``__setattr__`` that converts numpy types before delegating to C++.
+
+    The returned method calls :func:`_to_builtin` on every value, then
+    forwards to the C++ base-class setter.  On ``TypeError`` it re-raises
+    with a message that includes the class name, field name, and value.
+    """
     def __setattr__(self, name, value):
         value = _to_builtin(value)
         try:
@@ -67,30 +95,27 @@ def _numpy_setattr(cls_name):
 
 
 class InitialConditionSettings(_CppInitialConditionSettings):
+    __doc__ = _CppInitialConditionSettings.__doc__
     __setattr__ = _numpy_setattr("InitialConditionSettings")
 
 
 class OptimTargetSettings(_CppOptimTargetSettings):
+    __doc__ = _CppOptimTargetSettings.__doc__
     __setattr__ = _numpy_setattr("OptimTargetSettings")
 
 
 class ControlParameterizationSettings(_CppControlParameterizationSettings):
+    __doc__ = _CppControlParameterizationSettings.__doc__
     __setattr__ = _numpy_setattr("ControlParameterizationSettings")
 
 
 class ControlInitializationSettings(_CppControlInitializationSettings):
+    __doc__ = _CppControlInitializationSettings.__doc__
     __setattr__ = _numpy_setattr("ControlInitializationSettings")
 
 
 class Setup(_CppSetup):
-    """Python subclass of the C++ Setup struct.
-
-    Extends the nanobind-bound C++ base class with:
-    - A readable ``__repr__`` that shows all field values.
-    - Improved ``TypeError`` messages with a hint when a negative integer
-      is assigned to an unsigned field.
-    - Automatic conversion of numpy types to Python builtins for nanobind.
-    """
+    __doc__ = _CppSetup.__doc__
     __setattr__ = _numpy_setattr("Setup")
 
     __repr__ = _make_repr(_CppSetup)
