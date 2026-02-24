@@ -129,6 +129,12 @@ using Setup = ConfigFieldsT<std::optional>;
  * and deprecated CFG format, as well as printing log of used configuration.
  * This class is immutable after construction.
  *
+ * @note Error handling: Use exceptions (std::runtime_error, std::invalid_argument)
+ * instead of logger.exitWithError(). The Config class is called from Python via
+ * nanobind, and exitWithError terminates the process — crashing Jupyter notebooks
+ * and other interactive sessions. Exceptions are caught by nanobind and converted
+ * to Python exceptions, allowing graceful error handling.
+ *
  * @note Adding a new toml configuration option:
  *
  * 1) Add new member variable to the Config class below
