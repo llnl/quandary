@@ -49,7 +49,7 @@ You can silence Quandary by adding the `--quiet` command line argument.
 
 ### Python Interface
 
-Quandary provides two Python interfaces: a **classic** interface (`quandary`) and a **new nanobind-based** interface (`quandary.new`). Both are installed together via `pip`.
+Quandary provides two Python interfaces: a **deprecated** interface (`quandary`) and a **new nanobind-based** interface (`quandary.new`). Both are installed together via `pip`.
 
 #### Installation
 
@@ -61,9 +61,9 @@ pip install .
 
 This compiles the C++ nanobind extension and installs everything including type stubs for IDE autocompletion. For development (editable Python sources), use `pip install -e .` instead — note that in editable mode type stubs may not be visible to IDEs.
 
-#### Classic interface
+#### Deprecated interface
 
-Test the classic interface with a working example:
+Test the deprecated interface with a working example:
 ```console
 cd examples
 python example_cnot.py
@@ -78,7 +78,7 @@ This example demonstrates:
 
 #### New nanobind interface (`quandary.new`)
 
-The new interface provides direct in-process integration with the C++ code (no subprocess overhead) and type-safe configuration.
+The new interface provides direct in-process integration with the C++ code and type-safe configuration.
 It is imported as `from quandary.new import *`.
 
 See the [Jupyter Notebook Tutorial](QuandaryNewInterface_HowTo.ipynb) in `examples/` for a full walkthrough.
