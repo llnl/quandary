@@ -40,6 +40,7 @@ jobs:
       uses: spack/setup-spack@v3
       with:
         spack_ref: v1.1.1
+        packages_ref: 3f482a6fca
 
     - name: Configure Spack
       run: |
