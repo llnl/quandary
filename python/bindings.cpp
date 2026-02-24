@@ -147,13 +147,13 @@ NB_MODULE(_quandary_impl, m) {
     "Mutable configuration builder for Quandary simulations.\n\n"
     "Use this class to build a configuration by setting individual fields.\n"
     "All fields are optional and will use defaults if not specified.\n"
-    "Pass to Config() or run() to validate and execute.\n\n"
+    "Pass to optimize(), simulate(), or evaluate_controls() to run.\n\n"
     "Example:\n"
-    "    config = Setup()\n"
-    "    config.nlevels = [2, 2]\n"
-    "    config.ntime = 100\n"
-    "    config.dt = 0.01\n"
-    "    results = run(config)\n\n"
+    "    setup = Setup()\n"
+    "    setup.nlevels = [2, 2]\n"
+    "    setup.ntime = 100\n"
+    "    setup.dt = 0.01\n"
+    "    results = simulate(setup)\n\n"
     "Note: Use .copy() to create independent copies of Setup objects.")
     .def(nb::init<>())
     .def(nb::init<const Setup&>(),
