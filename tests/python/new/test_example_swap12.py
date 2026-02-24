@@ -140,8 +140,8 @@ def test_example_swap12(tmp_path, request):
         dipole_coupling=Jkl,
         rotation_frequency=list(rotfreq),
         control_amplitude_bounds=list(maxctrl_MHz/1000),
-        spline_knot_spacing=3.0,              # Old default: new default is 10 splines
-        control_zero_boundary_condition=False, # Old default: new default is True
+        spline_knot_spacing=3.0,               # Old default: new default is 10 splines
+        control_zero_boundary_condition=False,  # Old default: new default is True
         output_directory=datadir_path,
         verbose=False,
     )

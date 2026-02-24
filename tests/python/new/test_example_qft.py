@@ -325,7 +325,7 @@ def test_example_qft(tmp_path, request):
         final_time=T,
         Pmin=Pmin,
         spline_knot_spacing=spline_knot_spacing,
-        control_zero_boundary_condition=False, # Old default: new default is True
+        control_zero_boundary_condition=False,  # Old default: new default is True
         output_directory=datadir_path,
         verbose=False,
     )

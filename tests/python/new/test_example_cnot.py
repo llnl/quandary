@@ -139,8 +139,8 @@ def test_example_cnot(tmp_path, request):
         final_time=T,
         dipole_coupling=[0.005],
         rotation_frequency=rotfreq,
-        spline_knot_spacing=3.0,              # Old default: new default is 10 splines
-        control_zero_boundary_condition=False, # Old default: new default is True
+        spline_knot_spacing=3.0,               # Old default: new default is 10 splines
+        control_zero_boundary_condition=False,  # Old default: new default is True
         output_directory=datadir_path,
         verbose=False,
     )

@@ -1,6 +1,6 @@
 """Tests that wrong-sized vector settings produce user-friendly ValidationError messages."""
 import pytest
-from quandary.new import setup_quandary, optimize, Config
+from quandary.new import setup_quandary, Config
 from quandary._quandary_impl import ValidationError
 
 

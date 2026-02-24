@@ -70,8 +70,8 @@ def test_example_state_to_state(tmp_path, request):
         control_amplitude_bounds=[maxctrl_MHz/1000],
         initial_state=initialcondition,
         final_time=T,
-        spline_knot_spacing=3.0,              # Old default: new default is 10 splines
-        control_zero_boundary_condition=False, # Old default: new default is True
+        spline_knot_spacing=3.0,               # Old default: new default is 10 splines
+        control_zero_boundary_condition=False,  # Old default: new default is True
         output_directory=datadir_path,
         verbose=False,
     )
