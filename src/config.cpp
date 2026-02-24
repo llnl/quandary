@@ -1354,6 +1354,9 @@ void Config::validate() const {
     if (!data.optim_target.gate_type.has_value() && !data.optim_target.filename.has_value()) {
       throw validators::ValidationError("optimization target of type GATE requires 'gate_type' or 'filename'");
     }
+    if (data.optim_target.gate_rot_freq.has_value() && data.optim_target.gate_rot_freq->size() != data.nlevels.size()) {
+      throw validators::ValidationError("optimization target gate_rot_freq size (" + std::to_string(data.optim_target.gate_rot_freq->size()) + ") must match number of oscillators (" + std::to_string(data.nlevels.size()) + ")");
+    }
   } else if (data.optim_target.type == TargetType::STATE) {
     if (!data.optim_target.levels.has_value() && !data.optim_target.filename.has_value()) {
       throw validators::ValidationError("optimization target of type STATE requires 'levels' or 'filename'");
