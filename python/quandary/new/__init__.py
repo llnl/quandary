@@ -30,7 +30,7 @@ from .._quandary_impl import (
 # Python subclass of Setup with __repr__ and improved TypeError messages
 from ._structs import Setup
 
-from .._quandary_impl import (
+from ._structs import (
     InitialConditionSettings,
     OptimTargetSettings,
     ControlParameterizationSettings,

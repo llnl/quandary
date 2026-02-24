@@ -16,8 +16,8 @@ from .._quandary_impl import (
     ControlInitializationType,
     OutputType,
 )
-from ._structs import Setup
-from .._quandary_impl import (
+from ._structs import (
+    Setup,
     InitialConditionSettings,
     OptimTargetSettings,
     ControlParameterizationSettings,
