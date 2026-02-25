@@ -264,7 +264,8 @@ then
     eval `${spack_cmd} env activate ${spack_env_path} --sh`
     python_version=$(python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
     export PYTHONPATH="${install_dir}/lib/python${python_version}/site-packages:${PYTHONPATH:-}"
-    python -m pip install numpy mpi4py pytest pytest-benchmark pydantic pandas matplotlib --prefer-binary
+    python -m pip install numpy pytest pytest-benchmark pydantic pandas matplotlib --prefer-binary
+    python -m pip install --no-binary :all: mpi4py
     mpi_exe=$(grep 'MPIEXEC_EXECUTABLE' "${hostconfig_path}" | cut -d'"' -f2 | sed 's/;/ /g')
 
     # TODO cfg: remove this later
@@ -291,7 +292,8 @@ then
     eval `${spack_cmd} env activate ${spack_env_path} --sh`
     python_version=$(python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
     export PYTHONPATH="${install_dir}/lib/python${python_version}/site-packages:${PYTHONPATH:-}"
-    python -m pip install numpy mpi4py pytest pytest-benchmark pydantic pandas matplotlib --prefer-binary
+    python -m pip install numpy pytest pytest-benchmark pydantic pandas matplotlib --prefer-binary
+    python -m pip install --no-binary :all: mpi4py
 
     timed_message "Run performance tests"
 
