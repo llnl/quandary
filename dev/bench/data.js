@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771633546104,
+  "lastUpdate": 1772062824217,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -2683,6 +2683,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
             "value": 4339.86,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Stefanie Guenther",
+            "username": "steffi7574",
+            "email": "guenther5@llnl.gov"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "e42fd776d47e0e8709b00a8e1fb3eceda7fe8ffa",
+          "message": "Merge pull request #116 from llnl/toml_for_python_dump\n\nPython interface dumps a TOML config file instead of CFG config file.",
+          "timestamp": "2026-02-24T18:01:08Z",
+          "url": "https://github.com/llnl/quandary/commit/e42fd776d47e0e8709b00a8e1fb3eceda7fe8ffa"
+        },
+        "date": 1772062822022,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "value": 0.7975266720168293,
+            "range": "0.7118876850669812",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "value": 87.6,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "value": 5.388027068693191,
+            "range": "0.4610813195460961",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "value": 4340.99,
             "unit": "MB"
           }
         ]
