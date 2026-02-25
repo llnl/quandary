@@ -17,5 +17,5 @@
 rocmcc_6_4_1_hip:
   variables:
     # Fix compiler mixing issues by specifying ^cray-mpich%llvm-amdgpu
-    SPEC: "${PROJECT_TIOGA_VARIANTS} +rocm amdgpu_target=gfx90a %llvm-amdgpu@=6.4.1 ^hip@6.4.1 ^cray-mpich%llvm-amdgpu ${PROJECT_TIOGA_DEPS}"
+    SPEC: "${PROJECT_TIOGA_VARIANTS} +rocm amdgpu_target=gfx90a %%llvm-amdgpu@=6.4.1 ${PROJECT_TIOGA_DEPS}"
   extends: .job_on_tioga
