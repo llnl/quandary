@@ -248,9 +248,10 @@ MasterEq::~MasterEq(){
 
 void MasterEq::initSparseMatSolver(){
 
-  /* Allocate system matrices. Those will be applied to subvectors u and v */
   PetscInt globalsize = dim; // Global size of subvectors u or v 
   PetscInt localsize = globalsize / mpisize_petsc;   // local subvector size
+
+  /* Allocate system matrices. Those will be applied to subvectors u and v */
 
   // Time-independent system Hamiltonian
   // Ad = real(-i Hsys) and Bd = imag(-i Hsys)
@@ -261,7 +262,50 @@ void MasterEq::initSparseMatSolver(){
   MatSetType(Ad, MATMPIAIJ);
   MatSetType(Bd, MATMPIAIJ);
   if (addT1 || addT2) MatMPIAIJSetPreallocation(Ad, noscillators+5, NULL, noscillators+5, NULL);
-  MatMPIAIJSetPreallocation(Bd, 1, NULL, 1, NULL);
+  // Compute preallocation for transmon resonator system
+  if (transmon_resonator_system) {
+    PetscInt rstart = 0, rend = 0;
+    MatGetOwnershipRange(Bd, &rstart, &rend);
+    std::vector<PetscInt> d_nnz(rend - rstart, 0);
+    std::vector<PetscInt> o_nnz(rend - rstart, 0);
+
+    int ntransmon = oscil_vec[0]->getNLevels();
+    int nresonator = oscil_vec[1]->getNLevels();
+
+    for (PetscInt row = rstart; row < rend; row++) {
+      PetscInt local_row = row - rstart;
+
+      auto count_col = [&](PetscInt col) {
+        if (col >= rstart && col < rend) {
+          d_nnz[local_row]++;
+        } else {
+          o_nnz[local_row]++;
+        }
+      };
+
+      count_col(row); // diagonal
+
+      if (decoherence_type == DecoherenceType::NONE) {
+        int row_tr = row / nresonator;
+        if (row_tr < ntransmon - 1) count_col(row + nresonator);
+        if (row_tr > 0)            count_col(row - nresonator);
+
+      } else {
+        int row_tr  = (row % dim_rho) / nresonator;
+        int row_tr2 = (row / dim_rho) / nresonator;
+        PetscInt stride = nresonator * dim_rho;
+
+        if (row_tr < ntransmon - 1)  count_col(row + nresonator);
+        if (row_tr > 0)              count_col(row - nresonator);
+        if (row_tr2 < ntransmon - 1) count_col(row + stride);
+        if (row_tr2 > 0)             count_col(row - stride);
+      }
+    }
+
+    MatMPIAIJSetPreallocation(Bd, 0, d_nnz.data(), 0, o_nnz.data());
+  } else {
+    MatMPIAIJSetPreallocation(Bd, 1, NULL, 1, NULL);
+  }
   MatSetUp(Ad);
   MatSetUp(Bd);
   MatSetFromOptions(Ad);
@@ -386,14 +430,20 @@ void MasterEq::initTransmonResonatorSparseMats(){
   int ntransmon = oscil_vec[0]->getNLevels();
   int nresonator = oscil_vec[1]->getNLevels();
   int ncut = int((ntransmon - 1)/2);  
+  const PetscInt nresonator_dimrho = nresonator * dim_rho;
 
   double resonator_detuning = oscil_vec[1]->getDetuning();
 
   // Time-independent system matrix
+  if (mpirank_world==0) printf("Setting constant Hsys...\n");
   for (PetscInt row = ilow; row<iupp; row++){ // Iterate ove local rows of the system matrix
 
     // Schroedinger solver: -Bd
     if (decoherence_type == DecoherenceType::NONE) { 
+
+      PetscInt cols[3];
+      PetscScalar vals[3];
+      PetscInt nnz = 0;
 
       // DIAGONAL: Transmon part 4*EC (n-n_g)^2 \otimes I_r
       int row_tr = row / nresonator ; // Iterates in the transmon subspace
@@ -401,53 +451,88 @@ void MasterEq::initTransmonResonatorSparseMats(){
       // DIAGONAL: Resonator part delta_r * I_t \otimes a'a_r
       int row_res = row % nresonator;  // Iterates in the resonator subspace
       val_diag += - resonator_detuning * row_res;
-      if (fabs(val_diag)>1e-14) MatSetValue(Bd, row, row, val_diag, ADD_VALUES);
+      if (fabs(val_diag)>1e-14) {
+        cols[nnz] = row;
+        vals[nnz] = val_diag;
+        nnz++;
+      }
 
       // OFFDIAGONAL: Transmon part -EJ/2 bidiag(1) \otimes I_r
-      row_tr = row / nresonator; // Iterates in the transmon subspace
       double val_off = Ej/2.0;
-      if (row_tr < ntransmon -1) MatSetValue(Bd, row, row + nresonator, val_off, ADD_VALUES); // upper diag
-      if (row_tr > 0)            MatSetValue(Bd, row, row - nresonator, val_off, ADD_VALUES); // lower diag
+      if (row_tr < ntransmon -1) {
+        cols[nnz] = row + nresonator;
+        vals[nnz] = val_off;
+        nnz++;
+      }
+      if (row_tr > 0) {
+        cols[nnz] = row - nresonator;
+        vals[nnz] = val_off;
+        nnz++;
+      }
+      if (nnz > 0) MatSetValues(Bd, 1, &row, nnz, cols, vals, ADD_VALUES);
 
 
     // Lindblad solver: -I_n \kron Bd + Bd \kron I_n
     } else {
 
+      PetscInt cols[5];
+      PetscScalar vals[5];
+      PetscInt nnz = 0;
+
+      const PetscInt row_mod = row % dim_rho;
+      const PetscInt row_div = row / dim_rho;
+
       // DIAGONAL: Transmon part 4*EC (n-n_g)^2 \otimes I_r
-      int row_tr = row % dim_rho;   // For -I_n \kron Bd term
-      row_tr = row_tr / nresonator ; // Iterates over transmon subspace
+      int row_tr = row_mod / nresonator ; // Iterates over transmon subspace
       double val_diag = - 4.0 * Ec * (row_tr - ncut - charge_offset) * (row_tr - ncut- charge_offset);
 
-      int row_tr2 = row / dim_rho; // For Bd \kron I_n
-      row_tr2 = row_tr2 / nresonator ; // Iterates over transmon subspace
-      val_diag +=   4.0 * Ec * (row_tr2 - ncut - charge_offset) * (row_tr2 - ncut - charge_offset);
+      int row_tr2 = row_div / nresonator; // For Bd \kron I_n, iterates over transmon subspace
+      val_diag += 4.0 * Ec * (row_tr2 - ncut - charge_offset) * (row_tr2 - ncut - charge_offset);
 
       // DIAGONAL: Resonator part delta_r * I_t \otimes a'a_r
-      int row_res = row % dim_rho; // For -I_n \kron Bd term
-      row_res = row_res % nresonator; // Iterates over resonator subspace
+      int row_res = row_mod % nresonator; // Iterates over resonator subspace
       val_diag += - resonator_detuning * row_res;
 
-      int row_res2 = row / dim_rho; // For Bd \kron I_n
-      row_res2 = row_res2 % nresonator; // Iterates over resonator subspace
-      val_diag +=   resonator_detuning * row_res2;
-      if (fabs(val_diag)>1e-12) MatSetValue(Bd, row, row, val_diag, ADD_VALUES);
+      int row_res2 = row_div % nresonator; // Iterates over resonator subspace
+      val_diag += resonator_detuning * row_res2;
+      if (fabs(val_diag)>1e-12) {
+        cols[nnz] = row;
+        vals[nnz] = val_diag;
+        nnz++;
+      }
 
       // OFFDIAGONAL: Transmon part -EJ/2 bidiag(1) \otimes I_r
-      row_tr = row % dim_rho; // For -I_n \kron Bd term
-      row_tr = row_tr / nresonator; // Iterates over transmon subspace
       double val_off = -Ej/2.0;
-      if (row_tr < ntransmon -1) MatSetValue(Bd, row, row + nresonator, -val_off, ADD_VALUES); // upper 
-      if (row_tr > 0)            MatSetValue(Bd, row, row - nresonator, -val_off, ADD_VALUES); // lower 
+      if (row_tr < ntransmon -1) {
+        cols[nnz] = row + nresonator;
+        vals[nnz] = -val_off;
+        nnz++;
+      }
+      if (row_tr > 0) {
+        cols[nnz] = row - nresonator;
+        vals[nnz] = -val_off;
+        nnz++;
+      }
 
-      row_tr2 = row / dim_rho; // For Bd \kron I_n term
-      row_tr2 = row_tr2 / nresonator; // Iterates over transmon subspace
-      if (row_tr2 < ntransmon -1) MatSetValue(Bd, row, row + nresonator*dim_rho, val_off, ADD_VALUES); // upper 
-      if (row_tr2 > 0)            MatSetValue(Bd, row, row - nresonator*dim_rho, val_off, ADD_VALUES); // lower
+      row_tr2 = row_div / nresonator; // Iterates over transmon subspace
+      if (row_tr2 < ntransmon -1) {
+        cols[nnz] = row + nresonator_dimrho;
+        vals[nnz] = val_off;
+        nnz++;
+      }
+      if (row_tr2 > 0) {
+        cols[nnz] = row - nresonator_dimrho;
+        vals[nnz] = val_off;
+        nnz++;
+      }
+
+      if (nnz > 0) MatSetValues(Bd, 1, &row, nnz, cols, vals, ADD_VALUES);
     }
 
   }   
 
   /* Interaction matrix */
+  if (mpirank_world==0) printf("Setting Interaction matrix...\n");
   // -g sin(wrot*t) (n_t \otimes (a_r + a_r^+)) - i g cos(wrot*t) (n_t \otimes (a_r - a_r^+))
   // Here, only the time-independent part is initialized, to be modulated with sin/cos in the RHS application.
   // Schroedinger solver: 
@@ -461,88 +546,155 @@ void MasterEq::initTransmonResonatorSparseMats(){
     if (decoherence_type == DecoherenceType::NONE) { 
       int row_tr = row / nresonator ; //
       int row_res = row % nresonator;
+      const double charge_factor = row_tr - ncut - charge_offset;
+
+      PetscInt bd_cols[2];
+      PetscScalar bd_vals[2];
+      PetscInt bd_nnz = 0;
+
+      PetscInt ad_cols[2];
+      PetscScalar ad_vals[2];
+      PetscInt ad_nnz = 0;
 
       // Bd_kl = Jkl * n_t \otimes (a_r + a_r^+), where n_t is diagonal with elements -ncut - chargeoffset, ..., ncut - chargeoffset
       if (row_res < nresonator -1) {// upper (a_r part)
-        double val = Jkl[0] * (row_tr - ncut - charge_offset) * sqrt(row_res +1);
-        if (fabs(val) > 1e-12) MatSetValue(Bd_vec[0], row, row + 1, val, ADD_VALUES); 
+        double val = Jkl[0] * charge_factor * sqrt(row_res +1);
+        if (fabs(val) > 1e-12) {
+          bd_cols[bd_nnz] = row + 1;
+          bd_vals[bd_nnz] = val;
+          bd_nnz++;
+        }
       }
       if (row_res > 0) { // lower ( + a_r^+ part)
-        double val = Jkl[0] * (row_tr - ncut - charge_offset) * sqrt(row_res);
-        if (fabs(val) > 1e-12) MatSetValue(Bd_vec[0], row, row - 1, val, ADD_VALUES); 
+        double val = Jkl[0] * charge_factor * sqrt(row_res);
+        if (fabs(val) > 1e-12) {
+          bd_cols[bd_nnz] = row - 1;
+          bd_vals[bd_nnz] = val;
+          bd_nnz++;
+        }
       }
+      if (bd_nnz > 0) MatSetValues(Bd_vec[0], 1, &row, bd_nnz, bd_cols, bd_vals, ADD_VALUES);
 
       // Ad_kl = - Jkl * n_t \otimes (a_r - a_r^+)
       if (row_res < nresonator -1) {// upper (a_r part)
-        double val = - Jkl[0] * (row_tr - ncut - charge_offset) * sqrt(row_res +1);
-        if (fabs(val) > 1e-12) MatSetValue(Ad_vec[0], row, row + 1, val, ADD_VALUES); 
+        double val = - Jkl[0] * charge_factor * sqrt(row_res +1);
+        if (fabs(val) > 1e-12) {
+          ad_cols[ad_nnz] = row + 1;
+          ad_vals[ad_nnz] = val;
+          ad_nnz++;
+        }
       }
       if (row_res > 0)            {
-        double val = Jkl[0] * (row_tr - ncut - charge_offset) * sqrt(row_res);
-        if (fabs(val) > 1e-12) MatSetValue(Ad_vec[0], row, row - 1, val, ADD_VALUES); // lower (-a_r^+ part)
+        double val = Jkl[0] * charge_factor * sqrt(row_res);
+        if (fabs(val) > 1e-12) {
+          ad_cols[ad_nnz] = row - 1;
+          ad_vals[ad_nnz] = val;
+          ad_nnz++;
+        }
       }
+      if (ad_nnz > 0) MatSetValues(Ad_vec[0], 1, &row, ad_nnz, ad_cols, ad_vals, ADD_VALUES);
     } else {
       // Lindblad solver: -I_n \kron Bd_kl + Bd_kl \kron I_n and -I_n \kron Ad_kl + Ad_kl \kron I_n
-      int row_tr = row % dim_rho; // For -I_n \kron Bd_kl term
-      row_tr = row_tr / nresonator ; //
-      int row_res = row % dim_rho;
-      row_res = row_res % nresonator;
+      const PetscInt row_mod = row % dim_rho;
+      const PetscInt row_div = row / dim_rho;
+
+      int row_tr = row_mod / nresonator;
+      int row_res = row_mod % nresonator;
+      const double charge_factor_left = row_tr - ncut - charge_offset;
+
+      PetscInt bd_cols[4];
+      PetscScalar bd_vals[4];
+      PetscInt bd_nnz = 0;
+
+      PetscInt ad_cols[4];
+      PetscScalar ad_vals[4];
+      PetscInt ad_nnz = 0;
 
       // -I_n \kron Bd_kl
       if (row_res < nresonator -1) { // upper (a_r part)
-        double val = Jkl[0] * (row_tr - ncut - charge_offset) * sqrt(row_res +1);
-        if (fabs(val) > 1e-12) MatSetValue(Bd_vec[0], row, row + 1, val, ADD_VALUES);
+        double val = Jkl[0] * charge_factor_left * sqrt(row_res +1);
+        if (fabs(val) > 1e-12) {
+          bd_cols[bd_nnz] = row + 1;
+          bd_vals[bd_nnz] = val;
+          bd_nnz++;
+        }
       }
       if (row_res > 0) {
-        double val = Jkl[0] * (row_tr - ncut - charge_offset) * sqrt(row_res);
-        if (fabs(val) > 1e-12) MatSetValue(Bd_vec[0], row, row - 1, val, ADD_VALUES); // lower (a_r part)
+        double val = Jkl[0] * charge_factor_left * sqrt(row_res);
+        if (fabs(val) > 1e-12) {
+          bd_cols[bd_nnz] = row - 1;
+          bd_vals[bd_nnz] = val;
+          bd_nnz++;
+        }
       }
 
       // Bd_kl \kron I_n
-      row_tr = row / dim_rho; // For Bd_kl \kron I_n term
-      row_tr = row_tr / nresonator ;
-      row_res = row / dim_rho;
-      row_res = row_res % nresonator;
+      row_tr = row_div / nresonator;
+      row_res = row_div % nresonator;
+      const double charge_factor_right = row_tr - ncut - charge_offset;
       if (row_res < nresonator -1) {
-        double val = Jkl[0] * (row_tr - ncut - charge_offset) * sqrt(row_res +1);
-        if (fabs(val) > 1e-12) MatSetValue(Bd_vec[0], row, row + 1*dim_rho, val, ADD_VALUES); // upper (a_r part)
+        double val = Jkl[0] * charge_factor_right * sqrt(row_res +1);
+        if (fabs(val) > 1e-12) {
+          bd_cols[bd_nnz] = row + dim_rho;
+          bd_vals[bd_nnz] = val;
+          bd_nnz++;
+        }
       }
       if (row_res > 0) {
-        double val = Jkl[0] * (row_tr - ncut - charge_offset) * sqrt(row_res);
-        if (fabs(val) > 1e-12) MatSetValue(Bd_vec[0], row, row - 1*dim_rho, val, ADD_VALUES); // lower (a_r part)
+        double val = Jkl[0] * charge_factor_right * sqrt(row_res);
+        if (fabs(val) > 1e-12) {
+          bd_cols[bd_nnz] = row - dim_rho;
+          bd_vals[bd_nnz] = val;
+          bd_nnz++;
+        }
       }
+      if (bd_nnz > 0) MatSetValues(Bd_vec[0], 1, &row, bd_nnz, bd_cols, bd_vals, ADD_VALUES);
 
       // -I_n \kron Ad_kl
-      row_tr = row % dim_rho; // For -I_n \kron Ad_kl term
-      row_tr = row_tr / nresonator ;
-      row_res = row % dim_rho;
-      row_res = row_res % nresonator;
+      row_tr = row_mod / nresonator;
+      row_res = row_mod % nresonator;
       if (row_res < nresonator -1) {
-        double val = -Jkl[0] * (row_tr - ncut - charge_offset) * sqrt(row_res +1);
-        if (fabs(val) > 1e-12) MatSetValue(Ad_vec[0], row, row + 1, val, ADD_VALUES); // upper (a_r part)
+        double val = -Jkl[0] * charge_factor_left * sqrt(row_res +1);
+        if (fabs(val) > 1e-12) {
+          ad_cols[ad_nnz] = row + 1;
+          ad_vals[ad_nnz] = val;
+          ad_nnz++;
+        }
       }
       if (row_res > 0) {
-        double val =  Jkl[0] * (row_tr - ncut - charge_offset) * sqrt(row_res);
-        if (fabs(val) > 1e-12) MatSetValue(Ad_vec[0], row, row - 1, val, ADD_VALUES); // lower (-a_r^+ part)
+        double val =  Jkl[0] * charge_factor_left * sqrt(row_res);
+        if (fabs(val) > 1e-12) {
+          ad_cols[ad_nnz] = row - 1;
+          ad_vals[ad_nnz] = val;
+          ad_nnz++;
+        }
       }
 
       // Ad_kl \kron I_n
-      row_tr = row / dim_rho; // For Ad_kl \kron I_n term
-      row_tr = row_tr / nresonator ;
-      row_res = row / dim_rho;
-      row_res = row_res % nresonator;
+      row_tr = row_div / nresonator;
+      row_res = row_div % nresonator;
       if (row_res < nresonator -1) {
-        double val = - Jkl[0] * (row_tr - ncut - charge_offset) * sqrt(row_res +1);
-        if (fabs(val) > 1e-12) MatSetValue(Ad_vec[0], row, row + 1*dim_rho, val, ADD_VALUES); // upper (a_r part)
+        double val = -Jkl[0] * charge_factor_right * sqrt(row_res +1);
+        if (fabs(val) > 1e-12) {
+          ad_cols[ad_nnz] = row + dim_rho;
+          ad_vals[ad_nnz] = val;
+          ad_nnz++;
+        }
       }
       if (row_res > 0) {  
-        double val = Jkl[0] * (row_tr - ncut - charge_offset) * sqrt(row_res);
-        if (fabs(val) > 1e-12) MatSetValue(Ad_vec[0], row, row - 1*dim_rho, val, ADD_VALUES); // lower (-a_r^+ part)
+        double val = Jkl[0] * charge_factor_right * sqrt(row_res);
+        if (fabs(val) > 1e-12) {
+          ad_cols[ad_nnz] = row - dim_rho;
+          ad_vals[ad_nnz] = val;
+          ad_nnz++;
+        }
       }
+      if (ad_nnz > 0) MatSetValues(Ad_vec[0], 1, &row, ad_nnz, ad_cols, ad_vals, ADD_VALUES);
     }
   }
 
   /* control Hamiltonians, for the resonator only */
+  if (mpirank_world==0) printf("Setting Control Matrix...\n");
   int osc_id = 1; // resonator
   initStdControlMats(osc_id, nresonator, 1);
 }
