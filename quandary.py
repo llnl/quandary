@@ -151,7 +151,7 @@ class Quandary:
     tol_gnorm_rel          : float = 1e-4
     costfunction           : str   = "Jtrace"                      
     optim_target           : str   = "gate, none"
-    gamma_tik0             : bool = 1e-4 
+    gamma_tik0             : float = 1e-4 
     gamma_tik0_interpolate : float = 0.0
     gamma_leakage          : float = 0.1 	       
     gamma_energy           : float = 0.1
@@ -202,9 +202,9 @@ class Quandary:
         if len(self.selfkerr) != len(self.Ne):
             self.selfkerr= np.zeros(len(self.Ne))
         if len(self.rotfreq) == 0:
-            self.rotfreq = self.freq01[:]
+            self.rotfreq = self.freq01
         if len(self.gate_rot_freq) == 0:
-            self.gate_rot_freq = self.rotfreq[:]
+            self.gate_rot_freq = np.zeros(len(self.rotfreq))
         
         if isinstance(self.initctrl_MHz, float) or isinstance(self.initctrl_MHz, int):
             max_alloscillators = self.initctrl_MHz
