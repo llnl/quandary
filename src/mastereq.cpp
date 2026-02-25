@@ -26,6 +26,10 @@ MasterEq::MasterEq(const Config& config, Oscillator** oscil_vec_, bool quietmode
   crosskerr = config.getCrossKerrCoupling();
   Jkl = config.getDipoleCoupling();
 
+  MPI_Comm_size(PETSC_COMM_WORLD, &mpisize_petsc);
+  MPI_Comm_rank(PETSC_COMM_WORLD, &mpirank_petsc);
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
+
   // Compute eta from rotation frequencies (eta_ij = w^r_i - w^r_j)
   const std::vector<double>& rot_freq = config.getRotationFrequency();
   eta.resize(nlevels.size() * (nlevels.size() - 1) / 2);
@@ -69,10 +73,6 @@ MasterEq::MasterEq(const Config& config, Oscillator** oscil_vec_, bool quietmode
     eta.resize(1);
     eta[0] = 2.*M_PI * config.getRotationFrequency()[1];
   }
-
-  MPI_Comm_size(PETSC_COMM_WORLD, &mpisize_petsc);
-  MPI_Comm_rank(PETSC_COMM_WORLD, &mpirank_petsc);
-  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
 
   /* Get dimensions */
   dim_rho = 1;
@@ -328,18 +328,20 @@ void MasterEq::initSparseMatSolver(){
 
   /* If a Hamiltonian file is given, read the system matrices from file. */ 
   if (hamiltonian_file_Hsys.has_value() || hamiltonian_file_Hc.has_value()) {
-    if (mpirank_world==0 && !quietmode) printf("\n# Reading Hamiltonian model from files.\n");
+    if (mpirank_world==0) printf("\n# Reading Hamiltonian model from files.\n");
 
     /* Read Hamiltonians from file */
     HamiltonianFileReader* py = new HamiltonianFileReader(hamiltonian_file_Hsys, hamiltonian_file_Hc, decoherence_type, dim_rho, quietmode);
     py->receiveHsys(Ad, Bd);
     py->receiveHc(Ac_vec, Bc_vec); 
-    if (mpirank_world==0 && !quietmode) printf("# Done. \n\n");
+    if (mpirank_world==0) printf("# Done. \n\n");
     delete py;
 
   } else if (transmon_resonator_system){
     /* If using transmon-resonator system, init those system and control matrices */
+    if (mpirank_world==0) printf("Hamiltonian: Transmon-resonator system. Initializing...\n");
     initTransmonResonatorSparseMats();
+    if (mpirank_world==0) printf(" Done.\n");
 
   } else {
     /* Else: Initialize with standard Hamiltonian model */
