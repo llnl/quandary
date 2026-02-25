@@ -1,5 +1,6 @@
 #include "defs.hpp"
 #include <math.h>
+#include <optional>
 #include <petscts.h>
 #include <vector>
 #include <assert.h>
@@ -19,10 +20,10 @@
 class HamiltonianFileReader{
   protected:
 
-    LindbladType lindbladtype; ///< Type of solver (Lindblad vs Schroedinger)
+    DecoherenceType decoherence_type; ///< Type of solver (Lindblad vs Schroedinger)
     PetscInt dim_rho; ///< Dimension of the Hilbert space (N)
-    std::string hamiltonian_file_Hsys; ///< Filename for system Hamiltonian data ('none' if not used)
-    std::string hamiltonian_file_Hc; ///< Filename for control Hamiltonian data ('none' if not used)
+    std::optional<std::string> hamiltonian_file_Hsys; ///< Filename for system Hamiltonian data
+    std::optional<std::string> hamiltonian_file_Hc; ///< Filename for control Hamiltonian data
     int mpirank_world; ///< Rank of global MPI communicator
     int mpisize_world; ///< Rank of global MPI communicator
     bool quietmode; ///< Flag for quiet mode operation
@@ -35,11 +36,11 @@ class HamiltonianFileReader{
      *
      * @param hamiltonian_file_Hsys Path to file containing system Hamiltonian data
      * @param hamiltonian_file_Hc Path to file containing control Hamiltonian data
-     * @param lindbladtype_ Type of solver (Lindblad or Schroedinger)
+     * @param decoherence_type_ Type of solver (Lindblad or Schroedinger)
      * @param dim_rho_ Dimension of the Hilbert space
      * @param quietmode_ Flag for quiet operation
      */
-    HamiltonianFileReader(std::string hamiltonian_file_Hsys, std::string hamiltonian_file_Hc, LindbladType lindbladtype_, PetscInt dim_rho_, bool quietmode_);
+    HamiltonianFileReader(std::optional<std::string> hamiltonian_file_Hsys, std::optional<std::string> hamiltonian_file_Hc, DecoherenceType decoherence_type_, PetscInt dim_rho_, bool quietmode_);
 
     ~HamiltonianFileReader();
 

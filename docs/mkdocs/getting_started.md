@@ -20,7 +20,7 @@ This automatically handles all dependencies including PETSc and MPI.
 - **PETSc** (Portable, Extensible Toolkit for Scientific Computation)
 - **MPI** implementation for parallel execution
 - **CMake** 3.23 or later
-- **C++ compiler** with C++14 support
+- **C++ compiler** with C++17 support
 
 **Steps:**
 
@@ -39,11 +39,11 @@ cd quandary
 
 Test your installation with the provided template:
 ```console
-./quandary config_template.cfg  # Serial execution
-mpirun -np 4 ./quandary config_template.cfg  # Parallel execution
+./quandary config_template.toml  # Serial execution
+mpirun -np 4 ./quandary config_template.toml  # Parallel execution
 ```
 
-Results are written as column-based text files in the output directory `data_out/`. The `config_template.cfg` is currently set to run a CNOT optimization test case. It lists all available options and configurations, and is filled with comments that should help users to set up new simulation and optimization runs, and match the input options to the equations found in this document.
+Results are written as column-based text files in the output directory `data_out/`. The `config_template.toml` is currently set to run a CNOT optimization test case. It lists all available options and configurations, and is filled with comments that should help users to set up new simulation and optimization runs, and match the input options to the equations found in this document.
 
 You can silence Quandary by adding the `--quiet` command line argument.
 

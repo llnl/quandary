@@ -23,13 +23,14 @@ class Output{
   bool quietmode; ///< Flag for reduced screen output
   
   FILE* optimfile; ///< Output file for logging optimization progress
-  int output_frequency; ///< Time domain output frequency (write every N time steps)
-  std::vector<std::vector<std::string> > outputstr; ///< List of output specifications for each oscillator
+  int output_timestep_stride; ///< Time domain output frequency (write every N time steps)
+  std::vector<OutputType> output_observables; ///< List of output types applied to all oscillators
 
+  size_t noscillators; ///< Number of oscillators in the system
   bool writeFullState; ///< Flag to determine if evolution of full state vector should be written to file
-  std::vector<bool> writeExpectedEnergy; ///< Flag to determine if evolution of expected energy per oscillator should be written to files
+  bool writeExpectedEnergy; ///< Flag to determine if evolution of expected energy per oscillator should be written to files
   bool writeExpectedEnergy_comp; ///< Flag to determine if evolution of expected energy of the full composite system should be written to file
-  std::vector<bool> writePopulation; ///< Flag to determine if the evolution of the energy level occupations per oscillator should be written to files
+  bool writePopulation; ///< Flag to determine if the evolution of the energy level occupations per oscillator should be written to files
   bool writePopulation_comp; ///< Flag to determine if the evolution of the energy level occupations of the full composite system should be written to file
   FILE *ufile; ///< File for writing real part of fullstate evolution
   FILE *vfile; ///< File for writing imaginary part of fullstate evolution
@@ -42,8 +43,8 @@ class Output{
   // Vec xseq; ///< Sequential vector for I/O operations
 
   public:
-    std::string datadir; ///< Directory path for output data files
-    int optim_monitor_freq; ///< Write output files every N optimization iterations
+    std::string output_dir; ///< Directory path for output data files
+    int output_optimization_stride; ///< Write output files every N optimization iterations
 
   public:
     Output();
@@ -54,10 +55,9 @@ class Output{
      * @param config Configuration parameters from input file
      * @param comm_petsc MPI communicator for PETSc parallelization
      * @param comm_init MPI communicator for initial condition parallelization
-     * @param noscillators Number of oscillators in the system
      * @param quietmode Flag for reduced output (default: false)
      */
-    Output(Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, int noscillators, bool quietmode=false);
+    Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bool quietmode=false);
 
     ~Output();
 
@@ -65,7 +65,7 @@ class Output{
      * @brief Writes optimization progress to history file.
      *
      * Called at every optimization iteration to log convergence data. 
-     * Optimization history will be written to `<datadir>/optim_history.dat`.
+     * Optimization history will be written to `<output_dir>/optim_history.dat`.
      *
      * @param optim_iter Current optimization iteration
      * @param objective Total objective function value
@@ -74,20 +74,21 @@ class Output{
      * @param Favg Average fidelity
      * @param cost Final-time cost term
      * @param tikh_regul Tikhonov regularization term
-     * @param penalty Penalty term
+     * @param penalty_leakage Penalty term for leakage
+     * @param penalty_weightedcost Weighted cost penalty
      * @param penalty_dpdm Second-order derivative penalty
      * @param penalty_energy Energy penalty term
      * @param penalty_variation Control variation penalty
      * @param obj_robust Universally robust objective term
      */
-    void writeOptimFile(int optim_iter, double objective, double gnorm, double stepsize, double Favg, double cost, double tikh_regul,  double penalty, double penalty_dpdm, double penalty_energy, double penalty_variation, double obj_robust);
+    void writeOptimFile(int optim_iter, double objective, double gnorm, double stepsize, double Favg, double cost, double tikh_regul,  double penalty_leakage, double penalty_dpdm, double penalty_energy, double penalty_variation, double penalty_weightedcost, double obj_robust);
 
     /**
      * @brief Writes current control pulses per oscillator and control parameters.
      *
-     * Called every optim_monitor_freq optimization iterations. 
-     * Control pulses are written to `<datadir>/control<ioscillator>.dat`
-     * Control parameters are written to `<datadir>/params.dat`
+     * Called every output_optimization_stride optimization iterations. 
+     * Control pulses are written to `<output_dir>/control<ioscillator>.dat`
+     * Control parameters are written to `<output_dir>/params.dat`
      *
      * @param params Current parameter vector
      * @param mastereq Pointer to master equation solver
@@ -99,16 +100,16 @@ class Output{
     /**
      * @brief Writes gradient vector for debugging adjoint calculations.
      * 
-     * Gradient is written to `<datadir>/grad.dat`
+     * Gradient is written to `<output_dir>/grad.dat`
      *
      * @param grad Gradient vector to output
      */
     void writeGradient(Vec grad);
 
     /**
-     * @brief Opens data files for time evolution output.
+     * @brief Opens data files for time evolution output for one oscillator.
      *
-     * Prepares files for writing full state, expected energy, and population evolution data. Called before timestepping starts.
+     * Prepares files for writing full state, expected energy, and population evolution data. Called before timestepping starts. 
      *
      * @param prefix Filename prefix for output files
      * @param initid Initial condition identifier

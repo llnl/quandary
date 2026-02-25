@@ -3,8 +3,14 @@ name: Build Check
 on:
   pull_request:
     branches: ['main']
+    paths-ignore: &ignore-docs
+      - '*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
   push:
     branches: ['main']
+    paths-ignore: *ignore-docs
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -26,7 +32,9 @@ jobs:
         submodules: recursive
 
     - name: Set up Spack
-      uses: spack/setup-spack@v2
+      uses: spack/setup-spack@v3
+      with:
+        spack_ref: v1.1.1
 
     - name: Configure Spack
       run: |

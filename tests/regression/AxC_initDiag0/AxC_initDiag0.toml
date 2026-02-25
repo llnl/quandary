@@ -1,0 +1,43 @@
+[system]
+nlevels = [3, 20]
+ntime = 100
+dt = 0.0001
+transition_frequency = [4416.66, 6840.815]
+selfkerr = [230.56, 0.0]
+crosskerr_coupling = 1.176000
+rotation_frequency = [4416.66, 6840.815]
+decoherence = { type = "both", decay_time = [80.0, 0.3892042], dephase_time = [26.0, 5.0] }
+initial_condition = {type = "diagonal", subsystem = [0]}
+
+[control]
+parameterization = { type = "spline", num = 75 }
+carrier_frequency = [
+  { subsystem = 0, value = [0.0, -230.56, 1.176] },
+  { subsystem = 1, value = [0.0, 1.176] }
+]
+initialization = [
+  { subsystem = 0, type = "constant", amplitude = 5.0 },
+  { subsystem = 1, type = "constant", amplitude = 1.0 }
+]
+amplitude_bound = [25.0, 100.0]
+zero_boundary_condition = true
+
+[optimization]
+target = {type = "state", levels = [0, 0]}
+objective = "Jmeasure"
+tolerance = { grad_abs = 1e-07, grad_rel = 1e-08, final_cost = 1e-05, infidelity = 1e-05 }
+maxiter = 200
+tikhonov = { coeff = 1e-05, use_x0 = false }
+penalty = { leakage = 1.0, weightedcost = 1.0, weightedcost_width = 0.5, dpdm = 0.0, energy = 0.1, variation = 0.0 }
+
+[output]
+directory = "data_out"
+observables = ["fullstate"]
+timestep_stride = 100
+optimization_stride = 1
+
+[solver]
+runtype = "simulation"
+usematfree = true
+linearsolver = { type = "gmres", maxiter = 20 }
+rand_seed = 1234

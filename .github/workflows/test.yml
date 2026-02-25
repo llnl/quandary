@@ -3,8 +3,14 @@ name: Build and Test
 on:
   pull_request:
     branches: ['main']
+    paths-ignore: &ignore-docs
+      - '*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
   push:
     branches: ['main']
+    paths-ignore: *ignore-docs
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -14,7 +20,7 @@ jobs:
   build-and-test:
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-24.04]
+        os: [macos-15, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     permissions:
       packages: write
@@ -25,16 +31,25 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.12"
+
     - name: Set up Spack
-      uses: spack/setup-spack@v2
+      uses: spack/setup-spack@v3
+      with:
+        spack_ref: v1.1.1
 
     - name: Configure Spack
       run: |
         spack mirror add --type binary --unsigned --oci-username GITHUB_USER --oci-password-variable GITHUB_TOKEN local-buildcache oci://ghcr.io/LLNL/quandary-spack-buildcache
 
-    - name: Add only use GCC on macOS
+    - name: Add only use GCC/clang on macOS
       if: runner.os == 'macOS'
       run: |
+        ls $(brew --prefix llvm@18)/bin
+        spack compiler find $(brew --prefix llvm@18)/bin
         spack compiler find /opt/homebrew/bin
 
     - name: Install
@@ -44,10 +59,28 @@ jobs:
         spack -e .spack_env add quandary@develop+test^openmpi
         spack -e .spack_env install --use-buildcache package:never
 
+    - name: Run C++ unit tests
+      shell: spack-sh {0}
+      env:
+        PRTE_MCA_rmaps_default_mapping_policy: :oversubscribe
+      run: |
+        spack env activate .spack_env
+        cd $(spack -e .spack_env location -b quandary)
+        ctest --output-on-failure --no-compress-output
+
+    - name: Run cfg regression tests
+      shell: spack-sh {0}
+      run: |
+        spack env activate .spack_env
+        export PATH=$(pwd):$PATH  # Use repo root binary (spack view has broken RPATH)
+        python -m pip install -e . --prefer-binary
+        pytest -v -s --mpi-opt="--oversubscribe" --config-format=cfg tests/regression
+
     - name: Run regression tests
       shell: spack-sh {0}
       run: |
         spack env activate .spack_env
+        export PATH=$(pwd):$PATH  # Use repo root binary (spack view has broken RPATH)
         python -m pip install -e . --prefer-binary
         pytest -v -s -m "not performance" --mpi-opt="--oversubscribe"
 

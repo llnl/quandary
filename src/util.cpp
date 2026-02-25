@@ -1,7 +1,87 @@
 #include "util.hpp"
 
+#include <algorithm>
+
 // Suppress compiler warnings about unused parameters in code with #ifdef
 #define UNUSED(expr) (void)(expr)
+
+
+void printHelp() {
+  printf("\nQuandary - Optimal control for open quantum systems\n");
+  printf("\nUSAGE:\n");
+  printf("  quandary <config_file> [--quiet] [--petsc-options \"options\"]\n");
+  printf("  quandary --version\n");
+  printf("  quandary --help\n");
+  printf("\nOPTIONS:\n");
+  printf("  <config_file>    Configuration file: .toml (preferred) or .cfg (deprecated) specifying system parameters\n");
+  printf("  --quiet           Reduce output verbosity\n");
+  printf("  --petsc-options   Pass options directly to PETSc/SLEPc (in quotes)\n");
+  printf("  --version         Show version information\n");
+  printf("  --help            Show this help message\n");
+  printf("\nEXAMPLES:\n");
+  printf("  quandary config.toml\n");
+  printf("  mpirun -np 4 quandary config.toml --quiet\n");
+  printf("  quandary config.toml --petsc-options \"-log_view -tao_view\"\n");
+  printf("  mpirun -np 4 quandary config.toml --quiet --petsc-options \"-log_view -tao_view\"\n");
+  printf("\n");
+}
+
+ParsedArgs parseArguments(int argc, char** argv) {
+  ParsedArgs args;
+
+  if (argc < 2 || std::string(argv[1]) == "--help") {
+    printHelp();
+    exit(0);
+  }
+
+  if (std::string(argv[1]) == "--version") {
+    printf("Quandary %s %s\n", QUANDARY_FULL_VERSION_STRING, QUANDARY_GIT_SHA);
+    exit(0);
+  }
+
+  args.config_filename = argv[1];
+
+  // Validate config file exists and is readable
+  std::ifstream test_file(args.config_filename);
+  if (!test_file.good()) {
+    printf("\nERROR: Cannot open config file '%s'\n", args.config_filename.c_str());
+    printf("Please check that the file exists and is readable.\n\n");
+    exit(1);
+  }
+  test_file.close();
+
+  // Parse quiet mode and PETSc options flags
+  std::string petsc_options;
+  for (int i=2; i<argc; i++) {
+    std::string arg = argv[i];
+    if (arg == "--quiet") {
+      args.quietmode = true;
+    } else if (arg == "--petsc-options" && i + 1 < argc) {
+      petsc_options = argv[++i];
+    }
+  }
+
+  // Build PETSc argc/argv
+  // Always include program name
+  args.petsc_argv.push_back(argv[0]);
+
+  // Parse PETSc options string into individual tokens
+  if (!petsc_options.empty()) {
+    std::istringstream iss(petsc_options);
+    std::string token;
+    while (iss >> token) {
+      args.petsc_tokens.push_back(token);
+    }
+
+    for (const auto& token : args.petsc_tokens) {
+      args.petsc_argv.push_back(const_cast<char*>(token.c_str()));
+    }
+  }
+
+  args.petsc_argc = args.petsc_argv.size();
+
+  return args;
+}
 
 double sigmoid(double width, double x){
   return 1.0 / ( 1.0 + exp(-width*x) );
@@ -74,7 +154,7 @@ PetscInt getVecID(const PetscInt row, const PetscInt col, const PetscInt dim){
 } 
 
 
-PetscInt mapEssToFull(const PetscInt i, const std::vector<int> &nlevels, const std::vector<int> &nessential){
+PetscInt mapEssToFull(const PetscInt i, const std::vector<size_t> &nlevels, const std::vector<size_t> &nessential){
 
   PetscInt id = 0;
   PetscInt index = i;
@@ -96,7 +176,7 @@ PetscInt mapEssToFull(const PetscInt i, const std::vector<int> &nlevels, const s
   return id;
 }
 
-PetscInt mapFullToEss(const PetscInt i, const std::vector<int> &nlevels, const std::vector<int> &nessential){
+PetscInt mapFullToEss(const PetscInt i, const std::vector<size_t> &nlevels, const std::vector<size_t> &nessential){
 
   PetscInt id = 0;
   PetscInt index = i;
@@ -109,7 +189,7 @@ PetscInt mapFullToEss(const PetscInt i, const std::vector<int> &nlevels, const s
     }
     PetscInt iblock = index / postdim;
     index = index % postdim;
-    if (iblock >= nessential[iosc]) return -1; // this row/col belongs to a guard level, no mapping defined. 
+    if (iblock >= static_cast<PetscInt>(nessential[iosc])) return -1; // this row/col belongs to a guard level, no mapping defined. 
     // move id to that block
     id += iblock * postdim_ess;  
   }
@@ -156,7 +236,7 @@ PetscInt mapFullToEss(const PetscInt i, const std::vector<int> &nlevels, const s
 
 // }
 
-int isEssential(const int i, const std::vector<int> &nlevels, const std::vector<int> &nessential) {
+int isEssential(const int i, const std::vector<size_t> &nlevels, const std::vector<size_t> &nessential) {
 
   int isEss = 1;
   int index = i;
@@ -168,7 +248,7 @@ int isEssential(const int i, const std::vector<int> &nlevels, const std::vector<
     }
     int itest = (int) index / postdim;
     // test if essential for this oscillator
-    if (itest >= nessential[iosc]) {
+    if (itest >= static_cast<int>(nessential[iosc])) {
       isEss = 0;
       break;
     }
@@ -178,7 +258,7 @@ int isEssential(const int i, const std::vector<int> &nlevels, const std::vector<
   return isEss; 
 }
 
-int isGuardLevel(const int i, const std::vector<int> &nlevels, const std::vector<int> &nessential){
+int isGuardLevel(const int i, const std::vector<size_t> &nlevels, const std::vector<size_t> &nessential){
   int isGuard =  0;
   int index = i;
   for (size_t iosc = 0; iosc < nlevels.size(); iosc++){
@@ -189,7 +269,7 @@ int isGuardLevel(const int i, const std::vector<int> &nlevels, const std::vector
     }
     int itest = (int) index / postdim;   // floor(i/n_post)
     // test if this is a guard level for this oscillator
-    if (itest == nlevels[iosc] - 1 && itest >= nessential[iosc]) {  // last energy level for system 'iosc'
+    if (itest == static_cast<int>(nlevels[iosc]) - 1 && itest >= static_cast<int>(nessential[iosc])) {  // last energy level for system 'iosc'
       isGuard = 1;
       break;
     }
@@ -651,4 +731,15 @@ bool isUnitary(const Mat V_re, const Mat V_im){
   MatDestroy(&D);
 
   return isunitary;
+}
+
+
+std::string toLower(std::string str) {
+  std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+  return str;
+}
+
+bool hasSuffix(const std::string& str, const std::string& suffix) {
+  return str.size() >= suffix.size() &&
+    str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }

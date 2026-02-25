@@ -1,12 +1,44 @@
 #include <petscmat.h>
+
+#include <cctype>
+#include <cstring>
+#include <map>
+#include <optional>
+#include <string>
+#include <fstream>
 #include <iostream>
 #include <vector>
+#include "version.hpp"
 #ifdef WITH_SLEPC
 #include <slepceps.h>
 #endif
 
 #pragma once
 
+/**
+ * @brief Structure for parsed command-line arguments.
+ */
+struct ParsedArgs {
+  bool quietmode = false; ///< Flag for quiet mode (reduced output)
+  std::string config_filename; ///< Configuration filename
+  int petsc_argc = 0; ///< PETSc argument count
+  std::vector<std::string> petsc_tokens; ///< PETSc option tokens
+  std::vector<char*> petsc_argv; ///< PETSc argument vector
+};
+
+/**
+ * Prints help message for command-line usage.
+ */
+void printHelp();
+
+/**
+ * Parses command-line arguments for the Quandary program.
+ *
+ * @param argc Number of command-line arguments.
+ * @param argv Array of command-line argument strings.
+ * @return ParsedArgs structure containing configuration filename, quiet mode flag, and PETSc options.
+ */
+ParsedArgs parseArguments(int argc, char** argv);
 
 /**
  * @brief Sigmoid function for smooth transitions.
@@ -69,7 +101,7 @@ PetscInt getVecID(const PetscInt row, const PetscInt col, const PetscInt dim);
  * @param nessential Number of essential levels per oscillator
  * @return int Corresponding index in full-dimension system
  */
-PetscInt mapEssToFull(const PetscInt i, const std::vector<int> &nlevels, const std::vector<int> &nessential);
+PetscInt mapEssToFull(const PetscInt i, const std::vector<size_t> &nlevels, const std::vector<size_t> &nessential);
 
 /**
  * @brief Maps index from full dimension to essential dimension system.
@@ -79,7 +111,7 @@ PetscInt mapEssToFull(const PetscInt i, const std::vector<int> &nlevels, const s
  * @param nessential Number of essential levels per oscillator
  * @return int Corresponding index in essential dimension system
  */
-PetscInt mapFullToEss(const PetscInt i, const std::vector<int> &nlevels, const std::vector<int> &nessential);
+PetscInt mapFullToEss(const PetscInt i, const std::vector<size_t> &nlevels, const std::vector<size_t> &nessential);
 
 /**
  * @brief Tests if density matrix index corresponds to an essential level.
@@ -89,7 +121,7 @@ PetscInt mapFullToEss(const PetscInt i, const std::vector<int> &nlevels, const s
  * @param nessential Number of essential levels per oscillator
  * @return int Non-zero if index corresponds to essential level
  */
-int isEssential(const int i, const std::vector<int> &nlevels, const std::vector<int> &nessential);
+int isEssential(const int i, const std::vector<size_t> &nlevels, const std::vector<size_t> &nessential);
 
 /**
  * @brief Tests if density matrix index corresponds to a guard level.
@@ -102,7 +134,7 @@ int isEssential(const int i, const std::vector<int> &nlevels, const std::vector<
  * @param nessential Number of essential levels per oscillator
  * @return int Non-zero if index corresponds to guard level
  */
-int isGuardLevel(const int i, const std::vector<int> &nlevels, const std::vector<int> &nessential);
+int isGuardLevel(const int i, const std::vector<size_t> &nlevels, const std::vector<size_t> &nessential);
 
 /**
  * @brief Computes Kronecker product \f$Id \otimes A\f$.
@@ -251,3 +283,71 @@ void copyLast(std::vector<Tval>& fillme, int tosize){
       // std::cout<<std::endl;
     // }
 };
+
+
+/**
+ * @brief Returns a lowercase version of the input string.
+ *
+ * @param str String to convert to lowercase.
+ * @return std::string Lowercase string
+ */
+std::string toLower(std::string str);
+
+/**
+ * @brief Checks if string ends with specified suffix.
+ *
+ * @param str Input string to check.
+ * @param suffix Suffix to look for.
+ * @return bool True if string ends with suffix, false otherwise.
+ */
+bool hasSuffix(const std::string& str, const std::string& suffix);
+
+
+/**
+ * @brief Generic enum parsing utility with case-insensitive lookup.
+ *
+ * @param str String value to parse into enum
+ * @param enum_map Map from string to enum values
+ * @return std::optional<T> Parsed enum value or nullopt if not found
+ */
+template<typename T>
+std::optional<T> parseEnum(const std::string& str, const std::map<std::string, T>& enum_map) {
+  auto it = enum_map.find(toLower(str));
+  if (it != enum_map.end()) {
+    return it->second;
+  } else {
+    return std::nullopt;
+  }
+}
+
+/**
+ * @brief Converts enum value back to string.
+ *
+ * @param value Enum value to convert
+ * @param type_map Map from string to enum values
+ * @return std::string String representation of enum value
+ */
+template <typename EnumType>
+std::string enumToString(EnumType value, const std::map<std::string, EnumType>& type_map) {
+  for (const auto& [str, enum_val] : type_map) {
+    if (enum_val == value) return str;
+  }
+  return "unknown";
+}
+
+/**
+ * @brief Generic enum parsing utility with case-insensitive lookup and default fallback.
+ *
+ * @param opt_str Optional string value to parse into enum
+ * @param enum_map Map from string to enum values
+ * @param default_value Default enum value to return if string is missing or invalid
+ * @return T Parsed enum value or default_value if not found
+ */
+template<typename T>
+T parseEnum(const std::optional<std::string>& opt_str, const std::map<std::string, T>& enum_map, const T& default_value) {
+  if (!opt_str.has_value()) {
+    return default_value;
+  }
+  auto result = parseEnum(opt_str.value(), enum_map);
+  return result.value_or(default_value);
+}

@@ -4,9 +4,15 @@ on:
   push:
     branches:
       - main
+    paths: &doxygen-paths
+      - 'src/**'
+      - 'include/**'
+      - '**/Doxyfile*'
+      - 'CMakeLists.txt'
   pull_request:
     branches:
       - main
+    paths: *doxygen-paths
 
 permissions:
   contents: write

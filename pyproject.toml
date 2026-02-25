@@ -1,6 +1,6 @@
 [project]
 name = "quandary"
-version = "4.3-dev"
+version = "4.4-dev"
 description = "Optimal control for open quantum systems"
 authors = [
     {name = "Stefanie Guenther",email = "guenther5@llnl.gov"}

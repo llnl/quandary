@@ -13,25 +13,24 @@ TimeStepper::TimeStepper() {
   writeTrajectoryDataFiles = false;
 }
 
-TimeStepper::TimeStepper(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_, int ninit_local_, double gamma_robust_) : TimeStepper() {
+TimeStepper::TimeStepper(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_, int ninit_local_, bool eval_robust_) : TimeStepper() {
   mastereq = mastereq_;
   ntime = ntime_;
   total_time = total_time_;
   output = output_;
   storeFWD = storeFWD_;
   ninit_local = ninit_local_;
-  gamma_robust = gamma_robust_;
+  eval_leakage = false;
+  eval_energy = false;
+  eval_dpdm = false;
+  eval_weightedcost = false;
+  weightedcost_width = 0.0;
+  eval_robust = eval_robust_;
 
   // Set local sizes of subvectors u,v in state x=[u,v]
   localsize_u = mastereq->getDim() / mpisize_petsc; 
   ilow = mpirank_petsc * localsize_u;
   iupp = ilow + localsize_u;         
-
-  /* Check if leakage term is added: Only if nessential is smaller than nlevels for at least one oscillator */
-  addLeakagePrevent = false; 
-  for (size_t i=0; i<mastereq->getNOscillators(); i++){
-    if (mastereq->nessential[i] < mastereq->nlevels[i]) addLeakagePrevent = true;
-  }
 
   /* Set the time-step size */
   dt = total_time / ntime;
@@ -52,7 +51,7 @@ TimeStepper::TimeStepper(MasterEq* mastereq_, int ntime_, double total_time_, Ou
       store_states.push_back(states_iinit);
       
       // If robust optimization, also allocate adjoint states
-      if (gamma_robust > 0.0){
+      if (eval_robust){
         std::vector<Vec> adj_states_iinit;
         for (int n = 0; n <=ntime; n++) {
           Vec sadj;
@@ -118,8 +117,9 @@ Vec TimeStepper::solveODE(int iinit_global, Vec rho_t0){
   /* Set initial condition  */
   VecCopy(rho_t0, x);
 
-  /* Store initial state for dpdm penalty */
-  if (gamma_penalty_dpdm > 1e-13){
+
+  /* Store initial state for dpdm integral term */
+  if (eval_dpdm){
     for (int i = 0; i < 2; i++) {
       Vec state;
       VecCreate(PETSC_COMM_WORLD, &state);
@@ -133,9 +133,10 @@ Vec TimeStepper::solveODE(int iinit_global, Vec rho_t0){
   }
 
   /* --- Loop over time interval --- */
-  penalty_integral = 0.0;
-  penalty_dpdm = 0.0;
-  energy_penalty_integral = 0.0;
+  leakage_integral = 0.0;
+  weightedcost_integral = 0.0;
+  energy_integral = 0.0;
+  dpdm_integral = 0.0;
   for (int n = 0; n < ntime; n++){
 
     /* current time */
@@ -154,27 +155,32 @@ Vec TimeStepper::solveODE(int iinit_global, Vec rho_t0){
     /* Take one time step */
     evolveFWD(tstart, tstop, x);
 
-    /* Add to penalty objective term */
-    if (gamma_penalty > 1e-13) penalty_integral += penaltyIntegral(tstop, x);
+    /* Add to integral leakage term */
+    if (eval_leakage) leakage_integral += evalLeakage(x);
 
-    /* Add to penalty for second derivative */
-    if (gamma_penalty_dpdm > 1e-13) {
-      // printf("DPDM Forward, f(%d %d %d) \n", n+1, n, n-1);
-      if (n > 0) penalty_dpdm += penaltyDpDm(x, dpdm_states[n%2], dpdm_states[(n+1)%2]);  // uses x, x_n, x_n-1
+    /* Add to integral weighted cost function term */
+    if (eval_weightedcost) weightedcost_integral += evalWeightedCost(tstop, x);
 
+    /* Add to second derivative variation term */
+    if (eval_dpdm) {
+      if (n > 0) dpdm_integral += evalDpDm(x, dpdm_states[n%2], dpdm_states[(n+1)%2]);  // uses x, x_n, x_n-1
       // Update storage of primal states. Should build a history of 3 states.
       VecCopy(x, dpdm_states[(n+1)%2]);
-      
     }
 
-    /* Add to energy penalty objective term */
-    if (gamma_penalty_energy > 1e-13) energy_penalty_integral += energyPenaltyIntegral(tstop);
+    /* Add to energy integral term */
+    if (eval_energy) energy_integral += evalEnergy(tstop);
 
 #ifdef SANITY_CHECK
     SanityTests(x, tstart);
 #endif
   }
-  penalty_dpdm = penalty_dpdm/ntime;
+
+  /* Average integral terms over time steps */
+  dpdm_integral = dpdm_integral/ntime;
+  leakage_integral = leakage_integral / ntime;
+  energy_integral = energy_integral / ntime;
+  weightedcost_integral = weightedcost_integral * dt;
 
   /* Store last time step */
   if (storeFWD) {
@@ -182,7 +188,7 @@ Vec TimeStepper::solveODE(int iinit_global, Vec rho_t0){
   }
 
   /* Clear out dpdm storage */
-  if (gamma_penalty_dpdm > 1e-13) {
+  if (eval_dpdm) {
     for (size_t i=0; i<dpdm_states.size(); i++) {
       VecDestroy(&(dpdm_states[i]));
     }
@@ -199,7 +205,7 @@ Vec TimeStepper::solveODE(int iinit_global, Vec rho_t0){
 }
 
 
-void TimeStepper::solveAdjointODE(int iinit_global, Vec rho_t0_bar, Vec finalstate, double Jbar_penalty, double Jbar_penalty_dpdm, double Jbar_energy_penalty) {
+void TimeStepper::solveAdjointODE(int iinit_global, Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) {
   int iinit_local = iinit_global % ninit_local;
 
   /* Reset gradient */
@@ -209,15 +215,15 @@ void TimeStepper::solveAdjointODE(int iinit_global, Vec rho_t0_bar, Vec finalsta
   VecCopy(rho_t0_bar, xadj);
 
   // add robust adjoint contribution at final time
-  if (storeFWD && gamma_robust > 0){
+  if (storeFWD && eval_robust){
     VecAXPY(xadj, 1.0, store_adj_states[iinit_local][ntime]);
   }
 
   /* Set terminal primal state */
   VecCopy(finalstate, xprimal);
 
-  /* Store states at N, N-1, N-2 for dpdm penalty */
-  if (gamma_penalty_dpdm > 1e-13){
+  /* Store states at N, N-1, N-2 for dpdm integral term */
+  if (eval_dpdm){
     for (int i = 0; i < 5; i++) {
       Vec state;
       VecCreate(PETSC_COMM_WORLD, &state);
@@ -241,14 +247,17 @@ void TimeStepper::solveAdjointODE(int iinit_global, Vec rho_t0_bar, Vec finalsta
     double tstart = (n-1) * dt;
     // printf("Backwards %d -> %d ... \n", n, n-1);
 
-    /* Derivative of energy penalty objective term */
-    if (gamma_penalty_energy > 1e-13) energyPenaltyIntegral_diff(tstop, Jbar_energy_penalty, redgrad);
+    /* Derivative of energy integral term */
+    if (eval_energy) evalEnergy_diff(tstop, Jbar_energy/ntime, redgrad);
 
-    /* Derivative of penalty term */
-    if (gamma_penalty_dpdm > 1e-13) penaltyDpDm_diff(n, xadj, Jbar_penalty_dpdm/ntime);
+    /* Derivative of dpdm term */
+    if (eval_dpdm) evalDpDm_diff(n, xadj, Jbar_dpdm/ntime);
 
-    /* Derivative of penalty objective term */
-    if (gamma_penalty > 1e-13) penaltyIntegral_diff(tstop, xprimal, xadj, Jbar_penalty);
+    /* Derivative of weighted cost term */
+    if (eval_weightedcost) evalWeightedCost_diff(tstop, xprimal, xadj, Jbar_weightedcost*dt);
+
+    /* Derivative of leakage term */
+    if (eval_leakage) evalLeakage_diff(xprimal, xadj, Jbar_leakage/ntime);
 
     /* Get the state at n-1. If Schroedinger solver, recompute it by taking a step backwards with the forward solver, otherwise get it from storage. */
     if (storeFWD){
@@ -260,12 +269,12 @@ void TimeStepper::solveAdjointODE(int iinit_global, Vec rho_t0_bar, Vec finalsta
     evolveBWD(tstop, tstart, xprimal, xadj, redgrad, true);
 
     /* Add robust adjoint contribution */
-    if (storeFWD && gamma_robust > 0){
+    if (storeFWD && eval_robust){
       VecAXPY(xadj, 1.0, store_adj_states[iinit_local][n-1]);
     }
 
     /* Update dpdm storage */
-    if (gamma_penalty_dpdm > 1e-13 ) {
+    if (eval_dpdm) {
       int k = ntime - n;
       int idx = 4-((k+4)%5);
       int idx1 = 4-(k%5);
@@ -275,7 +284,7 @@ void TimeStepper::solveAdjointODE(int iinit_global, Vec rho_t0_bar, Vec finalsta
   }
 
   /* Clear out dpdm storage */
-  if (gamma_penalty_dpdm > 1e-13) {
+  if (eval_dpdm) {
     for (size_t i=0; i<dpdm_states.size(); i++) {
       VecDestroy(&(dpdm_states[i]));
     }
@@ -283,94 +292,95 @@ void TimeStepper::solveAdjointODE(int iinit_global, Vec rho_t0_bar, Vec finalsta
   }
 }
 
-
-double TimeStepper::penaltyIntegral(double time, const Vec x){
-  double penalty = 0.0;
+double TimeStepper::evalLeakage(const Vec x){
   PetscInt dim_rho = mastereq->getDimRho(); // N
   double x_re, x_im;
 
-  /* weighted integral of the objective function */
-  if (penalty_param > 1e-13) {
-    double weight = 1./penalty_param * exp(- pow((time - total_time)/penalty_param, 2));
-
-    double obj_re = 0.0;
-    double obj_im = 0.0;
-    optim_target->evalJ(x, &obj_re, &obj_im);
-    double obj_cost = optim_target->finalizeJ(obj_re, obj_im);
-    penalty = weight * obj_cost * dt;
-  }
-
   /* Add guard-level occupation to prevent leakage. A guard level is the LAST NON-ESSENTIAL energy level of an oscillator */
-  if (addLeakagePrevent) {
-    double leakage = 0.0;
-    /* Sum over all diagonal elements that correspond to a non-essential guard level. */
-    for (PetscInt i=0; i<dim_rho; i++) {
-      if ( isGuardLevel(i, mastereq->nlevels, mastereq->nessential) ) {
-        // vectorize if lindblad
-        PetscInt vecID = i;
-        if (mastereq->lindbladtype != LindbladType::NONE) vecID = getVecID(i,i,dim_rho);
-        x_re = 0.0; 
-        x_im = 0.0;
-        if (ilow <= vecID && vecID < iupp) {
-          PetscInt id_global_x = vecID + mpirank_petsc*localsize_u; 
-          VecGetValues(x, 1, &id_global_x, &x_re);
-          id_global_x += localsize_u; 
-          VecGetValues(x, 1, &id_global_x, &x_im); 
-        }
-        leakage += (x_re * x_re + x_im * x_im) / (dt*ntime);
+  double leakage = 0.0;
+  /* Sum over all diagonal elements that correspond to a non-essential guard level. */
+  for (PetscInt i=0; i<dim_rho; i++) {
+    if ( isGuardLevel(i, mastereq->nlevels, mastereq->nessential) ) {
+      // vectorize if lindblad
+      PetscInt vecID = i;
+      if (mastereq->decoherence_type != DecoherenceType::NONE) vecID = getVecID(i,i,dim_rho);
+      x_re = 0.0; 
+      x_im = 0.0;
+      if (ilow <= vecID && vecID < iupp) {
+        PetscInt id_global_x = vecID + mpirank_petsc*localsize_u; 
+        VecGetValues(x, 1, &id_global_x, &x_re);
+        id_global_x += localsize_u; 
+        VecGetValues(x, 1, &id_global_x, &x_im); 
       }
+      leakage += (x_re * x_re + x_im * x_im);
     }
-    double mine = leakage;
-    MPI_Allreduce(&mine, &leakage, 1, MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
-    penalty += dt * leakage;
   }
+  double mine = leakage;
+  MPI_Allreduce(&mine, &leakage, 1, MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
 
-  return penalty;
+  return leakage;
 }
 
-void TimeStepper::penaltyIntegral_diff(double time, const Vec x, Vec xbar, double penaltybar){
+void TimeStepper::evalLeakage_diff(const Vec x, Vec xbar, double Jbar){
   PetscInt dim_rho = mastereq->getDimRho();  // N
 
-  /* Derivative of weighted integral of the objective function */
-  if (penalty_param > 1e-13){
-    double weight = 1./penalty_param * exp(- pow((time - total_time)/penalty_param, 2));
-    
-    double obj_cost_re = 0.0;
-    double obj_cost_im = 0.0;
-    optim_target->evalJ(x, &obj_cost_re, &obj_cost_im);
-
-    double obj_cost_re_bar = 0.0; 
-    double obj_cost_im_bar = 0.0;
-    optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
-    optim_target->evalJ_diff(x, xbar, weight*obj_cost_re_bar*penaltybar*dt, weight*obj_cost_im_bar*penaltybar*dt);
-  }
-
   /* If gate optimization: Derivative of adding guard-level occupation */
-  if (addLeakagePrevent) {
-    double x_re, x_im;
-    for (PetscInt i=0; i<dim_rho; i++) {
-      if ( isGuardLevel(i, mastereq->nlevels, mastereq->nessential) ) {
-        PetscInt  vecID = i;
-        if (mastereq->lindbladtype != LindbladType::NONE) vecID = getVecID(i,i,dim_rho);
-        x_re = 0.0; 
-        x_im = 0.0;
-        if (ilow <= vecID && vecID < iupp) {
-          PetscInt id_global_x = vecID + mpirank_petsc*localsize_u; 
-          VecGetValues(x, 1, &id_global_x, &x_re);
-          VecSetValue(xbar, id_global_x, 2.*x_re*penaltybar/ntime, ADD_VALUES);
-          id_global_x += localsize_u; 
-          VecGetValues(x, 1, &id_global_x, &x_im);
-          VecSetValue(xbar, id_global_x, 2.*x_im*penaltybar/ntime, ADD_VALUES);
-        }
+  double x_re, x_im;
+  for (PetscInt i=0; i<dim_rho; i++) {
+    if ( isGuardLevel(i, mastereq->nlevels, mastereq->nessential) ) {
+      PetscInt  vecID = i;
+      if (mastereq->decoherence_type != DecoherenceType::NONE) vecID = getVecID(i,i,dim_rho);
+      x_re = 0.0; 
+      x_im = 0.0;
+      if (ilow <= vecID && vecID < iupp) {
+        PetscInt id_global_x = vecID + mpirank_petsc*localsize_u; 
+        VecGetValues(x, 1, &id_global_x, &x_re);
+        VecSetValue(xbar, id_global_x, 2.*x_re*Jbar, ADD_VALUES);
+        id_global_x += localsize_u; 
+        VecGetValues(x, 1, &id_global_x, &x_im);
+        VecSetValue(xbar, id_global_x, 2.*x_im*Jbar, ADD_VALUES);
       }
     }
-    VecAssemblyBegin(xbar);
-    VecAssemblyEnd(xbar);
   }
+  VecAssemblyBegin(xbar);
+  VecAssemblyEnd(xbar);
+}
+
+double TimeStepper::evalWeightedCost(double time, const Vec x){
+
+  if (weightedcost_width <= 0.0) {
+    return 0.0;
+  }
+  /* weighted integral of the objective function */
+  double weight = 1./weightedcost_width* exp(- pow((time - total_time)/weightedcost_width, 2));
+  double obj_re = 0.0;
+  double obj_im = 0.0;
+  optim_target->evalJ(x, &obj_re, &obj_im);
+  double obj_cost = optim_target->finalizeJ(obj_re, obj_im);
+
+  return weight * obj_cost;
+}
+
+void TimeStepper::evalWeightedCost_diff(double time, const Vec x, Vec xbar, double Jbar){
+  if (weightedcost_width <= 0.0) {
+    return;
+  }
+  /* Derivative of weighted integral of the objective function */
+  double weight = 1./weightedcost_width* exp(- pow((time - total_time)/weightedcost_width, 2));
+  
+  double obj_cost_re = 0.0;
+  double obj_cost_im = 0.0;
+  optim_target->evalJ(x, &obj_cost_re, &obj_cost_im);
+
+  double obj_cost_re_bar = 0.0; 
+  double obj_cost_im_bar = 0.0;
+  optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
+  optim_target->evalJ_diff(x, xbar, weight*obj_cost_re_bar*Jbar, weight*obj_cost_im_bar*Jbar);
+  
 }
 
 
-double TimeStepper::penaltyDpDm(Vec x, Vec xm1, Vec xm2){
+double TimeStepper::evalDpDm(Vec x, Vec xm1, Vec xm2){
 
     // Get local data pointers
     const PetscScalar *xptr, *xm1ptr, *xm2ptr;
@@ -400,7 +410,7 @@ double TimeStepper::penaltyDpDm(Vec x, Vec xm1, Vec xm2){
 }
 
 
-void TimeStepper::penaltyDpDm_diff(int n, Vec xbar, double Jbar){
+void TimeStepper::evalDpDm_diff(int n, Vec xbar, double Jbar){
 
     const PetscScalar *xptr, *xm1ptr, *xm2ptr, *xp1ptr, *xp2ptr;
     Vec x = nullptr, xm1 = nullptr, xm2 = nullptr, xp1 = nullptr, xp2 = nullptr;
@@ -472,21 +482,21 @@ void TimeStepper::penaltyDpDm_diff(int n, Vec xbar, double Jbar){
  
 }
 
-double TimeStepper::energyPenaltyIntegral(double time){
+double TimeStepper::evalEnergy(double time){
   double pen = 0.0;
 
   /* Loop over oscillators */
   for (size_t iosc = 0; iosc < mastereq->getNOscillators(); iosc++) {
     double p,q;
     mastereq->getOscillator(iosc)->evalControl(time, &p, &q); 
-    pen += (p*p + q*q) / ntime;
+    pen += p*p + q*q;
   }
 
   return pen;
 }
 
 
-void TimeStepper::energyPenaltyIntegral_diff(double time, double penaltybar, Vec redgrad){
+void TimeStepper::evalEnergy_diff(double time, double Jbar, Vec redgrad){
 
   PetscInt col_shift = 0;
   double* grad_ptr;
@@ -497,9 +507,8 @@ void TimeStepper::energyPenaltyIntegral_diff(double time, double penaltybar, Vec
     /* Reevaluate the controls to set pbar, qbar */
     double p,q;
     mastereq->getOscillator(iosc)->evalControl(time, &p, &q); 
-    double pbar = penaltybar/ntime * 2.0 * p;
-    double qbar = penaltybar/ntime * 2.0 * q;
-
+    double pbar = Jbar * 2.0 * p;
+    double qbar = Jbar * 2.0 * q;
     /* Derivative of evalControls */
     double* grad_for_this_oscillator = grad_ptr + col_shift;
     mastereq->getOscillator(iosc)->evalControl_diff(time, grad_for_this_oscillator, pbar, qbar);
@@ -512,7 +521,7 @@ void TimeStepper::energyPenaltyIntegral_diff(double time, double penaltybar, Vec
 
 void TimeStepper::evolveBWD(const double /*tstart*/, const double /*tstop*/, const Vec /*x_stop*/, Vec /*x_adj*/, Vec /*grad*/, bool /*compute_gradient*/){}
 
-ExplEuler::ExplEuler(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_, int ninit_local_, double gamma_robust) : TimeStepper(mastereq_, ntime_, total_time_, output_, storeFWD_, ninit_local_, gamma_robust) {
+ExplEuler::ExplEuler(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_, int ninit_local_, bool eval_robust_) : TimeStepper(mastereq_, ntime_, total_time_, output_, storeFWD_, ninit_local_, eval_robust_) {
   MatCreateVecs(mastereq->getRHS(), &stage, NULL);
   VecZeroEntries(stage);
 }
@@ -550,7 +559,7 @@ void ExplEuler::evolveBWD(const double tstop,const  double tstart,const  Vec x, 
 
 }
 
-ImplMidpoint::ImplMidpoint(MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_, int ninit_local_, double gamma_robust) : TimeStepper(mastereq_, ntime_, total_time_, output_, storeFWD_, ninit_local_, gamma_robust) {
+ImplMidpoint::ImplMidpoint(MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_, int ninit_local_, bool eval_robust_) : TimeStepper(mastereq_, ntime_, total_time_, output_, storeFWD_, ninit_local_, eval_robust_) {
 
   /* Create and reset the intermediate vectors */
   MatCreateVecs(mastereq->getRHS(), &stage, NULL);
@@ -759,7 +768,7 @@ int ImplMidpoint::NeumannSolve(Mat A, Vec b, Vec y, double alpha, bool transpose
 
 
 
-CompositionalImplMidpoint::CompositionalImplMidpoint(int order_, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_, int ninit_local_, double gamma_robust): ImplMidpoint(mastereq_, ntime_, total_time_, linsolve_type_, linsolve_maxiter_, output_, storeFWD_, ninit_local_, gamma_robust) {
+CompositionalImplMidpoint::CompositionalImplMidpoint(int order_, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_, int ninit_local_, bool eval_robust_): ImplMidpoint(mastereq_, ntime_, total_time_, linsolve_type_, linsolve_maxiter_, output_, storeFWD_, ninit_local_, eval_robust_) {
 
   order = order_;
 
