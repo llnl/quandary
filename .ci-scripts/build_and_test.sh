@@ -280,6 +280,12 @@ then
         export LD_LIBRARY_PATH="${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH:-}"
     fi
 
+    # ROCm/HIP is an external spack package, so its libraries (e.g. libamdhip64.so)
+    # aren't in the spack view. Add ROCM_PATH/lib to LD_LIBRARY_PATH if available.
+    if [[ -n "${ROCM_PATH:-}" ]]; then
+        export LD_LIBRARY_PATH="${ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
+    fi
+
     mpi_exe=$(grep 'MPIEXEC_EXECUTABLE' "${hostconfig_path}" | cut -d'"' -f2 | sed 's/;/ /g')
 
     # TODO cfg: remove this later
@@ -320,6 +326,12 @@ then
     # pip-built packages (e.g. mpi4py) compiled with CCE need libmodules.so at runtime.
     if [[ -n "${CRAY_LD_LIBRARY_PATH:-}" ]]; then
         export LD_LIBRARY_PATH="${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH:-}"
+    fi
+
+    # ROCm/HIP is an external spack package, so its libraries (e.g. libamdhip64.so)
+    # aren't in the spack view. Add ROCM_PATH/lib to LD_LIBRARY_PATH if available.
+    if [[ -n "${ROCM_PATH:-}" ]]; then
+        export LD_LIBRARY_PATH="${ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
     fi
 
     timed_message "Run performance tests"
