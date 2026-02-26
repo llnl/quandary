@@ -417,6 +417,34 @@ void MasterEq::initSparseMatSolver(){
       MatAssemblyEnd(Bd_vec[i], MAT_FINAL_ASSEMBLY);
   }
 
+  // Matrices are fixed after initialization: lock sparsity pattern for faster repeated MatMult
+  MatSetOption(Ad, MAT_NEW_NONZERO_LOCATIONS, PETSC_FALSE);
+  MatSetOption(Bd, MAT_NEW_NONZERO_LOCATIONS, PETSC_FALSE);
+  MatSetOption(Ad, MAT_KEEP_NONZERO_PATTERN, PETSC_TRUE);
+  MatSetOption(Bd, MAT_KEEP_NONZERO_PATTERN, PETSC_TRUE);
+  MatSetOption(Ad, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);
+  MatSetOption(Bd, MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);
+  for (size_t i = 0; i < Ac_vec.size(); ++i) {
+    MatSetOption(Ac_vec[i], MAT_NEW_NONZERO_LOCATIONS, PETSC_FALSE);
+    MatSetOption(Ac_vec[i], MAT_KEEP_NONZERO_PATTERN, PETSC_TRUE);
+    MatSetOption(Ac_vec[i], MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);
+  }
+  for (size_t i = 0; i < Bc_vec.size(); ++i) {
+    MatSetOption(Bc_vec[i], MAT_NEW_NONZERO_LOCATIONS, PETSC_FALSE);
+    MatSetOption(Bc_vec[i], MAT_KEEP_NONZERO_PATTERN, PETSC_TRUE);
+    MatSetOption(Bc_vec[i], MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);
+  }
+  for (size_t i = 0; i < Ad_vec.size(); ++i) {
+    MatSetOption(Ad_vec[i], MAT_NEW_NONZERO_LOCATIONS, PETSC_FALSE);
+    MatSetOption(Ad_vec[i], MAT_KEEP_NONZERO_PATTERN, PETSC_TRUE);
+    MatSetOption(Ad_vec[i], MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);
+  }
+  for (size_t i = 0; i < Bd_vec.size(); ++i) {
+    MatSetOption(Bd_vec[i], MAT_NEW_NONZERO_LOCATIONS, PETSC_FALSE);
+    MatSetOption(Bd_vec[i], MAT_KEEP_NONZERO_PATTERN, PETSC_TRUE);
+    MatSetOption(Bd_vec[i], MAT_IGNORE_ZERO_ENTRIES, PETSC_TRUE);
+  }
+
   /* Allocate some auxiliary vectors */
   MatCreateVecs(Bd, &aux, NULL);
 }
