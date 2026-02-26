@@ -266,6 +266,13 @@ then
     export PYTHONPATH="${install_dir}/lib/python${python_version}/site-packages:${PYTHONPATH:-}"
     python -m pip install numpy pytest pytest-benchmark pydantic pandas matplotlib --prefer-binary
     python -m pip install --no-binary :all: mpi4py
+
+    # spack env activate doesn't add Cray PE runtime paths to LD_LIBRARY_PATH.
+    # pip-built packages (e.g. mpi4py) compiled with CCE need libmodules.so at runtime.
+    if [[ -n "${CRAY_LD_LIBRARY_PATH:-}" ]]; then
+        export LD_LIBRARY_PATH="${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH:-}"
+    fi
+
     mpi_exe=$(grep 'MPIEXEC_EXECUTABLE' "${hostconfig_path}" | cut -d'"' -f2 | sed 's/;/ /g')
 
     # TODO cfg: remove this later
@@ -294,6 +301,12 @@ then
     export PYTHONPATH="${install_dir}/lib/python${python_version}/site-packages:${PYTHONPATH:-}"
     python -m pip install numpy pytest pytest-benchmark pydantic pandas matplotlib --prefer-binary
     python -m pip install --no-binary :all: mpi4py
+
+    # spack env activate doesn't add Cray PE runtime paths to LD_LIBRARY_PATH.
+    # pip-built packages (e.g. mpi4py) compiled with CCE need libmodules.so at runtime.
+    if [[ -n "${CRAY_LD_LIBRARY_PATH:-}" ]]; then
+        export LD_LIBRARY_PATH="${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH:-}"
+    fi
 
     timed_message "Run performance tests"
 
