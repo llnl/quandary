@@ -435,7 +435,6 @@ void MasterEq::initTransmonResonatorSparseMats(){
   double resonator_detuning = oscil_vec[1]->getDetuning();
 
   // Time-independent system matrix
-  if (mpirank_world==0) printf("Setting constant Hsys...\n");
   for (PetscInt row = ilow; row<iupp; row++){ // Iterate ove local rows of the system matrix
 
     // Schroedinger solver: -Bd
@@ -532,7 +531,6 @@ void MasterEq::initTransmonResonatorSparseMats(){
   }   
 
   /* Interaction matrix */
-  if (mpirank_world==0) printf("Setting Interaction matrix...\n");
   // -g sin(wrot*t) (n_t \otimes (a_r + a_r^+)) - i g cos(wrot*t) (n_t \otimes (a_r - a_r^+))
   // Here, only the time-independent part is initialized, to be modulated with sin/cos in the RHS application.
   // Schroedinger solver: 
@@ -694,7 +692,6 @@ void MasterEq::initTransmonResonatorSparseMats(){
   }
 
   /* control Hamiltonians, for the resonator only */
-  if (mpirank_world==0) printf("Setting Control Matrix...\n");
   int osc_id = 1; // resonator
   initStdControlMats(osc_id, nresonator, 1);
 }
