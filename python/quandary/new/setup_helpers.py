@@ -71,6 +71,59 @@ def _get_output_dir(setup):
     return setup.output_directory or _DEFAULT_OUTPUT_DIR
 
 
+def _write_hamiltonian_files(output_directory, Hsys=None, Hc=None):
+    """Write custom Hamiltonian matrices to sparse COO format files.
+
+    Parameters
+    ----------
+    output_directory : str
+        Directory to write the files into (created if needed).
+    Hsys : ndarray, optional
+        System Hamiltonian matrix (complex). Written as sparse COO with
+        columns: row col real imag.
+    Hc : sequence of ndarray, optional
+        Control Hamiltonian matrices (complex), one per oscillator. Written
+        as sparse COO with columns: oscillator row col real imag.
+
+    Returns
+    -------
+    hsys_path : str or None
+        Absolute path to the Hsys file, or None if Hsys was not provided.
+    hc_path : str or None
+        Absolute path to the Hc file, or None if Hc was not provided.
+    """
+    os.makedirs(output_directory, exist_ok=True)
+    hsys_path = None
+    hc_path = None
+
+    if Hsys is not None:
+        hsys_path = os.path.join(output_directory, "hamiltonian_Hsys.dat")
+        H = np.asarray(Hsys, dtype=complex)
+        with open(hsys_path, "w", newline='\n') as f:
+            f.write("# row col Hsys_real Hsys_imag\n")
+            nz = np.nonzero(H)
+            for i, j in zip(*nz):
+                v = H[i, j]
+                f.write(f"{i} {j} {v.real:.13e} {v.imag:.13e}\n")
+
+    if Hc is not None and len(Hc) > 0:
+        hc_path = os.path.join(output_directory, "hamiltonian_Hc.dat")
+        with open(hc_path, "w", newline='\n') as f:
+            for iosc, Hc_osc in enumerate(Hc):
+                Hc_mat = np.asarray(Hc_osc, dtype=complex)
+                nz = np.nonzero(Hc_mat)
+                f.write("# oscillator row col Hc_real Hc_imag\n")
+                for i, j in zip(*nz):
+                    v = Hc_mat[i, j]
+                    f.write(f"{iosc} {i} {j} {v.real:.13e} {v.imag:.13e}\n")
+
+    paths = [p for p in (hsys_path, hc_path) if p is not None]
+    if paths:
+        logger.info("Hamiltonian operators written to %s", ", ".join(paths))
+
+    return hsys_path, hc_path
+
+
 def setup_quandary(
     nessential: Sequence[int],
     final_time: float,
@@ -89,6 +142,8 @@ def setup_quandary(
     spline_knot_spacing: Optional[float] = None,
     spline_order: Optional[int] = None,
     control_zero_boundary_condition: Optional[bool] = None,
+    hamiltonian_Hsys: Optional[np.ndarray] = None,
+    hamiltonian_Hc: Optional[Sequence[np.ndarray]] = None,
     initial_condition: Optional[InitialConditionSettings] = None,
     initial_levels: Optional[Sequence[int]] = None,
     initial_state: Optional[Sequence[complex]] = None,
@@ -154,6 +209,14 @@ def setup_quandary(
         Affects the knot spacing formula and carrier frequency defaults.
     control_zero_boundary_condition : bool, optional
         Force control pulses to start and end at zero.
+    hamiltonian_Hsys : ndarray, optional
+        Custom system Hamiltonian matrix (complex, in rad/ns). When provided,
+        the standard superconducting-qubit Hamiltonian model is bypassed and
+        this matrix is written to a sparse COO file for the C++ solver.
+    hamiltonian_Hc : sequence of ndarray, optional
+        Custom control Hamiltonian matrices (complex), one per oscillator.
+        When provided, these are written to a sparse COO file for the C++
+        solver. Can be used with or without hamiltonian_Hsys.
     initial_condition : InitialConditionSettings, optional
         Direct struct specification (advanced). For convenience, prefer
         initial_levels or initial_state.
@@ -236,14 +299,37 @@ def setup_quandary(
 
     # Build Hamiltonians
     nlevels = [nessential[i] + nguard[i] for i in range(nqubits)]
-    Hsys, Hc_re, Hc_im = hamiltonians(
-        N=nlevels,
-        transition_frequency=transition_frequency,
-        selfkerr=selfkerr,
-        crosskerr_coupling=crosskerr_coupling,
-        dipole_coupling=dipole_coupling,
-        rotation_frequency=rotation_frequency,
-    )
+    if hamiltonian_Hsys is not None:
+        # Custom Hsys provided — use it directly
+        Hsys = np.asarray(hamiltonian_Hsys, dtype=complex)
+        if hamiltonian_Hc is not None:
+            # Custom Hc provided — split into real/imag for timestep/carrier estimation
+            Hc_re = [np.asarray(h, dtype=complex).real for h in hamiltonian_Hc]
+            Hc_im = [np.asarray(h, dtype=complex).imag for h in hamiltonian_Hc]
+        else:
+            # No custom Hc — build standard a+aT operators for estimation
+            _, Hc_re, Hc_im = hamiltonians(
+                N=nlevels,
+                transition_frequency=transition_frequency,
+                selfkerr=selfkerr,
+                crosskerr_coupling=crosskerr_coupling,
+                dipole_coupling=dipole_coupling,
+                rotation_frequency=rotation_frequency,
+            )
+    else:
+        # Standard model
+        Hsys, Hc_re, Hc_im = hamiltonians(
+            N=nlevels,
+            transition_frequency=transition_frequency,
+            selfkerr=selfkerr,
+            crosskerr_coupling=crosskerr_coupling,
+            dipole_coupling=dipole_coupling,
+            rotation_frequency=rotation_frequency,
+        )
+        if hamiltonian_Hc is not None:
+            # Custom Hc with standard Hsys — still need Hc_re/Hc_im for estimation
+            Hc_re = [np.asarray(h, dtype=complex).real for h in hamiltonian_Hc]
+            Hc_im = [np.asarray(h, dtype=complex).imag for h in hamiltonian_Hc]
 
     # Handle time discretization: final_time = ntime * dt
     # User should specify at most 2 of the 3 parameters, unless they are consistent.
@@ -335,6 +421,18 @@ def setup_quandary(
     setup.output_directory = output_directory
     if control_zero_boundary_condition is not None:
         setup.control_zero_boundary_condition = control_zero_boundary_condition
+
+    # Write custom Hamiltonian files and set paths on Setup
+    if hamiltonian_Hsys is not None or hamiltonian_Hc is not None:
+        hsys_path, hc_path = _write_hamiltonian_files(
+            output_directory,
+            Hsys=hamiltonian_Hsys,
+            Hc=hamiltonian_Hc,
+        )
+        if hsys_path is not None:
+            setup.hamiltonian_file_Hsys = hsys_path
+        if hc_path is not None:
+            setup.hamiltonian_file_Hc = hc_path
 
     # Set control parameterizations if nspline or spline_order was specified
     if nspline is not None or spline_order is not None:
