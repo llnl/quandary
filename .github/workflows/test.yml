@@ -59,7 +59,9 @@ jobs:
         spack -e .spack_env rm quandary
         spack -e .spack_env add quandary@develop+test+python^openmpi
         spack -e .spack_env install --use-buildcache package:never
-        readelf -d .spack_env/.spack-env/view/lib/python*/site-packages/quandary/_quandary_impl*.so | grep -i rpath
+        if command -v readelf &>/dev/null; then
+          readelf -d .spack_env/.spack-env/view/lib/python*/site-packages/quandary/_quandary_impl*.so | grep -i rpath
+        fi
 
     - name: Run C++ unit tests
       shell: spack-sh {0}
