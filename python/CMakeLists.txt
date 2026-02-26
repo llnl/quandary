@@ -11,6 +11,20 @@ set_target_properties(_quandary_impl PROPERTIES
     INSTALL_RPATH_USE_LINK_PATH TRUE
 )
 
+# PETSc comes transitively through quandary_lib, but CMake's
+# INSTALL_RPATH_USE_LINK_PATH does not capture library directories
+# from PkgConfig imported targets that are inherited transitively.
+# Explicitly add PETSc/SLEPc library dirs to RPATH so the nanobind
+# extension can find libpetsc.so at runtime.
+if(PETSC_LIBRARY_DIRS)
+    set_property(TARGET _quandary_impl APPEND PROPERTY
+        INSTALL_RPATH "${PETSC_LIBRARY_DIRS}")
+endif()
+if(WITH_SLEPC AND SLEPC_LIBRARY_DIRS)
+    set_property(TARGET _quandary_impl APPEND PROPERTY
+        INSTALL_RPATH "${SLEPC_LIBRARY_DIRS}")
+endif()
+
 # Generate type stubs for IDE autocomplete (requires typing_extensions on Python < 3.11)
 option(BUILD_PYTHON_STUBS "Generate Python type stubs (.pyi) for the nanobind module" ON)
 if(BUILD_PYTHON_STUBS)
