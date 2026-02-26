@@ -832,20 +832,22 @@ int applyRHS_sparsemat(Mat RHS, Vec x, Vec y){
     // Grab current controls from the shell
     double p = shellctx->control_Re[iosc];
     double q = shellctx->control_Im[iosc];
-
-    // uout += q^k*Acu
-    MatMult(shellctx->Ac_vec[iosc], u, *shellctx->aux);
-    VecAXPY(uout, q, *shellctx->aux); 
-    // vout += q^kAcv
-    MatMult(shellctx->Ac_vec[iosc], v, *shellctx->aux);
-    VecAXPY(vout, q, *shellctx->aux);
-
-    // uout -= p^kBcv
-    MatMult(shellctx->Bc_vec[iosc], v, *shellctx->aux);
-    VecAXPY(uout, -1.*p, *shellctx->aux);
-    // vout += p^kBcu
-    MatMult(shellctx->Bc_vec[iosc], u, *shellctx->aux);
-    VecAXPY(vout, p, *shellctx->aux);
+    if (fabs(q) > 1e-14) {
+      // uout += q^k*Acu
+      MatMult(shellctx->Ac_vec[iosc], u, *shellctx->aux);
+      VecAXPY(uout, q, *shellctx->aux); 
+      // vout += q^kAcv
+      MatMult(shellctx->Ac_vec[iosc], v, *shellctx->aux);
+      VecAXPY(vout, q, *shellctx->aux);
+    }
+    if (fabs(p) > 1e-14) {
+      // uout -= p^kBcv
+      MatMult(shellctx->Bc_vec[iosc], v, *shellctx->aux);
+      VecAXPY(uout, -1.*p, *shellctx->aux);
+      // vout += p^kBcu
+      MatMult(shellctx->Bc_vec[iosc], u, *shellctx->aux);
+      VecAXPY(vout, p, *shellctx->aux);
+    }
   }
 
   /* --- Apply time-dependent system Hamiltonian (Jaynes-Cumming) --- */
@@ -923,19 +925,23 @@ int applyRHS_sparsemat_transpose(Mat RHS, Vec x, Vec y) {
     p = shellctx->control_Re[iosc];
     q = shellctx->control_Im[iosc];
 
+    if (fabs(q) > 1e-14) {
       // uout += q^k*Ac^Tu
       MatMultTranspose(shellctx->Ac_vec[iosc], u, *shellctx->aux);
       VecAXPY(uout, q, *shellctx->aux);
       // vout += q^kAc^Tv
       MatMultTranspose(shellctx->Ac_vec[iosc], v, *shellctx->aux);
       VecAXPY(vout, q, *shellctx->aux);
+    }
 
+    if (fabs(p) > 1e-14) {
       // uout += p^kBc^Tv
       MatMultTranspose(shellctx->Bc_vec[iosc], v, *shellctx->aux);
       VecAXPY(uout, p, *shellctx->aux);
       // vout -= p^kBc^Tu
       MatMultTranspose(shellctx->Bc_vec[iosc], u, *shellctx->aux);
       VecAXPY(vout, -1.*p, *shellctx->aux);
+    }
     }
 
 
