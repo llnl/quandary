@@ -85,7 +85,6 @@ def test_example_swap02(tmp_path, request):
         spline_knot_spacing=3.0,               # Match old default (new default: 10 splines)
         control_zero_boundary_condition=False,  # Match old default (new default: True)
         output_directory=datadir_path,
-        verbose=False,
     )
 
     # Match old interface defaults (see parameter_reference.md for differences)

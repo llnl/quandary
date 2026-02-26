@@ -73,7 +73,6 @@ def test_example_state_to_state(tmp_path, request):
         spline_knot_spacing=3.0,               # Old default: new default is 10 splines
         control_zero_boundary_condition=False,  # Old default: new default is True
         output_directory=datadir_path,
-        verbose=False,
     )
 
     # Match old interface defaults

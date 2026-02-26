@@ -13,7 +13,6 @@ def _make_setup(**overrides):
         final_time=1.0,
         ntime=10,
         spline_order=0,
-        verbose=False,
     )
     defaults.update(overrides)
     return setup_quandary(**defaults)
@@ -28,7 +27,6 @@ def _make_2q_setup(**overrides):
         final_time=1.0,
         ntime=10,
         spline_order=0,
-        verbose=False,
     )
     defaults.update(overrides)
     return setup_quandary(**defaults)
@@ -117,7 +115,6 @@ class TestCorrectSizeAccepted:
             transition_frequency=[4.0],
             final_time=1.0,
             ntime=10,
-            verbose=False,
         )
         config = Config(setup, True)
         assert config is not None

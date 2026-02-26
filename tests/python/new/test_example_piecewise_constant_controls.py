@@ -150,7 +150,6 @@ def test_example_piecewise_constant_controls(tmp_path, request):
         nspline=nsplines,
         control_zero_boundary_condition=control_enforce_BC,
         output_directory=datadir_path,
-        verbose=False,
     )
 
     # Match old interface defaults

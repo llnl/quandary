@@ -188,7 +188,6 @@ def test_example_spinchain(tmp_path, request):
         final_time=T,
         dt=dT,
         output_directory=datadir_path,
-        verbose=False,
     )
 
     # Match old interface defaults (relevant for simulation)

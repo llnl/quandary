@@ -16,7 +16,6 @@ def test_evaluate_controls_updates_timestep(tmp_path, request):
         transition_frequency=[4.0],
         final_time=T,
         output_directory=datadir_path,
-        verbose=False,
     )
 
     original_dt = setup.dt

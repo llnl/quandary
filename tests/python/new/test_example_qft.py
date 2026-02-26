@@ -327,7 +327,6 @@ def test_example_qft(tmp_path, request):
         spline_knot_spacing=spline_knot_spacing,
         control_zero_boundary_condition=False,  # Old default: new default is True
         output_directory=datadir_path,
-        verbose=False,
     )
 
     # Recompute carrier frequencies with custom thresholds to match old test
@@ -339,7 +338,6 @@ def test_example_qft(tmp_path, request):
         crosskerr_coupling=[],
         dipole_coupling=Jkl,
         rotation_frequency=list(rotfreq),
-        verbose=False,
     )
     carrier_freq, _ = get_resonances(
         nessential=Ne,
@@ -350,7 +348,6 @@ def test_example_qft(tmp_path, request):
         rotation_frequency=list(rotfreq),
         cw_amp_thres=cw_amp_thres,
         cw_prox_thres=cw_prox_thres,
-        verbose=False,
     )
     setup.carrier_frequencies = carrier_freq
 

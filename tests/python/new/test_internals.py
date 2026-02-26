@@ -16,7 +16,6 @@ def _make_setup(output_directory="./run_dir"):
         ntime=10,
         spline_order=0,
         output_directory=output_directory,
-        verbose=False,
     )
 
 

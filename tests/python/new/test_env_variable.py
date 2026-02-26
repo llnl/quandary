@@ -20,7 +20,6 @@ def run_optimize(datadir):
         ntime=10,
         spline_order=0,
         output_directory=datadir,
-        verbose=False,
     )
     setup.optim_maxiter = 1
     return optimize(
@@ -40,7 +39,6 @@ def run_simulate(datadir):
         ntime=10,
         spline_order=0,
         output_directory=datadir,
-        verbose=False,
     )
     return simulate(
         setup,

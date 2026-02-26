@@ -148,7 +148,6 @@ def test_example_cnot_withguardlevels(tmp_path, request):
         spline_order=spline_order,
         spline_knot_spacing=spline_knot_spacing,
         output_directory=datadir_path,
-        verbose=False,
     )
 
     # Match old interface defaults
