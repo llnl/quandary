@@ -565,6 +565,10 @@ int runQuandary(const Config& config, bool quietmode, int argc, char** argv, int
   VecDestroy(&xinit);
   VecDestroy(&grad);
 
+  /* Free split communicators */
+  MPI_Comm_free(&comm_init);
+  MPI_Comm_free(&comm_optim);
+  MPI_Comm_free(&comm_petsc);
 
   /* Finalize Petsc and MPI only if not in external mode.
    * When called from Python with mpi4py, MPI and PETSc are managed externally,
