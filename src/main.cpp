@@ -568,7 +568,6 @@ int runQuandary(const Config& config, bool quietmode, int argc, char** argv, int
   /* Free split communicators */
   MPI_Comm_free(&comm_init);
   MPI_Comm_free(&comm_optim);
-  MPI_Comm_free(&comm_petsc);
 
   /* Finalize Petsc and MPI only if not in external mode.
    * When called from Python with mpi4py, MPI and PETSc are managed externally,
@@ -580,7 +579,10 @@ int runQuandary(const Config& config, bool quietmode, int argc, char** argv, int
       PetscOptionsSetValue(NULL, "-options_left", "no"); // Remove warning about unused options.
       ierr = PetscFinalize();
     #endif
+    MPI_Comm_free(&comm_petsc);  // Free after PetscFinalize since PETSC_COMM_WORLD = comm_petsc
     MPI_Finalize();
+  } else {
+    MPI_Comm_free(&comm_petsc);  // Free after all PETSc objects are destroyed
   }
   return ierr;
 }
