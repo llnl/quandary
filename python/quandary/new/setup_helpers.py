@@ -93,7 +93,6 @@ def setup_quandary(
     initial_levels: Optional[Sequence[int]] = None,
     initial_state: Optional[Sequence[complex]] = None,
     output_directory: str = _DEFAULT_OUTPUT_DIR,
-    verbose: bool = True,
 ) -> Setup:
     """Create a Setup with physics parameters configured.
 
@@ -165,8 +164,6 @@ def setup_quandary(
     output_directory : str
         Output directory for generated files (initial state, etc.).
         Default: "./data_out".
-    verbose : bool
-        Print setup information. Default: True.
 
     Returns
     -------
@@ -246,7 +243,6 @@ def setup_quandary(
         crosskerr_coupling=crosskerr_coupling,
         dipole_coupling=dipole_coupling,
         rotation_frequency=rotation_frequency,
-        verbose=verbose,
     )
 
     # Handle time discretization: final_time = ntime * dt
@@ -288,7 +284,6 @@ def setup_quandary(
             Hc_re=Hc_re,
             Hc_im=Hc_im,
             rotation_frequency=rotation_frequency,
-            verbose=verbose,
         )
 
     # Validate spline_order
@@ -311,14 +306,13 @@ def setup_quandary(
             )
         nspline = computed_nspline
 
-    if verbose:
-        logger.info("Configuration computed:")
-        logger.info(f"  Total time: {ntime * dt:.6f} ns")
-        logger.info(f"  Time steps: {ntime}")
-        logger.info(f"  dt: {dt:.6f} ns")
-        logger.info(f"  Carrier frequencies: {carrier_frequency}")
-        if nspline is not None:
-            logger.info(f"  B-spline basis functions: {nspline}")
+    logger.info("Configuration computed:")
+    logger.info(f"  Total time: {ntime * dt:.6f} ns")
+    logger.info(f"  Time steps: {ntime}")
+    logger.info(f"  dt: {dt:.6f} ns")
+    logger.info(f"  Carrier frequencies: {carrier_frequency}")
+    if nspline is not None:
+        logger.info(f"  B-spline basis functions: {nspline}")
 
     # Create Setup with common fields
     setup = Setup()

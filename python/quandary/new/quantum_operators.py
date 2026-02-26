@@ -46,7 +46,7 @@ def map_to_oscillators(id, nessential, nguard):
     return localIDs
 
 
-def _eigen_and_reorder(H0, verbose=False):
+def _eigen_and_reorder(H0):
     """Compute eigen decomposition, re-ordered so the eigenvector matrix
     is as close to the identity as possible.
     """
@@ -90,7 +90,7 @@ def _eigen_and_reorder(H0, verbose=False):
 
 
 def get_resonances(*, nessential, nguard, Hsys, Hc_re=None, Hc_im=None, rotation_frequency=None, cw_amp_thres=1e-7,
-                   cw_prox_thres=1e-2, verbose=True, stdmodel=True):
+                   cw_prox_thres=1e-2, stdmodel=True):
     """Compute system resonances to use as carrier wave frequencies.
 
     Parameters
@@ -114,8 +114,6 @@ def get_resonances(*, nessential, nguard, Hsys, Hc_re=None, Hc_im=None, rotation
         Minimum frequency separation [GHz] between retained resonances.
         Resonances closer than this to an existing one are discarded.
         Default: 0.01.
-    verbose : bool
-        Print resonance information. Default: True.
     stdmodel : bool
         Reserved for future use. Default: True.
 
@@ -136,15 +134,14 @@ def get_resonances(*, nessential, nguard, Hsys, Hc_re=None, Hc_im=None, rotation
     if rotation_frequency is None:
         rotation_frequency = []
 
-    if verbose:
-        logger.info(f"\nComputing carrier frequencies, ignoring growth rate slower than: {cw_amp_thres} "
-                    f"and frequencies closer than: {cw_prox_thres} [GHz]")
+    logger.info(f"\nComputing carrier frequencies, ignoring growth rate slower than: {cw_amp_thres} "
+                f"and frequencies closer than: {cw_prox_thres} [GHz]")
 
     nqubits = len(nessential)
     n = Hsys.shape[0]
 
     # Get eigenvalues of system Hamiltonian (GHz)
-    Hsys_evals, Utrans = _eigen_and_reorder(Hsys, verbose)
+    Hsys_evals, Utrans = _eigen_and_reorder(Hsys)
     Hsys_evals = Hsys_evals.real  # Eigenvalues may have a small imaginary part due to numerical imprecision
     Hsys_evals = Hsys_evals / (2 * np.pi)
 
@@ -159,8 +156,7 @@ def get_resonances(*, nessential, nguard, Hsys, Hc_re=None, Hc_im=None, rotation
 
         resonances_a = []
         speed_a = []
-        if verbose:
-            logger.info(f"  Resonances in oscillator # {q}")
+        logger.info(f"  Resonances in oscillator # {q}")
 
         for Hc_trans in (Hsym_trans, Hanti_trans):
 
@@ -189,22 +185,19 @@ def get_resonances(*, nessential, nguard, Hsys, Hc_re=None, Hc_im=None, rotation
                     if (is_ess_i and is_ess_j):
                         # Ignore resonances that are too close by comparing to all previous resonances
                         if any(abs(delta_f - f) < cw_prox_thres for f in resonances_a):
-                            if verbose:
-                                logger.info(f"    Ignoring resonance from {ids_j} to {ids_i}, freq {delta_f}, "
-                                            f"growth rate= {abs(Hc_trans[i, j])} "
-                                            f"being too close to one that already exists.")
+                            logger.info(f"    Ignoring resonance from {ids_j} to {ids_i}, freq {delta_f}, "
+                                        f"growth rate= {abs(Hc_trans[i, j])} "
+                                        f"being too close to one that already exists.")
                         # Ignore resonances with growth rate smaller than user-defined threshold
                         elif abs(Hc_trans[i, j]) < cw_amp_thres:
-                            if verbose:
-                                logger.info(f"    Ignoring resonance from {ids_j} to {ids_i}, freq {delta_f}, "
-                                            f"growth rate= {abs(Hc_trans[i, j])} growth rate is too slow.")
+                            logger.info(f"    Ignoring resonance from {ids_j} to {ids_i}, freq {delta_f}, "
+                                        f"growth rate= {abs(Hc_trans[i, j])} growth rate is too slow.")
                         # Otherwise, add resonance to the list
                         else:
                             resonances_a.append(delta_f)
                             speed_a.append(abs(Hc_trans[i, j]))
-                            if verbose:
-                                logger.info(f"    Resonance from {ids_j} to {ids_i}, freq {delta_f}, "
-                                            f"growth rate= {abs(Hc_trans[i, j])}")
+                            logger.info(f"    Resonance from {ids_j} to {ids_i}, freq {delta_f}, "
+                                        f"growth rate= {abs(Hc_trans[i, j])}")
 
         # Append resonances for this qubit to overall list
         resonances.append(resonances_a)
@@ -227,7 +220,7 @@ def get_resonances(*, nessential, nguard, Hsys, Hc_re=None, Hc_im=None, rotation
 
 
 def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=None, dipole_coupling=None,
-                 rotation_frequency=None, verbose=True):
+                 rotation_frequency=None):
     """Create standard Hamiltonian operators for pulse-driven superconducting qubits.
 
     Parameters
@@ -247,8 +240,6 @@ def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=None, 
     rotation_frequency : sequence of float, optional
         Rotating frame frequencies for each qubit [GHz]. Default: zeros
         (lab frame).
-    verbose : bool
-        Print Hamiltonian setup information. Default: True.
 
     Returns
     -------
@@ -326,11 +317,10 @@ def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=None, 
     Hc_re = [Amat[q] + Amat[q].T for q in range(nqubits)]
     Hc_im = [Amat[q] - Amat[q].T for q in range(nqubits)]
 
-    if verbose:
-        logger.info(f"*** {nqubits} coupled quantum systems setup ***")
-        logger.info(f"System Hamiltonian frequencies [GHz]: f01 = {transition_frequency}, "
-                    f"rot. freq = {rotation_frequency}")
-        logger.info(f"Selfkerr= {selfkerr}")
-        logger.info(f"Coupling: X-Kerr= {crosskerr_coupling}, J-C= {dipole_coupling}")
+    logger.info(f"*** {nqubits} coupled quantum systems setup ***")
+    logger.info(f"System Hamiltonian frequencies [GHz]: f01 = {transition_frequency}, "
+                f"rot. freq = {rotation_frequency}")
+    logger.info(f"Selfkerr= {selfkerr}")
+    logger.info(f"Coupling: X-Kerr= {crosskerr_coupling}, J-C= {dipole_coupling}")
 
     return Hsys, Hc_re, Hc_im
