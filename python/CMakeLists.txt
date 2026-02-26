@@ -5,6 +5,12 @@ nanobind_add_module(_quandary_impl STABLE_ABI bindings.cpp)
 
 target_link_libraries(_quandary_impl PRIVATE quandary_lib)
 
+set_target_properties(_quandary_impl PROPERTIES
+    SKIP_BUILD_RPATH FALSE
+    BUILD_WITH_INSTALL_RPATH FALSE
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+)
+
 # Generate type stubs for IDE autocomplete (requires typing_extensions on Python < 3.11)
 option(BUILD_PYTHON_STUBS "Generate Python type stubs (.pyi) for the nanobind module" ON)
 if(BUILD_PYTHON_STUBS)
