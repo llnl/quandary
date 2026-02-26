@@ -261,10 +261,17 @@ then
 
     timed_message "Install python test dependencies"
 
+    # Activate spack env to get the correct python, compilers, and MPI in PATH
     eval `${spack_cmd} env activate ${spack_env_path} --sh`
+
+    # Add quandary's installed python package to PYTHONPATH since it's installed
+    # via cmake (not pip or spack), so it's not in pip's default site-packages search path
     python_version=$(python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
     export PYTHONPATH="${install_dir}/lib/python${python_version}/site-packages:${PYTHONPATH:-}"
+
     python -m pip install numpy pytest pytest-benchmark pydantic pandas matplotlib --prefer-binary
+    # Build mpi4py from source so it links against the spack env's MPI, not a
+    # prebuilt wheel's bundled MPI which would mismatch at runtime
     python -m pip install --no-binary :all: mpi4py
 
     # spack env activate doesn't add Cray PE runtime paths to LD_LIBRARY_PATH.
@@ -296,10 +303,17 @@ then
 
     timed_message "Install python test dependencies"
 
+    # Activate spack env to get the correct python, compilers, and MPI in PATH
     eval `${spack_cmd} env activate ${spack_env_path} --sh`
+
+    # Add quandary's installed python package to PYTHONPATH since it's installed
+    # via cmake (not pip or spack), so it's not in pip's default site-packages search path
     python_version=$(python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
     export PYTHONPATH="${install_dir}/lib/python${python_version}/site-packages:${PYTHONPATH:-}"
+
     python -m pip install numpy pytest pytest-benchmark pydantic pandas matplotlib --prefer-binary
+    # Build mpi4py from source so it links against the spack env's MPI, not a
+    # prebuilt wheel's bundled MPI which would mismatch at runtime
     python -m pip install --no-binary :all: mpi4py
 
     # spack env activate doesn't add Cray PE runtime paths to LD_LIBRARY_PATH.
