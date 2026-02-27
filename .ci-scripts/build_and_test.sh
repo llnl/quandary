@@ -270,9 +270,9 @@ then
     export PYTHONPATH="${install_dir}/lib/python${python_version}/site-packages:${PYTHONPATH:-}"
 
     python -m pip install numpy pytest pytest-benchmark pydantic pandas matplotlib --prefer-binary
-    # Build mpi4py from source so it links against the spack env's MPI, not a
-    # prebuilt wheel's bundled MPI which would mismatch at runtime
-    python -m pip install --no-binary :all: mpi4py
+    # Build mpi4py from source with the SAME MPI that Quandary uses
+    mpi_c_compiler=$(grep 'MPI_C_COMPILER' "${hostconfig_path}" | cut -d'"' -f2)
+    MPICC="${mpi_c_compiler}" python -m pip install --no-binary :all: --no-cache-dir mpi4py
 
     # spack env activate doesn't add Cray PE runtime paths to LD_LIBRARY_PATH.
     # pip-built packages (e.g. mpi4py) compiled with CCE need libmodules.so at runtime.
@@ -318,9 +318,9 @@ then
     export PYTHONPATH="${install_dir}/lib/python${python_version}/site-packages:${PYTHONPATH:-}"
 
     python -m pip install numpy pytest pytest-benchmark pydantic pandas matplotlib --prefer-binary
-    # Build mpi4py from source so it links against the spack env's MPI, not a
-    # prebuilt wheel's bundled MPI which would mismatch at runtime
-    python -m pip install --no-binary :all: mpi4py
+    # Build mpi4py from source with the SAME MPI that Quandary uses
+    mpi_c_compiler=$(grep 'MPI_C_COMPILER' "${hostconfig_path}" | cut -d'"' -f2)
+    MPICC="${mpi_c_compiler}" python -m pip install --no-binary :all: --no-cache-dir mpi4py
 
     # spack env activate doesn't add Cray PE runtime paths to LD_LIBRARY_PATH.
     # pip-built packages (e.g. mpi4py) compiled with CCE need libmodules.so at runtime.
