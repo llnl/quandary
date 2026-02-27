@@ -317,23 +317,14 @@ NB_MODULE(_quandary_impl, m) {
   // Finalize PETSc if initialized. Registered as a Python atexit handler
   // so PETSc is cleaned up before MPI is finalized.
   m.def("_finalize_petsc", []() {
-      int mpi_finalized = 0;
-      MPI_Finalized(&mpi_finalized);
-      fprintf(stderr, "[DEBUG] _finalize_petsc called, MPI already finalized: %d\n", mpi_finalized);
       PetscBool initialized = PETSC_FALSE;
       PetscInitialized(&initialized);
       if (initialized) {
         PetscBool finalized = PETSC_FALSE;
         PetscFinalized(&finalized);
         if (!finalized) {
-          fprintf(stderr, "[DEBUG] Calling PetscFinalize()\n");
           PetscFinalize();
-          fprintf(stderr, "[DEBUG] PetscFinalize() done\n");
-        } else {
-          fprintf(stderr, "[DEBUG] PETSc already finalized\n");
         }
-      } else {
-        fprintf(stderr, "[DEBUG] PETSc was never initialized\n");
       }
     });
 }
