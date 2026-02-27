@@ -313,4 +313,18 @@ NB_MODULE(_quandary_impl, m) {
     },
     nb::arg("filename"), nb::arg("quiet") = false,
     "Run a Quandary simulation or optimization from a TOML file");
+
+  // Finalize PETSc if initialized. Registered as a Python atexit handler
+  // so PETSc is cleaned up before MPI is finalized.
+  m.def("_finalize_petsc", []() {
+      PetscBool initialized = PETSC_FALSE;
+      PetscInitialized(&initialized);
+      if (initialized) {
+        PetscBool finalized = PETSC_FALSE;
+        PetscFinalized(&finalized);
+        if (!finalized) {
+          PetscFinalize();
+        }
+      }
+    });
 }

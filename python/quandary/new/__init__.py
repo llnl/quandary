@@ -5,6 +5,13 @@
 # MPI_Init called twice is undefined behavior, so this must happen before any C++ code.
 import mpi4py.MPI  # noqa: F401, E402
 
+# Register PETSc finalization to run before mpi4py's MPI_Finalize at exit.
+# atexit handlers fire in reverse registration order, so registering after
+# mpi4py ensures PETSc is finalized while MPI is still active.
+import atexit
+from .._quandary_impl import _finalize_petsc
+atexit.register(_finalize_petsc)
+
 # Re-export the nanobind implementation from the parent package
 from .._quandary_impl import (
     # Exceptions

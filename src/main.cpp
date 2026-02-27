@@ -29,11 +29,9 @@ int runQuandary(const Config& config, bool quietmode, int argc, char** argv, int
   char filename[255];
   PetscErrorCode ierr;
 
-  /* Track whether we initialized MPI/PETSc (for proper finalization).
-   * If MPI was already initialized (e.g., by mpi4py), we're in "external mode"
-   * and should not finalize either MPI or PETSc. This means PETSc resources
-   * may not be explicitly cleaned up on process exit, but repeated calls are
-   * safe since PetscInitialized() guards re-initialization. */
+  /* Track whether MPI was initialized externally (e.g. by Python).
+   * If so, Python handles MPI and PETSc init/finalize, allowing
+   * multiple runQuandary() calls in one process. */
   bool external_initialization = false;
   int mpi_already_initialized = 0;
   MPI_Initialized(&mpi_already_initialized);
@@ -569,10 +567,8 @@ int runQuandary(const Config& config, bool quietmode, int argc, char** argv, int
   MPI_Comm_free(&comm_init);
   MPI_Comm_free(&comm_optim);
 
-  /* Finalize Petsc and MPI only if not in external mode.
-   * When called from Python with mpi4py, MPI and PETSc are managed externally,
-   * allowing multiple run() calls in the same process without reinitialization errors. */
   if (!external_initialization) {
+    /* Finalize PETSc/SLEPc and MPI (standalone mode). */
     #ifdef WITH_SLEPC
       ierr = SlepcFinalize();
     #else
@@ -581,8 +577,6 @@ int runQuandary(const Config& config, bool quietmode, int argc, char** argv, int
     #endif
     MPI_Comm_free(&comm_petsc);  // Free after PetscFinalize since PETSC_COMM_WORLD = comm_petsc
     MPI_Finalize();
-  } else {
-    MPI_Comm_free(&comm_petsc);  // Free after all PETSc objects are destroyed
   }
   return ierr;
 }
