@@ -211,6 +211,7 @@ then
     $cmake_exe \
         -C ${hostconfig_path} \
         ${cmake_options} \
+        -DENABLE_DOXYGEN=OFF \
         -DCMAKE_INSTALL_PREFIX=${install_dir} \
         ${project_dir}
 
