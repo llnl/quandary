@@ -211,12 +211,11 @@ def setup_quandary(
         Force control pulses to start and end at zero.
     hamiltonian_Hsys : ndarray, optional
         Custom system Hamiltonian matrix (complex, in rad/ns). When provided,
-        the standard superconducting-qubit Hamiltonian model is bypassed and
-        this matrix is written to a sparse COO file for the C++ solver.
+        the standard pulse-driven superconducting-qubit Hamiltonian model is
+        bypassed.
     hamiltonian_Hc : sequence of ndarray, optional
         Custom control Hamiltonian matrices (complex), one per oscillator.
-        When provided, these are written to a sparse COO file for the C++
-        solver. Can be used with or without hamiltonian_Hsys.
+        Can be used with or without hamiltonian_Hsys.
     initial_condition : InitialConditionSettings, optional
         Direct struct specification (advanced). For convenience, prefer
         initial_levels or initial_state.
