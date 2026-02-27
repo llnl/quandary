@@ -161,7 +161,7 @@ def test_example_cnot(tmp_path, request):
         setup,
         targetgate=unitary,
         control_initialization_amplitude=init_amplitude,
-        # quiet=True,
+        quiet=True,
     )
 
     assert_results_equal(
