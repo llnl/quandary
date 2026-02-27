@@ -49,7 +49,7 @@ typedef struct {
  * Each function returns y = RHS*x. Matrix-free versions as well as sparse-matrix versions are implemented. Those 
  * functions will be passed to PETSc's MatMult operations to realize a Matrix-Vector Multiplication of the RHS with 
  * a state vector, such that one can call PETSc's MatMult(RHS, x, y) for the RHS. 
- * Note: The RHS matrix must be assembled before usage, see @ref MasterEq::assemble_RHS.
+ * Note: The RHS matrix must be assembled before usage, see @ref MasterEq::assemble_RHS .
  */
 int applyRHS_matfree_1Osc(Mat RHS, Vec x, Vec y); ///< Matrix-free MatMult for 1 oscillator
 int applyRHS_matfree_transpose_1Osc(Mat RHS, Vec x, Vec y); ///< Transpose matrix-free MatMult for 1 oscillator
