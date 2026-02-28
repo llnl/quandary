@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <mpi.h>
 
 /**
  * @brief MPI-aware logger that handles rank filtering and quiet mode.
@@ -14,9 +15,35 @@ class MPILogger {
   int mpi_rank;
   bool quiet_mode;
 
+  /**
+   * @brief Get MPI rank, handling the case where MPI may not be initialized.
+   *
+   * If MPI is initialized, returns the rank from MPI_COMM_WORLD.
+   * If MPI is not initialized (e.g., in unit tests), returns 0.
+   */
+  static int getMpiRank() {
+    int rank = 0;
+    int mpi_initialized = 0;
+    MPI_Initialized(&mpi_initialized);
+    if (mpi_initialized) {
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    }
+    return rank;
+  }
+
  public:
   /**
-  * @brief Constructs an MPI logger.
+  * @brief Constructs an MPI logger with automatic rank detection.
+  *
+  * Gets the MPI rank from MPI_COMM_WORLD if MPI is initialized,
+  * otherwise uses rank 0 (for unit tests).
+  *
+  * @param quiet If true, suppresses non-error output
+  */
+  explicit MPILogger(bool quiet) : mpi_rank(getMpiRank()), quiet_mode(quiet) {}
+
+  /**
+  * @brief Constructs an MPI logger with explicit rank.
   *
   * @param rank MPI rank of the current process
   * @param quiet If true, suppresses non-error output

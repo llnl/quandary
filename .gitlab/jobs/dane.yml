@@ -18,6 +18,12 @@ oneapi_2025_2_0_gcc_10_3_1:
     ON_DANE: "OFF"
   extends: .job_on_dane
 
+# Force gcc for fortran on petsc/blt to avoid spack bug with intel-oneapi-compilers-classic
+clang_19_1_3_gcc_13_3_1:
+  variables:
+    SPEC: "${PROJECT_DANE_VARIANTS} %clang-19-gcc-13 ^petsc%[virtuals=fortran]gcc ^blt%[virtuals=fortran]gcc ${PROJECT_DANE_DEPS}"
+  extends: .job_on_dane
+
 ########################
 # Extra jobs
 ########################
