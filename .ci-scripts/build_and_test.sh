@@ -311,28 +311,7 @@ then
 
     # Activate spack env to get the correct python, compilers, and MPI in PATH
     eval `${spack_cmd} env activate ${spack_env_path} --sh`
-
-    # Add quandary's installed python package to PYTHONPATH since it's installed
-    # via cmake (not pip or spack), so it's not in pip's default site-packages search path
-    python_version=$(python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
-    export PYTHONPATH="${install_dir}/lib/python${python_version}/site-packages:${PYTHONPATH:-}"
-
-    python -m pip install numpy pytest pytest-benchmark pydantic pandas matplotlib --prefer-binary
-    # Build mpi4py from source with the SAME MPI that Quandary uses
-    mpi_c_compiler=$(grep 'MPI_C_COMPILER' "${hostconfig_path}" | cut -d'"' -f2)
-    MPICC="${mpi_c_compiler}" python -m pip install --no-binary :all: --no-cache-dir mpi4py
-
-    # spack env activate doesn't add Cray PE runtime paths to LD_LIBRARY_PATH.
-    # pip-built packages (e.g. mpi4py) compiled with CCE need libmodules.so at runtime.
-    if [[ -n "${CRAY_LD_LIBRARY_PATH:-}" ]]; then
-        export LD_LIBRARY_PATH="${CRAY_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH:-}"
-    fi
-
-    # ROCm/HIP is an external spack package, so its libraries (e.g. libamdhip64.so)
-    # aren't in the spack view. Add ROCM_PATH/lib to LD_LIBRARY_PATH if available.
-    if [[ -n "${ROCM_PATH:-}" ]]; then
-        export LD_LIBRARY_PATH="${ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
-    fi
+    python -m pip install pytest pytest-benchmark pydantic --prefer-binary
 
     timed_message "Run performance tests"
 
