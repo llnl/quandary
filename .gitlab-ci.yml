@@ -81,6 +81,8 @@ generate-job-lists:
 # DANE
 dane-up-check:
   extends: [.dane, .machine-check]
+  variables:
+    ASSOCIATED_CHILD_PIPELINE: "dane-build-and-test"
 
 dane-build-and-test:
   stage: build-and-test
@@ -105,6 +107,8 @@ dane-build-and-test:
 # TIOGA
 tioga-up-check:
   extends: [.tioga, .machine-check]
+  variables:
+    ASSOCIATED_CHILD_PIPELINE: "tioga-build-and-test"
 
 tioga-build-and-test:
   stage: build-and-test
