@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1772062824217,
+  "lastUpdate": 1772582473705,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -2727,6 +2727,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
             "value": 4340.99,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Tara Drwenski",
+            "username": "tdrwenski",
+            "email": "tdrwenski@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "26c42a1cb70a348058293216f816ae3a5a7c51b1",
+          "message": "Merge pull request #121 from llnl/test-rsc-branch\n\nUpdate CI",
+          "timestamp": "2026-03-03T23:00:57Z",
+          "url": "https://github.com/llnl/quandary/commit/26c42a1cb70a348058293216f816ae3a5a7c51b1"
+        },
+        "date": 1772582470835,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "value": 0.7236057545014773,
+            "range": "0.3550194055752225",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "value": 86.21,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "value": 5.35371984700032,
+            "range": "0.09919612484307193",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "value": 4321.36,
             "unit": "MB"
           }
         ]
