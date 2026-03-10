@@ -289,6 +289,8 @@ then
     eval `${spack_cmd} env activate ${spack_env_path} --sh`
     python -m pip install -e . --prefer-binary
 
+    mkdir -p ${perf_artifact_dir}
+
     timed_message "Run performance tests"
 
     mpi_exe=$(grep 'MPIEXEC_EXECUTABLE' "${hostconfig_path}" | cut -d'"' -f2 | sed 's/;/ /g')
