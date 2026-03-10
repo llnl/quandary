@@ -136,7 +136,7 @@ performance-test:
   trigger:
     include:
       - local: '.gitlab/custom-jobs.yml'
-      - component: $CI_SERVER_FQDN/radiuss/radiuss-shared-ci/performance-pipeline@v2026.02.1
+      - component: $CI_SERVER_FQDN/radiuss/radiuss-shared-ci/performance-pipeline@v2026.02.2
         inputs:
           job_cmd: $JOB_CMD
           perf_processing_cmd: "${CI_PROJECT_DIR}/tests/performance/convert_benchmark_format.py"
