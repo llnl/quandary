@@ -24,6 +24,8 @@ Options:
   --cfg PATH                    Config file (default: tests/performance/configs/nlevels_32_32_32_32.toml)
   --llvm-amdgpu VER             llvm-amdgpu compiler version (default: 6.4.1)
   --hip VER                     hip/ROCm version (default: 6.4.1; used for GPU variants)
+  --pin-hipblas                 Require hipblas@--hip (errors if unavailable; default: auto-detect if available)
+  --no-pin-hipblas              Never pin hipblas version (default: auto-detect)
   --amdgpu-target GFX           AMDGPU target (default: gfx90a on tioga, gfx942 on tuolumne)
   --petsc SPEC                  PETSc version/constraint appended after "^petsc"
                                 (default: "@3.24.4", e.g. "@3.24.4" or "@3.24.4:")
@@ -63,6 +65,7 @@ DO_INSTALL="1"
 KEEP_LOGS="0"
 RUN_ONLY="0"
 QUANDARY_QUIET="1"
+HIPBLAS_PIN_MODE="auto" # auto|pin|off
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -77,6 +80,8 @@ while [[ $# -gt 0 ]]; do
     --cfg) CFG="$2"; shift 2;;
     --llvm-amdgpu) LLVM_AMDGPU_VER="$2"; shift 2;;
     --hip) HIP_VER="$2"; shift 2;;
+    --pin-hipblas) HIPBLAS_PIN_MODE="pin"; shift 1;;
+    --no-pin-hipblas) HIPBLAS_PIN_MODE="off"; shift 1;;
     --amdgpu-target) AMDGPU_TARGET="$2"; shift 2;;
     --petsc) PETSC_SPEC="$2"; shift 2;;
     --petsc-min) PETSC_MIN="$2"; shift 2;;
@@ -211,7 +216,37 @@ if variant_selected kokkos "$VARIANTS"; then spack -e "$ENV_ROOT/kokkos" env sta
 if variant_selected rocm "$VARIANTS"; then spack -e "$ENV_ROOT/rocm" env status || true; fi
 
 COMPILER_SPEC="%llvm-amdgpu@=${LLVM_AMDGPU_VER}"
-ROCM_DEPS="^hip@${HIP_VER} ^hipblas@${HIP_VER}"
+
+hipblas_version_available() {
+  local ver="$1"
+  # If Spack doesn't know about hipblas, we'll find out later during concretize.
+  # Here we only guard against pinning an unavailable version.
+  spack versions -s hipblas 2>/dev/null | grep -q -E "(^|[[:space:]])${ver}([[:space:]]|$)"
+}
+
+HIPBLAS_SPEC="^hipblas"
+case "$HIPBLAS_PIN_MODE" in
+  off)
+    ;;
+  pin)
+    if hipblas_version_available "${HIP_VER}"; then
+      HIPBLAS_SPEC="^hipblas@${HIP_VER}"
+    else
+      die "hipblas@${HIP_VER} is not available in this Spack; omit --pin-hipblas (auto mode) or use --no-pin-hipblas"
+    fi
+    ;;
+  auto)
+    if hipblas_version_available "${HIP_VER}"; then
+      HIPBLAS_SPEC="^hipblas@${HIP_VER}"
+    fi
+    ;;
+  *)
+    die "Internal error: invalid HIPBLAS_PIN_MODE='${HIPBLAS_PIN_MODE}'"
+    ;;
+esac
+
+# For GPU variants, keep ROCm deps consistent and compiled with the same compiler.
+ROCM_DEPS="^hip@${HIP_VER} ${HIPBLAS_SPEC}${COMPILER_SPEC}"
 
 # Make PETSc explicitly use the same compiler as Quandary. Place the compiler
 # constraint at the end so PETSc variants don't get parsed as compiler variants.
