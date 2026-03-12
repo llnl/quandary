@@ -182,9 +182,11 @@ if variant_selected rocm "$VARIANTS"; then spack -e "$ENV_ROOT/rocm" env status 
 COMPILER_SPEC="%llvm-amdgpu@=${LLVM_AMDGPU_VER}"
 ROCM_DEPS="^hip@${HIP_VER}"
 
-PETSC_CPU="^petsc${PETSC_SPEC}~rocm~kokkos${PETSC_MIN}"
-PETSC_KOKKOS="^petsc${PETSC_SPEC}+rocm+kokkos amdgpu_target=${AMDGPU_TARGET}${PETSC_MIN}"
-PETSC_ROCM="^petsc${PETSC_SPEC}+rocm~kokkos amdgpu_target=${AMDGPU_TARGET}${PETSC_MIN}"
+# Make PETSc explicitly use the same compiler as Quandary. Place the compiler
+# constraint at the end so PETSc variants don't get parsed as compiler variants.
+PETSC_CPU="^petsc${PETSC_SPEC}~rocm~kokkos${PETSC_MIN}${COMPILER_SPEC}"
+PETSC_KOKKOS="^petsc${PETSC_SPEC}+rocm+kokkos amdgpu_target=${AMDGPU_TARGET}${PETSC_MIN}${COMPILER_SPEC}"
+PETSC_ROCM="^petsc${PETSC_SPEC}+rocm~kokkos amdgpu_target=${AMDGPU_TARGET}${PETSC_MIN}${COMPILER_SPEC}"
 
 echo "=== (Re)setting specs ==="
 if variant_selected cpu "$VARIANTS"; then
