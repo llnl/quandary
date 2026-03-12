@@ -26,8 +26,8 @@ Options:
   --hip VER                     hip/ROCm version (default: 6.4.3; used for GPU variants)
   --pin-hipblas                 Require hipblas@--hip (errors if unavailable; default: auto-detect if available)
   --no-pin-hipblas              Never pin hipblas version (default: auto-detect)
-  --petsc-cxxstd N              PETSc C++ standard for the kokkos variant (adds PETSc cxxflags="-std=gnu++N")
-                                Default: 20 for kokkos variant
+  --petsc-cxxstd N              PETSc C++ standard (adds PETSc cxxflags="-std=gnu++N"); default: unset
+  --kokkos-cxxstd N             Kokkos C++ standard for PETSc+Kokkos builds (default: 17)
   --amdgpu-target GFX           AMDGPU target (default: gfx90a on tioga, gfx942 on tuolumne)
   --petsc SPEC                  PETSc version/constraint appended after "^petsc"
                                 (default: "@3.24.4", e.g. "@3.24.4" or "@3.24.4:")
@@ -63,6 +63,7 @@ AMDGPU_TARGET=""
 PETSC_SPEC="@3.24.4"
 PETSC_MIN="~mmg~parmmg~saws~examples~ml~exodusii~zoltan"
 PETSC_CXXSTD=""
+KOKKOS_CXXSTD="17"
 QUANDARY_TEST_VARIANT="~test"
 DO_INSTALL="1"
 KEEP_LOGS="0"
@@ -86,6 +87,7 @@ while [[ $# -gt 0 ]]; do
     --pin-hipblas) HIPBLAS_PIN_MODE="pin"; shift 1;;
     --no-pin-hipblas) HIPBLAS_PIN_MODE="off"; shift 1;;
     --petsc-cxxstd) PETSC_CXXSTD="$2"; shift 2;;
+    --kokkos-cxxstd) KOKKOS_CXXSTD="$2"; shift 2;;
     --amdgpu-target) AMDGPU_TARGET="$2"; shift 2;;
     --petsc) PETSC_SPEC="$2"; shift 2;;
     --petsc-min) PETSC_MIN="$2"; shift 2;;
@@ -181,11 +183,6 @@ validate_variants "$VARIANTS"
 
 mkdir -p "$ENV_ROOT"
 
-if variant_selected kokkos "$VARIANTS" && [[ -z "$PETSC_CXXSTD" ]]; then
-  # PETSc's Kokkos interface code includes Kokkos headers that require C++20.
-  PETSC_CXXSTD="20"
-fi
-
 write_env_yaml() {
   local env_dir="$1"
   cat > "${env_dir}/spack.yaml" <<EOF
@@ -255,7 +252,7 @@ case "$HIPBLAS_PIN_MODE" in
 esac
 
 # For GPU variants, keep ROCm deps consistent and compiled with the same compiler.
-ROCM_DEPS="^hip@${HIP_VER} ${HIPBLAS_SPEC}${COMPILER_SPEC}"
+ROCM_DEPS="^hip@${HIP_VER} ${HIPBLAS_SPEC} ${COMPILER_SPEC}"
 
 # Make PETSc explicitly use the same compiler as Quandary. Place the compiler
 # constraint at the end so PETSc variants don't get parsed as compiler variants.
@@ -269,6 +266,8 @@ if [[ -n "$PETSC_CXXSTD" ]]; then
   PETSC_KOKKOS="${PETSC_KOKKOS%${COMPILER_SPEC}} cxxflags=-std=gnu++${PETSC_CXXSTD} ${COMPILER_SPEC}"
 fi
 
+KOKKOS_CONSTRAINT="^kokkos cxxstd=${KOKKOS_CXXSTD}"
+
 if [[ "$RUN_ONLY" != "1" ]]; then
   echo "=== (Re)setting specs ==="
   if variant_selected cpu "$VARIANTS"; then
@@ -280,7 +279,8 @@ if [[ "$RUN_ONLY" != "1" ]]; then
     spack -e "$ENV_ROOT/kokkos" rm -y quandary >/dev/null 2>&1 || true
     # GPU variant: enable ROCm at the Quandary level to keep amdgpu_target consistent for PETSc deps.
     # Kokkos is selected on PETSc (Quandary has no +kokkos variant).
-    spack -e "$ENV_ROOT/kokkos" add "quandary@main${QUANDARY_TEST_VARIANT}+rocm amdgpu_target=${AMDGPU_TARGET} ${COMPILER_SPEC} ^cray-mpich${COMPILER_SPEC} ${ROCM_DEPS} ${PETSC_KOKKOS}"
+    # Keep Kokkos itself on C++17; PETSc's Kokkos package currently rejects C++20.
+    spack -e "$ENV_ROOT/kokkos" add "quandary@main${QUANDARY_TEST_VARIANT}+rocm amdgpu_target=${AMDGPU_TARGET} ${COMPILER_SPEC} ^cray-mpich${COMPILER_SPEC} ${ROCM_DEPS} ${PETSC_KOKKOS} ${KOKKOS_CONSTRAINT}"
   fi
   if variant_selected rocm "$VARIANTS"; then
     spack -e "$ENV_ROOT/rocm" rm -y quandary >/dev/null 2>&1 || true
@@ -348,6 +348,7 @@ echo "variants=$VARIANTS"
 echo "cfg=$CFG"
 echo "env_root=$ENV_ROOT"
 if [[ -n "$PETSC_CXXSTD" ]]; then echo "petsc_cxxstd=$PETSC_CXXSTD"; fi
+if variant_selected kokkos "$VARIANTS"; then echo "kokkos_cxxstd=$KOKKOS_CXXSTD"; fi
 echo
 
 set -x
