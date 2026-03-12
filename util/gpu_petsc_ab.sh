@@ -16,7 +16,8 @@ Options:
   --env-root PATH               Where to create envs/ (default: <repo>/envs-gpu-ab)
   --variants LIST               Which variants to build/run (default: cpu,kokkos,rocm)
                                 LIST is comma-separated, e.g. "cpu,kokkos" or "kokkos"
-  --launcher "CMD"              Launcher prefix (default: "flux run --gpus-per-task=1 --gpu-bind=closest")
+  --run-only                    Do not modify/concretize/install envs; just run existing binaries
+  --launcher "CMD"              Launcher prefix (default: flux run; adds --gpu-bind=closest if supported)
                                 The script appends "-n <nprocs>" automatically.
   --nprocs N                    MPI ranks (default: 8 on tioga, 4 on tuolumne)
   --cfg PATH                    Config file (default: tests/performance/configs/nlevels_32_32_32_32.toml)
@@ -47,7 +48,8 @@ REPO="${PWD}"
 MACHINE="tioga"
 ENV_ROOT=""
 VARIANTS="cpu,kokkos,rocm"
-LAUNCHER="flux run --gpus-per-task=1 --gpu-bind=closest"
+LAUNCHER=""
+LAUNCHER_SET="0"
 NPROCS=""
 CFG="tests/performance/configs/nlevels_32_32_32_32.toml"
 LLVM_AMDGPU_VER="6.4.1"
@@ -58,6 +60,7 @@ PETSC_MIN="~mmg~parmmg~saws~examples~ml~exodusii~zoltan"
 QUANDARY_TEST_VARIANT="~test"
 DO_INSTALL="1"
 KEEP_LOGS="0"
+RUN_ONLY="0"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -65,7 +68,8 @@ while [[ $# -gt 0 ]]; do
     --repo) REPO="$2"; shift 2;;
     --env-root) ENV_ROOT="$2"; shift 2;;
     --variants) VARIANTS="$2"; shift 2;;
-    --launcher) LAUNCHER="$2"; shift 2;;
+    --run-only) RUN_ONLY="1"; shift 1;;
+    --launcher) LAUNCHER="$2"; LAUNCHER_SET="1"; shift 2;;
     --nprocs) NPROCS="$2"; shift 2;;
     --cfg) CFG="$2"; shift 2;;
     --llvm-amdgpu) LLVM_AMDGPU_VER="$2"; shift 2;;
@@ -85,6 +89,20 @@ command -v spack >/dev/null 2>&1 || die "'spack' not found in PATH"
 
 cd "$REPO"
 [[ -f "CMakeLists.txt" ]] || die "--repo must point to the Quandary repo root (missing CMakeLists.txt)"
+
+default_launcher() {
+  local launcher="flux run --gpus-per-task=1"
+  if command -v flux >/dev/null 2>&1; then
+    if flux run --help 2>&1 | rg -q -- '--gpu-bind'; then
+      launcher+=" --gpu-bind=closest"
+    fi
+  fi
+  echo "$launcher"
+}
+
+if [[ -z "$LAUNCHER" ]]; then
+  LAUNCHER="$(default_launcher)"
+fi
 
 RAD="$REPO/.ci-scripts/radiuss-spack-configs/toss_4_x86_64_ib_cray"
 [[ -d "$RAD" ]] || die "radiuss-spack-configs not found at: $RAD"
@@ -110,6 +128,10 @@ esac
 
 if [[ -z "$ENV_ROOT" ]]; then
   ENV_ROOT="$REPO/envs-gpu-ab"
+fi
+
+if [[ "$RUN_ONLY" == "1" ]]; then
+  DO_INSTALL="0"
 fi
 
 normalize_variants() {
@@ -161,17 +183,23 @@ spack:
 EOF
 }
 
-if variant_selected cpu "$VARIANTS"; then
-  mkdir -p "$ENV_ROOT/cpu"
-  write_env_yaml "$ENV_ROOT/cpu"
-fi
-if variant_selected kokkos "$VARIANTS"; then
-  mkdir -p "$ENV_ROOT/kokkos"
-  write_env_yaml "$ENV_ROOT/kokkos"
-fi
-if variant_selected rocm "$VARIANTS"; then
-  mkdir -p "$ENV_ROOT/rocm"
-  write_env_yaml "$ENV_ROOT/rocm"
+if [[ "$RUN_ONLY" != "1" ]]; then
+  if variant_selected cpu "$VARIANTS"; then
+    mkdir -p "$ENV_ROOT/cpu"
+    write_env_yaml "$ENV_ROOT/cpu"
+  fi
+  if variant_selected kokkos "$VARIANTS"; then
+    mkdir -p "$ENV_ROOT/kokkos"
+    write_env_yaml "$ENV_ROOT/kokkos"
+  fi
+  if variant_selected rocm "$VARIANTS"; then
+    mkdir -p "$ENV_ROOT/rocm"
+    write_env_yaml "$ENV_ROOT/rocm"
+  fi
+else
+  if variant_selected cpu "$VARIANTS"; then [[ -d "$ENV_ROOT/cpu" ]] || die "Missing env dir for --run-only: $ENV_ROOT/cpu"; fi
+  if variant_selected kokkos "$VARIANTS"; then [[ -d "$ENV_ROOT/kokkos" ]] || die "Missing env dir for --run-only: $ENV_ROOT/kokkos"; fi
+  if variant_selected rocm "$VARIANTS"; then [[ -d "$ENV_ROOT/rocm" ]] || die "Missing env dir for --run-only: $ENV_ROOT/rocm"; fi
 fi
 
 echo "=== Env status ==="
@@ -188,28 +216,32 @@ PETSC_CPU="^petsc${PETSC_SPEC}~rocm~kokkos${PETSC_MIN}${COMPILER_SPEC}"
 PETSC_KOKKOS="^petsc${PETSC_SPEC}+rocm+kokkos amdgpu_target=${AMDGPU_TARGET}${PETSC_MIN}${COMPILER_SPEC}"
 PETSC_ROCM="^petsc${PETSC_SPEC}+rocm~kokkos amdgpu_target=${AMDGPU_TARGET}${PETSC_MIN}${COMPILER_SPEC}"
 
-echo "=== (Re)setting specs ==="
-if variant_selected cpu "$VARIANTS"; then
-  spack -e "$ENV_ROOT/cpu" rm -y quandary >/dev/null 2>&1 || true
-  # CPU baseline: do not mention hip or amdgpu_target; keep rocm disabled at the Quandary level.
-  spack -e "$ENV_ROOT/cpu" add "quandary@main${QUANDARY_TEST_VARIANT}~rocm ${COMPILER_SPEC} ^cray-mpich${COMPILER_SPEC} ${PETSC_CPU}"
-fi
-if variant_selected kokkos "$VARIANTS"; then
-  spack -e "$ENV_ROOT/kokkos" rm -y quandary >/dev/null 2>&1 || true
-  # GPU variant: enable ROCm at the Quandary level to keep amdgpu_target consistent for PETSc deps.
-  # Kokkos is selected on PETSc (Quandary has no +kokkos variant).
-  spack -e "$ENV_ROOT/kokkos" add "quandary@main${QUANDARY_TEST_VARIANT}+rocm amdgpu_target=${AMDGPU_TARGET} ${COMPILER_SPEC} ^cray-mpich${COMPILER_SPEC} ${ROCM_DEPS} ${PETSC_KOKKOS}"
-fi
-if variant_selected rocm "$VARIANTS"; then
-  spack -e "$ENV_ROOT/rocm" rm -y quandary >/dev/null 2>&1 || true
-  # GPU variant: enable ROCm at the Quandary level to keep amdgpu_target consistent for PETSc deps.
-  spack -e "$ENV_ROOT/rocm" add "quandary@main${QUANDARY_TEST_VARIANT}+rocm amdgpu_target=${AMDGPU_TARGET} ${COMPILER_SPEC} ^cray-mpich${COMPILER_SPEC} ${ROCM_DEPS} ${PETSC_ROCM}"
-fi
+if [[ "$RUN_ONLY" != "1" ]]; then
+  echo "=== (Re)setting specs ==="
+  if variant_selected cpu "$VARIANTS"; then
+    spack -e "$ENV_ROOT/cpu" rm -y quandary >/dev/null 2>&1 || true
+    # CPU baseline: do not mention hip or amdgpu_target; keep rocm disabled at the Quandary level.
+    spack -e "$ENV_ROOT/cpu" add "quandary@main${QUANDARY_TEST_VARIANT}~rocm ${COMPILER_SPEC} ^cray-mpich${COMPILER_SPEC} ${PETSC_CPU}"
+  fi
+  if variant_selected kokkos "$VARIANTS"; then
+    spack -e "$ENV_ROOT/kokkos" rm -y quandary >/dev/null 2>&1 || true
+    # GPU variant: enable ROCm at the Quandary level to keep amdgpu_target consistent for PETSc deps.
+    # Kokkos is selected on PETSc (Quandary has no +kokkos variant).
+    spack -e "$ENV_ROOT/kokkos" add "quandary@main${QUANDARY_TEST_VARIANT}+rocm amdgpu_target=${AMDGPU_TARGET} ${COMPILER_SPEC} ^cray-mpich${COMPILER_SPEC} ${ROCM_DEPS} ${PETSC_KOKKOS}"
+  fi
+  if variant_selected rocm "$VARIANTS"; then
+    spack -e "$ENV_ROOT/rocm" rm -y quandary >/dev/null 2>&1 || true
+    # GPU variant: enable ROCm at the Quandary level to keep amdgpu_target consistent for PETSc deps.
+    spack -e "$ENV_ROOT/rocm" add "quandary@main${QUANDARY_TEST_VARIANT}+rocm amdgpu_target=${AMDGPU_TARGET} ${COMPILER_SPEC} ^cray-mpich${COMPILER_SPEC} ${ROCM_DEPS} ${PETSC_ROCM}"
+  fi
 
-echo "=== Concretize ==="
-if variant_selected cpu "$VARIANTS"; then spack -e "$ENV_ROOT/cpu" concretize -f; fi
-if variant_selected kokkos "$VARIANTS"; then spack -e "$ENV_ROOT/kokkos" concretize -f; fi
-if variant_selected rocm "$VARIANTS"; then spack -e "$ENV_ROOT/rocm" concretize -f; fi
+  echo "=== Concretize ==="
+  if variant_selected cpu "$VARIANTS"; then spack -e "$ENV_ROOT/cpu" concretize -f; fi
+  if variant_selected kokkos "$VARIANTS"; then spack -e "$ENV_ROOT/kokkos" concretize -f; fi
+  if variant_selected rocm "$VARIANTS"; then spack -e "$ENV_ROOT/rocm" concretize -f; fi
+else
+  echo "=== Run only (--run-only): skipping spec reset/concretize/install ==="
+fi
 
 if [[ "$DO_INSTALL" == "1" ]]; then
   echo "=== Install ==="
