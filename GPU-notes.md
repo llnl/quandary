@@ -40,3 +40,7 @@ The logs are written under `envs-gpu-ab/` by default (`cpu.log`, `kokkos.log`, `
 
 1. Run `cpu` and `kokkos` first; only run `rocm` if you want the additional HIP-only comparison.
 2. If GPU speedup is small and PETSc logs indicate shell/user time dominates or GPU activity is minimal, add a short Caliper run to diagnose GPU activity and sync/transfer overhead.
+
+## Common concretization pitfall (CPU baseline)
+
+- For the `cpu` variant, do **not** add ROCm-only constraints like `^hip@...` or `amdgpu_target=...`. Those can implicitly force `+rocm` in some dependency and create `~rocm`/`+rocm` conflicts (or `amdgpu_target=none` conflicts).
