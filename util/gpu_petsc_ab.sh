@@ -1,0 +1,267 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Build a small PETSc GPU/CPU matrix (Spack envs) and run Quandary with PETSc logging.
+
+Defaults are set up for LLNL Tioga using radiuss-spack-configs.
+
+Usage:
+  bash util/gpu_petsc_ab.sh [options]
+
+Options:
+  --machine {tioga|tuolumne}     Select radiuss machine config (default: tioga)
+  --repo PATH                   Path to Quandary repo root (default: cwd)
+  --env-root PATH               Where to create envs/ (default: <repo>/envs-gpu-ab)
+  --variants LIST               Which variants to build/run (default: cpu,kokkos,rocm)
+                                LIST is comma-separated, e.g. "cpu,kokkos" or "kokkos"
+  --launcher "CMD"              Launcher prefix (default: "flux run --gpus-per-task=1 --gpu-bind=closest")
+                                The script appends "-n <nprocs>" automatically.
+  --nprocs N                    MPI ranks (default: 8 on tioga, 4 on tuolumne)
+  --cfg PATH                    Config file (default: tests/performance/configs/nlevels_32_32_32_32.toml)
+  --llvm-amdgpu VER             llvm-amdgpu version (default: 6.4.3)
+  --hip VER                     hip version (default: 6.4.3)
+  --amdgpu-target GFX           AMDGPU target (default: gfx90a on tioga, gfx942 on tuolumne)
+  --petsc SPEC                  PETSc constraint (default: "^petsc@3.23:")
+  --no-install                  Only concretize; skip spack install
+  --keep-logs                   Don’t overwrite logs; append timestamp
+  -h, --help                    Show help
+
+Outputs:
+  <env-root>/cpu.log
+  <env-root>/kokkos.log
+  <env-root>/rocm.log
+EOF
+}
+
+die() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+REPO="${PWD}"
+MACHINE="tioga"
+ENV_ROOT=""
+VARIANTS="cpu,kokkos,rocm"
+LAUNCHER="flux run --gpus-per-task=1 --gpu-bind=closest"
+NPROCS=""
+CFG="tests/performance/configs/nlevels_32_32_32_32.toml"
+LLVM_AMDGPU_VER="6.4.3"
+HIP_VER="6.4.3"
+AMDGPU_TARGET=""
+PETSC_SPEC="^petsc@3.23:"
+DO_INSTALL="1"
+KEEP_LOGS="0"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --machine) MACHINE="$2"; shift 2;;
+    --repo) REPO="$2"; shift 2;;
+    --env-root) ENV_ROOT="$2"; shift 2;;
+    --variants) VARIANTS="$2"; shift 2;;
+    --launcher) LAUNCHER="$2"; shift 2;;
+    --nprocs) NPROCS="$2"; shift 2;;
+    --cfg) CFG="$2"; shift 2;;
+    --llvm-amdgpu) LLVM_AMDGPU_VER="$2"; shift 2;;
+    --hip) HIP_VER="$2"; shift 2;;
+    --amdgpu-target) AMDGPU_TARGET="$2"; shift 2;;
+    --petsc) PETSC_SPEC="$2"; shift 2;;
+    --no-install) DO_INSTALL="0"; shift 1;;
+    --keep-logs) KEEP_LOGS="1"; shift 1;;
+    -h|--help) usage; exit 0;;
+    *) die "Unknown arg: $1";;
+  esac
+done
+
+command -v spack >/dev/null 2>&1 || die "'spack' not found in PATH"
+
+cd "$REPO"
+[[ -f "CMakeLists.txt" ]] || die "--repo must point to the Quandary repo root (missing CMakeLists.txt)"
+
+RAD="$REPO/.ci-scripts/radiuss-spack-configs/toss_4_x86_64_ib_cray"
+[[ -d "$RAD" ]] || die "radiuss-spack-configs not found at: $RAD"
+
+case "$MACHINE" in
+  tioga)
+    : "${NPROCS:=8}"
+    : "${AMDGPU_TARGET:=gfx90a}"
+    MACHINE_PACKAGES="$RAD/tioga/packages.yaml"
+    ;;
+  tuolumne)
+    : "${NPROCS:=4}"
+    : "${AMDGPU_TARGET:=gfx942}"
+    MACHINE_PACKAGES="$RAD/tuolumne/packages.yaml"
+    ;;
+  *)
+    die "--machine must be tioga or tuolumne"
+    ;;
+esac
+
+[[ -f "$MACHINE_PACKAGES" ]] || die "Missing machine packages.yaml: $MACHINE_PACKAGES"
+[[ -f "$CFG" ]] || die "Config not found: $CFG"
+
+if [[ -z "$ENV_ROOT" ]]; then
+  ENV_ROOT="$REPO/envs-gpu-ab"
+fi
+
+normalize_variants() {
+  local raw="$1"
+  raw="${raw// /}"
+  echo "$raw"
+}
+
+variant_selected() {
+  local needle="$1"
+  local list="$2"
+  local IFS=,
+  local v
+  for v in $list; do
+    [[ "$v" == "$needle" ]] && return 0
+  done
+  return 1
+}
+
+validate_variants() {
+  local list="$1"
+  local IFS=,
+  local v
+  for v in $list; do
+    case "$v" in
+      cpu|kokkos|rocm) ;;
+      *) die "Invalid --variants entry: '$v' (allowed: cpu,kokkos,rocm)";;
+    esac
+  done
+}
+
+VARIANTS="$(normalize_variants "$VARIANTS")"
+[[ -n "$VARIANTS" ]] || die "--variants cannot be empty"
+validate_variants "$VARIANTS"
+
+mkdir -p "$ENV_ROOT"
+
+write_env_yaml() {
+  local env_dir="$1"
+  cat > "${env_dir}/spack.yaml" <<EOF
+spack:
+  include:
+    - ${RAD}/config.yaml
+    - ${RAD}/packages.yaml
+    - ${MACHINE_PACKAGES}
+  concretizer:
+    unify: true
+  view: true
+  specs: []
+EOF
+}
+
+if variant_selected cpu "$VARIANTS"; then
+  mkdir -p "$ENV_ROOT/cpu"
+  write_env_yaml "$ENV_ROOT/cpu"
+fi
+if variant_selected kokkos "$VARIANTS"; then
+  mkdir -p "$ENV_ROOT/kokkos"
+  write_env_yaml "$ENV_ROOT/kokkos"
+fi
+if variant_selected rocm "$VARIANTS"; then
+  mkdir -p "$ENV_ROOT/rocm"
+  write_env_yaml "$ENV_ROOT/rocm"
+fi
+
+echo "=== Env status ==="
+if variant_selected cpu "$VARIANTS"; then spack -e "$ENV_ROOT/cpu" env status || true; fi
+if variant_selected kokkos "$VARIANTS"; then spack -e "$ENV_ROOT/kokkos" env status || true; fi
+if variant_selected rocm "$VARIANTS"; then spack -e "$ENV_ROOT/rocm" env status || true; fi
+
+TOOLCHAIN="+rocm amdgpu_target=${AMDGPU_TARGET} %llvm-amdgpu@=${LLVM_AMDGPU_VER} ^hip@${HIP_VER}"
+
+echo "=== (Re)setting specs ==="
+if variant_selected cpu "$VARIANTS"; then
+  spack -e "$ENV_ROOT/cpu" rm -y quandary >/dev/null 2>&1 || true
+  spack -e "$ENV_ROOT/cpu" add "quandary@develop+test ~rocm~kokkos ${PETSC_SPEC} ${TOOLCHAIN}"
+fi
+if variant_selected kokkos "$VARIANTS"; then
+  spack -e "$ENV_ROOT/kokkos" rm -y quandary >/dev/null 2>&1 || true
+  spack -e "$ENV_ROOT/kokkos" add "quandary@develop+test +kokkos ${PETSC_SPEC} ${TOOLCHAIN}"
+fi
+if variant_selected rocm "$VARIANTS"; then
+  spack -e "$ENV_ROOT/rocm" rm -y quandary >/dev/null 2>&1 || true
+  spack -e "$ENV_ROOT/rocm" add "quandary@develop+test +rocm~kokkos ${PETSC_SPEC} ${TOOLCHAIN}"
+fi
+
+echo "=== Concretize ==="
+if variant_selected cpu "$VARIANTS"; then spack -e "$ENV_ROOT/cpu" concretize -f; fi
+if variant_selected kokkos "$VARIANTS"; then spack -e "$ENV_ROOT/kokkos" concretize -f; fi
+if variant_selected rocm "$VARIANTS"; then spack -e "$ENV_ROOT/rocm" concretize -f; fi
+
+if [[ "$DO_INSTALL" == "1" ]]; then
+  echo "=== Install ==="
+  if variant_selected cpu "$VARIANTS"; then spack -e "$ENV_ROOT/cpu" install; fi
+  if variant_selected kokkos "$VARIANTS"; then spack -e "$ENV_ROOT/kokkos" install; fi
+  if variant_selected rocm "$VARIANTS"; then spack -e "$ENV_ROOT/rocm" install; fi
+else
+  echo "=== Skipping install (--no-install) ==="
+fi
+
+declare -A BIN_PATHS
+declare -A PETSC_OPTS
+declare -A LOG_PATHS
+
+PETSC_OPTS[cpu]='-log_view -log_summary'
+PETSC_OPTS[kokkos]='-vec_type kokkos -mat_type aijkokkos -log_view -log_summary'
+PETSC_OPTS[rocm]='-vec_type hip -mat_type aijhipsparse -log_view -log_summary'
+
+if variant_selected cpu "$VARIANTS"; then
+  BIN_PATHS[cpu]="$(spack -e "$ENV_ROOT/cpu" location -i quandary)/bin/quandary"
+  [[ -x "${BIN_PATHS[cpu]}" ]] || die "Binary not found/executable: ${BIN_PATHS[cpu]}"
+fi
+if variant_selected kokkos "$VARIANTS"; then
+  BIN_PATHS[kokkos]="$(spack -e "$ENV_ROOT/kokkos" location -i quandary)/bin/quandary"
+  [[ -x "${BIN_PATHS[kokkos]}" ]] || die "Binary not found/executable: ${BIN_PATHS[kokkos]}"
+fi
+if variant_selected rocm "$VARIANTS"; then
+  BIN_PATHS[rocm]="$(spack -e "$ENV_ROOT/rocm" location -i quandary)/bin/quandary"
+  [[ -x "${BIN_PATHS[rocm]}" ]] || die "Binary not found/executable: ${BIN_PATHS[rocm]}"
+fi
+
+logname() {
+  local base="$1"
+  if [[ "$KEEP_LOGS" == "1" ]]; then
+    echo "${base%.*}_$(date +%Y%m%d_%H%M%S).log"
+  else
+    echo "$base"
+  fi
+}
+
+if variant_selected cpu "$VARIANTS"; then LOG_PATHS[cpu]="${ENV_ROOT}/$(logname cpu.log)"; fi
+if variant_selected kokkos "$VARIANTS"; then LOG_PATHS[kokkos]="${ENV_ROOT}/$(logname kokkos.log)"; fi
+if variant_selected rocm "$VARIANTS"; then LOG_PATHS[rocm]="${ENV_ROOT}/$(logname rocm.log)"; fi
+
+MPI_PREFIX="${LAUNCHER} -n ${NPROCS}"
+
+echo "=== Run settings ==="
+echo "machine=$MACHINE nprocs=$NPROCS"
+echo "launcher='$LAUNCHER'"
+echo "variants=$VARIANTS"
+echo "cfg=$CFG"
+echo "env_root=$ENV_ROOT"
+echo
+
+set -x
+
+run_variant() {
+  local v="$1"
+  ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" --quiet \
+    --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "${LOG_PATHS[$v]}"
+}
+
+if variant_selected cpu "$VARIANTS"; then run_variant cpu; fi
+if variant_selected kokkos "$VARIANTS"; then run_variant kokkos; fi
+if variant_selected rocm "$VARIANTS"; then run_variant rocm; fi
+
+set +x
+
+echo "Done. Logs:"
+if variant_selected cpu "$VARIANTS"; then echo "  ${LOG_PATHS[cpu]}"; fi
+if variant_selected kokkos "$VARIANTS"; then echo "  ${LOG_PATHS[kokkos]}"; fi
+if variant_selected rocm "$VARIANTS"; then echo "  ${LOG_PATHS[rocm]}"; fi
