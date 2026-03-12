@@ -93,7 +93,7 @@ cd "$REPO"
 default_launcher() {
   local launcher="flux run --gpus-per-task=1"
   if command -v flux >/dev/null 2>&1; then
-    if flux run --help 2>&1 | rg -q -- '--gpu-bind'; then
+    if flux run --help 2>&1 | grep -q -- '--gpu-bind'; then
       launcher+=" --gpu-bind=closest"
     fi
   fi
@@ -212,9 +212,9 @@ ROCM_DEPS="^hip@${HIP_VER}"
 
 # Make PETSc explicitly use the same compiler as Quandary. Place the compiler
 # constraint at the end so PETSc variants don't get parsed as compiler variants.
-PETSC_CPU="^petsc${PETSC_SPEC}~rocm~kokkos${PETSC_MIN}${COMPILER_SPEC}"
-PETSC_KOKKOS="^petsc${PETSC_SPEC}+rocm+kokkos amdgpu_target=${AMDGPU_TARGET}${PETSC_MIN}${COMPILER_SPEC}"
-PETSC_ROCM="^petsc${PETSC_SPEC}+rocm~kokkos amdgpu_target=${AMDGPU_TARGET}${PETSC_MIN}${COMPILER_SPEC}"
+PETSC_CPU="^petsc${PETSC_SPEC}~rocm~kokkos ${PETSC_MIN} ${COMPILER_SPEC}"
+PETSC_KOKKOS="^petsc${PETSC_SPEC}+rocm+kokkos amdgpu_target=${AMDGPU_TARGET} ${PETSC_MIN} ${COMPILER_SPEC}"
+PETSC_ROCM="^petsc${PETSC_SPEC}+rocm~kokkos amdgpu_target=${AMDGPU_TARGET} ${PETSC_MIN} ${COMPILER_SPEC}"
 
 if [[ "$RUN_ONLY" != "1" ]]; then
   echo "=== (Re)setting specs ==="
@@ -311,6 +311,12 @@ if variant_selected rocm "$VARIANTS"; then run_variant rocm; fi
 set +x
 
 echo "Done. Logs:"
-if variant_selected cpu "$VARIANTS"; then echo "  ${LOG_PATHS[cpu]}"; fi
-if variant_selected kokkos "$VARIANTS"; then echo "  ${LOG_PATHS[kokkos]}"; fi
-if variant_selected rocm "$VARIANTS"; then echo "  ${LOG_PATHS[rocm]}"; fi
+if variant_selected cpu "$VARIANTS"; then
+  echo "  ${LOG_PATHS[cpu]}"
+fi
+if variant_selected kokkos "$VARIANTS"; then
+  echo "  ${LOG_PATHS[kokkos]}"
+fi
+if variant_selected rocm "$VARIANTS"; then
+  echo "  ${LOG_PATHS[rocm]}"
+fi
