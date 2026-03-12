@@ -17,6 +17,7 @@ Options:
   --variants LIST               Which variants to build/run (default: cpu,kokkos,rocm)
                                 LIST is comma-separated, e.g. "cpu,kokkos" or "kokkos"
   --run-only                    Do not modify/concretize/install envs; just run existing binaries
+  --no-quiet                    Do not pass --quiet to Quandary (default: pass --quiet)
   --launcher "CMD"              Launcher prefix (default: flux run; adds --gpu-bind=closest if supported)
                                 The script appends "-n <nprocs>" automatically.
   --nprocs N                    MPI ranks (default: 8 on tioga, 4 on tuolumne)
@@ -61,6 +62,7 @@ QUANDARY_TEST_VARIANT="~test"
 DO_INSTALL="1"
 KEEP_LOGS="0"
 RUN_ONLY="0"
+QUANDARY_QUIET="1"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -69,6 +71,7 @@ while [[ $# -gt 0 ]]; do
     --env-root) ENV_ROOT="$2"; shift 2;;
     --variants) VARIANTS="$2"; shift 2;;
     --run-only) RUN_ONLY="1"; shift 1;;
+    --no-quiet) QUANDARY_QUIET="0"; shift 1;;
     --launcher) LAUNCHER="$2"; LAUNCHER_SET="1"; shift 2;;
     --nprocs) NPROCS="$2"; shift 2;;
     --cfg) CFG="$2"; shift 2;;
@@ -300,7 +303,11 @@ set -x
 
 run_variant() {
   local v="$1"
-  ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" --quiet \
+  local -a q_args
+  if [[ "$QUANDARY_QUIET" == "1" ]]; then
+    q_args+=(--quiet)
+  fi
+  ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" "${q_args[@]}" \
     --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "${LOG_PATHS[$v]}"
 }
 
