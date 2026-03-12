@@ -22,8 +22,8 @@ Options:
                                 The script appends "-n <nprocs>" automatically.
   --nprocs N                    MPI ranks (default: 8 on tioga, 4 on tuolumne)
   --cfg PATH                    Config file (default: tests/performance/configs/nlevels_32_32_32_32.toml)
-  --llvm-amdgpu VER             llvm-amdgpu compiler version (default: 6.4.1)
-  --hip VER                     hip/ROCm version (default: 6.4.1; used for GPU variants)
+  --llvm-amdgpu VER             llvm-amdgpu compiler version (default: 6.4.3)
+  --hip VER                     hip/ROCm version (default: 6.4.3; used for GPU variants)
   --pin-hipblas                 Require hipblas@--hip (errors if unavailable; default: auto-detect if available)
   --no-pin-hipblas              Never pin hipblas version (default: auto-detect)
   --petsc-cxxstd N              PETSc C++ standard for the kokkos variant (adds PETSc cxxflags="-std=gnu++N")
@@ -57,8 +57,8 @@ LAUNCHER=""
 LAUNCHER_SET="0"
 NPROCS=""
 CFG="tests/performance/configs/nlevels_32_32_32_32.toml"
-LLVM_AMDGPU_VER="6.4.1"
-HIP_VER="6.4.1"
+LLVM_AMDGPU_VER="6.4.3"
+HIP_VER="6.4.3"
 AMDGPU_TARGET=""
 PETSC_SPEC="@3.24.4"
 PETSC_MIN="~mmg~parmmg~saws~examples~ml~exodusii~zoltan"
