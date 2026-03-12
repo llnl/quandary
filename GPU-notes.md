@@ -12,9 +12,9 @@
 
 - Start with wall-clock + PETSc logging (`-log_view -log_summary`); only add Caliper if PETSc logs don’t explain the result.
 - Compare 2–3 PETSc builds using the same input and MPI/GPU binding:
-  - `cpu`: PETSc without `+kokkos`/`+rocm` (still built with the ROCm toolchain to match the platform).
-  - `kokkos`: PETSc `+kokkos` (preferred GPU path on AMD).
-  - `rocm`: PETSc `+rocm~kokkos` (experimental comparison).
+  - `cpu`: `^petsc@3.24.4~kokkos~rocm`
+  - `kokkos`: `^petsc@3.24.4+kokkos+rocm` (preferred GPU path on AMD)
+  - `rocm`: `^petsc@3.24.4+rocm~kokkos` (experimental HIP-only comparison)
 
 ## Script
 

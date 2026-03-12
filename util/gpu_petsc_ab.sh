@@ -23,7 +23,8 @@ Options:
   --llvm-amdgpu VER             llvm-amdgpu version (default: 6.4.3)
   --hip VER                     hip version (default: 6.4.3)
   --amdgpu-target GFX           AMDGPU target (default: gfx90a on tioga, gfx942 on tuolumne)
-  --petsc SPEC                  PETSc constraint (default: "^petsc@3.23:")
+  --petsc SPEC                  PETSc version/constraint appended after "^petsc"
+                                (default: "@3.24.4", e.g. "@3.24.4" or "@3.24.4:")
   --no-install                  Only concretize; skip spack install
   --keep-logs                   Don’t overwrite logs; append timestamp
   -h, --help                    Show help
@@ -50,7 +51,7 @@ CFG="tests/performance/configs/nlevels_32_32_32_32.toml"
 LLVM_AMDGPU_VER="6.4.3"
 HIP_VER="6.4.3"
 AMDGPU_TARGET=""
-PETSC_SPEC="^petsc@3.23:"
+PETSC_SPEC="@3.24.4"
 DO_INSTALL="1"
 KEEP_LOGS="0"
 
@@ -173,20 +174,25 @@ if variant_selected cpu "$VARIANTS"; then spack -e "$ENV_ROOT/cpu" env status ||
 if variant_selected kokkos "$VARIANTS"; then spack -e "$ENV_ROOT/kokkos" env status || true; fi
 if variant_selected rocm "$VARIANTS"; then spack -e "$ENV_ROOT/rocm" env status || true; fi
 
-TOOLCHAIN="+rocm amdgpu_target=${AMDGPU_TARGET} %llvm-amdgpu@=${LLVM_AMDGPU_VER} ^hip@${HIP_VER}"
+COMPILER_SPEC="%llvm-amdgpu@=${LLVM_AMDGPU_VER}"
+ROCM_DEPS="^hip@${HIP_VER}"
+
+PETSC_CPU="^petsc${PETSC_SPEC}~rocm~kokkos"
+PETSC_KOKKOS="^petsc${PETSC_SPEC}+rocm+kokkos"
+PETSC_ROCM="^petsc${PETSC_SPEC}+rocm~kokkos"
 
 echo "=== (Re)setting specs ==="
 if variant_selected cpu "$VARIANTS"; then
   spack -e "$ENV_ROOT/cpu" rm -y quandary >/dev/null 2>&1 || true
-  spack -e "$ENV_ROOT/cpu" add "quandary@develop+test ~rocm~kokkos ${PETSC_SPEC} ${TOOLCHAIN}"
+  spack -e "$ENV_ROOT/cpu" add "quandary@develop+test ${COMPILER_SPEC} ${PETSC_CPU}"
 fi
 if variant_selected kokkos "$VARIANTS"; then
   spack -e "$ENV_ROOT/kokkos" rm -y quandary >/dev/null 2>&1 || true
-  spack -e "$ENV_ROOT/kokkos" add "quandary@develop+test +kokkos ${PETSC_SPEC} ${TOOLCHAIN}"
+  spack -e "$ENV_ROOT/kokkos" add "quandary@develop+test ${COMPILER_SPEC} ${PETSC_KOKKOS} ${ROCM_DEPS}"
 fi
 if variant_selected rocm "$VARIANTS"; then
   spack -e "$ENV_ROOT/rocm" rm -y quandary >/dev/null 2>&1 || true
-  spack -e "$ENV_ROOT/rocm" add "quandary@develop+test +rocm~kokkos ${PETSC_SPEC} ${TOOLCHAIN}"
+  spack -e "$ENV_ROOT/rocm" add "quandary@develop+test ${COMPILER_SPEC} ${PETSC_ROCM} ${ROCM_DEPS}"
 fi
 
 echo "=== Concretize ==="
