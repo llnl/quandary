@@ -23,7 +23,7 @@ Options:
   --nprocs N                    MPI ranks (default: 8 on tioga, 4 on tuolumne)
   --cfg PATH                    Config file (default: tests/performance/configs/nlevels_32_32_32_32.toml)
   --llvm-amdgpu VER             llvm-amdgpu compiler version (default: 6.4.1)
-  --hip VER                     hip version (default: 6.4.1; used for GPU variants)
+  --hip VER                     hip/ROCm version (default: 6.4.1; used for GPU variants)
   --amdgpu-target GFX           AMDGPU target (default: gfx90a on tioga, gfx942 on tuolumne)
   --petsc SPEC                  PETSc version/constraint appended after "^petsc"
                                 (default: "@3.24.4", e.g. "@3.24.4" or "@3.24.4:")
@@ -211,7 +211,7 @@ if variant_selected kokkos "$VARIANTS"; then spack -e "$ENV_ROOT/kokkos" env sta
 if variant_selected rocm "$VARIANTS"; then spack -e "$ENV_ROOT/rocm" env status || true; fi
 
 COMPILER_SPEC="%llvm-amdgpu@=${LLVM_AMDGPU_VER}"
-ROCM_DEPS="^hip@${HIP_VER}"
+ROCM_DEPS="^hip@${HIP_VER} ^hipblas@${HIP_VER}"
 
 # Make PETSc explicitly use the same compiler as Quandary. Place the compiler
 # constraint at the end so PETSc variants don't get parsed as compiler variants.
