@@ -20,11 +20,13 @@ Options:
                                 The script appends "-n <nprocs>" automatically.
   --nprocs N                    MPI ranks (default: 8 on tioga, 4 on tuolumne)
   --cfg PATH                    Config file (default: tests/performance/configs/nlevels_32_32_32_32.toml)
-  --llvm-amdgpu VER             llvm-amdgpu version (default: 6.4.3)
-  --hip VER                     hip version (default: 6.4.3)
+  --llvm-amdgpu VER             llvm-amdgpu compiler version (default: 6.4.1)
+  --hip VER                     hip version (default: 6.4.1; used for GPU variants)
   --amdgpu-target GFX           AMDGPU target (default: gfx90a on tioga, gfx942 on tuolumne)
   --petsc SPEC                  PETSc version/constraint appended after "^petsc"
                                 (default: "@3.24.4", e.g. "@3.24.4" or "@3.24.4:")
+  --petsc-min VARS              Extra PETSc variant toggles (default: "~mmg~parmmg~saws~examples~ml~exodusii~zoltan")
+  --with-test-deps              Build Quandary with "+test" (adds python/pip run deps; default: off)
   --no-install                  Only concretize; skip spack install
   --keep-logs                   Don’t overwrite logs; append timestamp
   -h, --help                    Show help
@@ -48,10 +50,12 @@ VARIANTS="cpu,kokkos,rocm"
 LAUNCHER="flux run --gpus-per-task=1 --gpu-bind=closest"
 NPROCS=""
 CFG="tests/performance/configs/nlevels_32_32_32_32.toml"
-LLVM_AMDGPU_VER="6.4.3"
-HIP_VER="6.4.3"
+LLVM_AMDGPU_VER="6.4.1"
+HIP_VER="6.4.1"
 AMDGPU_TARGET=""
 PETSC_SPEC="@3.24.4"
+PETSC_MIN="~mmg~parmmg~saws~examples~ml~exodusii~zoltan"
+QUANDARY_TEST_VARIANT="~test"
 DO_INSTALL="1"
 KEEP_LOGS="0"
 
@@ -68,6 +72,8 @@ while [[ $# -gt 0 ]]; do
     --hip) HIP_VER="$2"; shift 2;;
     --amdgpu-target) AMDGPU_TARGET="$2"; shift 2;;
     --petsc) PETSC_SPEC="$2"; shift 2;;
+    --petsc-min) PETSC_MIN="$2"; shift 2;;
+    --with-test-deps) QUANDARY_TEST_VARIANT="+test"; shift 1;;
     --no-install) DO_INSTALL="0"; shift 1;;
     --keep-logs) KEEP_LOGS="1"; shift 1;;
     -h|--help) usage; exit 0;;
@@ -147,7 +153,6 @@ write_env_yaml() {
 spack:
   include:
     - ${RAD}/config.yaml
-    - ${RAD}/packages.yaml
     - ${MACHINE_PACKAGES}
   concretizer:
     unify: true
@@ -177,22 +182,26 @@ if variant_selected rocm "$VARIANTS"; then spack -e "$ENV_ROOT/rocm" env status 
 COMPILER_SPEC="%llvm-amdgpu@=${LLVM_AMDGPU_VER}"
 ROCM_DEPS="^hip@${HIP_VER}"
 
-PETSC_CPU="^petsc${PETSC_SPEC}~rocm~kokkos"
-PETSC_KOKKOS="^petsc${PETSC_SPEC}+rocm+kokkos"
-PETSC_ROCM="^petsc${PETSC_SPEC}+rocm~kokkos"
+PETSC_CPU="^petsc${PETSC_SPEC}~rocm~kokkos${PETSC_MIN}"
+PETSC_KOKKOS="^petsc${PETSC_SPEC}+rocm+kokkos amdgpu_target=${AMDGPU_TARGET}${PETSC_MIN}"
+PETSC_ROCM="^petsc${PETSC_SPEC}+rocm~kokkos amdgpu_target=${AMDGPU_TARGET}${PETSC_MIN}"
 
 echo "=== (Re)setting specs ==="
 if variant_selected cpu "$VARIANTS"; then
   spack -e "$ENV_ROOT/cpu" rm -y quandary >/dev/null 2>&1 || true
-  spack -e "$ENV_ROOT/cpu" add "quandary@develop+test ${COMPILER_SPEC} ${PETSC_CPU}"
+  # CPU baseline: do not mention hip or amdgpu_target; keep rocm disabled at the Quandary level.
+  spack -e "$ENV_ROOT/cpu" add "quandary@main${QUANDARY_TEST_VARIANT}~rocm ${COMPILER_SPEC} ^cray-mpich${COMPILER_SPEC} ${PETSC_CPU}"
 fi
 if variant_selected kokkos "$VARIANTS"; then
   spack -e "$ENV_ROOT/kokkos" rm -y quandary >/dev/null 2>&1 || true
-  spack -e "$ENV_ROOT/kokkos" add "quandary@develop+test ${COMPILER_SPEC} ${PETSC_KOKKOS} ${ROCM_DEPS}"
+  # GPU variant: enable ROCm at the Quandary level to keep amdgpu_target consistent for PETSc deps.
+  # Kokkos is selected on PETSc (Quandary has no +kokkos variant).
+  spack -e "$ENV_ROOT/kokkos" add "quandary@main${QUANDARY_TEST_VARIANT}+rocm amdgpu_target=${AMDGPU_TARGET} ${COMPILER_SPEC} ^cray-mpich${COMPILER_SPEC} ${ROCM_DEPS} ${PETSC_KOKKOS}"
 fi
 if variant_selected rocm "$VARIANTS"; then
   spack -e "$ENV_ROOT/rocm" rm -y quandary >/dev/null 2>&1 || true
-  spack -e "$ENV_ROOT/rocm" add "quandary@develop+test ${COMPILER_SPEC} ${PETSC_ROCM} ${ROCM_DEPS}"
+  # GPU variant: enable ROCm at the Quandary level to keep amdgpu_target consistent for PETSc deps.
+  spack -e "$ENV_ROOT/rocm" add "quandary@main${QUANDARY_TEST_VARIANT}+rocm amdgpu_target=${AMDGPU_TARGET} ${COMPILER_SPEC} ^cray-mpich${COMPILER_SPEC} ${ROCM_DEPS} ${PETSC_ROCM}"
 fi
 
 echo "=== Concretize ==="
