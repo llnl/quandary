@@ -30,7 +30,7 @@ Options:
   --debugger "CMD"              Run Quandary under a debugger wrapper (disables /usr/bin/time)
                                 Example: --debugger "gdb -batch -ex run -ex bt --args"
   --kokkos-vec-type TYPE        PETSc vec type for kokkos variant (default: kokkos)
-  --kokkos-mat-type TYPE        PETSc mat type for kokkos variant (default: aij)
+  --kokkos-mat-type TYPE        PETSc mat type for kokkos variant (default: aijkokkos)
   --nprocs N                    MPI ranks (default: 8 on tioga, 4 on tuolumne)
   --cfg PATH                    Config file (default: tests/performance/configs/nlevels_32_32_32_32.toml)
   --llvm-amdgpu VER             llvm-amdgpu compiler version (default: 6.4.3)
@@ -88,7 +88,7 @@ MPICH_GPU_SUPPORT="1"
 PETSC_GPU_AWARE_MPI="auto" # auto|on|off
 PETSC_GPU_AWARE_MPI_SET="0"
 KOKKOS_VEC_TYPE="kokkos"
-KOKKOS_MAT_TYPE="aij"
+KOKKOS_MAT_TYPE="aijkokkos"
 DEBUGGER=""
 
 while [[ $# -gt 0 ]]; do
