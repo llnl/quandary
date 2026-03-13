@@ -23,6 +23,8 @@ Options:
   --no-mpich-gpu-support        Do not set MPICH_GPU_SUPPORT_ENABLED=1 for GPU variants
   --petsc-gpu-aware-mpi MODE    Control PETSc GPU-aware MPI behavior for GPU variants
                                 MODE is {auto|on|off} (default: off for kokkos; auto otherwise)
+  --kokkos-vec-type TYPE        PETSc vec type for kokkos variant (default: kokkos)
+  --kokkos-mat-type TYPE        PETSc mat type for kokkos variant (default: aijkokkos)
   --nprocs N                    MPI ranks (default: 8 on tioga, 4 on tuolumne)
   --cfg PATH                    Config file (default: tests/performance/configs/nlevels_32_32_32_32.toml)
   --llvm-amdgpu VER             llvm-amdgpu compiler version (default: 6.4.3)
@@ -76,6 +78,8 @@ HIPBLAS_PIN_MODE="auto" # auto|pin|off
 MPICH_GPU_SUPPORT="1"
 PETSC_GPU_AWARE_MPI="auto" # auto|on|off
 PETSC_GPU_AWARE_MPI_SET="0"
+KOKKOS_VEC_TYPE="kokkos"
+KOKKOS_MAT_TYPE="aijkokkos"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -88,6 +92,8 @@ while [[ $# -gt 0 ]]; do
     --launcher) LAUNCHER="$2"; LAUNCHER_SET="1"; shift 2;;
     --no-mpich-gpu-support) MPICH_GPU_SUPPORT="0"; shift 1;;
     --petsc-gpu-aware-mpi) PETSC_GPU_AWARE_MPI="$2"; PETSC_GPU_AWARE_MPI_SET="1"; shift 2;;
+    --kokkos-vec-type) KOKKOS_VEC_TYPE="$2"; shift 2;;
+    --kokkos-mat-type) KOKKOS_MAT_TYPE="$2"; shift 2;;
     --nprocs) NPROCS="$2"; shift 2;;
     --cfg) CFG="$2"; shift 2;;
     --llvm-amdgpu) LLVM_AMDGPU_VER="$2"; shift 2;;
@@ -336,7 +342,7 @@ declare -A PETSC_OPTS
 declare -A LOG_PATHS
 
 PETSC_OPTS[cpu]='-log_view -log_summary'
-PETSC_OPTS[kokkos]='-vec_type kokkos -mat_type aijkokkos -log_view -log_summary'
+PETSC_OPTS[kokkos]="-vec_type ${KOKKOS_VEC_TYPE} -mat_type ${KOKKOS_MAT_TYPE} -log_view -log_summary"
 PETSC_OPTS[rocm]='-vec_type hip -mat_type aijhipsparse -log_view -log_summary'
 
 case "$PETSC_GPU_AWARE_MPI" in
