@@ -44,3 +44,10 @@ The logs are written under `envs-gpu-ab/` by default (`cpu.log`, `kokkos.log`, `
 ## Common concretization pitfall (CPU baseline)
 
 - For the `cpu` variant, do **not** add ROCm-only constraints like `^hip@...` or `amdgpu_target=...`. Those can implicitly force `+rocm` in some dependency and create `~rocm`/`+rocm` conflicts (or `amdgpu_target=none` conflicts).
+
+## Notes from Tioga runs (PETSc 3.24.4, ROCm 6.4.3)
+
+- PETSc `-mat_type aijkokkos` segfaulted quickly in our `kokkos` variant run.
+- Workaround: keep `-vec_type kokkos` but switch matrix back to CPU: `-mat_type aij`.
+  - Example (via `util/gpu_petsc_ab.sh`): `--variants kokkos --kokkos-vec-type kokkos --kokkos-mat-type aij`
+  - This still exercises PETSc+Kokkos vectors, but does **not** use Kokkos matrix kernels.
