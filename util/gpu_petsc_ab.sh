@@ -263,8 +263,15 @@ case "$HIPBLAS_PIN_MODE" in
     ;;
 esac
 
-# For GPU variants, keep ROCm deps consistent and compiled with the same compiler.
-ROCM_DEPS="^hip@${HIP_VER} ${HIPBLAS_SPEC} ${COMPILER_SPEC}"
+# hipblas-common is a separate package on some stacks; keeping it aligned avoids
+# mixing ROCm component versions (e.g. hipblas@6.4.x with hipblas-common@7.x).
+# Do not apply a compiler constraint here; on systems where hipblas-common is
+# provided externally by ROCm, a compiler constraint can prevent matching it.
+HIPBLAS_COMMON_SPEC="^hipblas-common@${HIP_VER}"
+
+# For GPU variants, keep ROCm deps consistent. Do not force a compiler on ROCm
+# externals like hipblas-common; some site stacks provide them prebuilt.
+ROCM_DEPS="^hip@${HIP_VER} ${HIPBLAS_SPEC} ${HIPBLAS_COMMON_SPEC}"
 
 # Make PETSc explicitly use the same compiler as Quandary. Place the compiler
 # constraint at the end so PETSc variants don't get parsed as compiler variants.
