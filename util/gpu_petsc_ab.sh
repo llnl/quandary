@@ -20,6 +20,7 @@ Options:
   --no-quiet                    Do not pass --quiet to Quandary (default: pass --quiet)
   --launcher "CMD"              Launcher prefix (default: flux run; adds --gpu-bind=closest if supported)
                                 The script appends "-n <nprocs>" automatically.
+  --no-mpich-gpu-support        Do not set MPICH_GPU_SUPPORT_ENABLED=1 for GPU variants
   --nprocs N                    MPI ranks (default: 8 on tioga, 4 on tuolumne)
   --cfg PATH                    Config file (default: tests/performance/configs/nlevels_32_32_32_32.toml)
   --llvm-amdgpu VER             llvm-amdgpu compiler version (default: 6.4.3)
@@ -70,6 +71,7 @@ KEEP_LOGS="0"
 RUN_ONLY="0"
 QUANDARY_QUIET="1"
 HIPBLAS_PIN_MODE="auto" # auto|pin|off
+MPICH_GPU_SUPPORT="1"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -80,6 +82,7 @@ while [[ $# -gt 0 ]]; do
     --run-only) RUN_ONLY="1"; shift 1;;
     --no-quiet) QUANDARY_QUIET="0"; shift 1;;
     --launcher) LAUNCHER="$2"; LAUNCHER_SET="1"; shift 2;;
+    --no-mpich-gpu-support) MPICH_GPU_SUPPORT="0"; shift 1;;
     --nprocs) NPROCS="$2"; shift 2;;
     --cfg) CFG="$2"; shift 2;;
     --llvm-amdgpu) LLVM_AMDGPU_VER="$2"; shift 2;;
@@ -355,11 +358,17 @@ set -x
 
 run_variant() {
   local v="$1"
+  local -a env_prefix
+  if [[ "$MPICH_GPU_SUPPORT" == "1" ]] && [[ "$v" != "cpu" ]]; then
+    # Cray MPICH typically requires this for GPU-aware MPI. Without it, PETSc may
+    # pass device pointers through MPI and trigger invalid memory accesses.
+    env_prefix+=(MPICH_GPU_SUPPORT_ENABLED=1)
+  fi
   if [[ "$QUANDARY_QUIET" == "1" ]]; then
-    ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" --quiet \
+    "${env_prefix[@]}" ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" --quiet \
       --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "${LOG_PATHS[$v]}"
   else
-    ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" \
+    "${env_prefix[@]}" ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" \
       --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "${LOG_PATHS[$v]}"
   fi
 }
