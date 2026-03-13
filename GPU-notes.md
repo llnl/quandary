@@ -37,6 +37,7 @@ Current defaults in the script:
 - `kokkos` run uses `--petsc-options "-vec_type kokkos -mat_type aijkokkos -use_gpu_aware_mpi 0 -log_view -log_summary"`.
 - `rocm` run uses `--petsc-options "-vec_type hip -mat_type aijhipsparse -use_gpu_aware_mpi 0 -log_view -log_summary"`.
 - Sets `MPICH_GPU_SUPPORT_ENABLED=1` for GPU variants (Tioga/Tuolumne Cray MPICH) unless disabled.
+- Writes Quandary output directories under `envs-gpu-ab/runs/` with a per-run unique name by rewriting the config’s `[output].directory`.
 
 ## Interpreting results
 
