@@ -31,6 +31,12 @@ Examples:
 
 The logs are written under `envs-gpu-ab/` by default (`cpu.log`, `kokkos.log`, `rocm.log`).
 
+Current defaults in the script:
+
+- `kokkos` run uses `--petsc-options "-vec_type kokkos -mat_type aijkokkos -use_gpu_aware_mpi 0 -log_view -log_summary"`.
+- `rocm` run uses `--petsc-options "-vec_type hip -mat_type aijhipsparse -use_gpu_aware_mpi 0 -log_view -log_summary"`.
+- Sets `MPICH_GPU_SUPPORT_ENABLED=1` for GPU variants (Tioga/Tuolumne Cray MPICH) unless disabled.
+
 ## Interpreting results
 
 - In `-log_view`, check whether time is dominated by `MatMult`/`KSPSolve` (better GPU candidate) vs “user”/shell work (GPU may not help without refactors).
@@ -47,8 +53,9 @@ The logs are written under `envs-gpu-ab/` by default (`cpu.log`, `kokkos.log`, `
 
 ## Notes from Tioga runs (PETSc 3.24.4, ROCm 6.4.3)
 
-- PETSc `-mat_type aijkokkos` originally failed (sometimes SEGV, sometimes a debug error) due to a type mismatch in our `MatShell`: PETSc was passing a Kokkos input vector `x` but a non-Kokkos output/work vector `y`.
-- Fix: set the MatShell VecType from the runtime `-vec_type` option (so PETSc’s `MatCreateVecs()` work vectors match the requested backend). With that in place, `-vec_type kokkos -mat_type aijkokkos` runs successfully.
+- PETSc `-mat_type aijkokkos` originally failed (sometimes SEGV, sometimes a debug error) due to a type mismatch in our `MatShell`: PETSc was passing a Kokkos input vector `x` but a non-Kokkos output/work vector `y` (e.g. `y=seq`).
+- Fix: set the MatShell VecType from the runtime `-vec_type` option in `src/mastereq.cpp` so PETSc’s `MatCreateVecs()` work vectors match the requested backend. With that in place, `-vec_type kokkos -mat_type aijkokkos` runs successfully on Tioga.
+- The older workaround (`-mat_type aij`) is no longer required, but can still be used for debugging/comparison.
 
 ### Why `aijkokkos` was failing
 
