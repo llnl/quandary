@@ -23,6 +23,9 @@ Options:
   --no-mpich-gpu-support        Do not set MPICH_GPU_SUPPORT_ENABLED=1 for GPU variants
   --petsc-gpu-aware-mpi MODE    Control PETSc GPU-aware MPI behavior for GPU variants
                                 MODE is {auto|on|off} (default: off for kokkos; auto otherwise)
+  --petsc-debug                 Build PETSc with +debug (default: ~debug)
+  --debugger "CMD"              Run Quandary under a debugger wrapper (disables /usr/bin/time)
+                                Example: --debugger "gdb -batch -ex run -ex bt --args"
   --kokkos-vec-type TYPE        PETSc vec type for kokkos variant (default: kokkos)
   --kokkos-mat-type TYPE        PETSc mat type for kokkos variant (default: aij)
   --nprocs N                    MPI ranks (default: 8 on tioga, 4 on tuolumne)
@@ -67,6 +70,7 @@ HIP_VER="6.4.3"
 AMDGPU_TARGET=""
 PETSC_SPEC="@3.24.4"
 PETSC_MIN="~mmg~parmmg~saws~examples~ml~exodusii~zoltan"
+PETSC_DEBUG="~debug"
 PETSC_CXXSTD=""
 KOKKOS_CXXSTD="17"
 QUANDARY_TEST_VARIANT="~test"
@@ -80,6 +84,7 @@ PETSC_GPU_AWARE_MPI="auto" # auto|on|off
 PETSC_GPU_AWARE_MPI_SET="0"
 KOKKOS_VEC_TYPE="kokkos"
 KOKKOS_MAT_TYPE="aij"
+DEBUGGER=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -92,6 +97,8 @@ while [[ $# -gt 0 ]]; do
     --launcher) LAUNCHER="$2"; LAUNCHER_SET="1"; shift 2;;
     --no-mpich-gpu-support) MPICH_GPU_SUPPORT="0"; shift 1;;
     --petsc-gpu-aware-mpi) PETSC_GPU_AWARE_MPI="$2"; PETSC_GPU_AWARE_MPI_SET="1"; shift 2;;
+    --petsc-debug) PETSC_DEBUG="+debug"; shift 1;;
+    --debugger) DEBUGGER="$2"; shift 2;;
     --kokkos-vec-type) KOKKOS_VEC_TYPE="$2"; shift 2;;
     --kokkos-mat-type) KOKKOS_MAT_TYPE="$2"; shift 2;;
     --nprocs) NPROCS="$2"; shift 2;;
@@ -292,6 +299,10 @@ PETSC_CPU="^petsc${PETSC_SPEC}~rocm~kokkos ${PETSC_MIN} ${COMPILER_SPEC}"
 PETSC_KOKKOS="^petsc${PETSC_SPEC}+rocm+kokkos amdgpu_target=${AMDGPU_TARGET} ${PETSC_MIN} ${COMPILER_SPEC}"
 PETSC_ROCM="^petsc${PETSC_SPEC}+rocm~kokkos amdgpu_target=${AMDGPU_TARGET} ${PETSC_MIN} ${COMPILER_SPEC}"
 
+PETSC_CPU="${PETSC_CPU/^petsc${PETSC_SPEC}/^petsc${PETSC_SPEC}${PETSC_DEBUG}}"
+PETSC_KOKKOS="${PETSC_KOKKOS/^petsc${PETSC_SPEC}/^petsc${PETSC_SPEC}${PETSC_DEBUG}}"
+PETSC_ROCM="${PETSC_ROCM/^petsc${PETSC_SPEC}/^petsc${PETSC_SPEC}${PETSC_DEBUG}}"
+
 if [[ -n "$PETSC_CXXSTD" ]]; then
   # Spack's PETSc package doesn't necessarily expose a cxxstd variant; use flags.
   # Keep this before the compiler constraint so it applies to PETSc, not the compiler spec.
@@ -405,6 +416,12 @@ run_variant() {
     # Cray MPICH typically requires this for GPU-aware MPI. Without it, PETSc may
     # pass device pointers through MPI and trigger invalid memory accesses.
     cmd_prefix=(env MPICH_GPU_SUPPORT_ENABLED=1)
+  fi
+  if [[ -n "$DEBUGGER" ]]; then
+    # Note: for MPI runs, this will launch a debugger per rank. Prefer --nprocs 1.
+    "${cmd_prefix[@]}" ${MPI_PREFIX} ${DEBUGGER} "${BIN_PATHS[$v]}" "$CFG" \
+      --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "${LOG_PATHS[$v]}"
+    return 0
   fi
   if [[ "$QUANDARY_QUIET" == "1" ]]; then
     "${cmd_prefix[@]}" ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" --quiet \
