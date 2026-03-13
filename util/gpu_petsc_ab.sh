@@ -21,6 +21,8 @@ Options:
   --launcher "CMD"              Launcher prefix (default: flux run; adds --gpu-bind=closest if supported)
                                 The script appends "-n <nprocs>" automatically.
   --no-mpich-gpu-support        Do not set MPICH_GPU_SUPPORT_ENABLED=1 for GPU variants
+  --petsc-gpu-aware-mpi MODE    Control PETSc GPU-aware MPI behavior for GPU variants
+                                MODE is {auto|on|off} (default: auto)
   --nprocs N                    MPI ranks (default: 8 on tioga, 4 on tuolumne)
   --cfg PATH                    Config file (default: tests/performance/configs/nlevels_32_32_32_32.toml)
   --llvm-amdgpu VER             llvm-amdgpu compiler version (default: 6.4.3)
@@ -72,6 +74,7 @@ RUN_ONLY="0"
 QUANDARY_QUIET="1"
 HIPBLAS_PIN_MODE="auto" # auto|pin|off
 MPICH_GPU_SUPPORT="1"
+PETSC_GPU_AWARE_MPI="auto" # auto|on|off
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -83,6 +86,7 @@ while [[ $# -gt 0 ]]; do
     --no-quiet) QUANDARY_QUIET="0"; shift 1;;
     --launcher) LAUNCHER="$2"; LAUNCHER_SET="1"; shift 2;;
     --no-mpich-gpu-support) MPICH_GPU_SUPPORT="0"; shift 1;;
+    --petsc-gpu-aware-mpi) PETSC_GPU_AWARE_MPI="$2"; shift 2;;
     --nprocs) NPROCS="$2"; shift 2;;
     --cfg) CFG="$2"; shift 2;;
     --llvm-amdgpu) LLVM_AMDGPU_VER="$2"; shift 2;;
@@ -103,6 +107,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 command -v spack >/dev/null 2>&1 || die "'spack' not found in PATH"
+
+case "$PETSC_GPU_AWARE_MPI" in
+  auto|on|off) ;;
+  *) die "--petsc-gpu-aware-mpi must be one of: auto, on, off";;
+esac
 
 cd "$REPO"
 [[ -f "CMakeLists.txt" ]] || die "--repo must point to the Quandary repo root (missing CMakeLists.txt)"
@@ -316,6 +325,18 @@ PETSC_OPTS[cpu]='-log_view -log_summary'
 PETSC_OPTS[kokkos]='-vec_type kokkos -mat_type aijkokkos -log_view -log_summary'
 PETSC_OPTS[rocm]='-vec_type hip -mat_type aijhipsparse -log_view -log_summary'
 
+case "$PETSC_GPU_AWARE_MPI" in
+  on)
+    PETSC_OPTS[kokkos]="${PETSC_OPTS[kokkos]} -use_gpu_aware_mpi 1"
+    PETSC_OPTS[rocm]="${PETSC_OPTS[rocm]} -use_gpu_aware_mpi 1"
+    ;;
+  off)
+    PETSC_OPTS[kokkos]="${PETSC_OPTS[kokkos]} -use_gpu_aware_mpi 0"
+    PETSC_OPTS[rocm]="${PETSC_OPTS[rocm]} -use_gpu_aware_mpi 0"
+    ;;
+  auto) ;;
+esac
+
 if variant_selected cpu "$VARIANTS"; then
   BIN_PATHS[cpu]="$(spack -e "$ENV_ROOT/cpu" location -i quandary)/bin/quandary"
   [[ -x "${BIN_PATHS[cpu]}" ]] || die "Binary not found/executable: ${BIN_PATHS[cpu]}"
@@ -352,6 +373,7 @@ echo "cfg=$CFG"
 echo "env_root=$ENV_ROOT"
 if [[ -n "$PETSC_CXXSTD" ]]; then echo "petsc_cxxstd=$PETSC_CXXSTD"; fi
 if variant_selected kokkos "$VARIANTS"; then echo "kokkos_cxxstd=$KOKKOS_CXXSTD"; fi
+if [[ "$PETSC_GPU_AWARE_MPI" != "auto" ]]; then echo "petsc_gpu_aware_mpi=$PETSC_GPU_AWARE_MPI"; fi
 echo
 
 set -x
