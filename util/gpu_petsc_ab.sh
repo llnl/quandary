@@ -25,7 +25,7 @@ Options:
                                 The script appends "-n <nprocs>" automatically.
   --no-mpich-gpu-support        Do not set MPICH_GPU_SUPPORT_ENABLED=1 for GPU variants
   --petsc-gpu-aware-mpi MODE    Control PETSc GPU-aware MPI behavior for GPU variants
-                                MODE is {auto|on|off} (default: on for kokkos; auto otherwise)
+                                MODE is {auto|on|off} (default: on for kokkos,rocm; auto otherwise)
   --petsc-debug                 Build PETSc with +debug (default: ~debug)
   --debugger "CMD"              Run Quandary under a debugger wrapper (disables /usr/bin/time)
                                 Example: --debugger "gdb -batch -ex run -ex bt --args"
@@ -231,6 +231,11 @@ mkdir -p "$ENV_ROOT"
 if [[ "$PETSC_GPU_AWARE_MPI_SET" == "0" ]] && variant_selected kokkos "$VARIANTS"; then
   # The PETSc+Kokkos path often triggers MPI communication with device-resident
   # buffers; default to GPU-aware MPI (on) now that Kokkos Mat/Vec are working.
+  PETSC_GPU_AWARE_MPI="on"
+fi
+if [[ "$PETSC_GPU_AWARE_MPI_SET" == "0" ]] && variant_selected rocm "$VARIANTS" && [[ "$PETSC_GPU_AWARE_MPI" == "auto" ]]; then
+  # The HIP Vec/Mat path can also benefit from GPU-aware MPI when the MPI stack
+  # supports device pointers (e.g., Cray MPICH with MPICH_GPU_SUPPORT_ENABLED=1).
   PETSC_GPU_AWARE_MPI="on"
 fi
 

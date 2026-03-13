@@ -35,7 +35,7 @@ By default, each run writes to a unique directory under `envs-gpu-ab/runs/`.
 Current defaults in the script:
 
 - `kokkos` run uses `--petsc-options "-vec_type kokkos -mat_type aijkokkos -use_gpu_aware_mpi 1 -log_view -log_summary"` (GPU-aware MPI enabled).
-- `rocm` run uses `--petsc-options "-vec_type hip -mat_type aijhipsparse -use_gpu_aware_mpi 0 -log_view -log_summary"` (staging enabled).
+- `rocm` run uses `--petsc-options "-vec_type hip -mat_type aijhipsparse -use_gpu_aware_mpi 1 -log_view -log_summary"` (GPU-aware MPI enabled).
 - Sets `MPICH_GPU_SUPPORT_ENABLED=1` for GPU variants (Tioga/Tuolumne Cray MPICH) unless disabled.
 - Writes Quandary output directories under `envs-gpu-ab/runs/` with a per-run unique name by rewriting the config’s `[output].directory`.
 - Writes the corresponding run log (`cpu.log`/`kokkos.log`/`rocm.log`) into the same per-run output directory under `envs-gpu-ab/runs/`.
