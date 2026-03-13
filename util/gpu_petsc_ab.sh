@@ -441,6 +441,7 @@ set -x
 run_variant() {
   local v="$1"
   local cfg_path="$CFG"
+  local log_path="${LOG_PATHS[$v]:-}"
   if [[ "$UNIQUE_OUTPUT" == "1" ]]; then
     local ts
     ts="$(date +%Y%m%d_%H%M%S)"
@@ -454,6 +455,7 @@ run_variant() {
     local outdir="${RUN_OUTPUT_ROOT}/${tag}_${ts}"
     mkdir -p "$outdir"
     cfg_path="${outdir}/config.toml"
+    log_path="${outdir}/${v}.log"
     awk -v out="$outdir" '
       BEGIN { in_output = 0 }
       /^\[/ { in_output = ($0 == "[output]") }
@@ -461,6 +463,7 @@ run_variant() {
       { print }
     ' "$CFG" > "$cfg_path"
   fi
+  LOG_PATHS[$v]="$log_path"
   local -a cmd_prefix
   if [[ "$MPICH_GPU_SUPPORT" == "1" ]] && [[ "$v" != "cpu" ]]; then
     # Cray MPICH typically requires this for GPU-aware MPI. Without it, PETSc may
@@ -470,15 +473,15 @@ run_variant() {
   if [[ -n "$DEBUGGER" ]]; then
     # Note: for MPI runs, this will launch a debugger per rank. Prefer --nprocs 1.
     "${cmd_prefix[@]}" ${MPI_PREFIX} ${DEBUGGER} "${BIN_PATHS[$v]}" "$cfg_path" \
-      --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "${LOG_PATHS[$v]}"
+      --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "$log_path"
     return 0
   fi
   if [[ "$QUANDARY_QUIET" == "1" ]]; then
     "${cmd_prefix[@]}" ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$cfg_path" --quiet \
-      --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "${LOG_PATHS[$v]}"
+      --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "$log_path"
   else
     "${cmd_prefix[@]}" ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$cfg_path" \
-      --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "${LOG_PATHS[$v]}"
+      --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "$log_path"
   fi
 }
 
