@@ -47,7 +47,18 @@ The logs are written under `envs-gpu-ab/` by default (`cpu.log`, `kokkos.log`, `
 
 ## Notes from Tioga runs (PETSc 3.24.4, ROCm 6.4.3)
 
-- PETSc `-mat_type aijkokkos` segfaulted quickly in our `kokkos` variant run.
-- Workaround: keep `-vec_type kokkos` but switch matrix back to CPU: `-mat_type aij`.
-  - Example (via `util/gpu_petsc_ab.sh`): `--variants kokkos --kokkos-vec-type kokkos --kokkos-mat-type aij`
-  - This still exercises PETSc+Kokkos vectors, but does **not** use Kokkos matrix kernels.
+- PETSc `-mat_type aijkokkos` originally failed (sometimes SEGV, sometimes a debug error) due to a type mismatch in our `MatShell`: PETSc was passing a Kokkos input vector `x` but a non-Kokkos output/work vector `y`.
+- Fix: set the MatShell VecType from the runtime `-vec_type` option (so PETSc’s `MatCreateVecs()` work vectors match the requested backend). With that in place, `-vec_type kokkos -mat_type aijkokkos` runs successfully.
+
+### Why `aijkokkos` was failing
+
+- PETSc’s AIJKokkos MatMult expects to operate on `VECKOKKOS` vectors.
+- Quandary’s PETSc operator is a `MatShell`. PETSc may create MatShell work vectors (including the output vector `y`) using the Mat’s configured VecType; if the Mat’s VecType is left at the default, `y` can be `seq`/`mpi` even when `-vec_type kokkos` is requested.
+- In a PETSc debug build you’ll typically see:
+  - `Invalid argument: Calling VECKOKKOS methods on a non-VECKOKKOS object`
+  - originating from `MatMult(_MPI/Seq)AIJKokkos()` → `VecGetKokkosView_Private()`.
+
+### Debugging / backtraces
+
+- Build PETSc with debug and run single-rank under gdb (otherwise you get one debugger per MPI rank):
+  - `bash util/gpu_petsc_ab.sh --variants kokkos --petsc-debug --nprocs 1 --cfg tests/performance/configs/nlevels_4_4_4_4.toml --kokkos-vec-type kokkos --kokkos-mat-type aijkokkos --debugger "gdb -q -batch -ex 'handle SIGSEGV stop print' -ex 'handle SIGABRT stop print' -ex run -ex bt --args"`
