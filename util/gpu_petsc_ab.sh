@@ -25,7 +25,7 @@ Options:
                                 The script appends "-n <nprocs>" automatically.
   --no-mpich-gpu-support        Do not set MPICH_GPU_SUPPORT_ENABLED=1 for GPU variants
   --petsc-gpu-aware-mpi MODE    Control PETSc GPU-aware MPI behavior for GPU variants
-                                MODE is {auto|on|off} (default: off for kokkos; auto otherwise)
+                                MODE is {auto|on|off} (default: on for kokkos; auto otherwise)
   --petsc-debug                 Build PETSc with +debug (default: ~debug)
   --debugger "CMD"              Run Quandary under a debugger wrapper (disables /usr/bin/time)
                                 Example: --debugger "gdb -batch -ex run -ex bt --args"
@@ -51,9 +51,10 @@ Options:
   -h, --help                    Show help
 
 Outputs:
-  <env-root>/cpu.log
-  <env-root>/kokkos.log
-  <env-root>/rocm.log
+  Default: per-run directories under <env-root>/runs/
+    <env-root>/runs/<tag>_<timestamp>/config.toml
+    <env-root>/runs/<tag>_<timestamp>/{cpu|kokkos|rocm}.log
+    <env-root>/runs/<tag>_<timestamp>/... (Quandary output files)
 EOF
 }
 
@@ -229,8 +230,8 @@ mkdir -p "$ENV_ROOT"
 
 if [[ "$PETSC_GPU_AWARE_MPI_SET" == "0" ]] && variant_selected kokkos "$VARIANTS"; then
   # The PETSc+Kokkos path often triggers MPI communication with device-resident
-  # buffers; default to PETSc staging (off) unless the user explicitly opts in.
-  PETSC_GPU_AWARE_MPI="off"
+  # buffers; default to GPU-aware MPI (on) now that Kokkos Mat/Vec are working.
+  PETSC_GPU_AWARE_MPI="on"
 fi
 
 write_env_yaml() {
