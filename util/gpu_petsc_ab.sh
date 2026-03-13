@@ -13,6 +13,9 @@ Usage:
 Options:
   --machine {tioga|tuolumne}     Select radiuss machine config (default: tioga)
   --repo PATH                   Path to Quandary repo root (default: cwd)
+  --develop                     Use Spack develop mode for Quandary (default: on)
+  --no-develop                  Disable Spack develop mode for Quandary
+  --develop-path PATH           Path to local Quandary source for develop mode (default: --repo)
   --env-root PATH               Where to create envs/ (default: <repo>/envs-gpu-ab)
   --variants LIST               Which variants to build/run (default: cpu,kokkos,rocm)
                                 LIST is comma-separated, e.g. "cpu,kokkos" or "kokkos"
@@ -60,6 +63,8 @@ die() {
 REPO="${PWD}"
 MACHINE="tioga"
 ENV_ROOT=""
+DEVELOP="1"
+DEVELOP_PATH=""
 VARIANTS="cpu,kokkos,rocm"
 LAUNCHER=""
 LAUNCHER_SET="0"
@@ -90,6 +95,9 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --machine) MACHINE="$2"; shift 2;;
     --repo) REPO="$2"; shift 2;;
+    --develop) DEVELOP="1"; shift 1;;
+    --no-develop) DEVELOP="0"; shift 1;;
+    --develop-path) DEVELOP_PATH="$2"; shift 2;;
     --env-root) ENV_ROOT="$2"; shift 2;;
     --variants) VARIANTS="$2"; shift 2;;
     --run-only) RUN_ONLY="1"; shift 1;;
@@ -129,6 +137,7 @@ esac
 
 cd "$REPO"
 [[ -f "CMakeLists.txt" ]] || die "--repo must point to the Quandary repo root (missing CMakeLists.txt)"
+: "${DEVELOP_PATH:=$REPO}"
 
 default_launcher() {
   local launcher="flux run --gpus-per-task=1"
@@ -225,6 +234,16 @@ spack:
   concretizer:
     unify: true
   view: true
+EOF
+  if [[ "$DEVELOP" == "1" ]]; then
+    cat >> "${env_dir}/spack.yaml" <<EOF
+  develop:
+    quandary:
+      path: ${DEVELOP_PATH}
+      spec: quandary@main
+EOF
+  fi
+  cat >> "${env_dir}/spack.yaml" <<EOF
   specs: []
 EOF
 }
