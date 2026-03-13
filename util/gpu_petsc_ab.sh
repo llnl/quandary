@@ -355,12 +355,13 @@ set -x
 
 run_variant() {
   local v="$1"
-  local -a q_args
   if [[ "$QUANDARY_QUIET" == "1" ]]; then
-    q_args+=(--quiet)
+    ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" --quiet \
+      --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "${LOG_PATHS[$v]}"
+  else
+    ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" \
+      --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "${LOG_PATHS[$v]}"
   fi
-  ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" "${q_args[@]}" \
-    --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "${LOG_PATHS[$v]}"
 }
 
 if variant_selected cpu "$VARIANTS"; then run_variant cpu; fi
