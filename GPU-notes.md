@@ -1,74 +1,135 @@
 # GPU Notes: Quandary + PETSc on ROCm (Tioga/Tuolumne)
 
-## Findings
+## Summary
 
-- Quandary already supports passing PETSc runtime flags via `quandary <config> --petsc-options "<...>"` (no code changes needed to try PETSc GPU backends).
-- The main operator is a PETSc `MatShell` (`src/mastereq.cpp`), and time stepping repeatedly calls `MatMult` and `KSPSolve` (`src/timestepper.cpp`), so GPU benefit depends on whether time is dominated by PETSc kernels vs Quandary’s shell callback / synchronization.
-- PETSc docs suggest on AMD:
-  - HIP/ROCm: Vec supported; Mat “in development” (may limit speedups depending on matrix path).
-  - Kokkos: Vec and Mat supported (best first target on AMD).
+**Result:** Quandary achieves **11.3x speedup** on AMD MI250X GPUs (Tioga) using PETSc 3.24.4 with Kokkos backend and GPU-aware MPI.
+
+**Key findings:**
+- PETSc+Kokkos backend (`-vec_type kokkos -mat_type aijkokkos`) works well on AMD GPUs
+- GPU-aware MPI is critical: provides 3.6x additional speedup over GPU-only acceleration
+  - Without it: ~17,800 host↔device transfers per run (~8 GB each direction), high memory bandwidth usage
+- Required fix: MatShell VecType configuration (already in `src/mastereq.cpp`)
+
+## Performance Results (Tioga, 8 MPI ranks, 32⁴ system)
+
+| Configuration | Time (s) | Speedup vs CPU | Memory (GB) |
+|---------------|----------|----------------|-------------|
+| CPU baseline | 44.3 | 1.0x | 2.7 (~340 MB/rank) |
+| Kokkos (no GPU-aware MPI) | 14.1 | 3.1x | 20.0 (~2.5 GB/rank) |
+| Kokkos (GPU-aware MPI) | 3.9 | **11.3x** | 20.0 (~2.5 GB/rank) |
+
+**Where time is spent (from `-log_view`):**
+- CPU: MatMult ≈ 85% of runtime
+- Kokkos (no GPU-aware): MatMult ≈ 83% (communication-bound)
+- Kokkos (GPU-aware): MatMult ≈ 52% (compute-bound)
+
+GPU-aware MPI eliminates host staging (`GPU → host → MPI → host → GPU` becomes `GPU → MPI → GPU`), reducing communication overhead and shifting the bottleneck back to compute.
+
+**Memory usage:** GPU runs require ~7.4x more memory due to device allocations, Kokkos dual-view structures, and PETSc matrix format conversions during setup.
+
+**PETSc configuration:**
+- CPU: `^petsc@3.24.4~kokkos~rocm`
+- GPU: `^petsc@3.24.4+kokkos+rocm amdgpu_target=gfx90a`
+- Runtime: `-vec_type kokkos -mat_type aijkokkos -use_gpu_aware_mpi 1`
+
+## Background
+
+- Quandary supports passing PETSc runtime flags via `quandary <config> --petsc-options “<...>”` (no user code changes needed).
+- The main operator is a PETSc `MatShell` (`src/mastereq.cpp`); time stepping repeatedly calls `MatMult` and `KSPSolve` (`src/timestepper.cpp`).
+- **PETSc backend support on AMD GPUs:**
+  - **Kokkos (recommended):** Vec and Mat fully supported, production-ready
+  - **HIP-only (`rocm`):** Vec supported, Mat in development (not recommended for production)
 - PETSc GPU roadmap: https://petsc.org/release/overview/gpu_roadmap/
+- **Profiling note:** PETSc's `-log_view` timers are an effective way to study Quandary performance, as ~91% of solve time is spent in PETSc operations (KSPSolve, MatMult, vector operations).
 
-## Recommended first experiment (simple)
+**Why Kokkos over HIP-only?** Per PETSc 3.24.4 docs, the HIP backend's matrix operations are still experimental. We tested the HIP-only path (`+rocm~kokkos`, `-vec_type hip -mat_type aijhipsparse`) and observed significant **slowdowns vs CPU** (260-326s vs 44s baseline), confirming the experimental Mat support is not production-ready. The Kokkos path provides full Vec+Mat GPU support and delivered the 11.3x speedup shown above.
 
-- Start with wall-clock + PETSc logging (`-log_view -log_summary`); only add Caliper if PETSc logs don’t explain the result.
-- Compare 2–3 PETSc builds using the same input and MPI/GPU binding:
-  - `cpu`: `^petsc@3.24.4~kokkos~rocm`
-  - `kokkos`: `^petsc@3.24.4+kokkos+rocm` (preferred GPU path on AMD)
-  - `rocm`: `^petsc@3.24.4+rocm~kokkos` (experimental HIP-only comparison)
+## Quick Start
 
-## Script
+Use `util/gpu_petsc_ab.sh` to reproduce the benchmark or test your own configurations:
 
-Use `util/gpu_petsc_ab.sh` to create Spack envs (using RADIUSS Tioga/Tuolumne configs), build, and run the A/B/C commands with PETSc logging.
+```bash
+# Tioga (default: cpu,kokkos,rocm variants, 8 MPI ranks)
+./util/gpu_petsc_ab.sh --machine tioga
 
-Examples:
+# Tuolumne
+./util/gpu_petsc_ab.sh --machine tuolumne
 
-- Tioga, run everything (defaults to `flux run --gpus-per-task=1 --gpu-bind=closest` and `-n 8`):
-  - `bash util/gpu_petsc_ab.sh --machine tioga`
-- Tuolumne:
-  - `bash util/gpu_petsc_ab.sh --machine tuolumne`
-- Only CPU + Kokkos:
-  - `bash util/gpu_petsc_ab.sh --variants cpu,kokkos`
+# Only CPU + Kokkos comparison
+./util/gpu_petsc_ab.sh --variants cpu,kokkos
+```
 
-By default, each run writes to a unique directory under `envs-gpu-ab/runs/`.
+Each run creates a unique timestamped directory under `envs-gpu-ab/runs/` with logs and PETSc `-log_view` output.
 
-Current defaults in the script:
+## Script Details
 
-- `kokkos` run uses `--petsc-options "-vec_type kokkos -mat_type aijkokkos -use_gpu_aware_mpi 1 -log_view -log_summary"` (GPU-aware MPI enabled).
-- `rocm` run uses `--petsc-options "-vec_type hip -mat_type aijhipsparse -use_gpu_aware_mpi 1 -log_view -log_summary"` (GPU-aware MPI enabled).
-- Sets `MPICH_GPU_SUPPORT_ENABLED=1` for GPU variants (Tioga/Tuolumne Cray MPICH) unless disabled.
-- Writes Quandary output directories under `envs-gpu-ab/runs/` with a per-run unique name by rewriting the config’s `[output].directory`.
-- Writes the corresponding run log (`cpu.log`/`kokkos.log`/`rocm.log`) into the same per-run output directory under `envs-gpu-ab/runs/`.
+The `util/gpu_petsc_ab.sh` script:
+- Creates separate Spack environments for CPU/Kokkos/ROCm variants
+- Uses RADIUSS Tioga/Tuolumne machine configs for external packages
+- Defaults: PETSc 3.24.4, ROCm 6.4.3, llvm-amdgpu@6.4.3 compiler
+- GPU variants: Enables GPU-aware MPI by default (`-use_gpu_aware_mpi 1` + `MPICH_GPU_SUPPORT_ENABLED=1`)
+- Launcher: `flux run --gpus-per-task=1 --gpu-bind=closest -n 8` (Tioga) or `-n 4` (Tuolumne)
+- Output: Per-run timestamped directories under `envs-gpu-ab/runs/` with logs and PETSc performance data
 
-## Interpreting results
+**PETSc options for each variant:**
+- `cpu`: `-log_view -log_summary`
+- `kokkos`: `-vec_type kokkos -mat_type aijkokkos -use_gpu_aware_mpi 1 -log_view -log_summary`
+- `rocm`: `-vec_type hip -mat_type aijhipsparse -use_gpu_aware_mpi 1 -log_view -log_summary`
+  - *Note:* HIP Mat support is experimental (in development per PETSc roadmap). Use Kokkos for production.
 
-- In `-log_view`, check whether time is dominated by `MatMult`/`KSPSolve` (better GPU candidate) vs “user”/shell work (GPU may not help without refactors).
-- If Kokkos/HIP is engaged, confirm `-vec_type`/`-mat_type` selections appear and that PETSc reports meaningful time in GPU-capable kernels.
+## Interpreting Results
 
-## Next steps
+**In PETSc `-log_view` output:**
+- Check `KSPSolve` time (main linear solver): Should dominate for good GPU candidates
+- Look for `GPU %F` column: 100% means operation ran entirely on GPU
+- For Kokkos runs, confirm `GPU Mflop/s` values appear for Vec/Mat operations
+- Compare `MatMult` and `VecScatterBegin/End` times: High scatter time suggests MPI overhead
 
-1. Run `cpu` and `kokkos` first; only run `rocm` if you want the additional HIP-only comparison.
-2. If GPU speedup is small and PETSc logs indicate shell/user time dominates or GPU activity is minimal, add a short Caliper run to diagnose GPU activity and sync/transfer overhead.
+**Performance indicators:**
+- Good: KSPSolve dominates time, high GPU Mflop/s, GPU %F = 100%
+- Poor: “User” time high, low GPU activity, or excessive VecScatter overhead
 
-## Common concretization pitfall (CPU baseline)
+**If speedup is disappointing:**
+- Check GPU-aware MPI is enabled (huge impact: 3.6x in our tests)
+- Verify PETSc sees GPUs: Look for “HIP architecture 90” in header
+- Profile with `rocprof` or Omniperf for detailed GPU kernel analysis
 
-- For the `cpu` variant, do **not** add ROCm-only constraints like `^hip@...` or `amdgpu_target=...`. Those can implicitly force `+rocm` in some dependency and create `~rocm`/`+rocm` conflicts (or `amdgpu_target=none` conflicts).
+## Technical Details
 
-## Notes from Tioga runs (PETSc 3.24.4, ROCm 6.4.3)
+### MatShell VecType Fix (Required for Kokkos)
 
-- PETSc `-mat_type aijkokkos` originally failed (sometimes SEGV, sometimes a debug error) due to a type mismatch in our `MatShell`: PETSc was passing a Kokkos input vector `x` but a non-Kokkos output/work vector `y` (e.g. `y=seq`).
-- Fix: set the MatShell VecType from the runtime `-vec_type` option in `src/mastereq.cpp` so PETSc’s `MatCreateVecs()` work vectors match the requested backend. With that in place, `-vec_type kokkos -mat_type aijkokkos` runs successfully on Tioga.
-- The older workaround (`-mat_type aij`) is no longer required, but can still be used for debugging/comparison.
+**Problem:** PETSc `-mat_type aijkokkos` originally crashed with MatShell operators.
 
-### Why `aijkokkos` was failing
+**Root cause:** PETSc’s AIJKokkos MatMult expects all vectors to be `VECKOKKOS`. Quandary’s MatShell operator creates work vectors using the Mat’s default VecType, which was `seq`/`mpi` even when `-vec_type kokkos` was specified. This caused type mismatches and crashes.
 
-- PETSc’s AIJKokkos MatMult expects to operate on `VECKOKKOS` vectors.
-- Quandary’s PETSc operator is a `MatShell`. PETSc may create MatShell work vectors (including the output vector `y`) using the Mat’s configured VecType; if the Mat’s VecType is left at the default, `y` can be `seq`/`mpi` even when `-vec_type kokkos` is requested.
-- In a PETSc debug build you’ll typically see:
-  - `Invalid argument: Calling VECKOKKOS methods on a non-VECKOKKOS object`
-  - originating from `MatMult(_MPI/Seq)AIJKokkos()` → `VecGetKokkosView_Private()`.
+**Solution:** Set MatShell VecType from the runtime `-vec_type` option ([src/mastereq.cpp:102-109](src/mastereq.cpp#L102-L109)):
+```cpp
+char vec_type_opt[128] = {0};
+PetscBool vec_type_set = PETSC_FALSE;
+PetscOptionsGetString(NULL, NULL, "-vec_type", vec_type_opt, sizeof(vec_type_opt), &vec_type_set);
+if (vec_type_set) MatSetVecType(RHS, vec_type_opt);
+```
 
-### Debugging / backtraces
+This ensures PETSc’s `MatCreateVecs()` creates work vectors matching the requested backend.
 
-- Build PETSc with debug and run single-rank under gdb (otherwise you get one debugger per MPI rank):
-  - `bash util/gpu_petsc_ab.sh --variants kokkos --petsc-debug --nprocs 1 --cfg tests/performance/configs/nlevels_4_4_4_4.toml --kokkos-vec-type kokkos --kokkos-mat-type aijkokkos --debugger "gdb -q -batch -ex 'handle SIGSEGV stop print' -ex 'handle SIGABRT stop print' -ex run -ex bt --args"`
+### Spack Tips
+
+**CPU variant:** Don’t add ROCm-only constraints like `^hip@...` or `amdgpu_target=...` — they can implicitly force `+rocm` in dependencies and cause conflicts.
+
+**Debug builds:** Add `--petsc-debug` to build PETSc with assertions and debug symbols:
+```bash
+./util/gpu_petsc_ab.sh --variants kokkos --petsc-debug --nprocs 1 \
+  --debugger "gdb -batch -ex run -ex bt --args"
+```
+
+### Spack Package Improvements
+
+**Current limitation:** The Quandary Spack package’s `+rocm` variant currently only does `^petsc+rocm`, which enables HIP-only support (Vec only, experimental Mat). Based on this testing, we should update the package:
+
+**Proposed changes:**
+- `quandary+rocm` should imply `^petsc+rocm+kokkos` (not just `+rocm`)
+- Add `^kokkos` dependency when `+rocm` is enabled
+- Ensure `amdgpu_target` propagates consistently to PETSc, Kokkos, and Kokkos-kernels
+- Document in package.py that GPU-aware MPI runtime flags are needed for best performance
+
+This would make `spack install quandary+rocm` work out-of-the-box with production-ready Kokkos backend instead of experimental HIP-only, and users would only need to add runtime flags (`--petsc-options "-vec_type kokkos -mat_type aijkokkos -use_gpu_aware_mpi 1"`) rather than rebuilding with custom PETSc specs.
