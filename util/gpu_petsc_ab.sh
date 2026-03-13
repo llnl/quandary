@@ -358,17 +358,17 @@ set -x
 
 run_variant() {
   local v="$1"
-  local -a env_prefix
+  local -a cmd_prefix
   if [[ "$MPICH_GPU_SUPPORT" == "1" ]] && [[ "$v" != "cpu" ]]; then
     # Cray MPICH typically requires this for GPU-aware MPI. Without it, PETSc may
     # pass device pointers through MPI and trigger invalid memory accesses.
-    env_prefix+=(MPICH_GPU_SUPPORT_ENABLED=1)
+    cmd_prefix=(env MPICH_GPU_SUPPORT_ENABLED=1)
   fi
   if [[ "$QUANDARY_QUIET" == "1" ]]; then
-    "${env_prefix[@]}" ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" --quiet \
+    "${cmd_prefix[@]}" ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" --quiet \
       --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "${LOG_PATHS[$v]}"
   else
-    "${env_prefix[@]}" ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" \
+    "${cmd_prefix[@]}" ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" \
       --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "${LOG_PATHS[$v]}"
   fi
 }
