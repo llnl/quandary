@@ -22,7 +22,7 @@ Options:
                                 The script appends "-n <nprocs>" automatically.
   --no-mpich-gpu-support        Do not set MPICH_GPU_SUPPORT_ENABLED=1 for GPU variants
   --petsc-gpu-aware-mpi MODE    Control PETSc GPU-aware MPI behavior for GPU variants
-                                MODE is {auto|on|off} (default: auto)
+                                MODE is {auto|on|off} (default: off for kokkos; auto otherwise)
   --nprocs N                    MPI ranks (default: 8 on tioga, 4 on tuolumne)
   --cfg PATH                    Config file (default: tests/performance/configs/nlevels_32_32_32_32.toml)
   --llvm-amdgpu VER             llvm-amdgpu compiler version (default: 6.4.3)
@@ -75,6 +75,7 @@ QUANDARY_QUIET="1"
 HIPBLAS_PIN_MODE="auto" # auto|pin|off
 MPICH_GPU_SUPPORT="1"
 PETSC_GPU_AWARE_MPI="auto" # auto|on|off
+PETSC_GPU_AWARE_MPI_SET="0"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -86,7 +87,7 @@ while [[ $# -gt 0 ]]; do
     --no-quiet) QUANDARY_QUIET="0"; shift 1;;
     --launcher) LAUNCHER="$2"; LAUNCHER_SET="1"; shift 2;;
     --no-mpich-gpu-support) MPICH_GPU_SUPPORT="0"; shift 1;;
-    --petsc-gpu-aware-mpi) PETSC_GPU_AWARE_MPI="$2"; shift 2;;
+    --petsc-gpu-aware-mpi) PETSC_GPU_AWARE_MPI="$2"; PETSC_GPU_AWARE_MPI_SET="1"; shift 2;;
     --nprocs) NPROCS="$2"; shift 2;;
     --cfg) CFG="$2"; shift 2;;
     --llvm-amdgpu) LLVM_AMDGPU_VER="$2"; shift 2;;
@@ -194,6 +195,12 @@ VARIANTS="$(normalize_variants "$VARIANTS")"
 validate_variants "$VARIANTS"
 
 mkdir -p "$ENV_ROOT"
+
+if [[ "$PETSC_GPU_AWARE_MPI_SET" == "0" ]] && variant_selected kokkos "$VARIANTS"; then
+  # The PETSc+Kokkos path often triggers MPI communication with device-resident
+  # buffers; default to PETSc staging (off) unless the user explicitly opts in.
+  PETSC_GPU_AWARE_MPI="off"
+fi
 
 write_env_yaml() {
   local env_dir="$1"
