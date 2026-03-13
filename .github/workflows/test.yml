@@ -44,6 +44,7 @@ jobs:
     - name: Configure Spack
       run: |
         spack mirror add --type binary --unsigned --oci-username GITHUB_USER --oci-password-variable GITHUB_TOKEN local-buildcache oci://ghcr.io/LLNL/quandary-spack-buildcache
+        spack external find cmake
 
     - name: Add only use GCC/clang on macOS
       if: runner.os == 'macOS'
@@ -56,7 +57,7 @@ jobs:
       # explicitly use openmpi, since mpich causes rpath problems in binary
       run: |
         spack -e .spack_env rm quandary
-        spack -e .spack_env add quandary@develop+test^openmpi
+        spack -e .spack_env add quandary@develop+test+python^openmpi
         spack -e .spack_env install --use-buildcache package:never
 
     - name: Run C++ unit tests
@@ -68,20 +69,22 @@ jobs:
         cd $(spack -e .spack_env location -b quandary)
         ctest --output-on-failure --no-compress-output
 
+    - name: Install Python test dependencies
+      shell: spack-sh {0}
+      run: |
+        spack env activate .spack_env
+        python -m pip install numpy mpi4py pytest pytest-benchmark pydantic pandas matplotlib --prefer-binary
+
     - name: Run cfg regression tests
       shell: spack-sh {0}
       run: |
         spack env activate .spack_env
-        export PATH=$(pwd):$PATH  # Use repo root binary (spack view has broken RPATH)
-        python -m pip install -e . --prefer-binary
         pytest -v -s --mpi-opt="--oversubscribe" --config-format=cfg tests/regression
 
     - name: Run regression tests
       shell: spack-sh {0}
       run: |
         spack env activate .spack_env
-        export PATH=$(pwd):$PATH  # Use repo root binary (spack view has broken RPATH)
-        python -m pip install -e . --prefer-binary
         pytest -v -s -m "not performance" --mpi-opt="--oversubscribe"
 
     - name: Push packages and update index
