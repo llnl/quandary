@@ -7,6 +7,7 @@
 - PETSc docs suggest on AMD:
   - HIP/ROCm: Vec supported; Mat “in development” (may limit speedups depending on matrix path).
   - Kokkos: Vec and Mat supported (best first target on AMD).
+- PETSc GPU roadmap: https://petsc.org/release/overview/gpu_roadmap/
 
 ## Recommended first experiment (simple)
 
