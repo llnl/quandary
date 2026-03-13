@@ -31,6 +31,8 @@ Options:
                                 Example: --debugger "gdb -batch -ex run -ex bt --args"
   --kokkos-vec-type TYPE        PETSc vec type for kokkos variant (default: kokkos)
   --kokkos-mat-type TYPE        PETSc mat type for kokkos variant (default: aijkokkos)
+  --run-output-root PATH        Root directory for Quandary outputs (default: <env-root>/runs)
+  --no-unique-output            Do not rewrite config output directory (default: unique per run under --run-output-root)
   --nprocs N                    MPI ranks (default: 8 on tioga, 4 on tuolumne)
   --cfg PATH                    Config file (default: tests/performance/configs/nlevels_32_32_32_32.toml)
   --llvm-amdgpu VER             llvm-amdgpu compiler version (default: 6.4.3)
@@ -90,6 +92,8 @@ PETSC_GPU_AWARE_MPI_SET="0"
 KOKKOS_VEC_TYPE="kokkos"
 KOKKOS_MAT_TYPE="aijkokkos"
 DEBUGGER=""
+RUN_OUTPUT_ROOT=""
+UNIQUE_OUTPUT="1"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -109,6 +113,8 @@ while [[ $# -gt 0 ]]; do
     --debugger) DEBUGGER="$2"; shift 2;;
     --kokkos-vec-type) KOKKOS_VEC_TYPE="$2"; shift 2;;
     --kokkos-mat-type) KOKKOS_MAT_TYPE="$2"; shift 2;;
+    --run-output-root) RUN_OUTPUT_ROOT="$2"; shift 2;;
+    --no-unique-output) UNIQUE_OUTPUT="0"; shift 1;;
     --nprocs) NPROCS="$2"; shift 2;;
     --cfg) CFG="$2"; shift 2;;
     --llvm-amdgpu) LLVM_AMDGPU_VER="$2"; shift 2;;
@@ -177,6 +183,9 @@ esac
 
 if [[ -z "$ENV_ROOT" ]]; then
   ENV_ROOT="$REPO/envs-gpu-ab"
+fi
+if [[ -z "$RUN_OUTPUT_ROOT" ]]; then
+  RUN_OUTPUT_ROOT="$ENV_ROOT/runs"
 fi
 
 if [[ "$RUN_ONLY" == "1" ]]; then
@@ -421,6 +430,7 @@ echo "launcher='$LAUNCHER'"
 echo "variants=$VARIANTS"
 echo "cfg=$CFG"
 echo "env_root=$ENV_ROOT"
+if [[ "$UNIQUE_OUTPUT" == "1" ]]; then echo "run_output_root=$RUN_OUTPUT_ROOT"; fi
 if [[ -n "$PETSC_CXXSTD" ]]; then echo "petsc_cxxstd=$PETSC_CXXSTD"; fi
 if variant_selected kokkos "$VARIANTS"; then echo "kokkos_cxxstd=$KOKKOS_CXXSTD"; fi
 if [[ "$PETSC_GPU_AWARE_MPI" != "auto" ]]; then echo "petsc_gpu_aware_mpi=$PETSC_GPU_AWARE_MPI"; fi
@@ -430,6 +440,27 @@ set -x
 
 run_variant() {
   local v="$1"
+  local cfg_path="$CFG"
+  if [[ "$UNIQUE_OUTPUT" == "1" ]]; then
+    local ts
+    ts="$(date +%Y%m%d_%H%M%S)"
+    local tag="${v}"
+    if [[ "$v" == "kokkos" ]]; then
+      tag+="_vec-${KOKKOS_VEC_TYPE}_mat-${KOKKOS_MAT_TYPE}"
+    elif [[ "$v" == "rocm" ]]; then
+      tag+="_vec-hip_mat-aijhipsparse"
+    fi
+    tag="$(echo "$tag" | tr -c 'A-Za-z0-9._-' '_' )"
+    local outdir="${RUN_OUTPUT_ROOT}/${tag}_${ts}"
+    mkdir -p "$outdir"
+    cfg_path="${outdir}/config.toml"
+    awk -v out="$outdir" '
+      BEGIN { in_output = 0 }
+      /^\[/ { in_output = ($0 == "[output]") }
+      in_output && $0 ~ /^[[:space:]]*directory[[:space:]]*=/ { print "directory = \"" out "\""; next }
+      { print }
+    ' "$CFG" > "$cfg_path"
+  fi
   local -a cmd_prefix
   if [[ "$MPICH_GPU_SUPPORT" == "1" ]] && [[ "$v" != "cpu" ]]; then
     # Cray MPICH typically requires this for GPU-aware MPI. Without it, PETSc may
@@ -438,15 +469,15 @@ run_variant() {
   fi
   if [[ -n "$DEBUGGER" ]]; then
     # Note: for MPI runs, this will launch a debugger per rank. Prefer --nprocs 1.
-    "${cmd_prefix[@]}" ${MPI_PREFIX} ${DEBUGGER} "${BIN_PATHS[$v]}" "$CFG" \
+    "${cmd_prefix[@]}" ${MPI_PREFIX} ${DEBUGGER} "${BIN_PATHS[$v]}" "$cfg_path" \
       --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "${LOG_PATHS[$v]}"
     return 0
   fi
   if [[ "$QUANDARY_QUIET" == "1" ]]; then
-    "${cmd_prefix[@]}" ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" --quiet \
+    "${cmd_prefix[@]}" ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$cfg_path" --quiet \
       --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "${LOG_PATHS[$v]}"
   else
-    "${cmd_prefix[@]}" ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$CFG" \
+    "${cmd_prefix[@]}" ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$cfg_path" \
       --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "${LOG_PATHS[$v]}"
   fi
 }
