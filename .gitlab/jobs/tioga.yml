@@ -17,4 +17,5 @@
 rocmcc_6_4_1_hip:
   variables:
     SPEC: "${PROJECT_TIOGA_VARIANTS} +rocm amdgpu_target=gfx90a %llvm-amdgpu@=6.4.1 ^hip@6.4.1 ^cray-mpich%llvm-amdgpu ${PROJECT_TIOGA_DEPS}"
+    PETSC_TEST_OPTIONS: "${PROJECT_TIOGA_PETSC_OPTIONS}"
   extends: .job_on_tioga

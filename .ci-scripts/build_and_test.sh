@@ -265,13 +265,19 @@ then
     python -m pip install -e . --prefer-binary
     mpi_exe=$(grep 'MPIEXEC_EXECUTABLE' "${hostconfig_path}" | cut -d'"' -f2 | sed 's/;/ /g')
 
+    # Build pytest command with optional PETSc options
+    petsc_opts_arg=""
+    if [ -n "${PETSC_TEST_OPTIONS}" ]; then
+        petsc_opts_arg="--petsc-options=${PETSC_TEST_OPTIONS}"
+    fi
+
     # TODO cfg: remove this later
     timed_message "Run regression tests with deprecated cfg config (excluding python tests which are run below)"
-    cd tests/regression && pytest -v -s --mpi-exec="${mpi_exe}" --config-format=cfg .
+    cd tests/regression && pytest -v -s --mpi-exec="${mpi_exe}" --config-format=cfg ${petsc_opts_arg} .
     cd ${project_dir}
 
     timed_message "Run regression tests"
-    pytest -v -s -m "not performance" --mpi-exec="${mpi_exe}"
+    pytest -v -s -m "not performance" --mpi-exec="${mpi_exe}" ${petsc_opts_arg}
 
     timed_message "Quandary tests completed"
 fi

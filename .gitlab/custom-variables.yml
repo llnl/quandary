@@ -34,4 +34,6 @@ variables:
   PROJECT_TIOGA_VARIANTS: "+test"
 # Project specific deps for tioga
 # Force use of petsc >= 3.23 as 3.22 doesn't seem to work with rocm 6.4.1
-  PROJECT_TIOGA_DEPS: "^petsc@3.23:"
+  PROJECT_TIOGA_DEPS: "^petsc@3.23:+kokkos"
+# PETSc runtime options for GPU testing on Tioga
+  PROJECT_TIOGA_PETSC_OPTIONS: "-vec_type kokkos -mat_type aijkokkos -use_gpu_aware_mpi 1"
