@@ -43,6 +43,7 @@ def test_eval(test_case: Case, request):
     exact = request.config.getoption("--exact")
     mpi_exec = request.config.getoption("--mpi-exec")
     mpi_opt = request.config.getoption("--mpi-opt")
+    petsc_options = request.config.getoption("--petsc-options")
     config_format = request.config.getoption("--config-format")
 
     simulation_name = test_case.simulation_name
@@ -57,10 +58,10 @@ def test_eval(test_case: Case, request):
         pytest.skip(f"Config file {config_file} not found for format '{config_format}'")
 
     for number_of_processes in number_of_processes_list:
-        run_test(simulation_dir, number_of_processes, config_file, files_to_compare, exact, mpi_exec, mpi_opt)
+        run_test(simulation_dir, number_of_processes, config_file, files_to_compare, exact, mpi_exec, mpi_opt, petsc_options)
 
 
-def run_test(simulation_dir, number_of_processes, config_file, files_to_compare, exact, mpi_exec, mpi_opt):
+def run_test(simulation_dir, number_of_processes, config_file, files_to_compare, exact, mpi_exec, mpi_opt, petsc_options):
     os.chdir(simulation_dir)
 
     command = build_mpi_command(
@@ -68,7 +69,8 @@ def run_test(simulation_dir, number_of_processes, config_file, files_to_compare,
         num_processes=number_of_processes,
         mpi_opt=mpi_opt,
         quandary_path=QUANDARY_PATH,
-        config_file=config_file)
+        config_file=config_file,
+        petsc_options=petsc_options)
     print(f"Running command: \"{' '.join(command)}\"")
     result = subprocess.run(command, capture_output=True, text=True, check=False)
     print("STDOUT:\n", result.stdout)

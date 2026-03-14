@@ -16,3 +16,10 @@ def pytest_addoption(parser):
         default="",
         help="Extra options to pass to mpi exec command)"
     )
+
+    parser.addoption(
+        "--petsc-options",
+        action="store",
+        default="",
+        help="PETSc options to pass to quandary (e.g., '-vec_type kokkos -mat_type aijkokkos')"
+    )
