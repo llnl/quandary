@@ -47,6 +47,8 @@ Options:
   --petsc-min VARS              Extra PETSc variant toggles (default: "~mmg~parmmg~saws~examples~ml~exodusii~zoltan")
   --with-test-deps              Build Quandary with "+test" (adds python/pip run deps; default: off)
   --no-install                  Only concretize; skip spack install
+  --spack-clean                 Always run `spack clean -s -b quandary` in each selected env before build/install
+  --no-spack-clean              Never run `spack clean -s -b quandary` (default: auto-clean in --develop mode)
   --keep-logs                   Don’t overwrite logs; append timestamp
   -h, --help                    Show help
 
@@ -70,7 +72,6 @@ DEVELOP="1"
 DEVELOP_PATH=""
 VARIANTS="cpu,kokkos,rocm"
 LAUNCHER=""
-LAUNCHER_SET="0"
 NPROCS=""
 CFG="tests/performance/configs/nlevels_32_32_32_32.toml"
 LLVM_AMDGPU_VER="6.4.3"
@@ -95,6 +96,7 @@ KOKKOS_MAT_TYPE="aijkokkos"
 DEBUGGER=""
 RUN_OUTPUT_ROOT=""
 UNIQUE_OUTPUT="1"
+SPACK_CLEAN="auto" # auto|on|off
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -107,7 +109,7 @@ while [[ $# -gt 0 ]]; do
     --variants) VARIANTS="$2"; shift 2;;
     --run-only) RUN_ONLY="1"; shift 1;;
     --no-quiet) QUANDARY_QUIET="0"; shift 1;;
-    --launcher) LAUNCHER="$2"; LAUNCHER_SET="1"; shift 2;;
+    --launcher) LAUNCHER="$2"; shift 2;;
     --no-mpich-gpu-support) MPICH_GPU_SUPPORT="0"; shift 1;;
     --petsc-gpu-aware-mpi) PETSC_GPU_AWARE_MPI="$2"; PETSC_GPU_AWARE_MPI_SET="1"; shift 2;;
     --petsc-debug) PETSC_DEBUG="+debug"; shift 1;;
@@ -129,6 +131,8 @@ while [[ $# -gt 0 ]]; do
     --petsc-min) PETSC_MIN="$2"; shift 2;;
     --with-test-deps) QUANDARY_TEST_VARIANT="+test"; shift 1;;
     --no-install) DO_INSTALL="0"; shift 1;;
+    --spack-clean) SPACK_CLEAN="on"; shift 1;;
+    --no-spack-clean) SPACK_CLEAN="off"; shift 1;;
     --keep-logs) KEEP_LOGS="1"; shift 1;;
     -h|--help) usage; exit 0;;
     *) die "Unknown arg: $1";;
@@ -263,6 +267,38 @@ EOF
 EOF
 }
 
+clean_cached_cmake_links() {
+  # CachedCMakePackage creates build-linux-* symlinks in the source tree that
+  # point at Spack stage dirs. If those get reused across concretizations, the
+  # cached CMake install prefix/RPATH can mismatch and fail at install time.
+  [[ "$DEVELOP" == "1" ]] || return 0
+  local link target
+  shopt -s nullglob
+  for link in "$REPO"/build-linux-*; do
+    [[ -L "$link" ]] || continue
+    target="$(readlink "$link" 2>/dev/null || true)"
+    if [[ "$target" == *"spack-stage-quandary"* ]]; then
+      echo "=== Removing stale Spack build link: $link -> $target ==="
+      rm -f -- "$link"
+    fi
+  done
+  shopt -u nullglob
+}
+
+spack_clean_env() {
+  local env_dir="$1"
+  case "$SPACK_CLEAN" in
+    on) ;;
+    off) return 0 ;;
+    auto)
+      [[ "$DEVELOP" == "1" ]] || return 0
+      ;;
+    *) die "Internal error: invalid SPACK_CLEAN='${SPACK_CLEAN}'" ;;
+  esac
+  echo "=== Spack clean (stage/build) for quandary in: $env_dir ==="
+  spack -e "$env_dir" clean -s -b quandary || true
+}
+
 if [[ "$RUN_ONLY" != "1" ]]; then
   if variant_selected cpu "$VARIANTS"; then
     mkdir -p "$ENV_ROOT/cpu"
@@ -346,13 +382,17 @@ fi
 KOKKOS_CONSTRAINT="^kokkos cxxstd=${KOKKOS_CXXSTD}"
 
 if [[ "$RUN_ONLY" != "1" ]]; then
+  clean_cached_cmake_links
+
   echo "=== (Re)setting specs ==="
   if variant_selected cpu "$VARIANTS"; then
+    spack_clean_env "$ENV_ROOT/cpu"
     spack -e "$ENV_ROOT/cpu" rm -y quandary >/dev/null 2>&1 || true
     # CPU baseline: do not mention hip or amdgpu_target; keep rocm disabled at the Quandary level.
     spack -e "$ENV_ROOT/cpu" add "quandary@main${QUANDARY_TEST_VARIANT}~rocm ${COMPILER_SPEC} ^cray-mpich${COMPILER_SPEC} ${PETSC_CPU}"
   fi
   if variant_selected kokkos "$VARIANTS"; then
+    spack_clean_env "$ENV_ROOT/kokkos"
     spack -e "$ENV_ROOT/kokkos" rm -y quandary >/dev/null 2>&1 || true
     # GPU variant: enable ROCm at the Quandary level to keep amdgpu_target consistent for PETSc deps.
     # Kokkos is selected on PETSc (Quandary has no +kokkos variant).
@@ -360,6 +400,7 @@ if [[ "$RUN_ONLY" != "1" ]]; then
     spack -e "$ENV_ROOT/kokkos" add "quandary@main${QUANDARY_TEST_VARIANT}+rocm amdgpu_target=${AMDGPU_TARGET} ${COMPILER_SPEC} ^cray-mpich${COMPILER_SPEC} ${ROCM_DEPS} ${PETSC_KOKKOS} ${KOKKOS_CONSTRAINT}"
   fi
   if variant_selected rocm "$VARIANTS"; then
+    spack_clean_env "$ENV_ROOT/rocm"
     spack -e "$ENV_ROOT/rocm" rm -y quandary >/dev/null 2>&1 || true
     # GPU variant: enable ROCm at the Quandary level to keep amdgpu_target consistent for PETSc deps.
     spack -e "$ENV_ROOT/rocm" add "quandary@main${QUANDARY_TEST_VARIANT}+rocm amdgpu_target=${AMDGPU_TARGET} ${COMPILER_SPEC} ^cray-mpich${COMPILER_SPEC} ${ROCM_DEPS} ${PETSC_ROCM}"
@@ -474,18 +515,21 @@ run_variant() {
   if [[ "$MPICH_GPU_SUPPORT" == "1" ]] && [[ "$v" != "cpu" ]]; then
     # Cray MPICH typically requires this for GPU-aware MPI. Without it, PETSc may
     # pass device pointers through MPI and trigger invalid memory accesses.
-    cmd_prefix=(env MPICH_GPU_SUPPORT_ENABLED=1)
+    cmd_prefix=(env "MPICH_GPU_SUPPORT_ENABLED=1")
   fi
   if [[ -n "$DEBUGGER" ]]; then
     # Note: for MPI runs, this will launch a debugger per rank. Prefer --nprocs 1.
+    # shellcheck disable=SC2086
     "${cmd_prefix[@]}" ${MPI_PREFIX} ${DEBUGGER} "${BIN_PATHS[$v]}" "$cfg_path" \
       --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "$log_path"
     return 0
   fi
   if [[ "$QUANDARY_QUIET" == "1" ]]; then
+    # shellcheck disable=SC2086
     "${cmd_prefix[@]}" ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$cfg_path" --quiet \
       --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "$log_path"
   else
+    # shellcheck disable=SC2086
     "${cmd_prefix[@]}" ${MPI_PREFIX} /usr/bin/time -p "${BIN_PATHS[$v]}" "$cfg_path" \
       --petsc-options "${PETSC_OPTS[$v]}" 2>&1 | tee "$log_path"
   fi
