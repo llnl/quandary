@@ -68,7 +68,7 @@ The `util/gpu_petsc_ab.sh` script:
 - Uses RADIUSS Tioga/Tuolumne machine configs for external packages
 - Defaults: PETSc 3.24.4, ROCm 6.4.3, llvm-amdgpu@6.4.3 compiler
 - GPU variants: Enables GPU-aware MPI by default (`-use_gpu_aware_mpi 1` + `MPICH_GPU_SUPPORT_ENABLED=1`)
-- Launcher: `flux run --gpus-per-task=1 --gpu-bind=closest -n 8` (Tioga) or `-n 4` (Tuolumne)
+- Launcher: `flux run --gpus-per-task=1 -n 8` (Tioga) or `-n 4` (Tuolumne); Flux uses `mpibind` by default to map ranks to GPUs/CPUs
 - Output: Per-run timestamped directories under `envs-gpu-ab/runs/` with logs and PETSc performance data
 
 **PETSc options for each variant:**
@@ -133,3 +133,35 @@ This ensures PETSc’s `MatCreateVecs()` creates work vectors matching the reque
 - Document in package.py that GPU-aware MPI runtime flags are needed for best performance
 
 This would make `spack install quandary+rocm` work out-of-the-box with production-ready Kokkos backend instead of experimental HIP-only, and users would only need to add runtime flags (`--petsc-options "-vec_type kokkos -mat_type aijkokkos -use_gpu_aware_mpi 1"`) rather than rebuilding with custom PETSc specs.
+
+### Comparing 64 MPI Ranks (CPU vs Kokkos)
+
+To compare 64 MPI ranks on a single Tioga node:
+
+**CPU (no GPUs requested):**
+```bash
+./util/gpu_petsc_ab.sh --variants cpu --nprocs 64 --launcher "flux run"
+```
+
+**Kokkos (64 ranks sharing 8 GPUs):**
+```bash
+./util/gpu_petsc_ab.sh --variants kokkos --nprocs 64 \
+  --launcher "flux run --setopt=mpibind=verbose:1"
+```
+
+If you do not pass `--launcher`, `util/gpu_petsc_ab.sh` will auto-add `--gpu-bind=closest` when `flux run --help` reports that option; it’s optional and not available on all systems.
+
+Add `--run-only` to reuse existing env installs, and `--no-quiet` to include Quandary’s own `Used Time:` line in the log.
+
+**Observed results (Tioga, 1 node, 64 ranks; 8 GPUs shared by 64 ranks):**
+- CPU log: `envs-gpu-ab/runs/cpu__20260316_085304/cpu.log`
+  - `/usr/bin/time -p` `real`: ~7.27s mean across ranks
+  - Quandary `Used Time:` ~5.83s
+  - PETSc `Time (sec)`: ~6.02s; `MatMult`: ~5.08s
+- Kokkos log: `envs-gpu-ab/runs/kokkos_vec-kokkos_mat-aijkokkos__20260316_085424/kokkos.log`
+  - Flux `mpibind` maps ~8 ranks/GPU (ranks 0–7 on one GPU, 8–15 on the next, etc.)
+  - `/usr/bin/time -p` `real`: ~39.17s mean across ranks (≈5.4× slower than CPU for this run)
+  - Quandary `Used Time:` ~4.46s (faster than CPU *inside Quandary’s timed region*)
+  - PETSc confirms the intended GPU path is enabled (`-vec_type kokkos -mat_type aijkokkos -use_gpu_aware_mpi 1`) and reports `GPU %F=100` for the main compute events, but many GPU event timings show as `n/a` in `-log_view`.
+
+**Takeaway:** the earlier speedups in this note were measured with low MPI rank counts (e.g., 1 rank/GPU). For 64 ranks sharing 8 GPUs, the wall-clock time is much worse even though the in-code `Used Time` is lower; this suggests substantial overhead outside Quandary’s timed region (e.g., GPU runtime initialization, device setup, synchronization, or GPU oversubscription effects).
