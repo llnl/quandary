@@ -1,0 +1,39 @@
+[system]
+nlevels = [2, 2]
+nessential = [2, 2]
+ntime = 500
+dt = 0.02
+transition_frequency = 4.10595
+rotation_frequency = [0.0, 0.0]
+selfkerr = [0.0, 0.0]
+decoherence = {type="both",decay_time = [10.0, 20.0], dephase_time = [30.0, 40.0]}
+initial_condition = {type = "diagonal"}
+hamiltonian_file_Hsys = "hamiltonian_Hsys.dat"
+hamiltonian_file_Hc = "hamiltonian_Hc.dat"
+
+[control]
+parameterization = { type = "spline", num = 6 }
+carrier_frequency = [0.0]
+initialization = { type = "constant", amplitude = 0.0070710678118654745 }
+zero_boundary_condition = false
+
+[optimization]
+target = {type = "gate", gate_type = "cnot"}
+objective = "Jtrace"
+tolerance = { grad_abs = 0.0001, grad_rel = 0.0001, final_cost = 0.0001, infidelity = 1e-05 }
+maxiter = 200
+tikhonov = { coeff = 0.0001, use_x0 = false }
+penalty = { leakage = 0.1, weightedcost = 0.1, weightedcost_width = 0.0, dpdm = 0.0, energy = 0.0, variation = 0.0 }
+
+[output]
+directory = "./data_out"
+observables = ["population"]
+timestep_stride = 1
+optimization_stride = 1
+
+[solver]
+runtype = "simulation"
+usematfree = false
+linearsolver = { type = "gmres", maxiter = 20 }
+timestepper = "IMR"
+rand_seed = 1234

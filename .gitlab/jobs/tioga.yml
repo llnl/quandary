@@ -14,9 +14,7 @@
 # Overridden shared jobs
 ########################
 
-# TODO: Temporarily need to force ^pkgconf instead of pkg-config (remove this when fixed in radiuss-spack-configs)
-# Force use of petsc >= 3.23 as 3.22 doesn't seem to work with rocm 6.4.1
 rocmcc_6_4_1_hip:
   variables:
-    SPEC: "${PROJECT_TIOGA_VARIANTS} +rocm amdgpu_target=gfx90a %rocmcc@=6.4.1 ^hip@6.4.1 ${PROJECT_TIOGA_DEPS} ^petsc@3.23: ^pkgconf"
+    SPEC: "${PROJECT_TIOGA_VARIANTS} +rocm amdgpu_target=gfx90a %llvm-amdgpu@=6.4.1 ^hip@6.4.1 ^cray-mpich%llvm-amdgpu ${PROJECT_TIOGA_DEPS}"
   extends: .job_on_tioga

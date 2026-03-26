@@ -22,7 +22,7 @@ See `pytest --help` for more options.
 ## How to add a test
 
 1. Create an appropriate test directory under tests directory, e.g., `mkdir tests/regression/newSimulation`
-2. Create a config file in that directory, e.g., `tests/regression/newSimulation/newSimulation.cfg`
+2. Create a config file in that directory, e.g., `tests/regression/newSimulation/newSimulation.toml`
 3. Add the expected output files of the simulation that you want to test to the base directory, e.g. `tests/regression/newSimulation/base`
 4. Add new entry to test_cases.json:
     - The `simulation_name` should be the new directory name, e.g. `newSimulation`.
@@ -46,4 +46,10 @@ Normally the tests compare the numerical data of the expected and output files w
 To instead do an exact comparison, you can do:
 ```
 pytest --exact
+```
+
+## Use cfg files
+Use deprecated cfg format for regression tests:
+```
+pytest tests/regression/ --config-format=cfg
 ```

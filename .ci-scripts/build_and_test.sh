@@ -36,9 +36,9 @@ perf_results_file=${PERF_RESULTS_FILE:-""}
 # REGISTRY_TOKEN allows you to provide your own personal access token to the CI
 # registry. Be sure to set the token with at least read access to the registry.
 registry_token=${REGISTRY_TOKEN:-""}
-ci_registry_user=${CI_REGISTRY_USER:-"${USER}"}
 ci_registry_image=${CI_REGISTRY_IMAGE:-"czregistry.llnl.gov:5050/quantum1/quandary"}
-ci_registry_token=${CI_JOB_TOKEN:-"${registry_token}"}
+export ci_registry_user=${CI_REGISTRY_USER:-"${USER}"}
+export ci_registry_token=${CI_JOB_TOKEN:-"${registry_token}"}
 
 timed_message ()
 {
@@ -129,7 +129,7 @@ then
     if [[ -n ${ci_registry_token} ]]
     then
         timed_message "GitLab registry as Spack Buildcache"
-        ${spack_cmd} -D ${spack_env_path} mirror add --unsigned --oci-username ${ci_registry_user} --oci-password ${ci_registry_token} gitlab_ci oci://${ci_registry_image}
+        ${spack_cmd} -D ${spack_env_path} mirror add --unsigned --oci-username-variable ci_registry_user --oci-password-variable ci_registry_token gitlab_ci oci://${ci_registry_image}
     fi
 
     timed_message "Spack build of dependencies"
@@ -263,10 +263,14 @@ then
 
     eval `${spack_cmd} env activate ${spack_env_path} --sh`
     python -m pip install -e . --prefer-binary
+    mpi_exe=$(grep 'MPIEXEC_EXECUTABLE' "${hostconfig_path}" | cut -d'"' -f2 | sed 's/;/ /g')
+
+    # TODO cfg: remove this later
+    timed_message "Run regression tests with deprecated cfg config (excluding python tests which are run below)"
+    cd tests/regression && pytest -v -s --mpi-exec="${mpi_exe}" --config-format=cfg .
+    cd ${project_dir}
 
     timed_message "Run regression tests"
-
-    mpi_exe=$(grep 'MPIEXEC_EXECUTABLE' "${hostconfig_path}" | cut -d'"' -f2 | sed 's/;/ /g')
     pytest -v -s -m "not performance" --mpi-exec="${mpi_exe}"
 
     timed_message "Quandary tests completed"
@@ -284,6 +288,8 @@ then
 
     eval `${spack_cmd} env activate ${spack_env_path} --sh`
     python -m pip install -e . --prefer-binary
+
+    mkdir -p ${perf_artifact_dir}
 
     timed_message "Run performance tests"
 

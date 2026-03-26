@@ -1,9 +1,9 @@
 #include "optimproblem.hpp"
 
-OptimProblem::OptimProblem(Config config, TimeStepper* timestepper_, MPI_Comm comm_init_, MPI_Comm comm_optim_, int ninit_, Output* output_, bool quietmode_){
+OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_Comm comm_init_, MPI_Comm comm_optim_, Output* output_, bool quietmode_){
 
   timestepper = timestepper_;
-  ninit = ninit_;
+  ninit = config.getNInitialConditions();
   output = output_;
   quietmode = quietmode_;
   /* Reset */
@@ -25,7 +25,7 @@ OptimProblem::OptimProblem(Config config, TimeStepper* timestepper_, MPI_Comm co
   ninit_local = ninit / mpisize_init; 
 
   /*  If Schroedingers solver, allocate storage for the final states at time T for each initial condition. Schroedinger's solver does not store the time-trajectories during forward ODE solve, but instead recomputes the primal states during the adjoint solve. Therefore we need to store the terminal condition for the backwards primal solve. Be aware that the final states stored here will be overwritten during backwards computation!! */
-  if (timestepper->mastereq->lindbladtype == LindbladType::NONE) {
+  if (timestepper->mastereq->decoherence_type == DecoherenceType::NONE) {
     for (int i = 0; i < ninit_local; i++) {
 
       PetscInt globalsize = 2 * timestepper->mastereq->getDim();  // Global state vector: 2 for real and imaginary part
@@ -39,12 +39,9 @@ OptimProblem::OptimProblem(Config config, TimeStepper* timestepper_, MPI_Comm co
   }
 
   // Check for new Riemannian objective function:
-  use_Riemannian_objective = config.GetDoubleParam("use_Riemannian_objective", 0.0, true);
-  phase_invariant = config.GetBoolParam("phase_invariant", false, true);
-  if (timestepper->mastereq->lindbladtype != LindbladType::NONE) {
-    use_Riemannian_objective = false;
-  }
-  if (use_Riemannian_objective > 0.0) {
+  optim_penalty_riemannian = config.getOptimPenaltyRiemannian();
+  phase_invariant = config.getOptimPenaltyRiemannianPhaseFree();
+  if (optim_penalty_riemannian > 0.0) {
     if (mpisize_petsc>1){
       printf("New objective function only works with one petsc core right now.\n");
       exit(1);
@@ -56,7 +53,7 @@ OptimProblem::OptimProblem(Config config, TimeStepper* timestepper_, MPI_Comm co
   }
 
   // Allocate storage for final-time unitary if new objective function is used
-  if (use_Riemannian_objective > 0.0) {
+  if (optim_penalty_riemannian > 0.0) {
     PetscInt globalsize_rows = timestepper->mastereq->getDim();
     PetscInt globalsize_cols = ninit;;
     PetscInt localsize_rows = globalsize_rows / mpisize_petsc;
@@ -104,76 +101,51 @@ OptimProblem::OptimProblem(Config config, TimeStepper* timestepper_, MPI_Comm co
   VecZeroEntries(rho_t0_bar);
   VecAssemblyBegin(rho_t0_bar); VecAssemblyEnd(rho_t0_bar);
 
-  /* Initialize the optimization target, including setting of initial state rho_t0 if read from file or pure state or ensemble */
-  std::vector<std::string> target_str;
-  config.GetVecStrParam("optim_target", target_str, "pure");
-  std::string objective_str = config.GetStrParam("optim_objective", "Jfrobenius");
-  std::vector<double> read_gate_rot;
-  config.GetVecDoubleParam("gate_rot_freq", read_gate_rot, 1e20, true, false); 
-  std::vector<std::string> initcond_str;
-  config.GetVecStrParam("initialcondition", initcond_str, "none", false);
-  optim_target = new OptimTarget(target_str, objective_str, initcond_str, timestepper->mastereq, timestepper->total_time, read_gate_rot, rho_t0, quietmode);
+  /* Initialize the optimization target, including setting of initial state rho_t0 if read from file or product state or ensemble */
+  optim_target = new OptimTarget(config, timestepper->mastereq, timestepper->total_time, rho_t0, quietmode);
 
   /* Get weights for the objective function (weighting the different initial conditions */
-  config.GetVecDoubleParam("optim_weights", obj_weights, 1.0);
-  int nfill = 0;
-  if (obj_weights.size() < ninit) nfill = ninit - obj_weights.size();
-  double val = obj_weights[obj_weights.size()-1];
-  if (obj_weights.size() < ninit){
-    for (int i = 0; i < nfill; i++) 
-      obj_weights.push_back(val);
-  }
-  assert(obj_weights.size() >= ninit);
-  // Scale the weights such that they sum up to one: beta_i <- beta_i / (\sum_i beta_i)
-  double scaleweights = 0.0;
-  for (size_t i=0; i<ninit; i++) scaleweights += obj_weights[i];
-  for (size_t i=0; i<ninit; i++) obj_weights[i] = obj_weights[i] / scaleweights;
-  // Distribute over mpi_init processes 
-  std::vector<double> sendbuf = obj_weights;
-  std::vector<double> recvbuf = obj_weights;
-  int nscatter = ninit_local;
-  MPI_Scatter(sendbuf.data(), nscatter, MPI_DOUBLE, recvbuf.data(), nscatter,  MPI_DOUBLE, 0, comm_init);
-  for (int i = 0; i < nscatter; i++) obj_weights[i] = recvbuf[i];
-  for (size_t i=nscatter; i < obj_weights.size(); i++) obj_weights[i] = 0.0;
-
+  obj_weights = config.getOptimWeights();
 
   /* Store other optimization parameters */
-  gamma_tik = config.GetDoubleParam("optim_regul", 1e-4);
-  gatol = config.GetDoubleParam("optim_atol", 1e-8);
-  fatol = config.GetDoubleParam("optim_ftol", 1e-8);
-  inftol = config.GetDoubleParam("optim_inftol", 1e-5);
-  grtol = config.GetDoubleParam("optim_rtol", 1e-4);
-  maxiter = config.GetIntParam("optim_maxiter", 200);
-  gamma_penalty = config.GetDoubleParam("optim_penalty", 0.0);
-  penalty_param = config.GetDoubleParam("optim_penalty_param", 0.5);
-  gamma_penalty_energy = config.GetDoubleParam("optim_penalty_energy", 0.0);
-  // Check for new parameter name first, then old name for backward compatibility
-  if (config.count("optim_regul_tik0") > 0) {
-    gamma_tik_interpolate = config.GetBoolParam("optim_regul_tik0", false, false);
-  } else if (config.count("optim_regul_interpolate") > 0) {
-    gamma_tik_interpolate = config.GetBoolParam("optim_regul_interpolate", false, false);
-    if (mpirank_world == 0 && !quietmode) {
-      printf("Warning: Parameter 'optim_regul_interpolate' is deprecated. Please use 'optim_regul_tik0' instead.\n");
-    }
-  } else {
-    gamma_tik_interpolate = false;
-  }
-  gamma_penalty_dpdm = config.GetDoubleParam("optim_penalty_dpdm", 0.0);
-  gamma_penalty_variation = config.GetDoubleParam("optim_penalty_variation", 0.01); 
-  
+  gamma_tikhonov = config.getOptimTikhonovCoeff();
+  tikhonov_use_x0 = config.getOptimTikhonovUseX0();
 
-  if (gamma_penalty_dpdm > 1e-13 && timestepper->mastereq->lindbladtype != LindbladType::NONE){
+  // Get tolerance settings
+  tol_grad_abs = config.getOptimTolGradAbs();
+  tol_final_cost = config.getOptimTolFinalCost();
+  tol_infidelity = config.getOptimTolInfidelity();
+  tol_grad_rel = config.getOptimTolGradRel();
+  maxiter = config.getOptimMaxiter();
+
+  // Get penalty settings
+  gamma_penalty_leakage = config.getOptimPenaltyLeakage();
+  gamma_penalty_weightedcost = config.getOptimPenaltyWeightedCost();
+  double weightedcost_width = config.getOptimPenaltyWeightedCostWidth();
+  gamma_penalty_energy = config.getOptimPenaltyEnergy();
+  gamma_penalty_dpdm = config.getOptimPenaltyDpdm();
+  gamma_penalty_variation = config.getOptimPenaltyVariation();
+
+  if (gamma_penalty_dpdm > 1e-13 && timestepper->mastereq->decoherence_type != DecoherenceType::NONE){
     if (mpirank_world == 0 && !quietmode) {
       printf("Warning: Disabling DpDm penalty term because it is not implemented for the Lindblad solver.\n");
     }
     gamma_penalty_dpdm = 0.0;
   }
 
+
   /* Pass information on objective function to the time stepper needed for penalty objective function */
-  timestepper->penalty_param = penalty_param;
-  timestepper->gamma_penalty = gamma_penalty;
-  timestepper->gamma_penalty_dpdm = gamma_penalty_dpdm;
-  timestepper->gamma_penalty_energy = gamma_penalty_energy;
+  timestepper->setEvalWeightedCost(gamma_penalty_weightedcost > 1e-13, weightedcost_width);
+  timestepper->setEvalDPDM(gamma_penalty_dpdm > 1e-13);
+  timestepper->setEvalEnergy(gamma_penalty_energy > 1e-13);
+  double eval_leakage = false; 
+  if (gamma_penalty_leakage > 1e-13) {
+    for (size_t i=0; i<timestepper->mastereq->getNOscillators(); i++){
+      if (timestepper->mastereq->nessential[i] < timestepper->mastereq->nlevels[i]) eval_leakage = true;
+    }
+  }
+  timestepper->setEvalLeakage(eval_leakage);
+
   timestepper->optim_target = optim_target;
 
   /* Store optimization bounds */
@@ -182,12 +154,8 @@ OptimProblem::OptimProblem(Config config, TimeStepper* timestepper_, MPI_Comm co
   VecDuplicate(xlower, &xupper);
   int col = 0;
   for (size_t iosc = 0; iosc < timestepper->mastereq->getNOscillators(); iosc++){
-    std::vector<std::string> bound_str;
-    config.GetVecStrParam("control_bounds" + std::to_string(iosc), bound_str, "10000.0");
-    for (size_t iseg = 0; iseg < timestepper->mastereq->getOscillator(iosc)->getNSegments(); iseg++){
-      double boundval = 0.0;
-      if (bound_str.size() <= iseg) boundval =  atof(bound_str[bound_str.size()-1].c_str());
-      else boundval = atof(bound_str[iseg].c_str());
+    for (size_t iseg = 0; iseg < timestepper->mastereq->getOscillator(iosc)->getNParameterizations(); iseg++){ // Note: Currently only one parameterization is supported! iseg=0!
+      double boundval = config.getControlAmplitudeBound(iosc);
       // Scale bounds by the number of carrier waves, and convert to radians */
       boundval = boundval / (sqrt(2) * timestepper->mastereq->getOscillator(iosc)->getNCarrierfrequencies());
       boundval = boundval * 2.0*M_PI;
@@ -210,22 +178,12 @@ OptimProblem::OptimProblem(Config config, TimeStepper* timestepper_, MPI_Comm co
   VecAssemblyBegin(xlower); VecAssemblyEnd(xlower);
   VecAssemblyBegin(xupper); VecAssemblyEnd(xupper);
 
-  /* Store the initial guess if read from file */
-  std::vector<std::string> controlinit_str;
-  config.GetVecStrParam("control_initialization0", controlinit_str, "constant, 0.0");
-  if ( controlinit_str.size() > 0 && controlinit_str[0].compare("file") == 0 ) {
-    assert(controlinit_str.size() >=2);
-    for (int i=0; i<ndesign; i++) initguess_fromfile.push_back(0.0);
-    if (mpirank_world == 0) read_vector(controlinit_str[1].c_str(), initguess_fromfile.data(), ndesign, quietmode);
-    MPI_Bcast(initguess_fromfile.data(), ndesign, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-  }
- 
   /* Create Petsc's optimization solver */
-  TaoCreate(PETSC_COMM_WORLD, &tao);
+  TaoCreate(PETSC_COMM_SELF, &tao);
   /* Set optimization type and parameters */
   TaoSetType(tao,TAOBQNLS);         // Optim type: taoblmvm vs BQNLS ??
   TaoSetMaximumIterations(tao, maxiter);
-  TaoSetTolerances(tao, gatol, PETSC_DEFAULT, grtol);
+  TaoSetTolerances(tao, tol_grad_abs, PETSC_DEFAULT, tol_grad_rel);
   TaoMonitorSet(tao, TaoMonitor, (void*)this, NULL);
   TaoSetVariableBounds(tao, xlower, xupper);
   TaoSetFromOptions(tao);
@@ -261,7 +219,7 @@ OptimProblem::~OptimProblem() {
   for (size_t i = 0; i < store_finalstates.size(); i++) {
     VecDestroy(&(store_finalstates[i]));
   }
-  if (use_Riemannian_objective > 0.0) {
+  if (optim_penalty_riemannian > 0.0) {
     MatDestroy(&U_final_re);
     MatDestroy(&U_final_im);
     MatDestroy(&U_final_re_bar);
@@ -283,7 +241,7 @@ double OptimProblem::evalF(const Vec x) {
   mastereq->setControlAmplitudes(x); 
 
   // Reset U_final
-  if (use_Riemannian_objective > 0.0) {
+  if (optim_penalty_riemannian > 0.0) {
     MatZeroEntries(U_final_re);
     MatZeroEntries(U_final_im);
     MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
@@ -296,7 +254,8 @@ double OptimProblem::evalF(const Vec x) {
   obj_cost  = 0.0;
   obj_riemann = 0.0;
   obj_regul = 0.0;
-  obj_penal = 0.0;
+  obj_penal_leakage = 0.0;
+  obj_penal_weightedcost = 0.0;
   obj_penal_dpdm = 0.0;
   obj_penal_energy = 0.0;
   obj_penal_variation = 0.0;
@@ -319,7 +278,7 @@ double OptimProblem::evalF(const Vec x) {
     Vec finalstate = timestepper->solveODE(initid, rho_t0);
 
     /* Store the final state for Riemannian objective function */
-    if (use_Riemannian_objective > 0.0) {
+    if (optim_penalty_riemannian > 0.0) {
       const PetscScalar *finalstate_array;
       VecGetArrayRead(finalstate, &finalstate_array);
       for (size_t row = 0; row < timestepper->mastereq->getDim(); row++) {
@@ -331,14 +290,17 @@ double OptimProblem::evalF(const Vec x) {
       VecRestoreArrayRead(finalstate, &finalstate_array);
     }
 
-    /* Add to integral penalty term */
-    obj_penal += obj_weights[iinit] * gamma_penalty * timestepper->penalty_integral;
+    /* Add to leakage penalty term */
+    obj_penal_leakage += obj_weights[iinit] * gamma_penalty_leakage * timestepper->getLeakageIntegral();
+
+    /* Add to running cost penalty term */
+    obj_penal_weightedcost += obj_weights[iinit] * gamma_penalty_weightedcost * timestepper->getWeightedCostIntegral();
 
     /* Add to second derivative penalty term */
-    obj_penal_dpdm += obj_weights[iinit] * gamma_penalty_dpdm * timestepper->penalty_dpdm;
+    obj_penal_dpdm += obj_weights[iinit] * gamma_penalty_dpdm * timestepper->getDPDMIntegral();
     
     /* Add to energy integral penalty term */
-    obj_penal_energy += obj_weights[iinit] * gamma_penalty_energy* timestepper->energy_penalty_integral;
+    obj_penal_energy += obj_weights[iinit] * gamma_penalty_energy* timestepper->getEnergyIntegral();
 
     /* Evaluate J(finalstate) and add to final-time cost */
     double obj_iinit_re = 0.0;
@@ -356,7 +318,7 @@ double OptimProblem::evalF(const Vec x) {
 
     // printf("%d, %d: iinit obj_iinit: %f * (%1.14e + i %1.14e, Overlap=%1.14e + i %1.14e\n", mpirank_world, mpirank_init, obj_weights[iinit], obj_iinit_re, obj_iinit_im, fidelity_iinit_re, fidelity_iinit_im);
   }
-  if (use_Riemannian_objective > 0.0) {
+  if (optim_penalty_riemannian > 0.0) {
     MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
@@ -364,14 +326,16 @@ double OptimProblem::evalF(const Vec x) {
   }
 
   /* Sum up from initial conditions processors */
-  double mypen = obj_penal;
+  double mypen_leak = obj_penal_leakage;
+  double mypen_wcost = obj_penal_weightedcost;
   double mypen_dpdm = obj_penal_dpdm;
   double mypenen = obj_penal_energy;
   double mycost_re = obj_cost_re;
   double mycost_im = obj_cost_im;
   double myfidelity_re = fidelity_re;
   double myfidelity_im = fidelity_im;
-  MPI_Allreduce(&mypen, &obj_penal, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+  MPI_Allreduce(&mypen_leak, &obj_penal_leakage, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+  MPI_Allreduce(&mypen_wcost, &obj_penal_weightedcost, 1, MPI_DOUBLE, MPI_SUM, comm_init);
   MPI_Allreduce(&mypen_dpdm, &obj_penal_dpdm, 1, MPI_DOUBLE, MPI_SUM, comm_init);
   MPI_Allreduce(&mypenen, &obj_penal_energy, 1, MPI_DOUBLE, MPI_SUM, comm_init);
   MPI_Allreduce(&mycost_re, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, comm_init);
@@ -380,7 +344,7 @@ double OptimProblem::evalF(const Vec x) {
   MPI_Allreduce(&myfidelity_im, &fidelity_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
 
   /* Set the fidelity: If Schroedinger, need to compute the absolute value: Fid= |\sum_i \phi^\dagger \phi_target|^2 */
-  if (timestepper->mastereq->lindbladtype == LindbladType::NONE) {
+  if (timestepper->mastereq->decoherence_type == DecoherenceType::NONE) {
     fidelity = pow(fidelity_re, 2.0) + pow(fidelity_im, 2.0);
   } else {
     fidelity = fidelity_re; 
@@ -390,7 +354,7 @@ double OptimProblem::evalF(const Vec x) {
   obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im);
 
   /* Penalty: Riemannian distance */
-  if (use_Riemannian_objective > 0.0) {
+  if (optim_penalty_riemannian > 0.0) {
 
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -409,19 +373,19 @@ double OptimProblem::evalF(const Vec x) {
 
     // if (mpirank_world == 0) printf("\nRiemannian distance objective: %1.14e\n\n", obj_riemannian);
     // obj_cost = obj_riemannian;
-    obj_riemann = use_Riemannian_objective * obj_riemannian;
+    obj_riemann = optim_penalty_riemannian * obj_riemannian;
   }
 
   /* Evaluate Tikhonov regularization term: gamma/2 * ||x-x0||^2*/
   double xnorm;
-  if (!gamma_tik_interpolate){  // ||x||^2
+  if (!tikhonov_use_x0){  // ||x||^2
     VecNorm(x, NORM_2, &xnorm);
   } else {
     VecCopy(x, xtmp);
     VecAXPY(xtmp, -1.0, xinit);    // xtmp =  x - x_0
     VecNorm(xtmp, NORM_2, &xnorm);
   }
-  obj_regul = gamma_tik / 2. * pow(xnorm,2.0);
+  obj_regul = gamma_tikhonov / 2. * pow(xnorm,2.0);
 
   /* Evaluate penality term for control variation */
   double var_reg = 0.0;
@@ -431,11 +395,11 @@ double OptimProblem::evalF(const Vec x) {
   obj_penal_variation = 0.5*gamma_penalty_variation*var_reg; 
 
   /* Sum, store and return objective value */
-  objective = obj_cost + obj_regul + obj_penal + obj_penal_dpdm + obj_penal_energy + obj_penal_variation + obj_riemann;
+  objective = obj_cost + obj_regul + obj_penal_leakage + obj_penal_dpdm + obj_penal_energy + obj_penal_variation + obj_penal_weightedcost + obj_riemann;
 
   /* Output */
   if (mpirank_world == 0 && !quietmode) {
-    std::cout<< "Objective = " << std::scientific<<std::setprecision(14) << obj_cost << " + " << obj_regul << " + " << obj_penal << " + " << obj_penal_dpdm << " + " << obj_penal_energy << " + " << obj_penal_variation  << " + " << obj_riemann << std::endl;
+    std::cout<< "Objective = " << std::scientific<<std::setprecision(14) << obj_cost << " + " << obj_regul << " + " << obj_penal_leakage << " + " << obj_penal_dpdm << " + " << obj_penal_energy << " + " << obj_penal_variation << " + " << obj_penal_weightedcost << " + " << obj_riemann << std::endl;
     std::cout<< "Fidelity = " << fidelity  << std::endl;
   }
 
@@ -460,7 +424,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   VecZeroEntries(G);
 
   // Reset U_final
-  if (use_Riemannian_objective > 0.0) {
+  if (optim_penalty_riemannian > 0.0) {
     MatZeroEntries(U_final_re);
     MatZeroEntries(U_final_im);
     MatZeroEntries(U_final_re_bar);
@@ -479,10 +443,10 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   // if (mpirank_init == 0 && mpirank_optim == 0) { // TODO: Which one?? 
   if (mpirank_init == 0 ) {
 
-    // Derivative of Tikhonov 0.5*gamma * ||x||^2 
-    VecAXPY(G, gamma_tik, x);   // + gamma_tik * x
-    if (gamma_tik_interpolate){
-      VecAXPY(G, -1.0*gamma_tik, xinit); // -gamma_tik * xinit
+    // Derivative of Tikhonov 0.5 * gamma * ||x||^2 
+    VecAXPY(G, gamma_tikhonov, x);   // + gamma * x
+    if (tikhonov_use_x0){
+      VecAXPY(G, -1.0*gamma_tikhonov, xinit); // -gamma * xinit
     }
 
     // Derivative of penalization of control variation 
@@ -499,7 +463,8 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   obj_cost = 0.0;
   obj_riemann = 0.0;
   obj_regul = 0.0;
-  obj_penal = 0.0;
+  obj_penal_leakage = 0.0;
+  obj_penal_weightedcost = 0.0;
   obj_penal_dpdm = 0.0;
   obj_penal_energy = 0.0;
   obj_penal_variation = 0.0;
@@ -524,7 +489,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
     Vec finalstate = timestepper->solveODE(initid, rho_t0);
 
     /* Store the final state for Riemannian objective function */
-    if (use_Riemannian_objective > 0.0) {
+    if (optim_penalty_riemannian > 0.0) {
       const PetscScalar *finalstate_array;
       VecGetArrayRead(finalstate, &finalstate_array);
       for (size_t row = 0; row < timestepper->mastereq->getDim(); row++) {
@@ -543,15 +508,18 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
     }
 
     /* Store the final state for the Schroedinger solver */
-    if (timestepper->mastereq->lindbladtype == LindbladType::NONE) VecCopy(finalstate, store_finalstates[iinit]);
+    if (timestepper->mastereq->decoherence_type == DecoherenceType::NONE) VecCopy(finalstate, store_finalstates[iinit]);
 
-    /* Add to integral penalty term */
-    obj_penal += obj_weights[iinit] * gamma_penalty * timestepper->penalty_integral;
+    /* Add to leakage penalty term */
+    obj_penal_leakage += obj_weights[iinit] * gamma_penalty_leakage * timestepper->getLeakageIntegral();
+
+    /* Add to running cost penalty term */
+    obj_penal_weightedcost += obj_weights[iinit] * gamma_penalty_weightedcost * timestepper->getWeightedCostIntegral();
 
     /* Add to second derivative dpdm integral penalty term */
-    obj_penal_dpdm += obj_weights[iinit] * gamma_penalty_dpdm * timestepper->penalty_dpdm;
+    obj_penal_dpdm += obj_weights[iinit] * gamma_penalty_dpdm * timestepper->getDPDMIntegral();
     /* Add to energy integral penalty term */
-    obj_penal_energy += obj_weights[iinit] * gamma_penalty_energy * timestepper->energy_penalty_integral;
+    obj_penal_energy += obj_weights[iinit] * gamma_penalty_energy * timestepper->getEnergyIntegral();
 
     /* Evaluate J(finalstate) and add to final-time cost */
     double obj_iinit_re = 0.0;
@@ -568,7 +536,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
     fidelity_im += 1./ ninit * fidelity_iinit_im;
 
     /* If Lindblas solver, compute adjoint for this initial condition. Otherwise (Schroedinger solver), compute adjoint only after all initial conditions have been propagated through (separate loop below) */
-    if (timestepper->mastereq->lindbladtype != LindbladType::NONE) {
+    if (timestepper->mastereq->decoherence_type != DecoherenceType::NONE) {
       // if (mpirank_optim == 0) printf("%d: %d BWD.", mpirank_init, initid);
 
       /* Reset adjoint */
@@ -580,7 +548,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
       optim_target->evalJ_diff(finalstate, rho_t0_bar, obj_weights[iinit]*obj_cost_re_bar, obj_weights[iinit]*obj_cost_im_bar);
 
       /* Derivative of time-stepping */
-      timestepper->solveAdjointODE(rho_t0_bar, finalstate, obj_weights[iinit] * gamma_penalty, obj_weights[iinit]*gamma_penalty_dpdm, obj_weights[iinit]*gamma_penalty_energy);
+      timestepper->solveAdjointODE(rho_t0_bar, finalstate, obj_weights[iinit] * gamma_penalty_leakage, obj_weights[iinit]*gamma_penalty_weightedcost, obj_weights[iinit]*gamma_penalty_dpdm, obj_weights[iinit]*gamma_penalty_energy);
 
       /* Add to optimizers's gradient */
       VecAXPY(G, 1.0, timestepper->redgrad);
@@ -588,14 +556,16 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   }
 
   /* Sum up from initial conditions processors */
-  double mypen = obj_penal;
+  double mypen_leak = obj_penal_leakage;
+  double mypen_wcost = obj_penal_weightedcost;
   double mypen_dpdm = obj_penal_dpdm;
   double mypenen = obj_penal_energy;
   double mycost_re = obj_cost_re;
   double mycost_im = obj_cost_im;
   double myfidelity_re = fidelity_re;
   double myfidelity_im = fidelity_im;
-  MPI_Allreduce(&mypen, &obj_penal, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+  MPI_Allreduce(&mypen_leak, &obj_penal_leakage, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+  MPI_Allreduce(&mypen_wcost, &obj_penal_weightedcost, 1, MPI_DOUBLE, MPI_SUM, comm_init);
   MPI_Allreduce(&mypen_dpdm, &obj_penal_dpdm, 1, MPI_DOUBLE, MPI_SUM, comm_init);
   MPI_Allreduce(&mypenen, &obj_penal_energy, 1, MPI_DOUBLE, MPI_SUM, comm_init);
   MPI_Allreduce(&mycost_re, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, comm_init);
@@ -604,7 +574,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   MPI_Allreduce(&myfidelity_im, &fidelity_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
 
   /* Set the fidelity: If Schroedinger, need to compute the absolute value: Fid= |\sum_i \phi^\dagger \phi_target|^2 */
-  if (timestepper->mastereq->lindbladtype == LindbladType::NONE) {
+  if (timestepper->mastereq->decoherence_type == DecoherenceType::NONE) {
     fidelity = pow(fidelity_re, 2.0) + pow(fidelity_im, 2.0);
   } else {
     fidelity = fidelity_re; 
@@ -615,7 +585,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im);
 
   /* Penalty: Riemannian distance */
-  if (use_Riemannian_objective > 0.0) {
+  if (optim_penalty_riemannian > 0.0) {
 
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -634,20 +604,20 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
 
     // if (mpirank_world == 0) printf("\nRiemannian distance objective: %1.14e\n\n", obj_riemannian);
     // obj_cost = obj_riemannian;
-    obj_riemann = use_Riemannian_objective * obj_riemannian;
+    obj_riemann = optim_penalty_riemannian * obj_riemannian;
 
   }
 
   /* Evaluate Tikhonov regularization term += gamma/2 * ||x||^2*/
   double xnorm;
-  if (!gamma_tik_interpolate){  // ||x||^2
+  if (!tikhonov_use_x0){  // ||x||^2
     VecNorm(x, NORM_2, &xnorm);
   } else {
     VecCopy(x, xtmp);
     VecAXPY(xtmp, -1.0, xinit);    // xtmp =  x_k - x_0
     VecNorm(xtmp, NORM_2, &xnorm);
   }
-  obj_regul = gamma_tik / 2. * pow(xnorm,2.0);
+  obj_regul = gamma_tikhonov / 2. * pow(xnorm,2.0);
 
   /* Evaluate penalty term for control parameter variation */
   double var_reg = 0.0;
@@ -657,18 +627,18 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   obj_penal_variation = 0.5*gamma_penalty_variation*var_reg; 
 
   /* Sum, store and return objective value */
-  objective = obj_cost + obj_regul + obj_penal + obj_penal_dpdm + obj_penal_energy + obj_penal_variation + obj_riemann;
+  objective = obj_cost + obj_regul + obj_penal_leakage + obj_penal_dpdm + obj_penal_energy + obj_penal_variation + obj_penal_weightedcost + obj_riemann;
 
   /* Derivative of new objective function */
-  if (use_Riemannian_objective > 0.0) {
+  if (optim_penalty_riemannian > 0.0) {
     optim_target->RiemannianDistance_diff(U_final_re, U_final_im, U_final_re_bar, U_final_im_bar, phase_invariant);
-    MatScale(U_final_re_bar, use_Riemannian_objective);
-    MatScale(U_final_im_bar, use_Riemannian_objective);
+    MatScale(U_final_re_bar, optim_penalty_riemannian);
+    MatScale(U_final_im_bar, optim_penalty_riemannian);
   }
 
 
   /* For Schroedinger solver: Solve adjoint equations for all initial conditions here. */
-  if (timestepper->mastereq->lindbladtype == LindbladType::NONE) {
+  if (timestepper->mastereq->decoherence_type == DecoherenceType::NONE) {
 
     // Iterate over all initial conditions 
     for (int iinit = 0; iinit < ninit_local; iinit++) {
@@ -687,7 +657,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
       optim_target->evalJ_diff(store_finalstates[iinit], rho_t0_bar, obj_weights[iinit]*obj_cost_re_bar, obj_weights[iinit]*obj_cost_im_bar);
 
       // Derivative of Riemannian penalty
-      if (use_Riemannian_objective > 0.0) {
+      if (optim_penalty_riemannian > 0.0) {
         // Pass i-th column of U_final_bar into rho_t0_bar
         for (size_t row = 0; row < timestepper->mastereq->getDim(); row++) {
           int id_re = row;
@@ -703,7 +673,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
       }
 
       /* Derivative of time-stepping */
-      timestepper->solveAdjointODE(rho_t0_bar, store_finalstates[iinit], obj_weights[iinit] * gamma_penalty, obj_weights[iinit]*gamma_penalty_dpdm, obj_weights[iinit]*gamma_penalty_energy);
+      timestepper->solveAdjointODE(rho_t0_bar, store_finalstates[iinit], obj_weights[iinit] * gamma_penalty_leakage, obj_weights[iinit]*gamma_penalty_weightedcost, obj_weights[iinit]*gamma_penalty_dpdm, obj_weights[iinit]*gamma_penalty_energy);
 
       /* Add to optimizers's gradient */
       VecAXPY(G, 1.0, timestepper->redgrad);
@@ -724,7 +694,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
 
   /* Output */
   // if (mpirank_world == 0 && !quietmode) {
-  //   std::cout<< "Objective = " << std::scientific<<std::setprecision(14) << obj_cost << " + " << obj_regul << " + " << obj_penal << " + " << obj_penal_dpdm << " + " << obj_penal_energy << " + " << obj_penal_variation << std::endl;
+  //   std::cout<< "Objective = " << std::scientific<<std::setprecision(14) << obj_cost << " + " << obj_regul << " + " << obj_penal_leakage << " + " << obj_penal_dpdm << " + " << obj_penal_energy << " + " << obj_penal_variation << " + " << obj_penal_weightedcost <<  std::endl;
   //   std::cout<< "Fidelity = " << fidelity << std::endl;
   // }
 }
@@ -737,23 +707,16 @@ void OptimProblem::solve(Vec xinit) {
 void OptimProblem::getStartingPoint(Vec xinit){
   MasterEq* mastereq = timestepper->mastereq;
 
-  if (initguess_fromfile.size() > 0) {
-    /* Set the initial guess from file */
-    for (size_t i=0; i<initguess_fromfile.size(); i++) {
-      VecSetValue(xinit, i, initguess_fromfile[i], INSERT_VALUES);
-    }
-
-  } else { // copy from initialization in oscillators contructor
-    PetscScalar* xptr;
-    VecGetArray(xinit, &xptr);
-    int shift = 0;
-    for (size_t ioscil = 0; ioscil<mastereq->getNOscillators(); ioscil++){
-      mastereq->getOscillator(ioscil)->getParams(xptr + shift);
-      shift += mastereq->getOscillator(ioscil)->getNParams();
-    }
-    VecRestoreArray(xinit, &xptr);
+  // Grab parameters from oscillators
+  PetscScalar* xptr;
+  VecGetArray(xinit, &xptr);
+  int shift = 0;
+  for (size_t ioscil = 0; ioscil<mastereq->getNOscillators(); ioscil++){
+    mastereq->getOscillator(ioscil)->getParams(xptr + shift);
+    shift += mastereq->getOscillator(ioscil)->getNParams();
   }
-
+  VecRestoreArray(xinit, &xptr);
+  
   /* Assemble initial guess */
   VecAssemblyBegin(xinit);
   VecAssemblyEnd(xinit);
@@ -791,7 +754,8 @@ PetscErrorCode TaoMonitor(Tao tao,void*ptr){
   double obj_cost = ctx->getCostT();
   double obj_riemann = ctx->getRiemannDistance();
   double obj_regul = ctx->getRegul();
-  double obj_penal = ctx->getPenalty();
+  double obj_penal_leakage = ctx->getPenaltyLeakage();
+  double obj_penal_weightedcost = ctx->getPenaltyWeightedCost();
   double obj_penal_dpdm = ctx->getPenaltyDpDm();
   double obj_penal_energy = ctx->getPenaltyEnergy();
   double obj_penal_variation= ctx->getPenaltyVariation();
@@ -807,34 +771,34 @@ PetscErrorCode TaoMonitor(Tao tao,void*ptr){
   /* Additional Stopping criteria */
   bool lastIter = false;
   std::string finalReason_str = "";
-  if (1.0 - F_avg <= ctx->getInfTol()) {
+  if (1.0 - F_avg <= ctx->getTolInfidelity()) {
     finalReason_str = "Optimization converged with small infidelity.";
     TaoSetConvergedReason(tao, TAO_CONVERGED_USER);
     lastIter = true;
-  } else if (obj_cost <= ctx->getFaTol()) {
+  } else if (obj_cost <= ctx->getTolFinalCost()) {
     finalReason_str = "Optimization converged with small final time cost.";
     TaoSetConvergedReason(tao, TAO_CONVERGED_USER);
     lastIter = true;
   } else if (iter == ctx->getMaxIter()) {
     finalReason_str = "Optimization stopped at maximum number of iterations.";
     lastIter = true;
-  } else if (gnorm < ctx->getGaTol()) {
+  } else if (gnorm < ctx->getTolGradAbs()) {
     finalReason_str = "OPtimization converged with small gradient norm.";
     lastIter=true;
   }
 
   /* First iteration: Header for screen output of optimization history */
   if (iter == 0 && ctx->getMPIrank_world() == 0) {
-    std::cout<<  "    Objective             Tikhonov                Penalty-Leakage        Penalty-StateVar       Penalty-TotalEnergy    Penalty-CtrlVar" << std::endl;
+    std::cout<<  "    Objective             Tikhonov               Penalty-Leakage        Penalty-StateVar       Penalty-TotalEnergy    Penalty-CtrlVar        Penalty-WeightedCost" << std::endl;
   }
 
-  /* Every <optim_monitor_freq> iterations: Output of optimization history */
-  if (iter % ctx->output->optim_monitor_freq == 0 ||lastIter) {
+  /* Every <output_optimization_stride> iterations: Output of optimization history */
+  if (iter % ctx->output->output_optimization_stride == 0 ||lastIter) {
     // Add to optimization history file 
-    ctx->output->writeOptimFile(iter, f, gnorm, deltax, F_avg, obj_cost, obj_riemann, obj_regul, obj_penal, obj_penal_dpdm, obj_penal_energy, obj_penal_variation);
+    ctx->output->writeOptimFile(iter, f, gnorm, deltax, F_avg, obj_cost, obj_riemann, obj_regul, obj_penal_leakage, obj_penal_dpdm, obj_penal_energy, obj_penal_variation, obj_penal_weightedcost);
     // Screen output 
     if (ctx->getMPIrank_world() == 0) {
-      std::cout<< iter <<  "  " << std::scientific<<std::setprecision(14) << obj_cost << " + " << obj_regul << " + " << obj_penal << " + " << obj_penal_dpdm << " + " << obj_penal_energy << " + " << obj_penal_variation << " + " << obj_riemann;
+      std::cout<< iter <<  "  " << std::scientific<<std::setprecision(14) << obj_cost << " + " << obj_regul << " + " << obj_penal_leakage << " + " << obj_penal_dpdm << " + " << obj_penal_energy << " + " << obj_penal_variation << " + " << obj_penal_weightedcost << " + " << obj_riemann;
       std::cout<< "  Fidelity = " << F_avg;
       std::cout<< "  ||Grad|| = " << gnorm;
       std::cout<< std::endl;

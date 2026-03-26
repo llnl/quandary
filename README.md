@@ -113,14 +113,49 @@ In additional to installing dependencies, the `pip install` command also enables
 
 # Running
 The C++ code builds into the executable `quandary`,
-which takes one argument being the name of the test-case's configuration file. The file `config_template.cfg`, lists all possible configuration options and is filled with comments that should help users set up their own test case and match the options to the description in the user guide. 
-* `quandary config_template.cfg` (serial execution)
-* `mpirun -np 4 quandary config_template.cfg` (on 4 cores)
+which takes one argument being the name of the test-case's configuration file. The file `config_template.toml` lists all possible configuration options and is filled with comments that should help users set up their own test case and match the options to the description in the user guide.
+* `quandary config_template.toml` (serial execution)
+* `mpirun -np 4 quandary config_template.toml` (on 4 cores)
 
 You can silence Quandary output by adding the `--quiet` argument to the above commands.
 
 The `examples/` folder exemplifies the usage of Quandary's Python interface. 
 * `python example_cnot.py`
+
+# Building Documentation Locally
+
+## Building Doxygen Locally
+To build the Doxygen documentation locally:
+
+1. Install Doxygen and Graphviz (e.g., `brew install doxygen graphviz` on macOS or `apt install doxygen graphviz` on Ubuntu)
+2. Configure and build the docs:
+   ```
+   cd build
+   cmake ..
+   make quandary_doxygen
+   ```
+3. View the docs in your browser:
+   ```
+   open build/docs/doxygen/html/index.html
+   ```
+
+## Building User Guide Locally
+To build the user guide documentation locally:
+
+1. Install the required Python packages:
+   ```
+   pip install mkdocs pymdown-extensions mkdocs-bibtex mkdocs-macros-plugin mkdocs-jupyter
+   ```
+2. Build the MkDocs site:
+   ```
+   mkdocs build
+   ```
+3. To view the documentation in your browser while making changes (with live reload):
+   ```
+   mkdocs serve
+   ```
+   Then open http://127.0.0.1:8000/ in your browser.
+4. The built site will be in the `site` directory.
 
 # Tests
 
@@ -144,6 +179,10 @@ See `tests/regression/README.md` for more information.
 Performance regression tests are defined in `tests/performance`.
 The latest results from `main` are shown on this [performance dashboard](https://software.llnl.gov/quandary/dev/bench/).
 See `tests/performance/README.md` for more information.
+
+## Unit tests
+Unit tests using google test are defined in `tests/unit`.
+They can be run with `make test` in the build folder.
 
 # Community and Contributing
 

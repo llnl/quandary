@@ -9,3 +9,10 @@ def pytest_addoption(parser):
         default=False,
         help="Use exact comparison for floating point numbers"
     )
+    group.addoption(
+        "--config-format",
+        action="store",
+        choices=["toml", "cfg"],
+        default="toml",
+        help="Configuration file format to use (default: toml)"
+    )

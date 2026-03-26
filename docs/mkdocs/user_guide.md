@@ -40,7 +40,7 @@ The **default Hamiltonian** in Quandary models superconducting (transmon) qubits
   H_c(t) &:= \sum_{k=0}^{Q-1} f^k(t) \left(a_k + a_k^\dagger \right)
 \end{align}
 
-where $\omega_k\geq 0$ denotes $0 \rightarrow 1$ transition frequencies for each oscillator $k$, $\xi_k\geq 0$ are the self-Kerr coefficients. Couplings can be specified through the cross resonance coefficients $J_{kl}\geq 0$ ("dipole-dipole interaction") or through $\xi_{kl}\geq 0$ ("zz-coupling"). 
+where $\omega_k\geq 0$ denotes $0 \rightarrow 1$ transition frequencies for each oscillator $k$ (configured as `transition_frequency`), $\xi_k\geq 0$ are the self-Kerr coefficients (`selfkerr`). Couplings can be specified through the cross resonance coefficients $J_{kl}\geq 0$ ("dipole-dipole interaction", configured as `dipole_coupling`) or through $\xi_{kl}\geq 0$ (`crosskerr_coupling`). 
 Here, $a_k\in \C^{N\times N}$ denotes the lowering operator acting on subsystem $k$.
 The control pulses $f^k(t)$ can be either specified or optimized for, compare section [Control pulse parameterization](#sec:controlpulses). **Custom system and control Hamiltonian operators** can be specified through Quandary's python interface.
 
@@ -57,10 +57,10 @@ where the collapse operators $\Ell_{lk}$ model decay and dephasing in each subsy
 - Decay  ("$T_1$"): $\Ell_{1k} = \frac{1}{\sqrt{T_1^k}} a_k$
 - Dephasing  ("$T_2$"): $\Ell_{2k} = \frac{1}{\sqrt{T_2^k}} a_k^{\dagger}a_k$
 
-<!-- Note that the main choice here is which equation should be solved for and which representation of the quantum state will be used (either Schroedinger with a state vector $\psi \in \C^N$, or Lindblad's equation for a density matrix $\rho \in \C^{N\times N}$). In the C++ configuration file, this choice is determined through the option `collapse_type`, where `none` will result in Schroedinger's equation and any other choice will result in Lindblad's equation being solved for. Further note, that choosing `collapse_type` $\neq$ `none`, together with a collapse time $T_{l}^k = 0.0$ will omit the evaluation of the corresponding term in the Lindblad operator $\eqref{eq:collapseop}$ (but will still solve Lindblad's equation for the density matrix). In the python interface, Lindblad's solver is enabled by passing decay and decoherence times `T1` and `T2` per oscillator to the Quandary object. -->
+<!-- Note that the main choice here is which equation should be solved for and which representation of the quantum state will be used (either Schroedinger with a state vector $\psi \in \C^N$, or Lindblad's equation for a density matrix $\rho \in \C^{N\times N}$). In the C++ configuration file, this choice is determined through the `decoherence` setting in the `[system]` section, where `type = "none"` will result in Schroedinger's equation and any other choice will result in Lindblad's equation being solved for. Further note, that choosing `type` $\neq$ `"none"`, together with `decay_time` or `dephase_time` set to 0.0 will omit the evaluation of the corresponding term in the Lindblad operator $\eqref{eq:collapseop}$ (but will still solve Lindblad's equation for the density matrix). In the python interface, Lindblad's solver is enabled by passing decay and decoherence times `T1` and `T2` per oscillator to the Quandary object. -->
 
-## Rotational frame 
-Quandary uses the rotating wave approximation to slow down the time scale of the quantum dynamics. The user can specify the rotation frequencies $\omega_k^r$ for each oscillator. Under the rotating frame wave approximation, the Hamiltonians are transformed to
+## Rotational frame
+Quandary uses the rotating wave approximation to slow down the time scale of the quantum dynamics. The user can specify the rotation frequencies $\omega_k^r$ for each oscillator (configured as `rotation_frequency`). Under the rotating frame wave approximation, the Hamiltonians are transformed to
 
 \begin{align}
   \tilde{H}_d(t) &:= \sum_{k=0}^{Q-1} \left(\omega_k - \omega_k^{r}\right)a_k^{\dagger}a_k- \frac{\xi_k}{2}
@@ -101,7 +101,7 @@ Using trigonometric identities, the real and imaginary part of the rotating-fram
 where $B^{(1)}(t) = \sum_{s=1}^{N_s^k} \alpha^{k(1)}_{s,f} B_s(t)$ and $B^{(2)}(t) = \sum_{s=1}^{N_s^k} \alpha^{k(2)}_{s,f} B_s(t)$ evaluate the splines using the control coefficients $\alpha_{f,s}^{k(1)}, \alpha_{f,s}^{k(2)}\in \R$. 
 By default, the basis functions are piecewise quadratic B-spline polynomials with compact support, centered on an equally spaced grid in time. To instead use a piecewise constant (0th order) Bspline basis, see Section [0-th order Bspline basis functions](#sec:bspline-0).
 
-The control parameter vector $\boldsymbol{\alpha} = (\alpha_{f,s}^{k(i)})$ (*design* variables) can be either specified (e.g. a constant pulse, a pi-pulse, or pulses whose parameters are read from a given file), or can be optimized for in order to realize a desired system behavior (Section [The Optimal Control Problem](#sec:optim)).  
+The control parameter vector $\boldsymbol{\alpha} = (\alpha_{f,s}^{k(i)})$ (*design* variables) can be either specified or can be optimized for in order to realize a desired system behavior (Section [The Optimal Control Problem](#sec:optim)).  
 
 ### Carrier wave frequencies
 The rotating-frame carrier wave frequencies $\Omega^k_f \in \R$ should be chosen to trigger intrinsic system resonance frequencies. For example, when $\xi_{kl} << \xi_k$, the intrinsic qubit transition frequencies are $\omega_k - n\xi_k$. Thus by choosing $\Omega^k_f = \omega_k-\omega_k^r - n \xi_k$ in the rotating frame, one triggers transition between energy levels $n$ and $n+1$ in subsystem $k$. Choosing effective carrier wave frequencies is quite important for optimization performance, particulary when qubit interactions are desired, such as when optimizing for a CNOT gate. Using the python interface for Quandary, the carrier wave frequencies $\Omega^k_f$ are automatically computed based on an eigenvalue decomposition of the system Hamiltonian. For the C++ code, it is recommended to follow [@petersson2021optimal] for details on how to choose them effectively.  
@@ -131,7 +131,7 @@ where the (single or multiple) final-time states $\rho_i(T)$ solve either Lindbl
 The remaining terms are regularization and penalty terms that can be added to stabilize convergence, or prevent leakage, compare Section [Regularization, penalty terms, and leakage prevention](#sec:penalty)
 
 ## Objective function {#sec:objectivefunctionals}
-The following objective functions can be used for optimization in Quandary (config option `optim_objective`):
+The following objective functions can be used for optimization in Quandary (config option `objective` in the `[optimization]` section):
 
 \begin{align}
  J_{Frobenius} &= \sum_{i=1}^{n_{init}} \frac{\beta_i}{2} \left\| \rho^{target}_i - \rho_i(T)\right\|^2_F \\
@@ -167,10 +167,9 @@ Further note that this fidelity is averaged over the chosen initial conditions, 
 ### Gate optimization
 Quandary can be used to design control pulses that realize logical gate operations. Let $V\in \C^{N\times N}$ be the unitary matrix (gate), optimized control pulses drive any initial state $\rho(0)$ to the unitary transformation $\rho^{target} = V\rho(0)V^{\dagger}$ (Lindblad), or, in the Schroedinger case, drive any $\psi(0)$ to $\psi(T) =  V\psi(0)$.
 Some default target gates that are readily available, or can be specified from file or through the Python interface. (File format: column-wise vectorization, first all real parts then all imaginary parts.)
+Optionally, the user can specify frequencies to rotate the target gate, using the `gate_rot_freq` field within the `target` setting (e.g., `target = { type = "gate", gate_type = "cnot", gate_rot_freq = [0.0, 0.0] }`).
 
 Since *any* initial quantum state should be transformed by the control pulses, the corresponding initial conditions must span a basis with $n_{init} = N$ for Schroedinger solver, and $n_{init}=N^2$ for Lindblad solver, see Section [Initial conditions](#sec:initcond). 
-
-Target gates will by default be rotated into the computational frame (Section [Model equation](#sec:model)). Alternatively, the user can specify the rotation of the target gate through the configuration option `gate_rot_freq`.
 
 
 If guard levels are used ($n_k > n_k^e$, compare Section [Essential and guard levels](#sec:essential)), the gate should be defined in the essential-level dimensions only. Internally, the gate is projected upwards to the full dimensions by inserting identity blocks for rows/columns that correspond to a non-essential levels of the subsystems. Hence, a realization of the gate $\tilde{V}$ will not alter the occupation of higher (non-essential) energy level compared to their initial occupation at $t=0$.
@@ -178,11 +177,10 @@ If guard levels are used ($n_k > n_k^e$, compare Section [Essential and guard le
 ### State preparation {#sec:stateprep}
 Quandary can be used to optimize for pulses that drive (one or multiple) initial states to a fixed target state $\rho^{target}$. Depending on the choice of the [Initial conditions](#sec:initcond), this enables pulses for either direct **state-to-state transfer** (by choosing one specific initial condition, $n_{init}=1$), and one specific target state), or **unconditional state preparation** such as qubit reset (by spanning a basis of initial conditions, $n_{init}=N$ or $N^2, and one specific target state). Driving a basis of initial state to a common target will require to couple to a dissipative bath, which should be accounted for in the model setup. For unconditional *pure*-state preparation, it is shown in [@guenther2021quantum] that if one chooses the objective function $J_{measure}$ with corresponding measurement operator $N_m$ (see eq. $\eqref{eq:Jmeasure}$), one can reduce the number of initial conditions to only *one* being an ensemble of all basis states, and hence $n_{init}=1$ independent of $N$. Compare [@guenther2021quantum] for details.
 
-If the target state is *pure*, internal computations are simplified and it is recommended to pass the specific identifier ``pure, i0, i1, i2, ...`` to the Quandary configuration for the optimization target, denoting a pure target state of the form $\psi = |i_0i_1i_2...\rangle$, or $\rho = \psi\psi^\dagger$
-
+A desired target state can either be read from file (format vectorized target state in the essential dimensions, first all real parts, then all imaginary parts), or it can be set to a pure product state of the form $\psi_{target} = |i_0, i_1, i_2, ...\rangle$, or $\rho_{target} = \psi_{target}\psi_{target}^\dagger$.
 
 ## Initial conditions {#sec:initcond}
-The initial states $\rho_i(0)$ which are accounted for in the objective function eq. $\eqref{eq:minproblem}$ can be specified with the configuration option `initialcondition`. 
+The initial states $\rho_i(0)$ which are accounted for in the objective function eq. $\eqref{eq:minproblem}$ can be specified with the configuration option `initial_condition` in the `[system]` section. 
 
 
 * **Basis states for gate optimization**: $n_{init}=N$ (Schroedinger case), or $n_{init}=N^2$ Lindblad case. For the Schroedinger case, the basis states are the unit vectors $\psi_i(0)=\boldsymbol{e}_i \in \R^N, i=0,\dots N-1$. For the Lindblad's case, the $N^2$ basis density matrices defined in [@guenther2021quantum] are used as initial states. 
@@ -208,9 +206,9 @@ The three initial states from above do not suffice to estimate the fidelity of t
 <br>
 Note: The $N+1$ initial states are spanned in the *full* dimension of the system, including non-essential levels, see above for 3-state initialization.
 
-* **Pure initial state for state-to-state transfer**: $n_{init} = 1$. The user can choose a pure initial state of the form $\psi(0) = |i_0, i_1, i_2, ...\rangle$, or $\rho(0) = \psi(0)\psi(0)^\dagger$, through the configuration option ``pure, i0, i1, i2, ...``
+* **Pure initial product state for state-to-state transfer**: $n_{init} = 1$. The user can choose a pure initial product state of the form $\psi(0) = |i_0, i_1, i_2, ...\rangle$, or $\rho(0) = \psi(0)\psi(0)^\dagger$.
 
-* **Arbitrary initial state for state-to-state transformation**: $n_{init}=1$. An arbitrary (non-pure) initial state can be passed to Quandary directly through the Python interface, or can be read from a file in the C++ code. File format: column-wise vectorized density matrix or the state vector, first all real parts, then all imaginary parts. 
+* **Arbitrary initial state for state-to-state transformation**: $n_{init}=1$. An arbitrary initial state can be passed to Quandary directly through the Python interface, or can be read from a file in the C++ code. File format: column-wise vectorized density matrix or the state vector, first all real parts, then all imaginary parts. 
 
 * **Ensemble state for unconditional pure-state preparation**: $n_{init}=1$. *Only valid for Lindblad's solver.* When choosing the objective function $J_{measure}$ $\eqref{eq:Jmeasure}$, one can use the ensemble state $\rho_s(0) = \frac{1}{N^2}\sum_{i,j=0}^{N-1} B^{kj}$ as the only initial condition for optimizing for pulses that realize unconditional pure-state preparation, compare [@guenther2021quantum]). To specify the ensemble state in Quandary (C++), one can provide a list of consecutive integer ID's that determine in which of the subsystems the ensemble state should be spanned. Other subsystems will be initialized in the ground state.
 <br>
@@ -227,13 +225,14 @@ In order to regularize the optimization problem (stabilize optimization converge
 In addition, the following penalty terms can be added to the objective function, if desired:
 
 \begin{align*}
-  Penalty &= \frac{\gamma_2}{T} \int_0^T P\left(\{\rho_i(t)\}\right) \, \mathrm{d} t   \hspace{3cm} \rightarrow \text{Leakage prevention}\\
-         &+  \frac{\gamma_3}{T} \int_0^T \, \| \partial_{tt} \mbox{Pop}(\rho_i(t)) \|^2 \mathrm{d}t \hspace{2cm} \rightarrow \text{State variation penalty} \\
-        &+\frac{\gamma_4}{T} \int_0^T \, \sum_k |d^k(\alpha^k,t)|^2\, dt  \hspace{2cm}\rightarrow  \text{Control energy penalty}\\
-        &+ \frac{\gamma_5}{2} Var(\vec{\alpha}) \hspace{4cm}\rightarrow  \text{Control variation penalty}
+  Penalty &= \frac{\gamma_2}{T} \int_0^T \mbox{Leakage}\left(\rho(t)\right) \, \mathrm{d} t   \hspace{3.5cm} \rightarrow \text{Leakage prevention}\\
+         &+  \frac{\gamma_3}{T} \int_0^T \, \| \partial_{tt} \mbox{Pop}(\rho(t)) \|^2 \mathrm{d}t \hspace{3.2cm} \rightarrow \text{State variation penalty} \\
+        &+\frac{\gamma_4}{T} \int_0^T \, \sum_k |p^k(\alpha^k,t)|^2 + |q^k(\alpha^k,t)|^2\, dt  \hspace{0.7cm}\rightarrow  \text{Control energy penalty}\\
+        &+ \frac{\gamma_5}{2} Var(\vec{\alpha}) \hspace{6.2cm}\rightarrow  \text{Control variation penalty}\\
+        &+\frac{\gamma_6}{T} \int_0^T \, w(t)J(t)\, dt  \hspace{4.5cm}\rightarrow  \text{Weighted running cost penalty}\\
 \end{align*}
 
-* **Leakage prevention:** Choose a small $\gamma_2 > 0$ to penalize (suppress) leakage into non-essential energy levels (if $n_k^e < n_k$ for at least $k$, compare Sec. [Essential and non-essential energy levels](#sec:essential)). This term penalizes the occupation of all *guard levels* with $P(\rho(t)) = \sum_{r} \| \rho(t)_{rr} \|^2_2$, where $r$ iterates over all indices that correspond to a guard level (i.e., the final (highest) non-essential energy level) of at least one of the subsystems, and $\rho(t)_{rr}$ denotes their corresponding population.
+* **Leakage prevention:** Choose a small $\gamma_2 > 0$ to penalize (suppress) leakage into non-essential energy levels (if $n_k^e < n_k$ for at least $k$, compare Sec. [Essential and non-essential energy levels](#sec:essential)). This term penalizes the occupation of all *guard levels* with $\mbox{Leakage}(\rho(t)) = \sum_{r} \| \rho(t)_{rr} \|^2_2$, where $r$ iterates over all indices that correspond to a guard level (i.e., the final (highest) non-essential energy level) of at least one of the subsystems.
 
 * **State variation penalty**: Choose a small $\gamma_3 > 0$ to encourage state evolutions whose populations vary slowly in time by penalizing the second derivative of the populations of the state.
 
@@ -242,20 +241,13 @@ In addition, the following penalty terms can be added to the objective function,
 * **Control variation penalty**: Choose a small $\gamma_5>0$ to penalize variations in control strength between consecutive B-spline coefficients. It is currently only implemented for piecewise zeroth order spline functions, see Section [Zeroth order B-spline basis functions](#sec:bspline-0), where it is useful to prevent noisy control pulses. Referring to the control function representation in $\eqref{eq:spline-ctrl}$, this penalty function takes the form:
 $Var(\vec{\alpha}) = \sum_{k=1}^Q Var_k(\vec{\alpha})$ with $Var_k(\vec{\alpha}) = \sum_{f,s}|\alpha_{s,f}^k - \alpha_{s-1,f}^k|^2$.
 
+* **Weighted running cost penalty**: Choose a small $\gamma_6>0$ to penalize a weighted objective function throughout the time domain. The weight is a gaussian centered at final time $T$: $w(t) =
+  \frac{1}{a} e^{ -\left(\frac{t-T}{a} \right)^2}$ for a width parameter $0 \leq a \leq 1$. Note, that as $a\to 0$, the weighting function $w(t)$ converges to the Dirac delta distribution with peak at final time $T$, hence reducing $a$ leads to more emphasis on the final time $T$ while larger $a$ penalize the objective function at earlier times $t\leq T$.
 
 Note: All regularization and penalty coefficients $\gamma_i$ should be chosen small enough so that they do not dominate the final-time objective function $J$. This might require some fine-tuning. It is recommended to always add $\gamma_1>0$, e.g. $\gamma_1 = 10^{-4}$, and add other penalties only if needed.
 
-<!--
-Achieving a target at EARLIER time-steps:
-\begin{align}\label{eq:penaltyterm}
-  P(\rho(t))  =  w(t) J\left(\rho(t)\right) \quad \text{where} \quad w(t) =
-  \frac{1}{a} e^{ -\left(\frac{t-T}{a} \right)^2},
-\end{align}
-for a penalty parameter $0 \leq a \leq 1$. Note, that as $a\to 0$, the weighting function $w(t)$ converges to the Dirac delta distribution with peak at final time $T$, hence reducing $a$ leads to more emphasis on the final time $T$ while larger $a$ penalize non-zero energy states at earlier times $t\leq T$.
--->
-
 ## Optimization algorithm
-Quandary utilized Petsc's Toolkit for Advanced Optimization (TAO) package to solve the optimal control problem. In the current setup, Quasi-Newton updates are applied to the control parameters using L-BFGS Hessian approximations. A projected line-search is used to incorporate box constraints for control pulse amplitude bounds $|p^k(t)| \leq c^k_{max}$, $|q^k(t)| \leq c^k_{max}$ via
+Quandary utilized Petsc's Toolkit for Advanced Optimization (TAO) package to solve the optimal control problem. In the current setup, Quasi-Newton updates are applied to the control parameters using L-BFGS Hessian approximations. A projected line-search is used to incorporate box constraints for control pulse amplitude bounds $|p^k(t)| \leq c^k_{max}$, $|q^k(t)| \leq c^k_{max}$ (configured as `amplitude_bound`) via
 
 \begin{align}
   | \alpha_{s,f}^{k(1)}| \leq \frac{c^k_{max}}{\sqrt{2}N_f^k} \quad \text{and} \quad |
@@ -303,7 +295,7 @@ to derive the vectorized master equation for $q(t) := \text{vec}(\rho(t)) \in \C
 
 
 The real and imaginary parts of $q(t)$ are stored in blocked manner: For
-  $q = u+iv$ with $u,v\in\R^{M}$, a vector of size $2M$ as $q=\begin{bmatrix} u\\v \end{bmatrix}.
+  $q = u+iv$ with $u,v\in\R^{M}$, a vector of size $2M$ as $q=\begin{bmatrix} u\\v \end{bmatrix}$.
 
 ## Time-stepping
 To solve the resulting real-valued differential equation 
@@ -430,7 +422,7 @@ processes ($np_{total}$) is split as
   np_{init} * np_{petsc} = np_{total}.
 \end{align*}
 
-Since parallelization over different initial conditions is perfect, Quandary automatically sets $np_{init} = n_{init}$, i.e. the total number of cores for distributing initial conditions is the total number of initial conditions that are considered in this run, as specified by the configuration option `intialcondition`. The number of cores for distributed linear algebra with Petsc is then computed from above.
+Since parallelization over different initial conditions is perfect, Quandary automatically sets $np_{init} = n_{init}$, i.e. the total number of cores for distributing initial conditions is the total number of initial conditions that are considered in this run, as specified by the configuration option `initial_condition`. The number of cores for distributed linear algebra with Petsc is then computed from above.
 
 It is currently required that the number of total cores for executing quandary is an integer divisor of multiplier of the number of initial conditions, such that each processor group owns the same number of initial conditions.
 
@@ -440,10 +432,10 @@ It is further required that the system dimension is an integer multiple of the n
   state.
 
 # Output and plotting the results
-Quandary generates various output files for system evolution of the current (optimized) controls as well as the optimization progress. All data files will be dumped into a user-specified folder through the config option `datadir`.
+Quandary generates various output files for system evolution of the current (optimized) controls as well as the optimization progress. All data files will be dumped into a user-specified folder through the config option `directory` in the `[output]` section.
 
 ### Output options with regard to state evolution
-For each subsystem $k$, the user can specify the desired state evolution output through the config option `output<k>`:
+The user can specify the desired state evolution output through the config option `observables` in the `[output]` section. This is an array of observable types to output:
 
 - `expectedEnergy`: This option prints the time evolution of the expected energy level of subsystem $k$ into files with naming convention `expected<k>.iinit<i>.dat`, where $i=1,\dots,n_{init}$ denotes the unique identifier for each initial condition $\rho_i(0)$ that was propagated through (see Section [Initial conditions](#sec:initcond)). This file contains two columns, the first row being the time values, the second one being the expectation value of the energy level of subsystem $k$ at that time point, computed from
 
@@ -452,19 +444,23 @@ For each subsystem $k$, the user can specify the desired state evolution output 
     \end{align}
 
     where $N^{(n_k)} = \left(a^{(n_k)}\right)^\dagger \left(a^{(n_k)}\right)$ denotes the number operator in subsystem $k$ and $\rho^k$ denotes the reduced density matrix or state for subsystem $k$. 
+
 - `expectedEnergyComposite` Prints the time evolution of the expected energy level of the entire (full-dimensional) system state into files (one for each initial condition, as above): $mbox{Tr}\left(N \rho(t)\right)$ for the number operator $N$ in the full dimensions.
+
 - `population`: This option prints the time evolution of the state's occupation in each energy level into files named `population<k>.iinit<i>.dat`, for each initial condition $i=1,\dots, n_{init}$ and each subsystem $k$. The files contain $n_k+1$ columns, the first one being the time values, the remaining ones correspond to the population of each level $l=0,\dots,n_k-1$ of the reduced density matrix or state vector at that time point. For Lindblad's solver, these are the diagonal elements of the reduced density matrix ($\rho_{ll}^k(t), l=0,\dots n_k-1$), for Schroedinger's solver it's the absolute values of the reduced state vector elements $|\psi^k_l(t)|^2, l=0,\dots n_k-1$. 
+
 - `populationComposite`: Prints the time evolution of the state populations of the entire (full-dimensional) system into files (one for each initial condition, as above).
+
 - `fullstate`: For smaller systems, one can choose to print out the full state $\rho(t)$ or $\psi(t)$ for each time point into the files `rho_Re.iinit<m>.dat` and `rho_Im.iinit<m>.dat`, for the real and imaginary parts. These files contain $N^2+1$ (Lindblad) or $N+1$ (Schroedinger) columns the first one being the time point value and the remaining ones contain the vectorized density matrix or the state vector for that time point. Note that these file become very big very quickly -- use with care!
 
-The user can change the frequency of output in time (printing only every $j$-th time point) through the option `output_frequency`. This is particularly important when doing performance tests, as computing the reduced states for output requires extra computation and communication that might skew performance tests.
+The user can change the frequency of output in time (printing only every $j$-th time point) through the option `timestep_stride` in the `[output]` section. This is particularly important when doing performance tests, as computing the reduced states for output requires extra computation and communication that might skew performance tests.
 
 ### Output with regard to simulation and optimization
-- `config_log.dat` contains all configuration options that had been used for the current run of the C++ code.
+- `config_log.toml` contains all configuration options that had been used for the current run of the C++ code.
 - `params.dat` contains the control parameters $\bfa$ that had been used to determine the current control pulses. This file contains one column containing all parameters, ordered as stored, see Section [Control pulses](#sec:controlpulses).
 - `control<k>.dat` contain the resulting control pulses applied to subsystem $k$ over time. It contains four columns, the first one being the time, second and third being $p^k(t)$ and $q^k(t)$ (rotating frame controls), and the last one is the corresponding lab-frame pulse $f^k(t)$. Note that the units of the control pulses are in frequency domain (divided by $2\pi)$. The unit matches the unit specified with the system parameters such as the qubit ground frequencies $\omega_k$.
 - `optim_history.dat` contains information about the optimization progress in terms of the overall objective function and contribution from each term (cost at final time $T$ and contribution from the tikhonov regularization and the penalty term), as well the norm of the gradient and the fidelity, for each iteration of the optimization. If only a forward simulation is performed, this file still prints out the objective function and fidelity for the forward simulation.
-Quandary always prints the current parameters and control pulses at the beginning of a simulation or optimization, and in addition at every $l$-th optimization iteration determined from the `optim_monitor_frequency` configuration option.
+Quandary always prints the current parameters and control pulses at the beginning of a simulation or optimization, and in addition at every $l$-th optimization iteration determined from the `optimization_stride` configuration option in the `[output]` section.
 
 ### Plotting
 The format of all output files are very well suited for plotting with [Gnuplot](http://www.gnuplot.info), which is a command-line based plotting program that can output directly to screen, or into many other formats such as png, eps, or even tex. As an example, from within a Gnuplot session, you can plot e.g. the expected energy level of subsystem $k=0$ for initial condition $m=0$ by the simple command
