@@ -185,6 +185,15 @@
         "number_of_processes": [
             1, 8
         ]
+    },
+    {
+        "simulation_name": "riemannian_distance",
+        "files_to_compare": [
+            "optim_history.dat"
+        ],
+        "number_of_processes": [
+            4
+        ]
     }
 
 ]
