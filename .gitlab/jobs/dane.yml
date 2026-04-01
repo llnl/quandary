@@ -25,7 +25,7 @@ clang_19_1_3_gcc_13_3_1:
 
 gcc_13_3_1:
   variables:
-    SPEC: "${PROJECT_DANE_VARIANTS} %%gcc@=13.3.1 ${PROJECT_DANE_DEPS}"
+    SPEC: "${PROJECT_DANE_VARIANTS} %%gcc@=13.3.1 ^netlib-lapack ${PROJECT_DANE_DEPS}"
   extends: .job_on_dane
 
 ########################
