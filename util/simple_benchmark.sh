@@ -2,12 +2,27 @@
 # Simple CPU vs GPU benchmark suite (runs on Tuolumne by default)
 set -uo pipefail
 
+# Detect machine and set GPU limits
+HOSTNAME=$(hostname)
+if [[ "$HOSTNAME" =~ tioga ]]; then
+  MACHINE="tioga"
+  MAX_GPUS=8
+elif [[ "$HOSTNAME" =~ tuolumne ]]; then
+  MACHINE="tuolumne"
+  MAX_GPUS=4
+else
+  MACHINE="tuolumne"
+  MAX_GPUS=4
+  echo "Warning: Unknown machine, defaulting to tuolumne settings (4 GPUs max)"
+fi
+
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 OUTPUT_DIR="benchmark_${TIMESTAMP}"
 mkdir -p "$OUTPUT_DIR"
 
 echo "=== Quandary CPU vs GPU Benchmark ==="
-echo "Machine: Tuolumne (default)"
+echo "Machine: $MACHINE"
+echo "Max GPUs: $MAX_GPUS"
 echo "Output: $OUTPUT_DIR"
 echo ""
 
@@ -15,49 +30,55 @@ echo ""
 echo "========================================"
 echo "Building GPU-capable environment (once)"
 echo "========================================"
-./util/benchmark_gpu_cpu.sh --build-only || {
+./util/benchmark_gpu_cpu.sh --build-only --machine "$MACHINE" || {
   echo "Build failed! Exiting."
   exit 1
 }
 echo ""
 
-# Test 1: Problem size (8 ranks, CPU vs GPU)
-echo "Test 1: Problem Size Scaling (8 ranks)"
+# Test 1: Problem size (CPU: 8 ranks, GPU: MAX_GPUS ranks)
+echo "Test 1: Problem Size Scaling"
 echo "======================================="
 for nlevels in 4 16 32; do
   toml="tests/performance/configs/nlevels_${nlevels}_${nlevels}_${nlevels}_${nlevels}.toml"
 
   echo "Size: ${nlevels}^4"
-  echo "  CPU..."
-  ./util/benchmark_gpu_cpu.sh --no-build --variants cpu \
+  echo "  CPU (8 ranks)..."
+  ./util/benchmark_gpu_cpu.sh --no-build --variants cpu --machine "$MACHINE" \
     --nprocs 8 --toml "$toml" \
     --output-dir "${OUTPUT_DIR}/size_${nlevels}_cpu" \
     2>&1 | tee -a "${OUTPUT_DIR}/test1.log"
   echo "  [DEBUG] CPU test completed with exit code: $?"
 
-  echo "  GPU..."
-  ./util/benchmark_gpu_cpu.sh --no-build --variants gpu \
-    --nprocs 8 --toml "$toml" \
+  echo "  GPU ($MAX_GPUS ranks)..."
+  ./util/benchmark_gpu_cpu.sh --no-build --variants gpu --machine "$MACHINE" \
+    --nprocs $MAX_GPUS --toml "$toml" \
     --output-dir "${OUTPUT_DIR}/size_${nlevels}_gpu" \
     2>&1 | tee -a "${OUTPUT_DIR}/test1.log"
   echo "  [DEBUG] GPU test completed with exit code: $?"
 done
 
 echo ""
-echo "Test 2: Strong Scaling (32^4 system)"
+echo "Test 2: Strong Scaling (32^4 system, up to $MAX_GPUS GPUs)"
 echo "====================================="
-for nranks in 1 4 8; do
+# Scale from 1 up to MAX_GPUS (powers of 2)
+SCALING_RANKS=(1)
+if [ $MAX_GPUS -ge 2 ]; then SCALING_RANKS+=(2); fi
+if [ $MAX_GPUS -ge 4 ]; then SCALING_RANKS+=(4); fi
+if [ $MAX_GPUS -ge 8 ]; then SCALING_RANKS+=(8); fi
+
+for nranks in "${SCALING_RANKS[@]}"; do
   toml="tests/performance/configs/nlevels_32_32_32_32.toml"
 
   echo "Ranks: $nranks"
   echo "  CPU..."
-  ./util/benchmark_gpu_cpu.sh --no-build --variants cpu \
+  ./util/benchmark_gpu_cpu.sh --no-build --variants cpu --machine "$MACHINE" \
     --nprocs $nranks --toml "$toml" \
     --output-dir "${OUTPUT_DIR}/scaling_${nranks}ranks_cpu" \
     2>&1 | tee -a "${OUTPUT_DIR}/test2.log"
 
   echo "  GPU..."
-  ./util/benchmark_gpu_cpu.sh --no-build --variants gpu \
+  ./util/benchmark_gpu_cpu.sh --no-build --variants gpu --machine "$MACHINE" \
     --nprocs $nranks --toml "$toml" \
     --output-dir "${OUTPUT_DIR}/scaling_${nranks}ranks_gpu" \
     2>&1 | tee -a "${OUTPUT_DIR}/test2.log"

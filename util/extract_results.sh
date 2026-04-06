@@ -95,7 +95,15 @@ echo "================================"
 echo ""
 echo "Ranks,CPU_Quandary(s),CPU_PETSc(s),CPU_MatMult%,CPU_Scatter%,GPU_Quandary(s),GPU_PETSc(s),GPU_MatMult%,GPU_Scatter%"
 
-for nranks in 1 4 8; do
+# Find all scaling directories and extract rank numbers
+SCALING_DIRS=$(find "$BENCH_DIR" -maxdepth 1 -type d -name "scaling_*ranks_cpu" | sort -V)
+RANK_NUMS=()
+for dir in $SCALING_DIRS; do
+  nranks=$(basename "$dir" | sed 's/scaling_\([0-9]*\)ranks_cpu/\1/')
+  RANK_NUMS+=($nranks)
+done
+
+for nranks in "${RANK_NUMS[@]}"; do
   cpu_dir="${BENCH_DIR}/scaling_${nranks}ranks_cpu"
   gpu_dir="${BENCH_DIR}/scaling_${nranks}ranks_gpu"
 
