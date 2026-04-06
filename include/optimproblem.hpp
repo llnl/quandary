@@ -11,6 +11,15 @@
 #include "optimtarget.hpp"
 #include <slepcsvd.h>
 #include <slepceps.h>
+
+#include "ROL_ParameterList.hpp"
+#include "ROL_Solver.hpp"
+#include "ROL_TypeB_LinMoreAlgorithm.hpp"
+#include "ROL_Algorithm.hpp"
+#include "ROL_TrustRegionStep.hpp"
+#include "ROL_StatusTest.hpp"
+#include "ROL_Bounds.hpp"
+
 #pragma once
 
 /* if Petsc version < 3.17: Change interface for Tao Optimizer */
@@ -25,6 +34,8 @@
 #if PETSC_VERSION_MAJOR<4 && PETSC_VERSION_MINOR<21
 #define TaoMonitorSet TaoSetMonitor 
 #endif
+
+class myVec;   // forward declaration
 
 /**
  * @brief Optimization problem solver for quantum optimal control.
@@ -94,6 +105,11 @@ class OptimProblem {
   double tol_infidelity; ///< Stopping criterion based on infidelity
   int maxiter; ///< Stopping criterion based on maximum number of iterations
   Tao tao; ///< PETSc's TAO optimization solver
+  ROL::Ptr<ROL::Solver<double>> rolSolver;      ///< ROL optimization solver
+  ROL::Ptr<ROL::ParameterList>  rolParlist;     ///< ROL parameter list
+  std::ofstream rolFileStream;  ///< ROL output file
+  ROL::Ptr<myVec> rolOptimVariable; ///< ROL optimization variable
+  ROL::Ptr<ROL::Problem<double>> rolOptimProb;
   double* mygrad; ///< Auxiliary gradient storage
   Vec xtmp; ///< Temporary vector storage
   OptimSolverType optim_solver_type; ///< Optimization solver type (TAO_BFGS, TAO_HESSIAN, or ROL)
@@ -313,15 +329,6 @@ class OptimProblem {
    * @param x Vector to store the initial guess
    */
   void getStartingPoint(Vec x);
-
-  /**
-   * @brief Retrieves the optimization solution and prints summary information.
-   *
-   * This method should be called after TaoSolve() has finished.
-   *
-   * @param opt Pointer to vector to store the optimal solution
-   */
-  void getSolution(Vec* opt);
 
   bool monitor(int iter, double deltax, Vec params);
 };

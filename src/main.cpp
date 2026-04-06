@@ -16,14 +16,6 @@
 #ifdef WITH_SLEPC
 #include <slepceps.h>
 #endif
-#include "ROL_ParameterList.hpp"
-#include "ROL_Solver.hpp"
-#include "ROL_TypeB_LinMoreAlgorithm.hpp"
-#include "ROL_Algorithm.hpp"
-#include "ROL_TrustRegionStep.hpp"
-#include "ROL_StatusTest.hpp"
-#include "ROL_Bounds.hpp"
-
 
 #define TEST_FD_GRAD 0    // Run Finite Differences gradient test
 #define TEST_FD_HESS 0    // Run Finite Differences Hessian test
@@ -204,48 +196,7 @@ int main(int argc,char **argv)
   VecCreateSeq(PETSC_COMM_SELF, optimctx->getNdesign(), &grad);
   VecSetUp(grad);
   VecZeroEntries(grad);
-  // Vec opt;
-
-  /* ROL optimization setup 
-  // Initial Vector, gradient and Objective function */
-  ROL::Ptr<ROL::Objective<double>> obj = ROL::makePtr<myObjective>(optimctx);
-  ROL::Ptr<ROL::Vector<double>>      x = ROL::makePtr<myVec>(xinit);
-  ROL::Ptr<ROL::Vector<double>>      g = ROL::makePtr<myVec>(grad);
-  // Optimization problem 
-  ROL::Ptr<ROL::Problem<double>> optProb = ROL::makePtr<ROL::Problem<double>>(obj,x);
-  // Add bounds
-  double bnorm = 0.0;
-  VecNorm(optimctx->xupper, NORM_2, &bnorm);
-  if (bnorm < 1e10) {
-    if (mpirank_world==0 && !quietmode) printf("Adding bounds\n");
-    ROL::Ptr<myVec> xlo = ROL::makePtr<myVec>(optimctx->xlower);
-    ROL::Ptr<myVec> xup = ROL::makePtr<myVec>(optimctx->xupper);
-    ROL::Ptr<ROL::BoundConstraint<double>> bnd = ROL::makePtr<ROL::Bounds<double>>(xlo, xup);
-    optProb->addBoundConstraint(bnd); 
-  }
-  // Create solver from ROL parameter file
-  std::string ROLfilename = config.getOptimROLInput();
-  // auto parlist = ROL::getParametersFromXmlFile(ROLfilename);
-  ROL::Ptr<ROL::ParameterList> parlist;
-  if (std::filesystem::exists(ROLfilename)) {
-      parlist = ROL::getParametersFromXmlFile(ROLfilename);
-  } else {
-      // Create default parameter list
-      parlist = ROL::makePtr<ROL::ParameterList>();
-  }
-  // // Pass maxiterations to optimproblem
-  // int ROLmaxiter = parlist->sublist("Status Test").get<int>("Iteration Limit", 100);
-  // optimctx->setMaxIter(ROLmaxiter);
-
-  ROL::Solver<double> rolSolver(optProb,*parlist);
-  // Set ROL output stream
-  std::ofstream rolFileStream(config.getOutputDirectory() + "/roloutput.txt");
-  ROL::Ptr<std::ostream> outStream = ROL::makePtrFromRef(rolFileStream);
-  // // Check the ROL problem setup 
-  // ROL::Ptr<std::ostream> outStr = ROL::makePtrFromRef(std::cout);
-  // bool printtoscreen = true;
-  // optProb->check(printtoscreen, *outStr);
-
+  // Vec opt;n
 
   /* Some screen output */
   if (mpirank_world == 0)
@@ -270,12 +221,7 @@ int main(int argc,char **argv)
     if (mpirank_world == 0 && !quietmode) printf("\nStarting primal solver... \n");
     optimctx->timestepper->writeTrajectoryDataFiles = true;
     // if (optimsolvertype==OptimSolverType::TAO) {
-    if (config.getOptimSolverType() == OptimSolverType::TAO_BFGS || config.getOptimSolverType() == OptimSolverType::TAO_HESSIAN) {
-      objective = optimctx->evalF(xinit);
-    } else  { // ROL
-      double tol = 0.0;
-      objective = obj->value(*x, tol);
-    }
+    objective = optimctx->evalF(xinit);
     
     if (mpirank_world == 0 && !quietmode) printf("\nTotal objective = %1.14e, \n", objective);
   } 
@@ -284,20 +230,18 @@ int main(int argc,char **argv)
   if (runtype == RunType::GRADIENT) {
     if (mpirank_world == 0 && !quietmode) printf("\nStarting adjoint solver...\n");
     optimctx->timestepper->writeTrajectoryDataFiles = true;
-    if (config.getOptimSolverType() == OptimSolverType::TAO_BFGS || config.getOptimSolverType() == OptimSolverType::TAO_HESSIAN) {
-      optimctx->evalGradF(xinit, grad);
-      VecNorm(grad, NORM_2, &gnorm);
-      optimctx->output->writeGradient(grad);
-      // TEST HESSIAN FUNCTION
-      optimctx->evalHessian(xinit, optimctx->Hessian, NULL);
-    } else { // ROL
-      g->zero();
-      double tol = 0.0;
-      obj->gradient(*g, *x, tol);
-      gnorm = g->norm();
-    }
+
+    optimctx->evalGradF(xinit, grad);
+    VecNorm(grad, NORM_2, &gnorm);
+    optimctx->output->writeGradient(grad);
+
     if (mpirank_world == 0 && !quietmode) {
       printf("\nGradient norm: %1.14e\n", gnorm);
+    }
+
+    if (config.getOptimSolverType() == OptimSolverType::TAO_HESSIAN) {
+      // TEST HESSIAN FUNCTION
+      optimctx->evalHessian(xinit, optimctx->Hessian, NULL);
     }
   }
 
@@ -307,24 +251,15 @@ int main(int argc,char **argv)
     if (mpirank_world == 0 && !quietmode) printf("\nStarting Optimization solver ... \n");
     optimctx->timestepper->writeTrajectoryDataFiles = false;
 
-    if (config.getOptimSolverType() == OptimSolverType::TAO_BFGS || config.getOptimSolverType() == OptimSolverType::TAO_HESSIAN) {
-      if (mpirank_world==0) printf("Optimizing with TAO...\n");
-      StartTime = MPI_Wtime();
-      optimctx->solve(xinit);
+    StartTime = MPI_Wtime();
+    optimctx->solve(xinit);
 
-    } else { // ROL optimizer 
-      if (mpirank_world==0) printf("Optimizing with ROL...\n");
-      StartTime = MPI_Wtime();
-      rolSolver.solve(*outStream); 
-      rolFileStream.close();
-
-      // write optimal controls 
-      const myVec& ex = dynamic_cast<const myVec&>(*x); 
-      output->writeControls(ex.getVector(), mytimestepper->mastereq, mytimestepper->ntime, mytimestepper->dt);
-      // one last forward evaluation while writing trajectory data
-      mytimestepper->writeTrajectoryDataFiles = true;
-      optimctx->evalF(ex.getVector()); 
-    }
+    // // write optimal controls 
+    // const myVec& ex = dynamic_cast<const myVec&>(*x); 
+    // output->writeControls(ex.getVector(), mytimestepper->mastereq, mytimestepper->ntime, mytimestepper->dt);
+    // // one last forward evaluation while writing trajectory data
+    // mytimestepper->writeTrajectoryDataFiles = true;
+    // optimctx->evalF(ex.getVector()); 
   }
 
   /* Only evaluate and write control pulses (no propagation) */

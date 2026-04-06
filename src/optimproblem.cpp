@@ -136,81 +136,131 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
   VecAssemblyBegin(xlower); VecAssemblyEnd(xlower);
   VecAssemblyBegin(xupper); VecAssemblyEnd(xupper);
 
-  /* Create Petsc's optimization solver */
-  TaoCreate(PETSC_COMM_WORLD, &tao);
-  TaoSetObjective(tao, TaoEvalObjective, (void *)this);
-  TaoSetGradient(tao, NULL, TaoEvalGradient,(void *)this);
-  TaoSetObjectiveAndGradient(tao, NULL, TaoEvalObjectiveAndGradient, (void*) this);
-
-  optim_solver_type = config.getOptimSolverType();
-  ncut = config.getOptimHessianNcut();
-  nextra = config.getOptimHessianNextra();
-  use_positive_evals = config.getOptimHessianUsePositive();
-
-  // Create Hessian matrix for TAO Hessian solver
-  if (optim_solver_type == OptimSolverType::TAO_HESSIAN) {
-    MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign, NULL, &Hessian);
-    MatSetFromOptions(Hessian);
-    
-    // Create preconditione
-    MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign, NULL, &Hessian_inv);
-    MatSetFromOptions(Hessian_inv);
-
-    // TaoSetType(tao, TAONLS);     // Newton line search, unconstrained. TODO: Check Bounds!
-    TaoSetType(tao, TAOBNLS);     // Bounded Newton with line search
-    TaoSetHessian(tao, Hessian, Hessian_inv, TaoEvalHessian, (void*) this);
-
-    // Define and store linear system solver
-    TaoGetKSP(tao, &taoksp);
-    // Type: Direct solve of the Hessian system: Use the preconditioner on the RHS directly, rather than solving a linear system.
-    // KSPSetType(taoksp, KSPPREONLY);
-
-    // Type: MINRES
-    KSPSetType(taoksp, KSPMINRES);
-
-    // // FOR TESTING: Get information about eigenvalues. NOT WORKING.
-    // KSPSetComputeEigenvalues(taoksp, PETSC_TRUE);
-
-    // Set a Hessian preconditioner
-    PC pc; 
-    KSPGetPC(taoksp, &pc);
-    // // NO preconditioner
-    // PCSetType(pc, PCNONE);
-    // Custom preconditioner (this one could be indefinite!)
-    PCSetType(pc, PCSHELL);
-    PCShellSetApply(pc, TaoPreconditioner);
-    PCShellSetName(pc, "MyPreconditioner") ;
-    // Context shell for preconditioner stores the optimproblem instance.
-    PCShellCtx* pcctx = new PCShellCtx;
-    pcctx->optimctx_ = this;
-    PCShellSetContext(pc, pcctx);
-
-
-    // TaoSetType(tao,TAOBQNLS);   // Bounded LBFGS with line search  
-    // // Disable LBFGS history to use just the (projected!) gradient
-    // Mat H_lmvm;
-    // TaoGetLMVMMatrix(tao, &H_lmvm);
-    // MatLMVMSetHistorySize(H_lmvm, 0); 
-  } else {
-    TaoSetType(tao,TAOBQNLS);   // Bounded LBFGS with line search  
-  }
-
-  TaoSetMaximumIterations(tao, maxiter);
-  TaoSetTolerances(tao, tol_grad_abs, PETSC_DEFAULT, tol_grad_rel);
-  TaoMonitorSet(tao, TaoMonitor, (void*)this, NULL);
-  TaoSetVariableBounds(tao, xlower, xupper);
-  TaoSetFromOptions(tao);
-
-  /* Allocate auxiliary vector */
-  mygrad = new double[ndesign];
-
-  /* Allocat xinit, xtmp */
+  /* Allocate initial optimization vector xinit, and temporary xtmp */
   VecCreateSeq(PETSC_COMM_SELF, ndesign, &xinit);
   VecSetFromOptions(xinit);
   VecZeroEntries(xinit);
   VecCreateSeq(PETSC_COMM_SELF, ndesign, &xtmp);
   VecSetFromOptions(xtmp);
   VecZeroEntries(xtmp);
+
+
+  /* Create the optimization solver */
+  optim_solver_type = config.getOptimSolverType();
+  ncut = config.getOptimHessianNcut();
+  nextra = config.getOptimHessianNextra();
+  use_positive_evals = config.getOptimHessianUsePositive();
+
+  // TODO. FOR NOW, disable any penalty terms when Hessian or ROL is used. 
+  if (optim_solver_type == OptimSolverType::TAO_HESSIAN || optim_solver_type == OptimSolverType::ROL) {
+    if (mpirank_world == 0 && !quietmode) printf("Disabling penalty terms for Hessian-based or ROL optimization.\n");
+    gamma_penalty_leakage = 0.0;
+    gamma_penalty_weightedcost = 0.0;
+    gamma_penalty_energy = 0.0;
+    gamma_penalty_dpdm = 0.0;
+    gamma_penalty_variation = 0.0;
+  }
+
+  if (optim_solver_type == OptimSolverType::TAO_BFGS || optim_solver_type == OptimSolverType::TAO_HESSIAN) {
+    if (mpirank_world == 0 && !quietmode) printf("Using TAO optimization solver.\n");
+
+    TaoCreate(PETSC_COMM_WORLD, &tao);
+    TaoSetObjective(tao, TaoEvalObjective, (void *)this);
+    TaoSetGradient(tao, NULL, TaoEvalGradient,(void *)this);
+    TaoSetObjectiveAndGradient(tao, NULL, TaoEvalObjectiveAndGradient, (void*) this);
+    TaoSetMaximumIterations(tao, maxiter);
+    TaoSetTolerances(tao, tol_grad_abs, PETSC_DEFAULT, tol_grad_rel);
+    TaoMonitorSet(tao, TaoMonitor, (void*)this, NULL);
+    TaoSetVariableBounds(tao, xlower, xupper);
+    TaoSetFromOptions(tao);
+
+    // Set the TAO solver type
+    if (optim_solver_type == OptimSolverType::TAO_BFGS) {
+      // TAO_BFGS: Use Bounded Quasi-Newton Line Search
+      TaoSetType(tao,TAOBQNLS);   
+    } else {
+      // TAO_HESSIAN: Approximate the Hessian and use as preconditioner. 
+      // Need to allocate the Hessian matrix and pass to TAO
+      MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign, NULL, &Hessian);
+      MatSetFromOptions(Hessian);
+
+      // Create preconditione
+      MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign, NULL, &Hessian_inv);
+      MatSetFromOptions(Hessian_inv);
+
+      // TaoSetType(tao, TAONLS);     // Newton line search, unconstrained. TODO: Check Bounds!
+      TaoSetType(tao, TAOBNLS);     // Bounded Newton with line search
+      TaoSetHessian(tao, Hessian, Hessian_inv, TaoEvalHessian, (void*) this);
+
+      // Define and store linear system solver
+      TaoGetKSP(tao, &taoksp);
+      // Type: Direct solve of the Hessian system: Use the preconditioner on the RHS directly, rather than solving a linear system.
+      // KSPSetType(taoksp, KSPPREONLY);
+
+      // Type: MINRES
+      KSPSetType(taoksp, KSPMINRES);
+      // // FOR TESTING: Get information about eigenvalues. NOT WORKING.
+      // KSPSetComputeEigenvalues(taoksp, PETSC_TRUE);
+
+      // Set a Hessian preconditioner
+      PC pc; 
+      KSPGetPC(taoksp, &pc);
+      // // NO preconditioner
+      // PCSetType(pc, PCNONE);
+      // Custom preconditioner (this one could be indefinite!)
+      PCSetType(pc, PCSHELL);
+      PCShellSetApply(pc, TaoPreconditioner);
+      PCShellSetName(pc, "MyPreconditioner") ;
+      // Context shell for preconditioner stores the optimproblem instance.
+      PCShellCtx* pcctx = new PCShellCtx;
+      pcctx->optimctx_ = this;
+      PCShellSetContext(pc, pcctx);
+
+      // TaoSetType(tao,TAOBQNLS);   // Bounded LBFGS with line search  
+      // // Disable LBFGS history to use just the (projected!) gradient
+      // Mat H_lmvm;
+      // TaoGetLMVMMatrix(tao, &H_lmvm);
+      // MatLMVMSetHistorySize(H_lmvm, 0); 
+    }
+
+  } else { // ROL solver
+    if (mpirank_world == 0 && !quietmode) printf("Using ROL optimization solver.\n");
+
+    ROL::Ptr<ROL::Objective<double>> obj = ROL::makePtr<myObjective>(this);
+    rolOptimVariable = ROL::makePtr<myVec>(xinit);
+  // ROL::Ptr<ROL::Vector<double>>      g = ROL::makePtr<myVec>(grad);
+
+    rolOptimProb = ROL::makePtr<ROL::Problem<double>>(obj, rolOptimVariable);
+    // Add bounds
+    double bnorm = 0.0;
+    VecNorm(xupper, NORM_2, &bnorm);
+    if (bnorm < 1e10) {
+      if (mpirank_world==0 && !quietmode) printf("ROL: Adding bounds.\n");
+      ROL::Ptr<myVec> xlo = ROL::makePtr<myVec>(xlower);
+      ROL::Ptr<myVec> xup = ROL::makePtr<myVec>(xupper);
+      ROL::Ptr<ROL::BoundConstraint<double>> bnd = ROL::makePtr<ROL::Bounds<double>>(xlo, xup);
+      rolOptimProb->addBoundConstraint(bnd); 
+    }
+
+    // Parse ROL input file
+    std::string ROLfilename = config.getOptimROLInput();
+    if (std::filesystem::exists(ROLfilename)) {
+        rolParlist = ROL::getParametersFromXmlFile(ROLfilename);
+    } else {
+        // Create default parameter list
+        rolParlist = ROL::makePtr<ROL::ParameterList>();
+    }
+
+    // Create the ROL optimization solver and output stream
+    // ROL::Solver<double> rolSolver(optProb,*parlist);
+    rolSolver = ROL::makePtr<ROL::Solver<double>>(rolOptimProb, *rolParlist);
+
+    // Open file stream
+    rolFileStream.open(config.getOutputDirectory() + "/roloutput.txt");
+  }
+
+  /* Allocate auxiliary vector */
+  mygrad = new double[ndesign];
 }
 
 
@@ -219,7 +269,10 @@ OptimProblem::~OptimProblem() {
   delete optim_target;
   VecDestroy(&rho_t0);
   VecDestroy(&rho_t0_bar);
-  MatDestroy(&Hessian);
+  if (optim_solver_type == OptimSolverType::TAO_HESSIAN) {
+    MatDestroy(&Hessian_inv);
+    MatDestroy(&Hessian);
+  }
 
   // VecDestroy(&xlower);
   // VecDestroy(&xupper);
@@ -230,7 +283,9 @@ OptimProblem::~OptimProblem() {
     VecDestroy(&(store_finalstates[i]));
   }
 
-  TaoDestroy(&tao);
+  if (optim_solver_type == OptimSolverType::TAO_BFGS || optim_solver_type == OptimSolverType::TAO_HESSIAN) {
+    TaoDestroy(&tao);
+  }
 }
 
 
@@ -641,10 +696,25 @@ void OptimProblem::evalHessVec(const Vec x, const Vec v, Vec Hv){
 }
 
 void OptimProblem::solve(Vec xinit) {
-  TaoSetSolution(tao, xinit);
-  TaoSolve(tao);
 
-  // TaoView(tao, NULL);
+  if (optim_solver_type == OptimSolverType::TAO_BFGS || optim_solver_type == OptimSolverType::TAO_HESSIAN) { // TAO solvers
+
+    TaoSetSolution(tao, xinit);
+    TaoSolve(tao);
+    // TaoView(tao, NULL);
+
+  } else { // ROL solver
+    ROL::Ptr<myVec> xnew = ROL::makePtr<myVec>(xinit);
+    rolOptimVariable->set(*xnew);
+
+    // // Check the ROL problem setup (FD test of gradient and Hessian.)
+    // ROL::Ptr<std::ostream> outStr = ROL::makePtrFromRef(std::cout);
+    // bool printtoscreen = true;
+    // rolOptimProb->check(printtoscreen, *outStr);
+
+    rolSolver->solve(rolFileStream);
+    rolFileStream.close();
+  }
 }
 
 void OptimProblem::getStartingPoint(Vec xinit){
@@ -670,15 +740,6 @@ void OptimProblem::getStartingPoint(Vec xinit){
   /* Write initial control functions to file */
   output->writeControls(xinit, timestepper->mastereq, timestepper->ntime, timestepper->dt);
 
-}
-
-
-void OptimProblem::getSolution(Vec* param_ptr){
-  
-  /* Get ref to optimized parameters */
-  Vec params;
-  TaoGetSolution(tao, &params);
-  *param_ptr = params;
 }
 
 
@@ -750,13 +811,13 @@ bool OptimProblem::monitor(int iter, double deltax, Vec params){
     }
   }
 
-  // print summary of tao to screen
-  if (lastIter && mpirank_world == 0){
-    TaoView(tao, NULL);
+  // print TAO summary of tao to screen
+  if (optim_solver_type == OptimSolverType::TAO_HESSIAN || optim_solver_type == OptimSolverType::TAO_BFGS) {
+    if (lastIter && mpirank_world == 0) TaoView(tao, NULL);
   }
 
+  // Inspect TAO linear solver
   if (optim_solver_type == OptimSolverType::TAO_HESSIAN) {
-    // Inspect TAO linear solver
     // int liters;
     // TaoGetLinearSolveIterations(tao, &liters);
     // if (mpirank_world==0) printf("Linear solver iterations at optimiter %d: %d\n", iter, liters);
