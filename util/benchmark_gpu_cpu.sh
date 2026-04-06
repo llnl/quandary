@@ -10,12 +10,13 @@ Usage:
   bash util/benchmark_gpu_cpu.sh [options]
 
 Options:
-  --machine {tioga|tuolumne}  LC machine (default: tioga)
+  --machine {tioga|tuolumne}  LC machine (default: tuolumne)
   --variants {cpu|gpu|both}   Which to test (default: both)
   --nprocs N                  MPI ranks (default: 8)
   --toml PATH                 Config file (default: tests/performance/configs/nlevels_32_32_32_32.toml)
   --output-dir PATH           Output directory (default: benchmark_results_<timestamp>)
-  --run-only                  Skip spack install, just run existing binaries
+  --build-only                Only build Spack environment, don't run
+  --no-build                  Skip build, use existing environment (must be built first)
   -h, --help                  Show help
 
 Note:
@@ -24,11 +25,14 @@ Note:
   GPU mode: runs with -vec_type kokkos -mat_type aijkokkos
 
 Examples:
-  # Quick CPU vs GPU comparison on Tuolumne
-  ./util/benchmark_gpu_cpu.sh --machine tuolumne
+  # Quick CPU vs GPU comparison (default: tuolumne, both variants, 8 ranks)
+  ./util/benchmark_gpu_cpu.sh
 
-  # GPU only, 4 ranks
-  ./util/benchmark_gpu_cpu.sh --variants gpu --nprocs 4
+  # Build environment only (e.g., in a batch job)
+  ./util/benchmark_gpu_cpu.sh --build-only
+
+  # Run using pre-built environment
+  ./util/benchmark_gpu_cpu.sh --no-build --variants gpu --nprocs 4
 
   # Custom config
   ./util/benchmark_gpu_cpu.sh --toml tests/performance/configs/nlevels_16_16_16_16.toml
@@ -41,12 +45,13 @@ die() {
 }
 
 # Defaults
-MACHINE="tioga"
+MACHINE="tuolumne"
 VARIANTS="both"
 NPROCS=8
 TOML="tests/performance/configs/nlevels_32_32_32_32.toml"
 OUTPUT_DIR=""
-RUN_ONLY=0
+BUILD_ONLY=0
+NO_BUILD=0
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -56,11 +61,17 @@ while [[ $# -gt 0 ]]; do
     --nprocs) NPROCS="$2"; shift 2;;
     --toml) TOML="$2"; shift 2;;
     --output-dir) OUTPUT_DIR="$2"; shift 2;;
-    --run-only) RUN_ONLY=1; shift;;
+    --build-only) BUILD_ONLY=1; shift;;
+    --no-build) NO_BUILD=1; shift;;
     -h|--help) usage; exit 0;;
     *) die "Unknown option: $1";;
   esac
 done
+
+# Validate exclusive options
+if [ "$BUILD_ONLY" -eq 1 ] && [ "$NO_BUILD" -eq 1 ]; then
+  die "Cannot specify both --build-only and --no-build"
+fi
 
 # Validate
 command -v spack >/dev/null 2>&1 || die "spack not found in PATH"
@@ -110,8 +121,8 @@ echo "Config:   $TOML"
 echo "Output:   $OUTPUT_DIR"
 echo ""
 
-# Build GPU-capable environment (only once)
-if [ "$RUN_ONLY" -eq 0 ]; then
+# Build GPU-capable environment
+if [ "$NO_BUILD" -eq 0 ]; then
   echo "========================================"
   echo "Setting up GPU-capable Spack environment"
   echo "========================================"
@@ -141,13 +152,31 @@ if [ "$RUN_ONLY" -eq 0 ]; then
     echo "Installing..."
     spack install --verbose
   fi
+
+  # Find quandary binary
+  QUANDARY_BIN=$(spack find --format '{prefix}' quandary)/bin/quandary
+  [ -x "$QUANDARY_BIN" ] || die "Quandary binary not found or not executable: $QUANDARY_BIN"
+
+  echo "Binary: $QUANDARY_BIN"
+  spack env deactivate
+
+  if [ "$BUILD_ONLY" -eq 1 ]; then
+    echo ""
+    echo "=== Build Complete ==="
+    echo "Binary: $QUANDARY_BIN"
+    echo ""
+    echo "Run benchmarks with:"
+    echo "  bash util/benchmark_gpu_cpu.sh --no-build"
+    exit 0
+  fi
+  echo ""
 else
-  echo "Run-only mode: using existing environment"
-  [ -d "$ENV_DIR" ] || die "Environment not found: $ENV_DIR (remove --run-only or build first)"
-  spack env activate -d "$ENV_DIR"
+  echo "Skipping build (--no-build): using existing environment"
+  [ -d "$ENV_DIR" ] || die "Environment not found: $ENV_DIR (remove --no-build or build first)"
 fi
 
-# Find quandary binary
+# Activate environment for runs
+spack env activate -d "$ENV_DIR"
 QUANDARY_BIN=$(spack find --format '{prefix}' quandary)/bin/quandary
 [ -x "$QUANDARY_BIN" ] || die "Quandary binary not found or not executable: $QUANDARY_BIN"
 
