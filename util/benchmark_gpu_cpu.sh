@@ -200,16 +200,17 @@ for variant in "${RUN_VARIANTS[@]}"; do
     LAUNCHER="flux run"
     unset MPICH_GPU_SUPPORT_ENABLED
   else  # gpu
-    # Tioga has discrete GPUs (MI250X) - binding helps locality
-    # Tuolumne has APUs (MI300A) - binding not supported/needed with unified memory
+    # Tioga: discrete GPUs (MI250X) - use GPU-aware MPI and binding
+    # Tuolumne: APUs (MI300A) - unified memory, no GPU-aware MPI needed
     if [ "$MACHINE" = "tioga" ]; then
       LAUNCHER="flux run --gpus-per-task=1 --gpu-bind=closest"
-    else
+      PETSC_OPTS="-vec_type kokkos -mat_type aijkokkos -use_gpu_aware_mpi 1 -log_view -log_summary"
+      export MPICH_GPU_SUPPORT_ENABLED=1
+    else  # tuolumne
       LAUNCHER="flux run --gpus-per-task=1"
+      PETSC_OPTS="-vec_type kokkos -mat_type aijkokkos -log_view -log_summary"
+      unset MPICH_GPU_SUPPORT_ENABLED
     fi
-    # For GPU, pass each PETSc option separately (not as wrapped string)
-    PETSC_OPTS="-vec_type kokkos -mat_type aijkokkos -use_gpu_aware_mpi 1 -log_view -log_summary"
-    export MPICH_GPU_SUPPORT_ENABLED=1
   fi
 
   # Set up run directory
