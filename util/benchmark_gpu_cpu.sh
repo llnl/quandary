@@ -135,9 +135,10 @@ if [ "$NO_BUILD" -eq 0 ]; then
     spack env create -d "$ENV_DIR"
     spack env activate -d "$ENV_DIR"
 
-    # Add radiuss machine configs
+    # Add radiuss machine configs (include config.yaml and packages.yaml directly)
     spack config add "config:install_tree:padded_length:128"
-    spack config add "include:[${RADIUSS_CONFIGS}/${RADIUSS_CONFIG}/spack.yaml]"
+    spack config add "include:[${RADIUSS_CONFIGS}/${RADIUSS_CONFIG}/config.yaml]"
+    spack config add "include:[${RADIUSS_CONFIGS}/${RADIUSS_CONFIG}/packages.yaml]"
 
     # Add Quandary with GPU-capable PETSc
     echo "Adding quandary@main ^petsc@3.24.4+kokkos+rocm amdgpu_target=${AMDGPU_TARGET}"
