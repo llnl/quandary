@@ -226,19 +226,24 @@ for variant in "${RUN_VARIANTS[@]}"; do
   echo "PETSc options: $PETSC_OPTS"
   echo ""
 
-  # Use eval to properly handle quoting through flux
-  CMD="/usr/bin/time -v $LAUNCHER -n $NPROCS '$QUANDARY_BIN' '$RUN_DIR/config.toml' --petsc-options '$PETSC_OPTS' --quiet"
-  eval "$CMD" > "${OUTPUT_DIR}/${variant}.log" 2>&1
+  # Build command with proper quoting - use array to avoid eval quoting issues
+  LAUNCHER_ARRAY=($LAUNCHER)
+  /usr/bin/time -v "${LAUNCHER_ARRAY[@]}" -n "$NPROCS" \
+    "$QUANDARY_BIN" "$RUN_DIR/config.toml" \
+    --petsc-options "$PETSC_OPTS" \
+    --quiet \
+    > "${OUTPUT_DIR}/${variant}.log" 2>&1
   EXIT_CODE=$?
 
   if [ $EXIT_CODE -eq 0 ]; then
     echo "✓ $variant completed successfully"
 
-    # Extract key metrics
-    TIME=$(grep "Used Time:" "${OUTPUT_DIR}/${variant}.log" 2>/dev/null | awk '{print $3}' || echo "N/A")
-    MEMORY=$(grep "Global Memory:" "${OUTPUT_DIR}/${variant}.log" 2>/dev/null | awk '{print $3 " " $4}' || echo "N/A")
-    echo "  Time: ${TIME}s"
-    echo "  Memory: $MEMORY"
+    # Extract Quandary timer from timing.dat in the run directory
+    TIMING_FILE="${RUN_DIR}/timing.dat"
+    if [ -f "$TIMING_FILE" ]; then
+      Q_TIME=$(awk '{print $2}' "$TIMING_FILE")
+      echo "  Quandary time: ${Q_TIME}s"
+    fi
   else
     echo "✗ $variant failed (exit code: $EXIT_CODE)"
     echo "  Check log: ${OUTPUT_DIR}/${variant}.log"
