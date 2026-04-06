@@ -141,8 +141,8 @@ if [ "$NO_BUILD" -eq 0 ]; then
     spack config add "include:[${RADIUSS_CONFIGS}/${RADIUSS_CONFIG}/packages.yaml]"
 
     # Add Quandary with GPU-capable PETSc
-    echo "Adding quandary@main ^petsc@3.24+kokkos+rocm amdgpu_target=${AMDGPU_TARGET}"
-    spack add "quandary@main ^petsc@3.24+kokkos+rocm amdgpu_target=${AMDGPU_TARGET} ~mmg~parmmg~saws~examples~exodusii~zoltan"
+    echo "Adding quandary@main ^petsc@3.24+kokkos+rocm amdgpu_target=${AMDGPU_TARGET} ^hipblas-common@7.2 ^hip@7.2"
+    spack add "quandary@main ^petsc@3.24+kokkos+rocm amdgpu_target=${AMDGPU_TARGET} ~mmg~parmmg~saws~examples~exodusii~zoltan ^hipblas-common@7.2 ^hip@7.2"
 
     # Develop mode
     spack develop -p "$REPO_ROOT" quandary@main
