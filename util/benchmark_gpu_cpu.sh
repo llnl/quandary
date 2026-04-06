@@ -129,11 +129,11 @@ if [ "$NO_BUILD" -eq 0 ]; then
 
   if [ -d "$ENV_DIR" ]; then
     echo "Environment exists, activating..."
-    spack env activate -d "$ENV_DIR"
+    eval $(spack env activate --sh -d "$ENV_DIR")
   else
     echo "Creating new environment..."
     spack env create -d "$ENV_DIR"
-    spack env activate -d "$ENV_DIR"
+    eval $(spack env activate --sh -d "$ENV_DIR")
 
     # Add radiuss machine configs (include config.yaml and packages.yaml directly)
     spack config add "config:install_tree:padded_length:128"
@@ -159,7 +159,7 @@ if [ "$NO_BUILD" -eq 0 ]; then
   [ -x "$QUANDARY_BIN" ] || die "Quandary binary not found or not executable: $QUANDARY_BIN"
 
   echo "Binary: $QUANDARY_BIN"
-  spack env deactivate
+  eval $(spack env deactivate --sh)
 
   if [ "$BUILD_ONLY" -eq 1 ]; then
     echo ""
@@ -177,7 +177,7 @@ else
 fi
 
 # Activate environment for runs
-spack env activate -d "$ENV_DIR"
+eval $(spack env activate --sh -d "$ENV_DIR")
 QUANDARY_BIN=$(spack find --format '{prefix}' quandary)/bin/quandary
 [ -x "$QUANDARY_BIN" ] || die "Quandary binary not found or not executable: $QUANDARY_BIN"
 
@@ -240,7 +240,7 @@ for variant in "${RUN_VARIANTS[@]}"; do
   echo ""
 done
 
-spack env deactivate
+eval $(spack env deactivate --sh)
 
 echo "=== Benchmark Complete ==="
 echo "Results in: $OUTPUT_DIR"
