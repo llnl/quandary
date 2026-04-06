@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Benchmark Quandary CPU vs GPU performance on LC machines
-set -euo pipefail
+set -uo pipefail
 
 usage() {
   cat <<'EOF'
@@ -219,21 +219,19 @@ for variant in "${RUN_VARIANTS[@]}"; do
   echo "PETSc options: $PETSC_RUNTIME_OPTS"
   echo ""
 
-  set +e
   /usr/bin/time -v $LAUNCHER -n $NPROCS \
     "$QUANDARY_BIN" "$RUN_DIR/config.toml" \
     --petsc-options "$PETSC_RUNTIME_OPTS" \
     --quiet \
     > "${OUTPUT_DIR}/${variant}.log" 2>&1
   EXIT_CODE=$?
-  set -e
 
   if [ $EXIT_CODE -eq 0 ]; then
     echo "✓ $variant completed successfully"
 
     # Extract key metrics
-    TIME=$(grep "Used Time:" "${OUTPUT_DIR}/${variant}.log" | awk '{print $3}')
-    MEMORY=$(grep "Global Memory:" "${OUTPUT_DIR}/${variant}.log" | awk '{print $3 " " $4}')
+    TIME=$(grep "Used Time:" "${OUTPUT_DIR}/${variant}.log" 2>/dev/null | awk '{print $3}' || echo "N/A")
+    MEMORY=$(grep "Global Memory:" "${OUTPUT_DIR}/${variant}.log" 2>/dev/null | awk '{print $3 " " $4}' || echo "N/A")
     echo "  Time: ${TIME}s"
     echo "  Memory: $MEMORY"
   else

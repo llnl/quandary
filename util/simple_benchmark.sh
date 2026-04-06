@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Simple CPU vs GPU benchmark suite (runs on Tuolumne by default)
-set -euo pipefail
+set -uo pipefail
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 OUTPUT_DIR="benchmark_${TIMESTAMP}"
@@ -33,12 +33,14 @@ for nlevels in 4 16 32; do
     --nprocs 8 --toml "$toml" \
     --output-dir "${OUTPUT_DIR}/size_${nlevels}_cpu" \
     2>&1 | tee -a "${OUTPUT_DIR}/test1.log"
+  echo "  [DEBUG] CPU test completed with exit code: $?"
 
   echo "  GPU..."
   ./util/benchmark_gpu_cpu.sh --no-build --variants gpu \
     --nprocs 8 --toml "$toml" \
     --output-dir "${OUTPUT_DIR}/size_${nlevels}_gpu" \
     2>&1 | tee -a "${OUTPUT_DIR}/test1.log"
+  echo "  [DEBUG] GPU test completed with exit code: $?"
 done
 
 echo ""
