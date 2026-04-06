@@ -91,11 +91,13 @@ case "$MACHINE" in
     ;;
 esac
 
-# Set output directory
-if [ -z "$OUTPUT_DIR" ]; then
-  OUTPUT_DIR="benchmark_results_$(date +%Y%m%d_%H%M%S)"
+# Set output directory (only if we're going to run)
+if [ "$BUILD_ONLY" -eq 0 ]; then
+  if [ -z "$OUTPUT_DIR" ]; then
+    OUTPUT_DIR="benchmark_results_$(date +%Y%m%d_%H%M%S)"
+  fi
+  mkdir -p "$OUTPUT_DIR"
 fi
-mkdir -p "$OUTPUT_DIR"
 
 # Set which variants to run
 case "$VARIANTS" in
@@ -115,10 +117,12 @@ RADIUSS_CONFIGS="${REPO_ROOT}/.ci-scripts/radiuss-spack-configs"
 
 echo "=== Quandary GPU/CPU Benchmark ==="
 echo "Machine:  $MACHINE"
-echo "Variants: ${RUN_VARIANTS[*]}"
-echo "Ranks:    $NPROCS"
-echo "Config:   $TOML"
-echo "Output:   $OUTPUT_DIR"
+if [ "$BUILD_ONLY" -eq 0 ]; then
+  echo "Variants: ${RUN_VARIANTS[*]}"
+  echo "Ranks:    $NPROCS"
+  echo "Config:   $TOML"
+  echo "Output:   $OUTPUT_DIR"
+fi
 echo ""
 
 # Build GPU-capable environment
