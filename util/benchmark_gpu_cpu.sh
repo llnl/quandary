@@ -135,6 +135,14 @@ if [ "$NO_BUILD" -eq 0 ]; then
     spack env create -d "$ENV_DIR"
     eval $(spack env activate --sh -d "$ENV_DIR")
 
+    # Pin Spack packages to v2026.03.0 (has PETSc 3.24.4)
+    cat >> "${ENV_DIR}/spack.yaml" <<'REPOS_EOF'
+  repos:
+    builtin:
+      git: https://github.com/spack/spack-packages.git
+      tag: v2026.03.0
+REPOS_EOF
+
     # Add radiuss machine configs (include config.yaml and packages.yaml directly)
     spack config add "config:install_tree:padded_length:128"
     spack config add "include:[${RADIUSS_CONFIGS}/${RADIUSS_CONFIG}/config.yaml]"
