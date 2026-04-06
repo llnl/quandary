@@ -247,3 +247,5 @@ echo "Results in: $OUTPUT_DIR"
 echo ""
 echo "Extract results with:"
 echo "  bash util/extract_results.sh $OUTPUT_DIR"
+
+exit 0
