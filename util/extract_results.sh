@@ -10,30 +10,43 @@ fi
 BENCH_DIR="$1"
 
 extract_from_run() {
-  local run_dir="$1"
+  local bench_dir="$1"
   local variant="$2"  # cpu or gpu
 
-  local log="${run_dir}/${variant}.log"
+  local log="${bench_dir}/${variant}.log"
 
   if [ ! -f "$log" ]; then
     echo "n/a,n/a,n/a,n/a,n/a"
     return
   fi
 
-  # Quandary timer
-  local q_time=$(grep "Used Time:" "$log" | awk '{print $3}')
+  # Find the run directory (run_cpu_* or run_gpu_*)
+  local run_subdir=$(find "$bench_dir" -maxdepth 1 -type d -name "run_${variant}_*" | head -n 1)
 
-  # PETSc total time (in the summary section)
-  local p_time=$(grep "^Time (sec):" "$log" | awk '{print $2}')
+  # Quandary timer from timing.dat
+  local q_time="n/a"
+  if [ -n "$run_subdir" ] && [ -f "$run_subdir/timing.dat" ]; then
+    q_time=$(awk '{print $2}' "$run_subdir/timing.dat")
+  fi
 
-  # MatMult %T (column 11 in the PETSc event table)
+  # DOFs from config_log.toml
+  local dofs="n/a"
+  if [ -n "$run_subdir" ] && [ -f "$run_subdir/config_log.toml" ]; then
+    # Extract nlevels array and calculate product
+    local nlevels=$(grep "^nlevels = " "$run_subdir/config_log.toml" | sed 's/.*\[\(.*\)\].*/\1/' | tr -d ' ')
+    if [ -n "$nlevels" ]; then
+      dofs=$(python3 -c "import math; print(math.prod([int(x) for x in '$nlevels'.split(',')]))" 2>/dev/null || echo "n/a")
+    fi
+  fi
+
+  # PETSc total time (in the summary section, column 3 is Avg time)
+  local p_time=$(grep "^Time (sec):" "$log" | awk '{print $3}')
+
+  # MatMult %T (column 11 is %T in Global section)
   local matmult=$(grep "^MatMult " "$log" | awk '{print $11}')
 
-  # VecScatterBegin %T
+  # VecScatterBegin %T (column 11 is %T in Global section)
   local vecscatter=$(grep "^VecScatterBegin " "$log" | awk '{print $11}')
-
-  # DOFs
-  local dofs=$(grep "State dimension" "$log" | awk '{print $4}')
 
   echo "${q_time:-n/a},${p_time:-n/a},${matmult:-n/a},${vecscatter:-n/a},${dofs:-n/a}"
 }
