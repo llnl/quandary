@@ -142,7 +142,7 @@ if [ "$NO_BUILD" -eq 0 ]; then
 
     # Add Quandary with GPU-capable PETSc
     echo "Adding quandary@main ^petsc@3.24.4+kokkos+rocm amdgpu_target=${AMDGPU_TARGET}"
-    spack add "quandary@main ^petsc@3.24.4+kokkos+rocm amdgpu_target=${AMDGPU_TARGET} ~mmg~parmmg~saws~examples~ml~exodusii~zoltan"
+    spack add "quandary@main ^petsc@3.24.4+kokkos+rocm amdgpu_target=${AMDGPU_TARGET} ~mmg~parmmg~saws~examples~exodusii~zoltan"
 
     # Develop mode
     spack develop -p "$REPO_ROOT" quandary@main
