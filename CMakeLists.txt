@@ -2,21 +2,22 @@ cmake_minimum_required(VERSION 3.23)
 
 project(
     Quandary
-    VERSION 4.3
+    VERSION 4.4
     LANGUAGES CXX C
 )
 set(PROJECT_VERSION_SUFFIX "-dev")
 set(FULL_VERSION "${PROJECT_VERSION}${PROJECT_VERSION_SUFFIX}")
+set(QUANDARY_GIT_SHA "")
 
 option(BUILD_QUANDARY "Build Quandary targets" ON)
+option(ENABLE_TESTS "Run unit tests" ON)
 
 # Set default build type to Release if not specified
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose build type" FORCE)
 endif()
 
-set(BLT_CXX_STD "c++14" CACHE STRING "Version of C++ standard")
-set(CMAKE_CXX_STANDARD 14)
+set(BLT_CXX_STD "c++17" CACHE STRING "Version of C++ standard")
 
 set(ENABLE_MPI ON CACHE BOOL "")
 
@@ -45,6 +46,20 @@ if (NOT BLT_LOADED)
   include(${BLT_SOURCE_DIR}/SetupBLT.cmake)
 endif()
 
+# Get git information using BLT macros
+find_package(Git QUIET)
+if(Git_FOUND)
+  blt_is_git_repo(OUTPUT_STATE is_git_repo)
+
+  if(${is_git_repo})
+    blt_git_hashcode(HASHCODE git_sha RETURN_CODE rc)
+    if(NOT ${rc} EQUAL 0)
+      set(git_sha "unknown")
+    endif()
+    set(QUANDARY_GIT_SHA ${git_sha})
+  endif()
+endif()
+
 # Configure version header
 configure_file(
     ${CMAKE_SOURCE_DIR}/include/version.hpp.in
@@ -52,8 +67,15 @@ configure_file(
     @ONLY
 )
 
+# Add tomlplusplus
+find_package(tomlplusplus CONFIG QUIET)
+if(NOT tomlplusplus_FOUND)
+  add_subdirectory(third_party/tomlplusplus)
+endif()
+
 if(BUILD_QUANDARY)
   add_subdirectory(src)
+  add_subdirectory(tests/unit)
 endif()
 
 add_subdirectory(docs)

@@ -1,0 +1,37 @@
+###############################################################################
+# Copyright (c) 2022-23, Lawrence Livermore National Security, LLC and RADIUSS
+# project contributors. See the COPYRIGHT file for details.
+#
+# SPDX-License-Identifier: (MIT)
+###############################################################################
+
+# We define the following GitLab pipeline variables:
+variables:
+# In some pipelines we create only one allocation shared among jobs in
+# order to save time and resources. This allocation has to be uniquely
+# named so that we are sure to retrieve it and avoid collisions.
+  ALLOC_NAME: ${CI_PROJECT_NAME}_ci_${CI_PIPELINE_ID}
+
+# Dane
+# Arguments for top level allocation
+  DANE_SHARED_ALLOC: "--exclusive --reservation=ci --time=15 --nodes=1"
+# Arguments for job level allocation
+  DANE_JOB_ALLOC: "--reservation=ci --overlap --nodes=1"
+# Arguments for performance job allocation (dedicated allocation with no overlapping).
+  DANE_PERF_ALLOC: "--exclusive --reservation=ci --time=15 --nodes=1"
+# Project specific variants for dane
+  PROJECT_DANE_VARIANTS: "+test"
+# Project specific deps for dane
+  PROJECT_DANE_DEPS: ""
+
+# Tioga
+# Arguments for top level allocation
+# OPTIONAL: "-o per-resource.count=2" allows to get 2 jobs running on each node.
+  TIOGA_SHARED_ALLOC: "--queue=pci --exclusive --time-limit=20m --nodes=1 -o per-resource.count=2"
+# Arguments for job level allocation
+  TIOGA_JOB_ALLOC: "--nodes=1 --begin-time=+5s"
+# Project specific variants for tioga
+  PROJECT_TIOGA_VARIANTS: "+test"
+# Project specific deps for tioga
+# Force use of petsc >= 3.23 as 3.22 doesn't seem to work with rocm 6.4.1
+  PROJECT_TIOGA_DEPS: "^petsc@3.23:"

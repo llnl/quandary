@@ -1,0 +1,51 @@
+name: Doxygen Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths: &doxygen-paths
+      - 'src/**'
+      - 'include/**'
+      - '**/Doxyfile*'
+      - 'CMakeLists.txt'
+  pull_request:
+    branches:
+      - main
+    paths: *doxygen-paths
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Doxygen Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Set up Doxygen
+      run: sudo apt-get update && sudo apt-get install -y doxygen graphviz
+
+    - name: Generate Doxygen Documentation
+      run: |
+        mkdir build
+        cd build
+        cmake -DENABLE_MPI=OFF -DBUILD_QUANDARY=OFF ..
+        cmake --build . --target quandary_doxygen
+
+    - name: Deploy to GitHub Pages on main branch
+      if: github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: build/docs/doxygen/html
+        destination_dir: doxygen

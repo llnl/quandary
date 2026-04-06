@@ -252,37 +252,6 @@ class BSpline2ndAmplitude : public ControlBasis {
 };
 
 /**
- * @brief Parameterization of the controls using step functions with constant amplitude and variable width.
- *
- * This class represents a step function with configurable amplitudes and ramp time.
- */
-class Step : public ControlBasis {
-    protected:
-        double step_amp1; ///< Real part of amplitude of the step pulse.
-        double step_amp2; ///< Imaginary part of amplitude of the step pulse.
-        double tramp; ///< Ramp time.
-
-    public: 
-        /**
-         * @brief Constructor for the step function.
-         *
-         * @param step_amp1_ Real amplitude of the step pulse.
-         * @param step_amp2_ Imaginary amplitude of the step pulse.
-         * @param t0 Start time of the interval.
-         * @param t1 Stop time of the interval.
-         * @param tramp Ramp time.
-         * @param enforceZeroBoundary Flag to enforce zero boundary conditions.
-         */
-        Step(double step_amp1_, double step_amp2_, double t0, double t1, double tramp, bool enforceZeroBoundary);
-
-        ~Step();
-
-        void evaluate(const double t, const std::vector<double>& coeff, int carrier_freq_id, double* Blt1, double*Blt2);
-
-        void derivative(const double t, const std::vector<double>& coeff, double* coeff_diff, const double valbar1, const double valbar2, int carrier_freq_id);
-};
-
-/**
  * @brief Discretization of the Controls using piece-wise constant (0-th order) Bsplines.
  *
  * This class parameterizes the control pulse using 0-th order Bspline basis functions 

@@ -1,0 +1,56 @@
+name: Build Check
+
+on:
+  pull_request:
+    branches: ['main']
+    paths-ignore: &ignore-docs
+      - '*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+  push:
+    branches: ['main']
+    paths-ignore: *ignore-docs
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  strict-compile:
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Set up Spack
+      uses: spack/setup-spack@v3
+      with:
+        spack_ref: v1.1.1
+
+    - name: Configure Spack
+      run: |
+        spack mirror add --type binary --unsigned --oci-username GITHUB_USER --oci-password-variable GITHUB_TOKEN local-buildcache oci://ghcr.io/LLNL/quandary-spack-buildcache
+
+    - name: Install with strict warnings
+      run: |
+        spack -e .spack_env rm quandary
+        spack -e .spack_env add "quandary@develop +werror %${{ matrix.compiler }} ^openmpi"
+        spack -e .spack_env install -v --use-buildcache package:never
+
+    - name: Push packages and update index
+      env:
+        GITHUB_USER: ${{ github.actor }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        DOCKER_DEFAULT_PLATFORM: linux/amd64
+      run: |
+        spack -e .spack_env buildcache push --base-image ubuntu:24.04 --update-index local-buildcache
+      if: ${{ !cancelled() && github.event.pull_request.head.repo.full_name == github.repository }}

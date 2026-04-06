@@ -1,0 +1,27 @@
+###############################################################################
+# Copyright (c) 2022-23, Lawrence Livermore National Security, LLC and RADIUSS
+# project contributors. See the COPYRIGHT file for details.
+#
+# SPDX-License-Identifier: (MIT)
+###############################################################################
+
+# Override reproducer section to define project specific variables.
+.dane_reproducer_vars:
+  script:
+    - !reference [.reproducer_vars, script]
+
+########################
+# Overridden shared jobs
+########################
+oneapi_2025_2_0_gcc_10_3_1:
+  variables:
+    ON_DANE: "OFF"
+  extends: .job_on_dane
+
+########################
+# Extra jobs
+########################
+gcc_13_3_1_int64:
+  variables:
+    SPEC: "${PROJECT_DANE_VARIANTS} +int64 %gcc@=13.3.1 ${PROJECT_DANE_DEPS}"
+  extends: .job_on_dane

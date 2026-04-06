@@ -75,7 +75,7 @@ def test_eval(benchmark, simulation_name, number_of_processes, request):
         1
     )
 
-    config_file = os.path.join(TEST_CONFIG_PATH, simulation_name + ".cfg")
+    config_file = os.path.join(TEST_CONFIG_PATH, simulation_name + ".toml")
 
     command = build_mpi_command(
         mpi_exec=mpi_exec,

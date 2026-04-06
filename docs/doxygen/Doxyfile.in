@@ -7,3 +7,4 @@ USE_MATHJAX            = YES
 EXTRACT_ALL            = YES
 SHOW_FILES             = YES
 QUIET                  = YES
+WARN_AS_ERROR = FAIL_ON_WARNINGS_PRINT

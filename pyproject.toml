@@ -1,15 +1,15 @@
 [project]
 name = "quandary"
-version = "4.3-dev"
+version = "4.4-dev"
 description = "Optimal control for open quantum systems"
 authors = [
     {name = "Stefanie Guenther",email = "guenther5@llnl.gov"}
 ]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 dependencies = [
-    "numpy (>=2.2.3,<3.0.0)",
+    "numpy (>=1.26,<3.0.0)",
     "matplotlib (>=3.9.0,<4.0.0)",
     "pytest (>=8.3.4,<9.0.0)",
     "pandas (>=2.2.3,<3.0.0)",

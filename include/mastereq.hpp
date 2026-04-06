@@ -1,6 +1,7 @@
 #include "defs.hpp"
 #include "oscillator.hpp"
 #include "util.hpp"
+#include <optional>
 #include <petscts.h>
 #include <vector>
 #include <assert.h>
@@ -19,13 +20,13 @@
  */
 typedef struct {
   PetscInt dim; ///< Dimension of full vectorized system: N^2 if Lindblad, N if Schroedinger
-  std::vector<int> nlevels; ///< Number of levels per oscillator
+  std::vector<size_t> nlevels; ///< Number of levels per oscillator
   IS *isu, *isv; ///< Vector strides for accessing real and imaginary parts
   Oscillator** oscil_vec; ///< Array of pointers to the oscillators
   std::vector<double> crosskerr; ///< Cross-Kerr coupling coefficients
   std::vector<double> Jkl; ///< Dipole-dipole coupling strength
   std::vector<double> eta; ///< Frequency differences of the rotating frames
-  LindbladType lindbladtype; ///< Type of Lindblad operators to include
+  DecoherenceType decoherence_type; ///< Type of Lindblad operators to include
   bool addT1, addT2; ///< Flags for T1 decay and T2 dephasing
   std::vector<double> control_Re;  ///< Real parts of control pulse \f$p(t)\f$
   std::vector<double> control_Im;  ///< Imaginary parts of control pulse \f$q(t)\f$
@@ -48,7 +49,7 @@ typedef struct {
  * Each function returns y = RHS*x. Matrix-free versions as well as sparse-matrix versions are implemented. Those 
  * functions will be passed to PETSc's MatMult operations to realize a Matrix-Vector Multiplication of the RHS with 
  * a state vector, such that one can call PETSc's MatMult(RHS, x, y) for the RHS. 
- * Note: The RHS matrix must be assembled before usage, see @ref assemble_RHS. 
+ * Note: The RHS matrix must be assembled before usage, see @ref MasterEq::assemble_RHS.
  */
 int applyRHS_matfree_1Osc(Mat RHS, Vec x, Vec y); ///< Matrix-free MatMult for 1 oscillator
 int applyRHS_matfree_transpose_1Osc(Mat RHS, Vec x, Vec y); ///< Transpose matrix-free MatMult for 1 oscillator
@@ -121,34 +122,26 @@ class MasterEq{
     IS isu, isv; ///< Vector strides for accessing real and imaginary parts u=Re(x), v=Im(x)
     Vec aux; ///< Auxiliary vector for computations
     bool quietmode; ///< Flag for quiet mode operation
-    std::string hamiltonian_file_Hsys; ///< Filename if a custom system Hamiltonian is read from file ('none' if standard Hamiltonian is used)
-    std::string hamiltonian_file_Hc; ///< Filename if a custom control Hamiltonians are read from file ('none' if standard Hamiltonian is used)
+    std::optional<std::string> hamiltonian_file_Hsys; ///< Filename if a custom system Hamiltonian is read from file
+    std::optional<std::string> hamiltonian_file_Hc; ///< Filename if a custom control Hamiltonians are read from file
 
   public:
-    std::vector<int> nlevels; ///< Number of levels per oscillator
-    std::vector<int> nessential; ///< Number of essential levels per oscillator
+    std::vector<size_t> nlevels; ///< Number of levels per oscillator
+    std::vector<size_t> nessential; ///< Number of essential levels per oscillator
     bool usematfree; ///< Flag for using matrix-free solver
-    LindbladType lindbladtype; ///< Type of Lindblad operators to include (NONE means Schroedinger equation)
+    DecoherenceType decoherence_type; ///< Type of Lindblad operators to include (NONE means Schroedinger equation)
 
   public:
     MasterEq();
 
     /**
-     * @brief Constructor with full system specification.
+     * @brief Constructor with simplified configuration-based specification.
      *
-     * @param nlevels Number of levels per oscillator
-     * @param nessential Number of essential levels per oscillator
+     * @param config Configuration parameters containing all master equation settings
      * @param oscil_vec_ Array of pointers to oscillator objects
-     * @param crosskerr_ Cross-Kerr coupling coefficients
-     * @param Jkl_ Dipole-dipole coupling coefficients
-     * @param eta_ Frequency differences for rotating frame
-     * @param lindbladtype_ Type of Lindblad operators to include
-     * @param usematfree_ Flag to use matrix-free solver
-     * @param hamiltonian_file_Hsys Filename for system Hamiltonian data
-     * @param hamiltonian_file_Hc Filename for control Hamiltonian data
      * @param quietmode Flag for quiet operation (default: false)
      */
-    MasterEq(const std::vector<int>& nlevels, const std::vector<int>& nessential, Oscillator** oscil_vec_, const std::vector<double>& crosskerr_, const std::vector<double>& Jkl_, const std::vector<double>& eta_, LindbladType lindbladtype_, bool usematfree_, const std::string& hamiltonian_file_Hsys, const std::string& hamiltonian_file_Hc, bool quietmode=false);
+    MasterEq(const Config& config, Oscillator** oscil_vec_, bool quietmode=false);
 
     ~MasterEq();
 
@@ -290,10 +283,12 @@ class MasterEq{
  * @param[in] nlevels Number of energy levels per subsystem 
  * @param[in] isu Index stride to access real parts of a state vector
  * @param[in] isv Index stride to access imaginar parts of a state vector
+ * @param[in] Ac_vec Vector of real parts of control matrices per oscillator
+ * @param[in] Bc_vec Vector of imaginary parts of control matrices per oscillator
  * @param[in] aux Auxiliary vector for computations 
  * @param[in] oscil_vec Vector of quantum oscilators
  */
-void compute_dRHS_dParams_sparsemat(const double t,const Vec x,const Vec x_bar, const double alpha, Vec grad, std::vector<int>& nlevels, IS isu, IS isv, std::vector<Mat>& Ac_vec, std::vector<Mat>& Bc_vec, Vec aux, Oscillator** oscil_vec);
+void compute_dRHS_dParams_sparsemat(const double t,const Vec x,const Vec x_bar, const double alpha, Vec grad, std::vector<size_t>& nlevels, IS isu, IS isv, std::vector<Mat>& Ac_vec, std::vector<Mat>& Bc_vec, Vec aux, Oscillator** oscil_vec);
 
 /**
  * @brief: Matrix free version to compute gradient of RHS with respect to parameters 
@@ -301,16 +296,17 @@ void compute_dRHS_dParams_sparsemat(const double t,const Vec x,const Vec x_bar, 
  * Updates grad += alpha * x^T * (d RHS / d params)^T * x_bar in a matrix-free 
  * manner. See @ref compute_dRHS_dParams_sparsemat for the sparse-matrix version of this routine.
  *
+ * @param[in] dim Dimension of full vectorized system: N^2 if Lindblad, N if Schroedinger
  * @param[in] t Current time
  * @param[in] x State vector
  * @param[in] x_bar Adjoint state vector
  * @param[in] alpha Scaling factor
  * @param[out] grad Gradient vector to update
  * @param[in] nlevels Number of energy levels per subsystem
- * @param[in] lindbladtype Type of Lindblad decoherence operators, or NONE
+ * @param[in] decoherence_type Type of Lindblad decoherence operators, or NONE
  * @param[in] oscil_vec Vector of quantum oscillators 
  */
-void compute_dRHS_dParams_matfree(const PetscInt dim, const double t,const Vec x,const Vec x_bar, const double alpha, Vec grad, std::vector<int>& nlevels, LindbladType lindbladtype, Oscillator** oscil_vec);
+void compute_dRHS_dParams_matfree(const PetscInt dim, const double t,const Vec x,const Vec x_bar, const double alpha, Vec grad, std::vector<size_t>& nlevels, DecoherenceType decoherence_type, Oscillator** oscil_vec);
 
 
 
@@ -546,6 +542,7 @@ inline int TensorGetIndex(const int nlevels0, const int nlevels1, const int nlev
  *
  * Computes coefficients for gradient computation with respect to control parameters.
  *
+ * @param dim Dimension of full vectorized system: N^2 if Lindblad, N if Schroedinger
  * @param it Current tensor index
  * @param n Number of levels for current oscillator
  * @param np Number of levels for conjugate oscillator
@@ -617,6 +614,7 @@ inline void dRHSdp_getcoeffs(const PetscInt dim, const int it, const int n, cons
  *
  * Implements J_kl coupling terms in the rotating frame between oscillator i and j.
  *
+ * @param dim Dimension of full vectorized system: N^2 if Lindblad, N if Schroedinger
  * @param it Current tensor index
  * @param ni Number of levels for oscillator i
  * @param nj Number of levels for oscillator j
@@ -685,6 +683,7 @@ inline void Jkl_coupling(const PetscInt dim, const int it, const int ni, const i
 /**
  * @brief Transpose of dipole-dipole coupling for adjoint computations.
  *
+ * @param dim Dimension of full vectorized system: N^2 if Lindblad, N if Schroedinger
  * @param it Current tensor index
  * @param ni Number of levels for oscillator i
  * @param nj Number of levels for oscillator j
@@ -750,6 +749,7 @@ inline void Jkl_coupling_T(const PetscInt dim, const int it, const int ni, const
 /**
  * @brief Matrix-free solver inline for off-diagonal L1 decay term.
  *
+ * @param dim Dimension of full vectorized system: N^2 if Lindblad, N if Schroedinger
  * @param it Current tensor index
  * @param n Number of levels
  * @param i Occupation number (bra)
@@ -778,6 +778,7 @@ inline void L1decay(const PetscInt dim, const int it, const int n, const int i, 
 /**
  * @brief Matrix-free inline Transpose of off-diagonal L1 decay for adjoint computations.
  *
+ * @param dim Dimension of full vectorized system: N^2 if Lindblad, N if Schroedinger
  * @param it Current tensor index
  * @param i Occupation number (bra)
  * @param ip Occupation number (ket)
@@ -806,6 +807,7 @@ inline void L1decay_T(const PetscInt dim, const int it, const int i, const int i
  *
  * Applies control Hamiltonian terms (ladder operators) to the state.
  *
+ * @param dim Dimension of full vectorized system: N^2 if Lindblad, N if Schroedinger
  * @param it Current tensor index
  * @param n Number of levels
  * @param i Occupation number (bra)
@@ -862,6 +864,7 @@ inline void control(const PetscInt dim, const int it, const int n, const int i, 
 /**
  * @brief Matrix-free Transpose of control terms for adjoint computations.
  *
+ * @param dim Dimension of full vectorized system: N^2 if Lindblad, N if Schroedinger
  * @param it Current tensor index
  * @param n Number of levels
  * @param i Occupation number (bra)

@@ -1,0 +1,21 @@
+###############################################################################
+# Copyright (c) 2022-23, Lawrence Livermore National Security, LLC and RADIUSS
+# project contributors. See the COPYRIGHT file for details.
+#
+# SPDX-License-Identifier: (MIT)
+###############################################################################
+
+clang_14_0_6_perf:
+  extends: .perf_on_dane
+  variables:
+    SPEC: "${PROJECT_DANE_VARIANTS} %clang@=14.0.6 ${PROJECT_DANE_DEPS}"
+
+process_results:
+  extends: .convert_to_gh_benchmark
+  dependencies:
+    - clang_14_0_6_perf
+
+report_results:
+  extends: .report_to_gh_benchmark
+  dependencies:
+    - process_results

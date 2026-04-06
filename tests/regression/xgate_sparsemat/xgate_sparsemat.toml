@@ -1,0 +1,38 @@
+[system]
+nlevels = [2]
+nessential = [2]
+ntime = 700
+dt = 0.1
+transition_frequency = [4.1]
+rotation_frequency = [4.0]
+selfkerr = [0.2198]
+decoherence = {type = "both", decay_time = [56000.0], dephase_time = [28000.0]}
+initial_condition = {type = "basis"}
+
+[control]
+parameterization = { type = "spline", num = 150 }
+carrier_frequency = [0.1]
+initialization = { type = "file", filename = "./params.dat" }
+amplitude_bound = 0.05
+zero_boundary_condition = true
+
+[optimization]
+target = {type = "gate", gate_type = "xgate"}
+objective = "Jfrobenius"
+tolerance = { grad_abs = 0.0001, grad_rel = 1e-05, final_cost = 1e-05, infidelity = 1e-05 }
+maxiter = 100
+tikhonov = { coeff = 1e-05, use_x0 = false }
+penalty = { leakage = 0.0, weightedcost = 0.0, weightedcost_width = 0.0, dpdm = 0.0, energy = 0.0, variation = 0.0 }
+
+[output]
+directory = "./data_out"
+observables = ["expectedEnergy", "population", "fullstate"]
+timestep_stride = 1
+optimization_stride = 1
+
+[solver]
+runtype = "gradient"
+usematfree = false
+linearsolver = { type = "gmres", maxiter = 20 }
+timestepper = "IMR"
+rand_seed = 1234
