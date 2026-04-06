@@ -196,11 +196,10 @@ for variant in "${RUN_VARIANTS[@]}"; do
 
   # Set PETSc runtime options
   if [ "$variant" = "cpu" ]; then
-    PETSC_RUNTIME_OPTS="-log_view -log_summary"
+    PETSC_OPTS="-log_view -log_summary"
     LAUNCHER="flux run"
     unset MPICH_GPU_SUPPORT_ENABLED
   else  # gpu
-    PETSC_RUNTIME_OPTS="-vec_type kokkos -mat_type aijkokkos -use_gpu_aware_mpi 1 -log_view -log_summary"
     # Tioga has discrete GPUs (MI250X) - binding helps locality
     # Tuolumne has APUs (MI300A) - binding not supported/needed with unified memory
     if [ "$MACHINE" = "tioga" ]; then
@@ -208,6 +207,8 @@ for variant in "${RUN_VARIANTS[@]}"; do
     else
       LAUNCHER="flux run --gpus-per-task=1"
     fi
+    # For GPU, pass each PETSc option separately (not as wrapped string)
+    PETSC_OPTS="-vec_type kokkos -mat_type aijkokkos -use_gpu_aware_mpi 1 -log_view -log_summary"
     export MPICH_GPU_SUPPORT_ENABLED=1
   fi
 
@@ -222,14 +223,12 @@ for variant in "${RUN_VARIANTS[@]}"; do
 
   # Run
   echo "Launcher: $LAUNCHER -n $NPROCS"
-  echo "PETSc options: $PETSC_RUNTIME_OPTS"
+  echo "PETSc options: $PETSC_OPTS"
   echo ""
 
-  /usr/bin/time -v $LAUNCHER -n $NPROCS \
-    "$QUANDARY_BIN" "$RUN_DIR/config.toml" \
-    --petsc-options "$PETSC_RUNTIME_OPTS" \
-    --quiet \
-    > "${OUTPUT_DIR}/${variant}.log" 2>&1
+  # Use eval to properly handle quoting through flux
+  CMD="/usr/bin/time -v $LAUNCHER -n $NPROCS '$QUANDARY_BIN' '$RUN_DIR/config.toml' --petsc-options '$PETSC_OPTS' --quiet"
+  eval "$CMD" > "${OUTPUT_DIR}/${variant}.log" 2>&1
   EXIT_CODE=$?
 
   if [ $EXIT_CODE -eq 0 ]; then
