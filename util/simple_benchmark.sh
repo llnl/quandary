@@ -11,6 +11,16 @@ echo "Machine: Tuolumne (default)"
 echo "Output: $OUTPUT_DIR"
 echo ""
 
+# Build GPU-capable environment once
+echo "========================================"
+echo "Building GPU-capable environment (once)"
+echo "========================================"
+./util/benchmark_gpu_cpu.sh --build-only || {
+  echo "Build failed! Exiting."
+  exit 1
+}
+echo ""
+
 # Test 1: Problem size (8 ranks, CPU vs GPU)
 echo "Test 1: Problem Size Scaling (8 ranks)"
 echo "======================================="
@@ -19,13 +29,13 @@ for nlevels in 4 16 32; do
 
   echo "Size: ${nlevels}^4"
   echo "  CPU..."
-  ./util/benchmark_gpu_cpu.sh --variants cpu \
+  ./util/benchmark_gpu_cpu.sh --no-build --variants cpu \
     --nprocs 8 --toml "$toml" \
     --output-dir "${OUTPUT_DIR}/size_${nlevels}_cpu" \
     2>&1 | tee -a "${OUTPUT_DIR}/test1.log"
 
   echo "  GPU..."
-  ./util/benchmark_gpu_cpu.sh --variants gpu \
+  ./util/benchmark_gpu_cpu.sh --no-build --variants gpu \
     --nprocs 8 --toml "$toml" \
     --output-dir "${OUTPUT_DIR}/size_${nlevels}_gpu" \
     2>&1 | tee -a "${OUTPUT_DIR}/test1.log"
@@ -39,13 +49,13 @@ for nranks in 1 4 8; do
 
   echo "Ranks: $nranks"
   echo "  CPU..."
-  ./util/benchmark_gpu_cpu.sh --variants cpu \
+  ./util/benchmark_gpu_cpu.sh --no-build --variants cpu \
     --nprocs $nranks --toml "$toml" \
     --output-dir "${OUTPUT_DIR}/scaling_${nranks}ranks_cpu" \
     2>&1 | tee -a "${OUTPUT_DIR}/test2.log"
 
   echo "  GPU..."
-  ./util/benchmark_gpu_cpu.sh --variants gpu \
+  ./util/benchmark_gpu_cpu.sh --no-build --variants gpu \
     --nprocs $nranks --toml "$toml" \
     --output-dir "${OUTPUT_DIR}/scaling_${nranks}ranks_gpu" \
     2>&1 | tee -a "${OUTPUT_DIR}/test2.log"
