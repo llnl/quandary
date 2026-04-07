@@ -17,6 +17,7 @@ Options:
   --output-dir PATH           Output directory (default: benchmark_results_<timestamp>)
   --build-only                Only build Spack environment, don't run
   --no-build                  Skip build, use existing environment (must be built first)
+  --rebuild                   Remove existing environment and rebuild from scratch
   -h, --help                  Show help
 
 Note:
@@ -52,6 +53,7 @@ TOML="tests/performance/configs/nlevels_32_32_32_32.toml"
 OUTPUT_DIR=""
 BUILD_ONLY=0
 NO_BUILD=0
+REBUILD=0
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -63,6 +65,7 @@ while [[ $# -gt 0 ]]; do
     --output-dir) OUTPUT_DIR="$2"; shift 2;;
     --build-only) BUILD_ONLY=1; shift;;
     --no-build) NO_BUILD=1; shift;;
+    --rebuild) REBUILD=1; shift;;
     -h|--help) usage; exit 0;;
     *) die "Unknown option: $1";;
   esac
@@ -71,6 +74,9 @@ done
 # Validate exclusive options
 if [ "$BUILD_ONLY" -eq 1 ] && [ "$NO_BUILD" -eq 1 ]; then
   die "Cannot specify both --build-only and --no-build"
+fi
+if [ "$REBUILD" -eq 1 ] && [ "$NO_BUILD" -eq 1 ]; then
+  die "Cannot specify both --rebuild and --no-build"
 fi
 
 # Validate
@@ -131,6 +137,12 @@ if [ "$NO_BUILD" -eq 0 ]; then
   echo "Setting up GPU-capable Spack environment"
   echo "========================================"
 
+  # Handle rebuild if requested
+  if [ "$REBUILD" -eq 1 ] && [ -d "$ENV_DIR" ]; then
+    echo "Removing existing environment for rebuild..."
+    rm -rf "$ENV_DIR"
+  fi
+
   if [ -d "$ENV_DIR" ]; then
     echo "Environment exists, activating..."
     eval $(spack env activate --sh -d "$ENV_DIR")
@@ -145,8 +157,14 @@ if [ "$NO_BUILD" -eq 0 ]; then
     spack config add "include:[${RADIUSS_CONFIGS}/${RADIUSS_CONFIG}/packages.yaml]"
 
     # Add Quandary with GPU-capable PETSc
-    echo "Adding quandary@main ^petsc@3.24+kokkos+rocm amdgpu_target=${AMDGPU_TARGET} ^hipblas-common@7.2 ^hip@7.2"
-    spack add "quandary@main ^petsc@3.24+kokkos+rocm amdgpu_target=${AMDGPU_TARGET} ~mmg~parmmg~saws~examples~exodusii~zoltan ^hipblas-common@7.2 ^hip@7.2"
+    # For MI300A APUs (tuolumne), enable Kokkos APU variant
+    if [ "$MACHINE" = "tuolumne" ]; then
+      echo "Adding quandary@main ^petsc@3.24+kokkos+rocm ^kokkos+apu+rocm amdgpu_target=${AMDGPU_TARGET} ^hipblas-common@7.2 ^hip@7.2"
+      spack add "quandary@main ^petsc@3.24+kokkos+rocm amdgpu_target=${AMDGPU_TARGET} ~mmg~parmmg~saws~examples~exodusii~zoltan ^kokkos+apu+rocm amdgpu_target=${AMDGPU_TARGET} ^hipblas-common@7.2 ^hip@7.2"
+    else
+      echo "Adding quandary@main ^petsc@3.24+kokkos+rocm amdgpu_target=${AMDGPU_TARGET} ^hipblas-common@7.2 ^hip@7.2"
+      spack add "quandary@main ^petsc@3.24+kokkos+rocm amdgpu_target=${AMDGPU_TARGET} ~mmg~parmmg~saws~examples~exodusii~zoltan ^hipblas-common@7.2 ^hip@7.2"
+    fi
 
     # Develop mode
     spack develop -p "$REPO_ROOT" quandary@main
