@@ -228,6 +228,8 @@ for variant in "${RUN_VARIANTS[@]}"; do
       LAUNCHER="flux run --gpus-per-task=1"
       PETSC_OPTS="-vec_type kokkos -mat_type aijkokkos -log_view -log_summary"
       unset MPICH_GPU_SUPPORT_ENABLED
+      # MI300A APU requires XNACK for unified memory access
+      export HSA_XNACK=1
     fi
   fi
 
