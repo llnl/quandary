@@ -404,6 +404,8 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
         }
       }
     }
+    VecAssemblyBegin(rho0);
+    VecAssemblyEnd(rho0);
   } else if(initcond.type == InitialConditionType::FROMFILE) {
     /* Do nothing. Init cond is already stored */
   } else if(initcond.type == InitialConditionType::PRODUCT_STATE) {
