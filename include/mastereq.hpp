@@ -11,6 +11,8 @@
 
 #pragma once
 
+class MasterEq;
+
 
 /**
  * @brief Matrix shell context containing data needed for applying the right-hand-side (RHS) system matrix to a vector.
@@ -19,6 +21,7 @@
  * and vectorized system matrix to a state vector.
  */
 typedef struct {
+  MasterEq* mastereq; ///< Owning MasterEq instance for callback dispatch
   PetscInt dim; ///< Dimension of full vectorized system: N^2 if Lindblad, N if Schroedinger
   std::vector<size_t> nlevels; ///< Number of levels per oscillator
   IS *isu, *isv; ///< Vector strides for accessing real and imaginary parts
@@ -40,6 +43,7 @@ typedef struct {
   std::vector<double> Ad_coeffs;  //< Time-dependent coefficients for dipole-dipole coupling matrices: sin(eta_k*t)
   Vec *aux; ///< Auxiliary vector for computations
   double time; ///< Current time
+  PetscBool assembled;
 } MatShellCtx;
 
 
@@ -226,6 +230,7 @@ class MasterEq{
      * @return Mat PETSc matrix shell object representing the RHS.
      */
     Mat getRHS();
+    MatShellCtx* getRHSctx();
 
     /**
      * @brief Computes gradient of RHS with respect to control parameters.

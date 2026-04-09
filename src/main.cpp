@@ -178,6 +178,10 @@ int main(int argc,char **argv)
     case TimeStepperType::EE:
       mytimestepper = new ExplEuler(mastereq, ntime, total_time, output, storeFWD);
       break;
+    case TimeStepperType::PETSCTS:
+      printf("Using PETSc's TS solver as time stepper.\n");
+      mytimestepper = new PetscTS(mastereq, ntime, total_time, output, storeFWD);
+      break;
     default:
       logger.exitWithError("Unknown timestepper type\n");
   }

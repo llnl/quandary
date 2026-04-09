@@ -179,6 +179,7 @@ MasterEq::MasterEq(const Config& config, Oscillator** oscil_vec_, bool quietmode
   ISCreateStride(PETSC_COMM_WORLD, localsize_u, ilow*2+localsize_u, 1, &isv);
 
   /* Allocate MatShell context for applying RHS */
+  RHSctx.mastereq = this;
   RHSctx.dim = dim;
   RHSctx.isu = &isu;
   RHSctx.isv = &isv;
@@ -204,6 +205,7 @@ MasterEq::MasterEq(const Config& config, Oscillator** oscil_vec_, bool quietmode
     RHSctx.control_Re.push_back(0.0);
     RHSctx.control_Im.push_back(0.0);
   }
+  RHSctx.assembled = false;
 
   for (int iosc = 0; iosc < noscillators*(noscillators-1)/2; iosc++) RHSctx.Bd_coeffs.push_back(0.0);
   for (int iosc = 0; iosc < noscillators*(noscillators-1)/2; iosc++) RHSctx.Ad_coeffs.push_back(0.0);
@@ -724,12 +726,12 @@ void MasterEq::initTransmonResonatorSparseMats(){
   initStdControlMats(osc_id, nresonator, 1);
 }
 
-
 int MasterEq::assemble_RHS(const double t){
   /* Prepare the matrix shell to perform the action of RHS on a vector */
 
   // Set the time
   RHSctx.time = t;
+  RHSctx.assembled = true;
 
   // Evaluate and store the controls and transfer for each oscillator 
   for (int iosc = 0; iosc < noscillators; iosc++) {
@@ -757,6 +759,7 @@ int MasterEq::assemble_RHS(const double t){
 }
 
 Mat MasterEq::getRHS() { return RHS; }
+MatShellCtx* MasterEq::getRHSctx() { return &RHSctx; }
 
 // Gradient of RHS wrt parameters: grad += alpha * x^T * (d RHS / d params)^T * xbar 
 void MasterEq::compute_dRHS_dParams(const double t, const Vec x, const Vec xbar, const double alpha, Vec grad) {

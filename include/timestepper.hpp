@@ -112,7 +112,7 @@ class TimeStepper{
      * @param rho_t0 Initial state vector
      * @return Vec Final state vector at time T
      */
-    Vec solveODE(int initid, Vec rho_t0);
+    virtual Vec solveODE(int initid, Vec rho_t0);
 
     /**
      * @brief Solves the adjoint ODE backward in time.
@@ -402,4 +402,35 @@ class CompositionalImplMidpoint : public ImplMidpoint {
      * @param compute_gradient Flag to compute gradient
      */
     void evolveBWD(const double tstart, const double tstop, const Vec x_stop, Vec x_adj, Vec grad, bool compute_gradient);
+};
+
+
+/**
+ * @brief Petsc's adaptive timestepper
+ */
+class PetscTS : public TimeStepper {
+  protected:
+    TS ts;      ///< PETSc's time stepper context to solve the ODE
+    TS ts_quad; ///< Quadrature TS for computing integral objective terms. 
+    Vec q;     ///< Auxiliary vector for evaluating integral objective terms during time-stepping.  
+
+  public:
+    PetscTS(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_);
+    ~PetscTS();
+
+    // Use Petsc's TSSolve function to solve the ODE
+    Vec solveODE(int initid, Vec rho_t0) override;
+
+    // Wrapper to assemble RHS if the time step t has changed. 
+    static PetscErrorCode RHSMatrixUpdate(TS ts, PetscReal t, Vec, Mat, Mat, void *ptr);
+
+    // Callback function during TSSolve to evaluate trajectory data at each accepted time step 
+    static PetscErrorCode monitorTrajectory(TS ts, PetscInt step, PetscReal time, Vec state, void *ctx);
+
+    // Callback for integral cost functions
+    static PetscErrorCode IntegralCosts(TS, PetscReal t, Vec x, Vec F, void *ctx);
+
+    // NOT USED. Instead the below solveODE overwrites the default time-stepping by calling TSSolve. 
+    void evolveFWD(const double, const double, Vec) override {};
+    void evolveBWD(const double, const double, const Vec, Vec, Vec, bool) override {};
 };

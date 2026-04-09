@@ -832,3 +832,122 @@ void CompositionalImplMidpoint::evolveBWD(const double tstop, const double tstar
   }
   assert(fabs(tcurr - tstart) < 1e-12);
 }
+
+PetscTS::PetscTS(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper(mastereq_, ntime_, total_time_, output_, storeFWD_) {
+
+  TSCreate(PETSC_COMM_WORLD, &ts);
+  TSSetProblemType(ts, TS_LINEAR);
+
+  /* Explicit RK */
+  TSSetType(ts, TSRK);
+  TSRKSetType(ts, TSRK5DP);
+  TSSetFromOptions(ts);
+
+  TSSetRHSFunction(ts, NULL, TSComputeRHSFunctionLinear, mastereq->getRHSctx());
+  TSSetRHSJacobian(ts, mastereq->getRHS(), mastereq->getRHS(), RHSMatrixUpdate, mastereq->getRHSctx());
+
+  // Set time domain and adaptivity
+  TSSetTime(ts, 0.0);
+  TSSetMaxTime(ts, total_time);
+  TSSetExactFinalTime(ts, TS_EXACTFINALTIME_MATCHSTEP);
+  TSAdapt adapt;
+  TSGetAdapt(ts, &adapt);
+  TSAdaptSetType(adapt, TSADAPTBASIC);
+  double atol = 1e-7;
+  double rtol = 1e-7;
+  TSSetTolerances(ts, atol, NULL, rtol, NULL);
+
+  // Register monitor function to evaluate observables at each accepted time step. 
+  TSMonitorSet(ts, PetscTS::monitorTrajectory, this, NULL);
+
+  // Quadrature for integral objective functions. Only leakage, weighted cost, and energy are supported for now. NOT DPDM. TODO.
+  TSCreateQuadratureTS(ts, PETSC_TRUE, &ts_quad);
+  TSSetRHSFunction(ts_quad, NULL, IntegralCosts, this);
+
+  // Create vector to hold integral terms
+  int nterms = 3;
+  VecCreate(PETSC_COMM_WORLD, &q);
+  VecSetSizes(q, PETSC_DECIDE, nterms);
+  VecSetFromOptions(q);
+
+}
+
+PetscTS::~PetscTS() {
+  TSDestroy(&ts);
+  VecDestroy(&q);
+}
+
+Vec PetscTS::solveODE(int initid, Vec rho_t0){
+
+  /* Prepare storage for trajectory output data */
+  if (writeTrajectoryDataFiles) {
+    output->initTrajectoryData(initid, mastereq);
+  }
+
+  /* Reset integral terms */
+  VecSet(q, 0.0);
+  TSSetSolution(ts_quad, q);
+
+  /* Set initial condition for timestepping */
+  VecCopy(rho_t0, x);
+  TSSetTime(ts, 0.0);
+  TSSetStepNumber(ts, 0);
+  TSSetSolution(ts, x);
+
+  /* Solve the ODE */
+  TSSolve(ts, x);
+
+  /* Store integral cost terms */
+  PetscScalar *terms;
+  VecGetArray(q, &terms);
+  leakage_integral = terms[0] / total_time;
+  weightedcost_integral = terms[1] / total_time;
+  energy_integral = terms[2] / total_time;
+  VecRestoreArray(q, &terms);
+
+  /* Write trajectory data files. Data was collected in monitorTrajectory() during TSSolve. */
+  PetscInt nsteps;
+  TSGetStepNumber(ts, &nsteps);
+  if (writeTrajectoryDataFiles) {
+    output->writeTrajectoryData(nsteps);
+  }
+
+  return x;
+}
+
+
+PetscErrorCode PetscTS::RHSMatrixUpdate(TS, PetscReal t, Vec, Mat, Mat, void *ptr){
+  MatShellCtx *ctx = (MatShellCtx *)ptr;
+  if (!ctx->assembled || fabs(t - ctx->time) > 1e-8) {
+    ctx->mastereq->assemble_RHS(t);
+  }
+  return 0;
+};
+
+
+PetscErrorCode PetscTS::IntegralCosts(TS, PetscReal t, Vec x, Vec F, void *ctx){
+  PetscTS *self = static_cast<PetscTS *>(ctx); // The base Timestepper class.
+  PetscScalar *integral_terms;
+  VecGetArray(F, &integral_terms);
+
+  /* Evaluate the cost integrand at time t, given state x. Store result in F. */
+  if (self->eval_leakage)       integral_terms[0] = self->evalLeakage(x);
+  if (self->eval_weightedcost)  integral_terms[1] = self->evalWeightedCost(t, x);
+  if (self->eval_energy)        integral_terms[2] = self->evalEnergy(t);
+  // TODO: DPDM integral term
+
+  VecRestoreArray(F, &integral_terms);
+  return 0;
+}
+
+PetscErrorCode PetscTS::monitorTrajectory(TS ts, PetscInt step, PetscReal time, Vec state, void *ctx){
+  (void)ts;
+  PetscTS *self = static_cast<PetscTS *>(ctx); // The base Timestepper class.
+
+  // evaluate trajectory output 
+  if (self->writeTrajectoryDataFiles) {
+    self->output->evalTrajectoryData(step, time, state, self->mastereq);
+  }
+
+  return 0;
+}

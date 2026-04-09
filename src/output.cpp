@@ -318,11 +318,13 @@ void Output::evalTrajectoryData(int timestep, double time, const Vec state, Mast
   }
 }
 
-void Output::writeTrajectoryData(){
+void Output::writeTrajectoryData(size_t ntimepoints){
   char filename[255];
 
   if (mpirank_petsc == 0) {
-    const size_t ntimepoints = trajectory_times.size();
+    if (ntimepoints == 0) {
+      ntimepoints = trajectory_times.size();
+    }
 
     if (writeExpectedEnergy) {
       for (size_t i=0; i<noscillators; i++) {

@@ -134,6 +134,6 @@ class Output{
     /**
      * @brief Writes time evolution data from internal buffers to files. Called after time-stepping.
      */
-    void writeTrajectoryData();
+    void writeTrajectoryData(size_t ntimepoints = 0);
 
 };
