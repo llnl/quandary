@@ -194,6 +194,30 @@ echo ""
 
 echo ""
 echo "================================"
+echo "Test 3: Fixed GPUs (32^4)"
+echo "================================"
+echo ""
+{
+  echo "Ranks,GPUs,GPU_Quandary(s),GPU_PETSc(s),GPU_MatMult%,GPU_Scatter%"
+
+  FIXED_DIRS=$(find "$BENCH_DIR" -maxdepth 1 -type d -name "fixed_*gpus_*ranks_gpu" | sort -V)
+  for dir in $FIXED_DIRS; do
+    base=$(basename "$dir")
+    gpus=$(echo "$base" | sed -n 's/^fixed_\([0-9]\+\)gpus_.*$/\1/p')
+    nranks=$(echo "$base" | sed -n 's/^fixed_[0-9]\+gpus_\([0-9]\+\)ranks_gpu$/\1/p')
+
+    gpu_data=$(extract_from_run "$dir" "gpu")
+    gpu_qt=$(echo "$gpu_data" | cut -d, -f1)
+    gpu_pt=$(echo "$gpu_data" | cut -d, -f2)
+    gpu_mm=$(echo "$gpu_data" | cut -d, -f3)
+    gpu_vs=$(echo "$gpu_data" | cut -d, -f4)
+
+    echo "${nranks:-n/a},${gpus:-n/a},${gpu_qt},${gpu_pt},${gpu_mm},${gpu_vs}"
+  done
+} | maybe_column
+
+echo ""
+echo "================================"
 echo "Key Metrics Guide"
 echo "================================"
 echo "Quandary time: Solve loop only (excludes setup)"
