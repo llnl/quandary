@@ -2,19 +2,14 @@
 # Simple CPU vs GPU benchmark suite (runs on Tuolumne by default)
 set -uo pipefail
 
-# Detect machine and set GPU limits
+# Tuolumne-only.
 HOSTNAME=$(hostname)
-if [[ "$HOSTNAME" =~ tioga ]]; then
-  MACHINE="tioga"
-  MAX_GPUS=8
-elif [[ "$HOSTNAME" =~ tuolumne ]]; then
-  MACHINE="tuolumne"
-  MAX_GPUS=4
-else
-  MACHINE="tuolumne"
-  MAX_GPUS=4
-  echo "Warning: Unknown machine, defaulting to tuolumne settings (4 GPUs max)"
+if [[ ! "$HOSTNAME" =~ tuolumne ]]; then
+  echo "ERROR: util/simple_benchmark.sh is tuolumne-only (hostname: ${HOSTNAME})" >&2
+  exit 1
 fi
+MACHINE="tuolumne"
+MAX_GPUS=4
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 OUTPUT_DIR="benchmark_${TIMESTAMP}"
@@ -26,16 +21,6 @@ echo "Max GPUs: $MAX_GPUS"
 echo "Output: $OUTPUT_DIR"
 echo ""
 
-# Build GPU-capable environment once
-echo "========================================"
-echo "Building GPU-capable environment (once)"
-echo "========================================"
-./util/benchmark_gpu_cpu.sh --build-only --machine "$MACHINE" || {
-  echo "Build failed! Exiting."
-  exit 1
-}
-echo ""
-
 # Test 1: Problem size (CPU: 8 ranks, GPU: MAX_GPUS ranks)
 echo "Test 1: Problem Size Scaling"
 echo "======================================="
@@ -44,14 +29,14 @@ for nlevels in 4 16 32; do
 
   echo "Size: ${nlevels}^4"
   echo "  CPU (8 ranks)..."
-  ./util/benchmark_gpu_cpu.sh --no-build --variants cpu --machine "$MACHINE" \
+  ./util/benchmark_gpu_cpu.sh --variants cpu \
     --nprocs 8 --toml "$toml" \
     --output-dir "${OUTPUT_DIR}/size_${nlevels}_cpu" \
     2>&1 | tee -a "${OUTPUT_DIR}/test1.log"
   echo "  [DEBUG] CPU test completed with exit code: $?"
 
   echo "  GPU ($MAX_GPUS ranks)..."
-  ./util/benchmark_gpu_cpu.sh --no-build --variants gpu --machine "$MACHINE" \
+  ./util/benchmark_gpu_cpu.sh --variants gpu \
     --nprocs $MAX_GPUS --toml "$toml" \
     --output-dir "${OUTPUT_DIR}/size_${nlevels}_gpu" \
     2>&1 | tee -a "${OUTPUT_DIR}/test1.log"
@@ -72,13 +57,13 @@ for nranks in "${SCALING_RANKS[@]}"; do
 
   echo "Ranks: $nranks"
   echo "  CPU..."
-  ./util/benchmark_gpu_cpu.sh --no-build --variants cpu --machine "$MACHINE" \
+  ./util/benchmark_gpu_cpu.sh --variants cpu \
     --nprocs $nranks --toml "$toml" \
     --output-dir "${OUTPUT_DIR}/scaling_${nranks}ranks_cpu" \
     2>&1 | tee -a "${OUTPUT_DIR}/test2.log"
 
   echo "  GPU..."
-  ./util/benchmark_gpu_cpu.sh --no-build --variants gpu --machine "$MACHINE" \
+  ./util/benchmark_gpu_cpu.sh --variants gpu \
     --nprocs $nranks --toml "$toml" \
     --output-dir "${OUTPUT_DIR}/scaling_${nranks}ranks_gpu" \
     2>&1 | tee -a "${OUTPUT_DIR}/test2.log"
