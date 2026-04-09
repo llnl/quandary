@@ -884,14 +884,17 @@ Vec PetscTS::solveODE(int initid, Vec rho_t0){
     output->resetTrajectoryData(initid);
   }
 
+  /* Reset the time stepper */
+  TSSetTime(ts, 0.0);
+  TSSetStepNumber(ts, 0);
+  TSSetTimeStep(ts, 0.1);  // This is Petsc's default initial guess. Will be adpted during TSSolve().
+
   /* Reset integral terms */
   VecSet(q, 0.0);
   TSSetSolution(ts_quad, q);
-
+  
   /* Set initial condition for timestepping */
   VecCopy(rho_t0, x);
-  TSSetTime(ts, 0.0);
-  TSSetStepNumber(ts, 0);
   TSSetSolution(ts, x);
 
   /* Solve the ODE */
