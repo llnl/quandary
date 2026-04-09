@@ -12,9 +12,14 @@ Usage:
 Options:
   --machine {tioga|tuolumne}  LC machine (default: tuolumne)
   --variants {cpu|gpu|both}   Which to test (default: both)
-  --nprocs N                  MPI ranks (default: 8)
+  --nprocs N                  MPI ranks (default: 8 on tioga, 4 on tuolumne)
   --toml PATH                 Config file (default: tests/performance/configs/nlevels_32_32_32_32.toml)
   --output-dir PATH           Output directory (default: benchmark_results_<timestamp>)
+  --petsc-version VER         PETSc version (default: 3.24.4)
+  --rocm-version VER          ROCm/HIP version (default: 6.4.3)
+  --kokkos-version VER        Kokkos version (default: 4.6.02)
+  --kokkos-cxxstd N           Kokkos C++ standard (default: 17)
+  --llvm-amdgpu VER           llvm-amdgpu compiler version (default: 6.4.3)
   --build-only                Only build Spack environment, don't run
   --no-build                  Skip build, use existing environment (must be built first)
   --rebuild                   Remove existing environment and rebuild from scratch
@@ -49,8 +54,14 @@ die() {
 MACHINE="tuolumne"
 VARIANTS="both"
 NPROCS=8
+NPROCS_SET=0
 TOML="tests/performance/configs/nlevels_32_32_32_32.toml"
 OUTPUT_DIR=""
+PETSC_VERSION="3.24.4"
+ROCM_VERSION="6.4.3"
+KOKKOS_VERSION="4.6.02"
+KOKKOS_CXXSTD="17"
+LLVM_AMDGPU_VERSION="6.4.3"
 BUILD_ONLY=0
 NO_BUILD=0
 REBUILD=0
@@ -60,9 +71,14 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --machine) MACHINE="$2"; shift 2;;
     --variants) VARIANTS="$2"; shift 2;;
-    --nprocs) NPROCS="$2"; shift 2;;
+    --nprocs) NPROCS="$2"; NPROCS_SET=1; shift 2;;
     --toml) TOML="$2"; shift 2;;
     --output-dir) OUTPUT_DIR="$2"; shift 2;;
+    --petsc-version) PETSC_VERSION="$2"; shift 2;;
+    --rocm-version) ROCM_VERSION="$2"; shift 2;;
+    --kokkos-version) KOKKOS_VERSION="$2"; shift 2;;
+    --kokkos-cxxstd) KOKKOS_CXXSTD="$2"; shift 2;;
+    --llvm-amdgpu) LLVM_AMDGPU_VERSION="$2"; shift 2;;
     --build-only) BUILD_ONLY=1; shift;;
     --no-build) NO_BUILD=1; shift;;
     --rebuild) REBUILD=1; shift;;
@@ -84,6 +100,7 @@ command -v spack >/dev/null 2>&1 || die "spack not found in PATH"
 [[ "$MACHINE" =~ ^(tioga|tuolumne)$ ]] || die "Invalid machine: $MACHINE (must be tioga or tuolumne)"
 [[ "$VARIANTS" =~ ^(cpu|gpu|both)$ ]] || die "Invalid variants: $VARIANTS (must be cpu, gpu, or both)"
 [[ -f "$TOML" ]] || die "Config file not found: $TOML"
+[[ "$KOKKOS_CXXSTD" =~ ^(14|17|20|23)$ ]] || die "Invalid --kokkos-cxxstd: $KOKKOS_CXXSTD"
 
 # Set machine-specific defaults
 case "$MACHINE" in
@@ -96,6 +113,15 @@ case "$MACHINE" in
     RADIUSS_CONFIG="toss_4_x86_64_ib_cray/tuolumne"
     ;;
 esac
+
+# Machine-specific default ranks (only if user didn't pass --nprocs).
+if [ "$NPROCS_SET" -eq 0 ]; then
+  if [ "$MACHINE" = "tuolumne" ]; then
+    NPROCS=4
+  else
+    NPROCS=8
+  fi
+fi
 
 # Set output directory (only if we're going to run)
 if [ "$BUILD_ONLY" -eq 0 ]; then
@@ -129,6 +155,10 @@ if [ "$BUILD_ONLY" -eq 0 ]; then
   echo "Config:   $TOML"
   echo "Output:   $OUTPUT_DIR"
 fi
+echo "PETSc:    ${PETSC_VERSION}"
+echo "ROCm:     ${ROCM_VERSION}"
+echo "Kokkos:   ${KOKKOS_VERSION} (cxxstd=${KOKKOS_CXXSTD})"
+echo "Compiler: llvm-amdgpu@=${LLVM_AMDGPU_VERSION}"
 echo ""
 
 # Build GPU-capable environment
@@ -158,12 +188,14 @@ if [ "$NO_BUILD" -eq 0 ]; then
 
     # Add Quandary with GPU-capable PETSc
     # For MI300A APUs (tuolumne), enable Kokkos APU variant
+    COMPILER_SPEC="%llvm-amdgpu@=${LLVM_AMDGPU_VERSION}"
     if [ "$MACHINE" = "tuolumne" ]; then
-      echo "Adding quandary@main ^petsc@3.24+kokkos+rocm ^kokkos+apu+rocm amdgpu_target=${AMDGPU_TARGET} ^hipblas-common@7.2 ^hip@7.2"
-      spack add "quandary@main ^petsc@3.24+kokkos+rocm amdgpu_target=${AMDGPU_TARGET} ~mmg~parmmg~saws~examples~exodusii~zoltan ^kokkos+apu+rocm amdgpu_target=${AMDGPU_TARGET} ^hipblas-common@7.2 ^hip@7.2"
+      echo "Adding quandary@main ^petsc@${PETSC_VERSION}+kokkos+rocm ^kokkos@${KOKKOS_VERSION}+apu+rocm cxxstd=${KOKKOS_CXXSTD} amdgpu_target=${AMDGPU_TARGET} ^hip@${ROCM_VERSION}"
+      # Note: kokkos-kernels@4.6.02 does not have +rocm/amdgpu_target variants in Spack.
+      spack add "quandary@main ${COMPILER_SPEC} ^cray-mpich${COMPILER_SPEC} ^petsc@${PETSC_VERSION}+kokkos+rocm amdgpu_target=${AMDGPU_TARGET} ~mmg~parmmg~saws~examples~ml~exodusii~zoltan ${COMPILER_SPEC} ^kokkos@${KOKKOS_VERSION}+apu+rocm cxxstd=${KOKKOS_CXXSTD} amdgpu_target=${AMDGPU_TARGET} ${COMPILER_SPEC} ^kokkos-kernels@${KOKKOS_VERSION} ${COMPILER_SPEC} ^hip@${ROCM_VERSION}${COMPILER_SPEC} ^hipblas@${ROCM_VERSION}${COMPILER_SPEC} ^hipblas-common@${ROCM_VERSION}"
     else
-      echo "Adding quandary@main ^petsc@3.24+kokkos+rocm amdgpu_target=${AMDGPU_TARGET} ^hipblas-common@7.2 ^hip@7.2"
-      spack add "quandary@main ^petsc@3.24+kokkos+rocm amdgpu_target=${AMDGPU_TARGET} ~mmg~parmmg~saws~examples~exodusii~zoltan ^hipblas-common@7.2 ^hip@7.2"
+      echo "Adding quandary@main ^petsc@${PETSC_VERSION}+kokkos+rocm amdgpu_target=${AMDGPU_TARGET} ^kokkos@${KOKKOS_VERSION}+rocm cxxstd=${KOKKOS_CXXSTD} ^hip@${ROCM_VERSION}"
+      spack add "quandary@main ${COMPILER_SPEC} ^cray-mpich${COMPILER_SPEC} ^petsc@${PETSC_VERSION}+kokkos+rocm amdgpu_target=${AMDGPU_TARGET} ~mmg~parmmg~saws~examples~ml~exodusii~zoltan ${COMPILER_SPEC} ^kokkos@${KOKKOS_VERSION}+rocm cxxstd=${KOKKOS_CXXSTD} amdgpu_target=${AMDGPU_TARGET} ${COMPILER_SPEC} ^kokkos-kernels@${KOKKOS_VERSION} ${COMPILER_SPEC} ^hip@${ROCM_VERSION}${COMPILER_SPEC} ^hipblas@${ROCM_VERSION}${COMPILER_SPEC} ^hipblas-common@${ROCM_VERSION}"
     fi
 
     # Develop mode
@@ -218,18 +250,22 @@ for variant in "${RUN_VARIANTS[@]}"; do
     LAUNCHER="flux run"
     unset MPICH_GPU_SUPPORT_ENABLED
   else  # gpu
+    ENV_FLAGS=""
     # Tioga: discrete GPUs (MI250X) - use GPU-aware MPI and binding
     # Tuolumne: APUs (MI300A) - unified memory, no GPU-aware MPI needed
     if [ "$MACHINE" = "tioga" ]; then
-      LAUNCHER="flux run --gpus-per-task=1 --gpu-bind=closest"
+      ENV_FLAGS="--env=MPICH_GPU_SUPPORT_ENABLED=1"
+      LAUNCHER="flux run ${ENV_FLAGS} --gpus-per-task=1 --gpu-bind=closest"
       PETSC_OPTS="-vec_type kokkos -mat_type aijkokkos -use_gpu_aware_mpi 1 -log_view -log_summary"
       export MPICH_GPU_SUPPORT_ENABLED=1
     else  # tuolumne
-      LAUNCHER="flux run --gpus-per-task=1"
+      # MI300A APU requires XNACK for unified memory access.
+      # Explicitly propagate to Flux ranks, along with GPU-aware MPI enablement.
+      ENV_FLAGS="--env=HSA_XNACK=1 --env=MPICH_GPU_SUPPORT_ENABLED=1"
+      LAUNCHER="flux run ${ENV_FLAGS} --gpus-per-task=1"
       PETSC_OPTS="-vec_type kokkos -mat_type aijkokkos -log_view -log_summary"
-      unset MPICH_GPU_SUPPORT_ENABLED
-      # MI300A APU requires XNACK for unified memory access
       export HSA_XNACK=1
+      export MPICH_GPU_SUPPORT_ENABLED=1
     fi
   fi
 
@@ -252,7 +288,6 @@ for variant in "${RUN_VARIANTS[@]}"; do
   /usr/bin/time -v "${LAUNCHER_ARRAY[@]}" -n "$NPROCS" \
     "$QUANDARY_BIN" "$RUN_DIR/config.toml" \
     --petsc-options "$PETSC_OPTS" \
-    --quiet \
     > "${OUTPUT_DIR}/${variant}.log" 2>&1
   EXIT_CODE=$?
 
