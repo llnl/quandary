@@ -174,13 +174,13 @@ optimization_stride = 1
 # "simulation" - a forward simulation only
 # "gradient" - forward simulation and backward simulation
 # "optimization" - a full optimization cycle
-# "evalControls" - only evaluates the current control pulses (no simulation)
 runtype = "optimization"
 # Use matrix free solver, instead of sparse matrix implementation. Only available for 2,3,4, or 5 subsystems.
 usematfree = true
 # Linear solver configuration: type can be "gmres" or "neumann", and maximum number of iteration (maxiter)
 linearsolver = { type = "gmres", maxiter = 20 }
 # Switch the time-stepping algorithm. Currently available:
+# "PETSCTS" - Petsc's adaptive timestepping (5th order explicit RK)
 # "IMR" - Implicit Midpoint Rule (IMR) of 2nd order,
 # "IMR4" - Compositional IMR of order 2 using 3 stages,
 # "IMR8" - Compositional IMR of order 8 using 15 stages,

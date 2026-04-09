@@ -96,7 +96,7 @@ Vec TimeStepper::solveODE(int initid, Vec rho_t0){
 
   /* Prepare storage for trajectory output data */
   if (writeTrajectoryDataFiles) {
-    output->initTrajectoryData(initid, mastereq);
+    output->resetTrajectoryData(initid);
   }
 
   /* Set initial condition  */
@@ -881,7 +881,7 @@ Vec PetscTS::solveODE(int initid, Vec rho_t0){
 
   /* Prepare storage for trajectory output data */
   if (writeTrajectoryDataFiles) {
-    output->initTrajectoryData(initid, mastereq);
+    output->resetTrajectoryData(initid);
   }
 
   /* Reset integral terms */
@@ -909,7 +909,7 @@ Vec PetscTS::solveODE(int initid, Vec rho_t0){
   PetscInt nsteps;
   TSGetStepNumber(ts, &nsteps);
   if (writeTrajectoryDataFiles) {
-    output->writeTrajectoryData(nsteps);
+    output->writeTrajectoryData();
   }
 
   return x;

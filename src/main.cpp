@@ -256,14 +256,6 @@ int main(int argc,char **argv)
     optimctx->getSolution(&opt);
   }
 
-  /* Only evaluate and write control pulses (no propagation) */
-  if (runtype == RunType::EVALCONTROLS) {
-    std::vector<double> pt, qt;
-    optimctx->getStartingPoint(xinit);
-    if (mpirank_world == 0 && !quietmode) printf("\nEvaluating current controls ... \n");
-    output->writeControls(xinit, mastereq);
-  }
-
   /* Output */
   if (runtype != RunType::OPTIMIZATION) {
     optimctx->output->writeOptimFile(0, optimctx->getObjective(), gnorm, 0.0, optimctx->getFidelity(), optimctx->getCostT(), optimctx->getRegul(), optimctx->getPenaltyLeakage(), optimctx->getPenaltyDpDm(), optimctx->getPenaltyEnergy(), optimctx->getPenaltyVariation(), optimctx->getPenaltyWeightedCost());

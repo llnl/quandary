@@ -26,8 +26,6 @@ class Output{
   FILE* optimfile; ///< Output file for logging optimization progress
   int output_timestep_stride; ///< Time domain output frequency (write every N time steps)
   std::vector<OutputType> output_observables; ///< List of output types applied to all oscillators
-  int ntime; ///< Total number of time steps in the simulation
-  double dt; ///< Time step size
 
   size_t noscillators; ///< Number of oscillators in the system
   bool writeFullState; ///< Flag to determine if evolution of full state vector should be written to file
@@ -35,17 +33,20 @@ class Output{
   bool writeExpectedEnergy_comp; ///< Flag to determine if evolution of expected energy of the full composite system should be written to file
   bool writePopulation; ///< Flag to determine if the evolution of the energy level occupations per oscillator should be written to files
   bool writePopulation_comp; ///< Flag to determine if the evolution of the energy level occupations of the full composite system should be written to file
+  bool writeControls; ///< Flag to determine if the control pulses should be written to file.
 
   // Trajectory output buffers (written at end of simulation)
   int trajectory_initid; ///< Initial condition identifier for buffered trajectory output
   std::vector<double> trajectory_times; ///< Stored output times
-  std::vector<std::vector<double>> expected_energy_buffer; ///< [oscillator][timepoint]
+  std::vector<std::vector<double>> controls_Re_buffer; ///< [timepoint][oscillator] Control pulse values for each oscillator at each buffered time point
+  std::vector<std::vector<double>> controls_Im_buffer; ///< [timepoint][oscillator] Control pulse values for each oscillator at each buffered time point
+  std::vector<std::vector<double>> expected_energy_buffer; ///< [timepoint][oscillator]
   std::vector<double> expected_energy_comp_buffer; ///< [timepoint]
-  std::vector<std::vector<std::vector<double>>> population_buffer; ///< [oscillator][timepoint][level]
+  std::vector<std::vector<std::vector<double>>> population_buffer; ///< [timepoint][oscillator][level]
   std::vector<std::vector<double>> population_comp_buffer; ///< [timepoint][level]
   std::vector<std::vector<double>> fullstate_re_buffer; ///< [timepoint][state index]
   std::vector<std::vector<double>> fullstate_im_buffer; ///< [timepoint][state index]
-  size_t trajectory_timepoint_count; ///< Number of buffered trajectory samples
+  // size_t trajectory_timepoint_count; ///< Number of buffered trajectory samples
 
   // VecScatter scat; ///< PETSc's scatter context for state communication across cores
   // Vec xseq; ///< Sequential vector for I/O operations
@@ -91,18 +92,6 @@ class Output{
     void writeOptimFile(int optim_iter, double objective, double gnorm, double stepsize, double Favg, double cost, double tikh_regul,  double penalty_leakage, double penalty_dpdm, double penalty_energy, double penalty_variation, double penalty_weightedcost);
 
     /**
-     * @brief Writes current control pulses per oscillator and control parameters.
-     *
-     * Called every output_optimization_stride optimization iterations. 
-     * Control pulses are written to `<output_dir>/control<ioscillator>.dat`
-     * Control parameters are written to `<output_dir>/params.dat`
-     *
-     * @param params Current parameter vector
-     * @param mastereq Pointer to master equation solver
-     */
-    void writeControls(Vec params, MasterEq* mastereq);
-
-    /**
      * @brief Writes gradient vector for debugging adjoint calculations.
      * 
      * Gradient is written to `<output_dir>/grad.dat`
@@ -117,7 +106,7 @@ class Output{
      * @param initid Initial condition identifier
      * @param mastereq Pointer to master equation solver
      */
-    void initTrajectoryData(int initid, MasterEq* mastereq);
+    void resetTrajectoryData(int initid);
 
     /**
      * @brief Computes time evolution output and stores it in internal buffers.
@@ -134,6 +123,10 @@ class Output{
     /**
      * @brief Writes time evolution data from internal buffers to files. Called after time-stepping.
      */
-    void writeTrajectoryData(size_t ntimepoints = 0);
+    void writeTrajectoryData();
 
+    /**
+     * @brief Writes control parameters to file. 
+     */
+    void writeControlParams(Vec params);
 };
