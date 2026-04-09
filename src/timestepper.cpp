@@ -835,7 +835,7 @@ void CompositionalImplMidpoint::evolveBWD(const double tstop, const double tstar
 
 PetscTS::PetscTS(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper(mastereq_, ntime_, total_time_, output_, storeFWD_) {
 
-  TSCreate(PETSC_COMM_WORLD, &ts);
+  TSCreate(PETSC_COMM_SELF, &ts);
   TSSetProblemType(ts, TS_LINEAR);
 
   /* Explicit RK */
