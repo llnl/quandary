@@ -21,16 +21,16 @@ echo "Max GPUs: $MAX_GPUS"
 echo "Output: $OUTPUT_DIR"
 echo ""
 
-# Test 1: Problem size (CPU: 8 ranks, GPU: MAX_GPUS ranks)
+# Test 1: Problem size (compare CPU vs GPU at same ranks)
 echo "Test 1: Problem Size Scaling"
 echo "======================================="
 for nlevels in 4 16 32; do
   toml="tests/performance/configs/nlevels_${nlevels}_${nlevels}_${nlevels}_${nlevels}.toml"
 
   echo "Size: ${nlevels}^4"
-  echo "  CPU (8 ranks)..."
+  echo "  CPU ($MAX_GPUS ranks)..."
   ./util/benchmark_gpu_cpu.sh --variants cpu \
-    --nprocs 8 --toml "$toml" \
+    --nprocs $MAX_GPUS --toml "$toml" \
     --output-dir "${OUTPUT_DIR}/size_${nlevels}_cpu" \
     2>&1 | tee -a "${OUTPUT_DIR}/test1.log"
   echo "  [DEBUG] CPU test completed with exit code: $?"
