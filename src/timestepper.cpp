@@ -866,7 +866,7 @@ PetscTS::PetscTS(MasterEq* mastereq_, int ntime_, double total_time_, Output* ou
 
   // Create vector to hold integral terms
   int nterms = 3;
-  VecCreate(PETSC_COMM_WORLD, &q);
+  VecCreate(PETSC_COMM_SELF, &q);
   VecSetSizes(q, PETSC_DECIDE, nterms);
   VecSetFromOptions(q);
 
@@ -898,12 +898,12 @@ Vec PetscTS::solveODE(int initid, Vec rho_t0){
   TSSolve(ts, x);
 
   /* Store integral cost terms */
-  PetscScalar *terms;
-  VecGetArray(q, &terms);
+  const PetscScalar *terms;
+  VecGetArrayRead(q, &terms);
   leakage_integral = terms[0] / total_time;
   weightedcost_integral = terms[1] / total_time;
   energy_integral = terms[2] / total_time;
-  VecRestoreArray(q, &terms);
+  VecRestoreArrayRead(q, &terms);
 
   /* Write trajectory data files. Data was collected in monitorTrajectory() during TSSolve. */
   PetscInt nsteps;
