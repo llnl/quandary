@@ -130,9 +130,39 @@ int main(int argc,char **argv)
   /* Output */
   Output* output = new Output(config, comm_petsc, comm_init, quietmode);
 
-  int ntime = config.getNTime();
-  double dt = config.getDt();
+  /* --- Initialize the time-stepper --- */
+  LinearSolverType linsolvetype = config.getLinearSolverType();
+  int linsolve_maxiter = config.getLinearSolverMaxiter();
+
+  /* My time stepper */
+  bool storeFWD = false;
+  RunType runtype = config.getRuntype();
+  if (mastereq->decoherence_type != DecoherenceType::NONE &&   
+     (runtype == RunType::GRADIENT || runtype == RunType::OPTIMIZATION) ) storeFWD = true;  // if NOT Schroedinger solver and running gradient optim: store forward states. Otherwise, they will be recomputed during gradient. 
+
+  TimeStepperType timesteppertype = config.getTimestepperType();
+  TimeStepper* mytimestepper = nullptr;
+  size_t ntime = config.getNTime();
   double total_time = config.getTotalTime();
+  switch (timesteppertype) {
+    case TimeStepperType::IMR:
+      mytimestepper = new ImplMidpoint(mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
+      break;
+    case TimeStepperType::IMR4:
+      mytimestepper = new CompositionalImplMidpoint(4, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
+      break;
+    case TimeStepperType::IMR8:
+      mytimestepper = new CompositionalImplMidpoint(8, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
+      break;
+    case TimeStepperType::EE:
+      mytimestepper = new ExplEuler(mastereq, ntime, total_time, output, storeFWD);
+      break;
+    case TimeStepperType::PETSCTS:
+      mytimestepper = new PetscTS(mastereq, ntime, total_time, output, storeFWD);
+      break;
+    default:
+      logger.exitWithError("Unknown timestepper type\n");
+  }
 
   // Some screen output 
   if (mpirank_world == 0 && !quietmode) {
@@ -149,42 +179,14 @@ int main(int argc,char **argv)
     std::cout << ") " << std::endl;
 
     std::cout<<"State dimension (complex): " << mastereq->getDim() << std::endl;
-    std::cout << "Time: [0:" << total_time << "], ";
-    std::cout << "N="<< ntime << ", dt=" << dt << std::endl;
+    std::cout << "Time domain: [0:" << config.getTotalTime() << "]" << std::endl;
+    std::cout << "Timestepping type: " << enumToString(config.getTimestepperType(), TIME_STEPPER_TYPE_MAP);
+    if (config.getTimestepperType() != TimeStepperType::PETSCTS)
+      std::cout << ", N="<< config.getNTime()<< ", dt=" << config.getDt();
+    std::cout << std::endl;
   }
 
-  /* --- Initialize the time-stepper --- */
-  LinearSolverType linsolvetype = config.getLinearSolverType();
-  int linsolve_maxiter = config.getLinearSolverMaxiter();
 
-  /* My time stepper */
-  bool storeFWD = false;
-  RunType runtype = config.getRuntype();
-  if (mastereq->decoherence_type != DecoherenceType::NONE &&   
-     (runtype == RunType::GRADIENT || runtype == RunType::OPTIMIZATION) ) storeFWD = true;  // if NOT Schroedinger solver and running gradient optim: store forward states. Otherwise, they will be recomputed during gradient. 
-
-  TimeStepperType timesteppertype = config.getTimestepperType();
-  TimeStepper* mytimestepper = nullptr;
-  switch (timesteppertype) {
-    case TimeStepperType::IMR:
-      mytimestepper = new ImplMidpoint(mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
-      break;
-    case TimeStepperType::IMR4:
-      mytimestepper = new CompositionalImplMidpoint(4, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
-      break;
-    case TimeStepperType::IMR8:
-      mytimestepper = new CompositionalImplMidpoint(8, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
-      break;
-    case TimeStepperType::EE:
-      mytimestepper = new ExplEuler(mastereq, ntime, total_time, output, storeFWD);
-      break;
-    case TimeStepperType::PETSCTS:
-      printf("Using PETSc's TS solver as time stepper.\n");
-      mytimestepper = new PetscTS(mastereq, ntime, total_time, output, storeFWD);
-      break;
-    default:
-      logger.exitWithError("Unknown timestepper type\n");
-  }
 
   /* --- Initialize optimization --- */
   OptimProblem* optimctx = new OptimProblem(config, mytimestepper, comm_init, comm_optim, output, quietmode);

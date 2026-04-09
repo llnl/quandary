@@ -102,9 +102,10 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     nessential = validators::scalarOrVectorOr<size_t>(*system_table, "nessential", num_osc, nlevels);
 
-    ntime = validators::field<size_t>(*system_table, "ntime").positive().value();
-
-    dt = validators::field<double>(*system_table, "dt").positive().value();
+    // total_time is required, ntime and dt are optional (but if provided, must be consistent with total_time)
+    total_time = validators::field<double>(*system_table, "total_time").positive().value();
+    ntime = validators::field<size_t>(*system_table, "ntime").positive().valueOr(0);
+    dt = validators::field<double>(*system_table, "dt").positive().valueOr(0.0);
 
     transition_frequency = validators::scalarOrVector<double>(*system_table, "transition_frequency", num_osc);
 
@@ -785,8 +786,12 @@ void Config::printConfig(std::stringstream& log) const {
   // System parameters
   log << "nlevels = " << printVector(nlevels) << "\n";
   log << "nessential = " << printVector(nessential) << "\n";
-  log << "ntime = " << ntime << "\n";
-  log << "dt = " << dt << "\n";
+  log << "total_time = " << formatDouble(total_time) << "\n";
+  // if not using PETSCTS timestepper, also print ntime and dt
+  if (timestepper_type != TimeStepperType::PETSCTS) {
+    log << "ntime = " << ntime << "\n";
+    log << "dt = " << dt << "\n";
+  }
   log << "transition_frequency = " << printVector(transition_frequency) << "\n";
   log << "selfkerr = " << printVector(selfkerr) << "\n";
   log << "crosskerr_coupling = " << toStringCoupling(crosskerr_coupling, nlevels.size()) << "\n";
@@ -868,6 +873,26 @@ void Config::printConfig(std::stringstream& log) const {
 }
 
 void Config::finalize() {
+  // Time domain specification: total_time is required, ntime and dt are optional but must be consistent with total_time if provided. If PetscTimestepper is used, ignore N and dt and print a warning if they were provided. For other timesteppers, either ntime or dt must be provided, and the other will be computed from total_time. If both are provided, check for consistency with total_time and print a warning if they are inconsistent.
+  if (timestepper_type == TimeStepperType::PETSCTS) {
+    if (ntime > 0 || dt > 0) {
+      logger.log("# Warning: ntime and dt are ignored when using PETSCTS timestepper. Using total_time = " + std::to_string(total_time) + ".\n");
+    }
+  } else { // any timestepper other than PETSCTS
+      if (ntime > 0 && dt > 0) { // if both are provided, check consistency with total_time. 
+        double total_time_from_ntime_dt = ntime * dt;
+        if (std::abs(total_time_from_ntime_dt - total_time) > 1e-6) {
+          logger.exitWithError(" ntime * dt = " + std::to_string(total_time_from_ntime_dt) + " is inconsistent with total_time = " + std::to_string(total_time) + ". Provide consistent values for ntime and dt, or provide only one of them and it will be computed from total_time."); 
+      }
+    } else if (ntime > 0) { // if only ntime is provided, compute dt from total_time
+      dt = total_time / ntime;
+    } else if (dt > 0) { // if only dt is provided, compute ntime from total_time
+      ntime = static_cast<size_t>(std::round(total_time / dt));
+    } else {
+      logger.exitWithError("Either ntime or dt must be provided when using a non-PETSCTS timestepper.");
+    }
+  }
+
   // Hamiltonian file + matrix-free compatibility check
   if ((hamiltonian_file_Hsys.has_value() || hamiltonian_file_Hc.has_value()) && usematfree) {
     logger.log(
@@ -1062,7 +1087,7 @@ size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_se
       }
       break;
   }
-  logger.log("Number of initial conditions: " + std::to_string(n_initial_conditions) + "\n");
+  // logger.log("Number of initial conditions: " + std::to_string(n_initial_conditions) + "\n");
   return n_initial_conditions;
 }
 
