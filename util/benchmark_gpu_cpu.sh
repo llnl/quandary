@@ -12,6 +12,7 @@ Usage:
 Options:
   --variants {cpu|gpu|both}   Which to test (default: both)
   --nprocs N                  MPI ranks (default: 4)
+  --gpus-per-node N           GPU run: allocate N GPUs on 1 node and run NPROCS tasks (allows oversubscription)
   --toml PATH                 Config file (default: tests/performance/configs/nlevels_32_32_32_32.toml)
   --output-dir PATH           Output directory (default: benchmark_results_<timestamp>)
   --quiet                     Pass Quandary quiet flag (--quiet)
@@ -45,6 +46,7 @@ die() {
 # Defaults (tuolumne-only)
 VARIANTS="both"
 NPROCS=4
+GPUS_PER_NODE=""
 TOML="tests/performance/configs/nlevels_32_32_32_32.toml"
 OUTPUT_DIR=""
 BUILD_ONLY=0
@@ -64,6 +66,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --variants) VARIANTS="$2"; shift 2;;
     --nprocs) NPROCS="$2"; shift 2;;
+    --gpus-per-node) GPUS_PER_NODE="$2"; shift 2;;
     --toml) TOML="$2"; shift 2;;
     --output-dir) OUTPUT_DIR="$2"; shift 2;;
     --quiet) QUIET=1; shift;;
@@ -190,9 +193,16 @@ for variant in "${RUN_VARIANTS[@]}"; do
   if [ "$variant" = "cpu" ]; then
     PETSC_OPTS="-log_view -log_summary"
     LAUNCHER="flux run"
+    LAUNCHER_HAS_TASKS=0
   else  # gpu
     # MI300A APU: propagate XNACK + MPICH GPU support to all ranks.
-    LAUNCHER="flux run --env=HSA_XNACK=1 --env=MPICH_GPU_SUPPORT_ENABLED=1 --gpus-per-task=1"
+    if [ -n "$GPUS_PER_NODE" ]; then
+      LAUNCHER="flux run --env=HSA_XNACK=1 --env=MPICH_GPU_SUPPORT_ENABLED=1 -N 1 --gpus-per-node=${GPUS_PER_NODE} --tasks-per-node=${NPROCS}"
+      LAUNCHER_HAS_TASKS=1
+    else
+      LAUNCHER="flux run --env=HSA_XNACK=1 --env=MPICH_GPU_SUPPORT_ENABLED=1 --gpus-per-task=1"
+      LAUNCHER_HAS_TASKS=0
+    fi
     PETSC_OPTS="-vec_type kokkos -mat_type aijkokkos -log_view -log_summary"
   fi
 
@@ -206,15 +216,26 @@ for variant in "${RUN_VARIANTS[@]}"; do
   rm "$RUN_DIR/config.toml.bak"
 
   # Run
-  echo "Command: $LAUNCHER -n $NPROCS $QUANDARY_BIN ${QUANDARY_ARGS[*]:-} $RUN_DIR/config.toml --petsc-options \"${PETSC_OPTS}\""
+  if [ "$LAUNCHER_HAS_TASKS" -eq 1 ]; then
+    echo "Command: $LAUNCHER $QUANDARY_BIN ${QUANDARY_ARGS[*]:-} $RUN_DIR/config.toml --petsc-options \"${PETSC_OPTS}\""
+  else
+    echo "Command: $LAUNCHER -n $NPROCS $QUANDARY_BIN ${QUANDARY_ARGS[*]:-} $RUN_DIR/config.toml --petsc-options \"${PETSC_OPTS}\""
+  fi
   echo ""
 
   # Build command with proper quoting - use array to avoid eval quoting issues
   LAUNCHER_ARRAY=($LAUNCHER)
-  /usr/bin/time -v "${LAUNCHER_ARRAY[@]}" -n "$NPROCS" \
+  if [ "$LAUNCHER_HAS_TASKS" -eq 1 ]; then
+    /usr/bin/time -v "${LAUNCHER_ARRAY[@]}" \
+      "$QUANDARY_BIN" "${QUANDARY_ARGS[@]}" "$RUN_DIR/config.toml" \
+      --petsc-options "$PETSC_OPTS" \
+      > "${OUTPUT_DIR}/${variant}.log" 2>&1
+  else
+    /usr/bin/time -v "${LAUNCHER_ARRAY[@]}" -n "$NPROCS" \
     "$QUANDARY_BIN" "${QUANDARY_ARGS[@]}" "$RUN_DIR/config.toml" \
     --petsc-options "$PETSC_OPTS" \
     > "${OUTPUT_DIR}/${variant}.log" 2>&1
+  fi
   EXIT_CODE=$?
 
   if [ $EXIT_CODE -eq 0 ]; then
