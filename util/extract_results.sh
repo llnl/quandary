@@ -9,6 +9,23 @@ fi
 
 BENCH_DIR="$1"
 
+is_number() {
+  # Accepts integers, decimals, and scientific notation (e.g. 1.23e-04).
+  [[ "${1:-}" =~ ^[+-]?[0-9]+([.][0-9]+)?([eE][+-]?[0-9]+)?$ ]] || [[ "${1:-}" =~ ^[+-]?[0-9]*[.][0-9]+([eE][+-]?[0-9]+)?$ ]]
+}
+
+calc_speedup() {
+  local cpu="$1"
+  local gpu="$2"
+
+  if ! is_number "$cpu" || ! is_number "$gpu"; then
+    echo "n/a"
+    return
+  fi
+
+  awk -v cpu="$cpu" -v gpu="$gpu" 'BEGIN { if (gpu == 0) { print "n/a" } else { printf "%.2f", cpu / gpu } }'
+}
+
 extract_from_run() {
   local bench_dir="$1"
   local variant="$2"  # cpu or gpu
@@ -79,13 +96,12 @@ for nlevels in 4 16 32; do
   gpu_mm=$(echo "$gpu_data" | cut -d, -f3)
   gpu_vs=$(echo "$gpu_data" | cut -d, -f4)
 
-  if [ "$cpu_qt" != "n/a" ] && [ "$gpu_qt" != "n/a" ]; then
-    speedup=$(echo "scale=2; $cpu_qt / $gpu_qt" | bc)
-  else
-    speedup="n/a"
+  speedup=$(calc_speedup "$cpu_qt" "$gpu_qt")
+  if [ "$speedup" != "n/a" ]; then
+    speedup="${speedup}x"
   fi
 
-  echo "${nlevels}^4,${dofs},${cpu_qt},${cpu_pt},${cpu_mm},${cpu_vs},${gpu_qt},${gpu_pt},${gpu_mm},${gpu_vs},${speedup}x"
+  echo "${nlevels}^4,${dofs},${cpu_qt},${cpu_pt},${cpu_mm},${cpu_vs},${gpu_qt},${gpu_pt},${gpu_mm},${gpu_vs},${speedup}"
 done
 
 echo ""
