@@ -15,6 +15,7 @@ Options:
   --nprocs N                  MPI ranks (default: 8 on tioga, 4 on tuolumne)
   --toml PATH                 Config file (default: tests/performance/configs/nlevels_32_32_32_32.toml)
   --output-dir PATH           Output directory (default: benchmark_results_<timestamp>)
+  --quiet                     Pass Quandary quiet flag (--quiet)
   --petsc-version VER         PETSc version (default: 3.24.4)
   --rocm-version VER          ROCm/HIP version (default: 6.4.3)
   --kokkos-version VER        Kokkos version (default: 4.6.02)
@@ -65,6 +66,7 @@ LLVM_AMDGPU_VERSION="6.4.3"
 BUILD_ONLY=0
 NO_BUILD=0
 REBUILD=0
+QUIET=0
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -74,6 +76,7 @@ while [[ $# -gt 0 ]]; do
     --nprocs) NPROCS="$2"; NPROCS_SET=1; shift 2;;
     --toml) TOML="$2"; shift 2;;
     --output-dir) OUTPUT_DIR="$2"; shift 2;;
+    --quiet) QUIET=1; shift;;
     --petsc-version) PETSC_VERSION="$2"; shift 2;;
     --rocm-version) ROCM_VERSION="$2"; shift 2;;
     --kokkos-version) KOKKOS_VERSION="$2"; shift 2;;
@@ -238,6 +241,12 @@ QUANDARY_BIN=$(spack find --format '{prefix}' quandary)/bin/quandary
 echo "Binary: $QUANDARY_BIN"
 echo ""
 
+# Optional Quandary args.
+QUANDARY_ARGS=()
+if [ "$QUIET" -eq 1 ]; then
+  QUANDARY_ARGS+=(--quiet)
+fi
+
 # Run each variant
 for variant in "${RUN_VARIANTS[@]}"; do
   echo "========================================"
@@ -280,13 +289,13 @@ for variant in "${RUN_VARIANTS[@]}"; do
 
   # Run
   echo "Launcher: $LAUNCHER -n $NPROCS"
-  echo "PETSc options: $PETSC_OPTS"
+  echo "Command: $LAUNCHER -n $NPROCS $QUANDARY_BIN ${QUANDARY_ARGS[*]:-} $RUN_DIR/config.toml --petsc-options \"${PETSC_OPTS}\""
   echo ""
 
   # Build command with proper quoting - use array to avoid eval quoting issues
   LAUNCHER_ARRAY=($LAUNCHER)
   /usr/bin/time -v "${LAUNCHER_ARRAY[@]}" -n "$NPROCS" \
-    "$QUANDARY_BIN" "$RUN_DIR/config.toml" \
+    "$QUANDARY_BIN" "${QUANDARY_ARGS[@]}" "$RUN_DIR/config.toml" \
     --petsc-options "$PETSC_OPTS" \
     > "${OUTPUT_DIR}/${variant}.log" 2>&1
   EXIT_CODE=$?
