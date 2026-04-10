@@ -835,7 +835,7 @@ void CompositionalImplMidpoint::evolveBWD(const double tstop, const double tstar
 
 PetscTS::PetscTS(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper(mastereq_, ntime_, total_time_, output_, storeFWD_) {
 
-  TSCreate(PETSC_COMM_SELF, &ts);
+  TSCreate(PETSC_COMM_WORLD, &ts);
   TSSetProblemType(ts, TS_LINEAR);
 
   /* Explicit RK */
@@ -843,8 +843,21 @@ PetscTS::PetscTS(MasterEq* mastereq_, int ntime_, double total_time_, Output* ou
   TSRKSetType(ts, TSRK5DP);
   TSSetFromOptions(ts);
 
+  // Pass the RHS function and Jacobian to Pestsc
   TSSetRHSFunction(ts, NULL, TSComputeRHSFunctionLinear, mastereq->getRHSctx());
   TSSetRHSJacobian(ts, mastereq->getRHS(), mastereq->getRHS(), RHSMatrixUpdate, mastereq->getRHSctx());
+
+  // Prepare adjoint solver
+  TSSetSaveTrajectory(ts);
+
+  PetscInt nstate_global, nparam_global;
+  VecGetSize(x, &nstate_global);
+  VecGetSize(redgrad, &nparam_global);
+  MatCreateShell(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, nstate_global, nparam_global, this, &dRHSdp);
+  MatShellSetOperation(dRHSdp, MATOP_MULT_TRANSPOSE, (void(*)(void)) computedRHSdp);
+  dRHSdp_time = 0.0;
+
+  TSSetRHSJacobianP(ts, dRHSdp, dRHSdpMatrixUpdate, this);
 
   // Set time domain and adaptivity
   TSSetTime(ts, 0.0);
@@ -861,20 +874,29 @@ PetscTS::PetscTS(MasterEq* mastereq_, int ntime_, double total_time_, Output* ou
   TSMonitorSet(ts, PetscTS::monitorTrajectory, this, NULL);
 
   // Quadrature for integral objective functions. Only leakage, weighted cost, and energy are supported for now. NOT DPDM. TODO.
-  TSCreateQuadratureTS(ts, PETSC_TRUE, &ts_quad);
-  TSSetRHSFunction(ts_quad, NULL, IntegralCosts, this);
-
-  // Create vector to hold integral terms
   int nterms = 3;
-  VecCreate(PETSC_COMM_SELF, &q);
+  VecCreate(PETSC_COMM_WORLD, &q);
   VecSetSizes(q, PETSC_DECIDE, nterms);
   VecSetFromOptions(q);
+  // TSCreateQuadratureTS(ts, PETSC_TRUE, &ts_quad);
+  // TSSetRHSFunction(ts_quad, NULL, IntegralCosts, this);
+
+  // Internal TS gradient uses a communicator-compatible layout.
+  VecCreate(PETSC_COMM_WORLD, &redgrad_ts);
+  VecSetSizes(redgrad_ts, PETSC_DECIDE, nparam_global);
+  VecSetFromOptions(redgrad_ts);
+  VecZeroEntries(redgrad_ts);
+
+  // // Gradient of quadrature register callbacks for r, dr/dy, dr/dp
+  // TSSetCostIntegrand(ts, 1, q, IntegralCosts, DRDYFunction,DRDPFunction,ctx);
 
 }
 
 PetscTS::~PetscTS() {
   TSDestroy(&ts);
+  MatDestroy(&dRHSdp);
   VecDestroy(&q);
+  VecDestroy(&redgrad_ts);
 }
 
 Vec PetscTS::solveODE(int initid, Vec rho_t0){
@@ -889,9 +911,9 @@ Vec PetscTS::solveODE(int initid, Vec rho_t0){
   TSSetStepNumber(ts, 0);
   TSSetTimeStep(ts, 0.1);  // This is Petsc's default initial guess. Will be adpted during TSSolve().
 
-  /* Reset integral terms */
-  VecSet(q, 0.0);
-  TSSetSolution(ts_quad, q);
+  // /* Reset integral terms */
+  // VecSet(q, 0.0);
+  // TSSetSolution(ts_quad, q);
   
   /* Set initial condition for timestepping */
   VecCopy(rho_t0, x);
@@ -918,6 +940,24 @@ Vec PetscTS::solveODE(int initid, Vec rho_t0){
   return x;
 }
 
+void PetscTS::solveAdjointODE(Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) {
+
+  /* Build terminal adjoint condition lambda(T) and terminal parameter gradient mu(T). */
+  VecCopy(finalstate, xprimal);
+  TSSetSolution(ts, xprimal);
+
+  VecCopy(rho_t0_bar, xadj);
+  VecZeroEntries(redgrad_ts);
+  TSSetCostGradients(ts, 1, &xadj, &redgrad_ts);
+
+  // backward solve
+  TSAdjointSolve(ts);
+
+  // Copy gradient to timestepper:
+  VecCopy(redgrad_ts, redgrad);
+
+}
+
 
 PetscErrorCode PetscTS::RHSMatrixUpdate(TS, PetscReal t, Vec, Mat, Mat, void *ptr){
   MatShellCtx *ctx = (MatShellCtx *)ptr;
@@ -926,6 +966,28 @@ PetscErrorCode PetscTS::RHSMatrixUpdate(TS, PetscReal t, Vec, Mat, Mat, void *pt
   }
   return 0;
 };
+
+
+PetscErrorCode PetscTS::dRHSdpMatrixUpdate(TS, PetscReal t, Vec xstate, Mat, void *ptr){
+
+  PetscTS *self = static_cast<PetscTS *>(ptr);
+  self->dRHSdp_time = t;
+  VecCopy(xstate, self->xprimal);
+
+  return 0;
+}
+
+
+PetscErrorCode PetscTS::computedRHSdp(Mat A, Vec xbar, Vec grad){
+  PetscTS *self;
+  MatShellGetContext(A, (void**)&self);
+
+  VecZeroEntries(grad); // Need to reset here because compute_dRHS_dParams adds to grad. 
+  self->mastereq->compute_dRHS_dParams(self->dRHSdp_time, self->xprimal, xbar, 1.0, grad);
+
+  return 0;
+}
+
 
 
 PetscErrorCode PetscTS::IntegralCosts(TS, PetscReal t, Vec x, Vec F, void *ctx){

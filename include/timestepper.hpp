@@ -127,7 +127,7 @@ class TimeStepper{
      * @param Jbar_dpdm Adjoint of second-order derivative variation
      * @param Jbar_energy Adjoint of energy integral term
      */
-    void solveAdjointODE(Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy);
+    virtual void solveAdjointODE(Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy);
 
     /**
      * @brief Evaluates leakage into guard levels 
@@ -413,6 +413,10 @@ class PetscTS : public TimeStepper {
     TS ts;      ///< PETSc's time stepper context to solve the ODE
     TS ts_quad; ///< Quadrature TS for computing integral objective terms. 
     Vec q;     ///< Auxiliary vector for evaluating integral objective terms during time-stepping.  
+    Vec redgrad_ts; ///< TS-internal gradient vector with PETSc communicator-compatible layout.
+
+    Mat dRHSdp; ///< MatShell for applying derivative of the RHS to control parameters.
+    PetscReal dRHSdp_time; ///< Cached time used by the RHSJacobianP MatShell callbacks.
 
   public:
     PetscTS(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_);
@@ -421,8 +425,17 @@ class PetscTS : public TimeStepper {
     // Use Petsc's TSSolve function to solve the ODE
     Vec solveODE(int initid, Vec rho_t0) override;
 
+    // Use Petsc's TSAdjointSolve for backpropagation
+    void solveAdjointODE(Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) override;
+
     // Wrapper to assemble RHS if the time step t has changed. 
     static PetscErrorCode RHSMatrixUpdate(TS ts, PetscReal t, Vec, Mat, Mat, void *ptr);
+
+    // Cache primal state/time for Jacobian w.r.t. parameters.
+    static PetscErrorCode dRHSdpMatrixUpdate(TS ts, PetscReal t, Vec x, Mat A, void *ptr);
+
+    // y = (dRHS/dp)^T x, implemented via MasterEq::compute_dRHS_dParams.
+    static PetscErrorCode computedRHSdp(Mat A, Vec x, Vec y);
 
     // Callback function during TSSolve to evaluate trajectory data at each accepted time step 
     static PetscErrorCode monitorTrajectory(TS ts, PetscInt step, PetscReal time, Vec state, void *ctx);
@@ -430,7 +443,7 @@ class PetscTS : public TimeStepper {
     // Callback for integral cost functions
     static PetscErrorCode IntegralCosts(TS, PetscReal t, Vec x, Vec F, void *ctx);
 
-    // NOT USED. Instead the below solveODE overwrites the default time-stepping by calling TSSolve. 
+    // THESE ARE NOT USED. Instead the below solveODE overwrites the default time-stepping by calling TSSolve. 
     void evolveFWD(const double, const double, Vec) override {};
     void evolveBWD(const double, const double, const Vec, Vec, Vec, bool) override {};
 };
