@@ -1,0 +1,45 @@
+[system]
+#nlevels = [31, 10]
+nlevels = [31, 50]
+
+#ntime = 120771
+ntime = 1207
+
+dt = 8.280159878619155e-05
+transition_frequency = [0.0, 7.499999999999999]
+selfkerr = [0.0, 0.0]
+crosskerr_coupling = 0.0
+dipole_coupling = 0.12
+rotation_frequency = [0.0, 0.0]
+decoherence = { type = "decay", decay_time = [0.0, 20.019489697093753] }
+transmon_resonator = true
+charge_offset = 0.0
+Ec = 0.22
+Ej = 24.200000000000003
+#initial_condition = { type = "file", filename = "initialstate.dat" }
+initial_condition = { type = "performance" }
+
+[control]
+parameterization = { type = "spline", num = 10}
+carrier_frequency = [
+  { subsystem = 0, value = [0.0] },
+  { subsystem = 1, value = [0.0] },
+]
+initialization = { type = "constant", amplitude = 0.01 }
+amplitude_bound = 1.0e12
+zero_boundary_condition = false
+
+[optimization]
+target = { type = "none" }
+
+[output]
+directory = "./data"
+#observables = ["population", "expectedEnergy"]
+timestep_stride = 10
+optimization_stride = 1
+
+[solver]
+runtype = "simulation"
+usematfree = false
+linearsolver = { type = "gmres", maxiter = 20 }
+timestepper = "IMR"
