@@ -835,7 +835,8 @@ void CompositionalImplMidpoint::evolveBWD(const double tstop, const double tstar
 
 PetscTS::PetscTS(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper(mastereq_, ntime_, total_time_, output_, storeFWD_) {
 
-  TSCreate(PETSC_COMM_WORLD, &ts);
+
+  TSCreate(PETSC_COMM_SELF, &ts);
   TSSetProblemType(ts, TS_LINEAR);
 
   /* Explicit RK */
@@ -848,16 +849,14 @@ PetscTS::PetscTS(MasterEq* mastereq_, int ntime_, double total_time_, Output* ou
   TSSetRHSJacobian(ts, mastereq->getRHS(), mastereq->getRHS(), RHSMatrixUpdate, mastereq->getRHSctx());
 
   // Prepare adjoint solver
-  TSSetSaveTrajectory(ts);
-
   PetscInt nstate_global, nparam_global;
   VecGetSize(x, &nstate_global);
   VecGetSize(redgrad, &nparam_global);
-  MatCreateShell(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, nstate_global, nparam_global, this, &dRHSdp);
+  MatCreateShell(PETSC_COMM_WORLD, PETSC_DECIDE, nparam_global, nstate_global, nparam_global, this, &dRHSdp);
   MatShellSetOperation(dRHSdp, MATOP_MULT_TRANSPOSE, (void(*)(void)) computedRHSdp);
   dRHSdp_time = 0.0;
-
   TSSetRHSJacobianP(ts, dRHSdp, dRHSdpMatrixUpdate, this);
+  TSSetSaveTrajectory(ts);
 
   // Set time domain and adaptivity
   TSSetTime(ts, 0.0);
@@ -875,14 +874,14 @@ PetscTS::PetscTS(MasterEq* mastereq_, int ntime_, double total_time_, Output* ou
 
   // Quadrature for integral objective functions. Only leakage, weighted cost, and energy are supported for now. NOT DPDM. TODO.
   int nterms = 3;
-  VecCreate(PETSC_COMM_WORLD, &q);
+  VecCreate(PETSC_COMM_SELF, &q);
   VecSetSizes(q, PETSC_DECIDE, nterms);
   VecSetFromOptions(q);
   // TSCreateQuadratureTS(ts, PETSC_TRUE, &ts_quad);
   // TSSetRHSFunction(ts_quad, NULL, IntegralCosts, this);
 
   // Internal TS gradient uses a communicator-compatible layout.
-  VecCreate(PETSC_COMM_WORLD, &redgrad_ts);
+  VecCreate(PETSC_COMM_SELF, &redgrad_ts);
   VecSetSizes(redgrad_ts, PETSC_DECIDE, nparam_global);
   VecSetFromOptions(redgrad_ts);
   VecZeroEntries(redgrad_ts);
