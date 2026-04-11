@@ -13,7 +13,7 @@ TimeStepper::TimeStepper() {
   writeTrajectoryDataFiles = false;
 }
 
-TimeStepper::TimeStepper(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper() {
+TimeStepper::TimeStepper(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper() {
   mastereq = mastereq_;
   ntime = ntime_;
   total_time = total_time_;
@@ -92,7 +92,7 @@ Vec TimeStepper::getState(size_t tindex){
   return store_states[tindex];
 }
 
-Vec TimeStepper::solveODE(int initid, Vec rho_t0){
+Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
 
   /* Prepare storage for trajectory output data */
   if (writeTrajectoryDataFiles) {
@@ -186,7 +186,7 @@ Vec TimeStepper::solveODE(int initid, Vec rho_t0){
 }
 
 
-void TimeStepper::solveAdjointODE(Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) {
+void TimeStepper::solveAdjointODE(int iinit_local, Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) {
 
   /* Reset gradient */
   VecZeroEntries(redgrad);
@@ -489,7 +489,7 @@ void TimeStepper::evalEnergy_diff(double time, double Jbar, Vec redgrad){
 
 void TimeStepper::evolveBWD(const double /*tstart*/, const double /*tstop*/, const Vec /*x_stop*/, Vec /*x_adj*/, Vec /*grad*/, bool /*compute_gradient*/){}
 
-ExplEuler::ExplEuler(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper(mastereq_, ntime_, total_time_, output_, storeFWD_) {
+ExplEuler::ExplEuler(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper(ninit_local, mastereq_, ntime_, total_time_, output_, storeFWD_) {
   MatCreateVecs(mastereq->getRHS(), &stage, NULL);
   VecZeroEntries(stage);
 }
@@ -527,7 +527,7 @@ void ExplEuler::evolveBWD(const double tstop,const  double tstart,const  Vec x, 
 
 }
 
-ImplMidpoint::ImplMidpoint(MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_) : TimeStepper(mastereq_, ntime_, total_time_, output_, storeFWD_) {
+ImplMidpoint::ImplMidpoint(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_) : TimeStepper(ninit_local, mastereq_, ntime_, total_time_, output_, storeFWD_) {
 
   /* Create and reset the intermediate vectors */
   MatCreateVecs(mastereq->getRHS(), &stage, NULL);
@@ -736,7 +736,7 @@ int ImplMidpoint::NeumannSolve(Mat A, Vec b, Vec y, double alpha, bool transpose
 
 
 
-CompositionalImplMidpoint::CompositionalImplMidpoint(int order_, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_): ImplMidpoint(mastereq_, ntime_, total_time_, linsolve_type_, linsolve_maxiter_, output_, storeFWD_) {
+CompositionalImplMidpoint::CompositionalImplMidpoint(size_t ninit_local, int order_, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_): ImplMidpoint(ninit_local, mastereq_, ntime_, total_time_, linsolve_type_, linsolve_maxiter_, output_, storeFWD_) {
 
   order = order_;
 
@@ -833,54 +833,88 @@ void CompositionalImplMidpoint::evolveBWD(const double tstop, const double tstar
   assert(fabs(tcurr - tstart) < 1e-12);
 }
 
-PetscTS::PetscTS(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper(mastereq_, ntime_, total_time_, output_, storeFWD_) {
+PetscTS::PetscTS(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper(ninit_local, mastereq_, ntime_, total_time_, output_, storeFWD_) {
 
+  ninit_pool = ninit_local; 
+  ts_pool.resize(ninit_pool, nullptr);
+  q_pool.resize(ninit_pool, nullptr);
 
-  TSCreate(PETSC_COMM_SELF, &ts);
-  TSSetProblemType(ts, TS_LINEAR);
-
-  /* Explicit RK */
-  TSSetType(ts, TSRK);
-  TSRKSetType(ts, TSRK5DP);
-  TSSetFromOptions(ts);
-
-  // Pass the RHS function and Jacobian to Pestsc
-  TSSetRHSFunction(ts, NULL, TSComputeRHSFunctionLinear, mastereq->getRHSctx());
-  TSSetRHSJacobian(ts, mastereq->getRHS(), mastereq->getRHS(), RHSMatrixUpdate, mastereq->getRHSctx());
-
-  // Prepare adjoint solver
+  // Prepare a shared dRHSdp MatShell used by all TS objects.
   PetscInt nstate_global, nparam_global;
   VecGetSize(x, &nstate_global);
   VecGetSize(redgrad, &nparam_global);
   MatCreateShell(PETSC_COMM_WORLD, PETSC_DECIDE, nparam_global, nstate_global, nparam_global, this, &dRHSdp);
   MatShellSetOperation(dRHSdp, MATOP_MULT_TRANSPOSE, (void(*)(void)) computedRHSdp);
+
+  const PetscInt ncost_terms = 3;
+  MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ncost_terms, nstate_global, NULL, &dCostdY);
+  MatSetUp(dCostdY);
+  MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ncost_terms, nparam_global, NULL, &dCostdP);
+  MatSetUp(dCostdP);
+
   dRHSdp_time = 0.0;
-  TSSetRHSJacobianP(ts, dRHSdp, dRHSdpMatrixUpdate, this);
-  TSSetSaveTrajectory(ts);
+  adj_scale_leakage = 0.0;
+  adj_scale_weightedcost = 0.0;
+  adj_scale_energy = 0.0;
 
-  // Set time domain and adaptivity
-  TSSetTime(ts, 0.0);
-  TSSetMaxTime(ts, total_time);
-  TSSetExactFinalTime(ts, TS_EXACTFINALTIME_MATCHSTEP);
-  TSAdapt adapt;
-  TSGetAdapt(ts, &adapt);
-  TSAdaptSetType(adapt, TSADAPTBASIC);
-  double atol = 1e-7;
-  double rtol = 1e-7;
-  TSSetTolerances(ts, atol, NULL, rtol, NULL);
+  // Helper function to create TS objects
+  auto configureTS = [&](TS tsi) {
+    TSSetProblemType(tsi, TS_LINEAR);
 
-  // Register monitor function to evaluate observables at each accepted time step. 
-  TSMonitorSet(ts, PetscTS::monitorTrajectory, this, NULL);
+    /* Explicit RK */
+    TSSetType(tsi, TSRK);
+    TSRKSetType(tsi, TSRK5DP);
 
-  // Quadrature for integral objective functions. Only leakage, weighted cost, and energy are supported for now. NOT DPDM. TODO.
-  int nterms = 3;
-  VecCreate(PETSC_COMM_SELF, &q);
-  VecSetSizes(q, PETSC_DECIDE, nterms);
-  VecSetFromOptions(q);
-  // TSCreateQuadratureTS(ts, PETSC_TRUE, &ts_quad);
-  // TSSetRHSFunction(ts_quad, NULL, IntegralCosts, this);
+    // Pass the RHS function and Jacobian to Petsc.
+    TSSetRHSFunction(tsi, NULL, TSComputeRHSFunctionLinear, mastereq->getRHSctx());
+    TSSetRHSJacobian(tsi, mastereq->getRHS(), mastereq->getRHS(), RHSMatrixUpdate, mastereq->getRHSctx());
+    TSSetRHSJacobianP(tsi, dRHSdp, dRHSdpMatrixUpdate, this);
 
-  // Internal TS gradient uses a communicator-compatible layout.
+    // Set time domain and adaptivity.
+    TSSetTime(tsi, 0.0);
+    TSSetMaxTime(tsi, total_time);
+    TSSetExactFinalTime(tsi, TS_EXACTFINALTIME_MATCHSTEP);
+    TSAdapt adapt;
+    TSGetAdapt(tsi, &adapt);
+    TSAdaptSetType(adapt, TSADAPTBASIC);
+    // TSAdaptSetType(adapt, TSADAPTNONE);
+    // TSSetTimeStep(tsi, total_time / ntime);
+    double atol = 1e-7;
+    double rtol = 1e-7;
+    TSSetTolerances(tsi, atol, NULL, rtol, NULL);
+
+    TSMonitorSet(tsi, PetscTS::monitorTrajectory, this, NULL);
+    TSSetFromOptions(tsi);
+
+    // Enable in-memory trajectory storage for adjoint solves.
+    TSSetSaveTrajectory(tsi);
+    TSTrajectory tj;
+    TSGetTrajectory(tsi, &tj);
+    TSTrajectorySetType(tj, tsi, TSTRAJECTORYMEMORY);
+  };
+
+  // Create a TS object for each initial condition. 
+  for (int i = 0; i < ninit_pool; i++) {
+    TSCreate(PETSC_COMM_SELF, &ts_pool[i]);
+    configureTS(ts_pool[i]);
+
+    // Attach quadrature integrator and a integral state per TS instance.
+    TS ts_quad_i;
+    TSCreateQuadratureTS(ts_pool[i], PETSC_TRUE, &ts_quad_i);
+    TSSetRHSFunction(ts_quad_i, NULL, IntegralCosts, this);
+    TSSetRHSJacobian(ts_quad_i, dCostdY, dCostdY, dCostdYMatrixUpdate, this);
+    TSSetRHSJacobianP(ts_quad_i, dCostdP, dCostdPMatrixUpdate, this);
+    VecCreate(PETSC_COMM_SELF, &q_pool[i]);
+    VecSetSizes(q_pool[i], PETSC_DECIDE, 3);
+    VecSetFromOptions(q_pool[i]);
+    VecSet(q_pool[i], 0.0);
+    TSSetSolution(ts_quad_i, q_pool[i]);
+  }
+
+  // Keep existing member as alias to first TS instance.
+  ts = ts_pool[0];
+
+  // Create an internal TS gradient 
   VecCreate(PETSC_COMM_SELF, &redgrad_ts);
   VecSetSizes(redgrad_ts, PETSC_DECIDE, nparam_global);
   VecSetFromOptions(redgrad_ts);
@@ -892,13 +926,23 @@ PetscTS::PetscTS(MasterEq* mastereq_, int ntime_, double total_time_, Output* ou
 }
 
 PetscTS::~PetscTS() {
-  TSDestroy(&ts);
+  for (auto &qi : q_pool) {
+    if (qi) VecDestroy(&qi);
+  }
+  for (auto &tsi : ts_pool) {
+    if (tsi) TSDestroy(&tsi);
+  }
   MatDestroy(&dRHSdp);
-  VecDestroy(&q);
+  MatDestroy(&dCostdY);
+  MatDestroy(&dCostdP);
   VecDestroy(&redgrad_ts);
 }
 
-Vec PetscTS::solveODE(int initid, Vec rho_t0){
+Vec PetscTS::solveODE(int initid, int iinit_local, Vec rho_t0){
+  // Grab the timestepper for this initial condit
+  const int iinit = iinit_local;;
+  TS ts_run = getTSForInit(iinit_local);
+  Vec q_run = q_pool[iinit];
 
   /* Prepare storage for trajectory output data */
   if (writeTrajectoryDataFiles) {
@@ -906,32 +950,34 @@ Vec PetscTS::solveODE(int initid, Vec rho_t0){
   }
 
   /* Reset the time stepper */
-  TSSetTime(ts, 0.0);
-  TSSetStepNumber(ts, 0);
-  TSSetTimeStep(ts, 0.1);  // This is Petsc's default initial guess. Will be adpted during TSSolve().
+  TSSetTime(ts_run, 0.0);
+  TSSetStepNumber(ts_run, 0);
+  TSSetTimeStep(ts_run, 0.1);  // This is Petsc's default initial guess. Will be adpted during TSSolve().
 
-  // /* Reset integral terms */
-  // VecSet(q, 0.0);
-  // TSSetSolution(ts_quad, q);
+  /* Reset integral terms for this initial condition. */
+  VecSet(q_run, 0.0);
   
   /* Set initial condition for timestepping */
   VecCopy(rho_t0, x);
-  TSSetSolution(ts, x);
+  TSSetSolution(ts_run, x);
+
+  // Reset/setup trajectory for this forward solve after solution is known.
+  TSResetTrajectory(ts_run);
 
   /* Solve the ODE */
-  TSSolve(ts, x);
+  TSSolve(ts_run, x);
 
   /* Store integral cost terms */
   const PetscScalar *terms;
-  VecGetArrayRead(q, &terms);
+  VecGetArrayRead(q_run, &terms);
   leakage_integral = terms[0] / total_time;
   weightedcost_integral = terms[1] / total_time;
   energy_integral = terms[2] / total_time;
-  VecRestoreArrayRead(q, &terms);
+  VecRestoreArrayRead(q_run, &terms);
 
   /* Write trajectory data files. Data was collected in monitorTrajectory() during TSSolve. */
   PetscInt nsteps;
-  TSGetStepNumber(ts, &nsteps);
+  TSGetStepNumber(ts_run, &nsteps);
   if (writeTrajectoryDataFiles) {
     output->writeTrajectoryData();
   }
@@ -939,18 +985,25 @@ Vec PetscTS::solveODE(int initid, Vec rho_t0){
   return x;
 }
 
-void PetscTS::solveAdjointODE(Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) {
+void PetscTS::solveAdjointODE(int iinit_local, Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) {
+  TS ts_run = getTSForInit(iinit_local);
+  (void)Jbar_dpdm;
+
+  // Scaling.
+  adj_scale_leakage = Jbar_leakage / total_time;
+  adj_scale_weightedcost = Jbar_weightedcost / total_time;
+  adj_scale_energy = Jbar_energy / total_time;
 
   /* Build terminal adjoint condition lambda(T) and terminal parameter gradient mu(T). */
   VecCopy(finalstate, xprimal);
-  TSSetSolution(ts, xprimal);
+  TSSetSolution(ts_run, xprimal);
 
   VecCopy(rho_t0_bar, xadj);
   VecZeroEntries(redgrad_ts);
-  TSSetCostGradients(ts, 1, &xadj, &redgrad_ts);
+  TSSetCostGradients(ts_run, 1, &xadj, &redgrad_ts);
 
   // backward solve
-  TSAdjointSolve(ts);
+  TSAdjointSolve(ts_run);
 
   // Copy gradient to timestepper:
   VecCopy(redgrad_ts, redgrad);
@@ -987,12 +1040,88 @@ PetscErrorCode PetscTS::computedRHSdp(Mat A, Vec xbar, Vec grad){
   return 0;
 }
 
+PetscErrorCode PetscTS::dCostdYMatrixUpdate(TS, PetscReal t, Vec xstate, Mat, Mat, void *ptr){
+  PetscTS *self = static_cast<PetscTS *>(ptr);
+  self->dRHSdp_time = t;
+  VecCopy(xstate, self->xprimal);
+
+  Mat dRdy = self->dCostdY;
+  MatZeroEntries(dRdy);
+
+  Vec row;
+  VecDuplicate(self->xprimal, &row);
+
+  PetscInt ilow, iupp;
+  VecGetOwnershipRange(row, &ilow, &iupp);
+  const PetscScalar *vals = NULL;
+
+  if (self->eval_leakage) {
+    VecZeroEntries(row);
+    self->evalLeakage_diff(self->xprimal, row, self->adj_scale_leakage);
+    VecGetArrayRead(row, &vals);
+    for (PetscInt j = ilow; j < iupp; ++j) {
+      MatSetValue(dRdy, 0, j, vals[j - ilow], INSERT_VALUES);
+    }
+    VecRestoreArrayRead(row, &vals);
+  }
+
+  if (self->eval_weightedcost) {
+    VecZeroEntries(row);
+    self->evalWeightedCost_diff(self->dRHSdp_time, self->xprimal, row, self->adj_scale_weightedcost);
+    VecGetArrayRead(row, &vals);
+    for (PetscInt j = ilow; j < iupp; ++j) {
+      MatSetValue(dRdy, 1, j, vals[j - ilow], INSERT_VALUES);
+    }
+    VecRestoreArrayRead(row, &vals);
+  }
+
+  VecDestroy(&row);
+
+  MatAssemblyBegin(dRdy, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(dRdy, MAT_FINAL_ASSEMBLY);
+  return 0;
+}
+
+PetscErrorCode PetscTS::dCostdPMatrixUpdate(TS, PetscReal t, Vec xstate, Mat, void *ptr){
+  PetscTS *self = static_cast<PetscTS *>(ptr);
+  self->dRHSdp_time = t;
+  VecCopy(xstate, self->xprimal);
+
+  Mat dRdp = self->dCostdP;
+  MatZeroEntries(dRdp);
+
+  if (self->eval_energy) {
+    Vec prow;
+    VecDuplicate(self->redgrad_ts, &prow);
+    VecZeroEntries(prow);
+    self->evalEnergy_diff(self->dRHSdp_time, self->adj_scale_energy, prow);
+
+    PetscInt ilow, iupp;
+    VecGetOwnershipRange(prow, &ilow, &iupp);
+    const PetscScalar *vals = NULL;
+    VecGetArrayRead(prow, &vals);
+    for (PetscInt j = ilow; j < iupp; ++j) {
+      MatSetValue(dRdp, 2, j, vals[j - ilow], INSERT_VALUES);
+    }
+    VecRestoreArrayRead(prow, &vals);
+    VecDestroy(&prow);
+  }
+
+  MatAssemblyBegin(dRdp, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(dRdp, MAT_FINAL_ASSEMBLY);
+  return 0;
+}
+
 
 
 PetscErrorCode PetscTS::IntegralCosts(TS, PetscReal t, Vec x, Vec F, void *ctx){
   PetscTS *self = static_cast<PetscTS *>(ctx); // The base Timestepper class.
   PetscScalar *integral_terms;
   VecGetArray(F, &integral_terms);
+
+  integral_terms[0] = 0.0;
+  integral_terms[1] = 0.0;
+  integral_terms[2] = 0.0;
 
   /* Evaluate the cost integrand at time t, given state x. Store result in F. */
   if (self->eval_leakage)       integral_terms[0] = self->evalLeakage(x);

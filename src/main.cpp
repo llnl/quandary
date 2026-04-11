@@ -144,21 +144,22 @@ int main(int argc,char **argv)
   TimeStepper* mytimestepper = nullptr;
   size_t ntime = config.getNTime();
   double total_time = config.getTotalTime();
+  int ninit_local = ninit / mpisize_init; 
   switch (timesteppertype) {
     case TimeStepperType::IMR:
-      mytimestepper = new ImplMidpoint(mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
+      mytimestepper = new ImplMidpoint(ninit_local, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
       break;
     case TimeStepperType::IMR4:
-      mytimestepper = new CompositionalImplMidpoint(4, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
+      mytimestepper = new CompositionalImplMidpoint(ninit_local, 4, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
       break;
     case TimeStepperType::IMR8:
-      mytimestepper = new CompositionalImplMidpoint(8, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
+      mytimestepper = new CompositionalImplMidpoint(ninit_local, 8, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
       break;
     case TimeStepperType::EE:
-      mytimestepper = new ExplEuler(mastereq, ntime, total_time, output, storeFWD);
+      mytimestepper = new ExplEuler(ninit_local, mastereq, ntime, total_time, output, storeFWD);
       break;
     case TimeStepperType::PETSCTS:
-      mytimestepper = new PetscTS(mastereq, ntime, total_time, output, storeFWD);
+      mytimestepper = new PetscTS(ninit_local, mastereq, ntime, total_time, output, storeFWD);
       break;
     default:
       logger.exitWithError("Unknown timestepper type\n");

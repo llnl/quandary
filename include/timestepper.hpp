@@ -81,7 +81,7 @@ class TimeStepper{
      * @param output_ Pointer to output handler
      * @param storeFWD_ Flag to store forward states
      */
-    TimeStepper(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_); 
+    TimeStepper(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_); 
 
     virtual ~TimeStepper(); 
 
@@ -112,7 +112,7 @@ class TimeStepper{
      * @param rho_t0 Initial state vector
      * @return Vec Final state vector at time T
      */
-    virtual Vec solveODE(int initid, Vec rho_t0);
+    virtual Vec solveODE(int initid, int iinit_local, Vec rho_t0);
 
     /**
      * @brief Solves the adjoint ODE backward in time.
@@ -127,7 +127,7 @@ class TimeStepper{
      * @param Jbar_dpdm Adjoint of second-order derivative variation
      * @param Jbar_energy Adjoint of energy integral term
      */
-    virtual void solveAdjointODE(Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy);
+    virtual void solveAdjointODE(int iinit_local, Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy);
 
     /**
      * @brief Evaluates leakage into guard levels 
@@ -246,7 +246,7 @@ class ExplEuler : public TimeStepper {
      * @param output_ Pointer to output handler
      * @param storeFWD_ Flag to store forward states
      */
-    ExplEuler(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_);
+    ExplEuler(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_);
 
     ~ExplEuler();
 
@@ -312,7 +312,7 @@ class ImplMidpoint : public TimeStepper {
      * @param output_ Pointer to output handler
      * @param storeFWD_ Flag to store forward states
      */
-    ImplMidpoint(MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_);
+    ImplMidpoint(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_);
 
     ~ImplMidpoint();
 
@@ -378,7 +378,7 @@ class CompositionalImplMidpoint : public ImplMidpoint {
      * @param output_ Pointer to output handler
      * @param storeFWD_ Flag to store forward states
      */
-    CompositionalImplMidpoint(int order_, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_);
+    CompositionalImplMidpoint(size_t ninit_local, int order_, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_);
 
     ~CompositionalImplMidpoint();
 
@@ -410,23 +410,37 @@ class CompositionalImplMidpoint : public ImplMidpoint {
  */
 class PetscTS : public TimeStepper {
   protected:
-    TS ts;      ///< PETSc's time stepper context to solve the ODE
-    TS ts_quad; ///< Quadrature TS for computing integral objective terms. 
-    Vec q;     ///< Auxiliary vector for evaluating integral objective terms during time-stepping.  
+    TS ts;      ///< Backward-compatible alias to ts_pool[0].
+    std::vector<TS> ts_pool; ///< One PETSc TS per initial condition.
+    int ninit_pool; ///< Number of TS instances in ts_pool.
+    std::vector<Vec> q_pool; ///< One quadrature state vector per TS/initial condition.
     Vec redgrad_ts; ///< TS-internal gradient vector with PETSc communicator-compatible layout.
 
     Mat dRHSdp; ///< MatShell for applying derivative of the RHS to control parameters.
+    Mat dCostdY; ///< Dense matrix for derivative of integral costs wrt state.
+    Mat dCostdP; ///< Dense matrix for derivative of integral costs wrt parameters.
     PetscReal dRHSdp_time; ///< Cached time used by the RHSJacobianP MatShell callbacks.
+    double adj_scale_leakage; ///< Per-solve scaling for leakage integral adjoint contribution.
+    double adj_scale_weightedcost; ///< Per-solve scaling for weighted-cost integral adjoint contribution.
+    double adj_scale_energy; ///< Per-solve scaling for energy integral adjoint contribution.
+
+    TS getTSForInit(int iinit_local) const {
+      if (iinit_local < 0 || iinit_local >= ninit_pool) {
+        return ts_pool[0];
+      }
+      return ts_pool[iinit_local];
+    }
+
 
   public:
-    PetscTS(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_);
+    PetscTS(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_);
     ~PetscTS();
 
     // Use Petsc's TSSolve function to solve the ODE
-    Vec solveODE(int initid, Vec rho_t0) override;
+    Vec solveODE(int initid, int iinit_local, Vec rho_t0) override;
 
     // Use Petsc's TSAdjointSolve for backpropagation
-    void solveAdjointODE(Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) override;
+    void solveAdjointODE(int iinit_local, Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) override;
 
     // Wrapper to assemble RHS if the time step t has changed. 
     static PetscErrorCode RHSMatrixUpdate(TS ts, PetscReal t, Vec, Mat, Mat, void *ptr);
@@ -436,6 +450,12 @@ class PetscTS : public TimeStepper {
 
     // y = (dRHS/dp)^T x, implemented via MasterEq::compute_dRHS_dParams.
     static PetscErrorCode computedRHSdp(Mat A, Vec x, Vec y);
+
+    // Cache primal state/time for quadrature derivative wrt state.
+    static PetscErrorCode dCostdYMatrixUpdate(TS ts, PetscReal t, Vec x, Mat A, Mat B, void *ptr);
+
+    // Cache primal state/time for quadrature derivative wrt parameters.
+    static PetscErrorCode dCostdPMatrixUpdate(TS ts, PetscReal t, Vec x, Mat A, void *ptr);
 
     // Callback function during TSSolve to evaluate trajectory data at each accepted time step 
     static PetscErrorCode monitorTrajectory(TS ts, PetscInt step, PetscReal time, Vec state, void *ctx);

@@ -1039,13 +1039,6 @@ void Config::validate() const {
       }
     }
   }
-
-  // Validate timestepper: PetscTS, only works for Lindblad solver right now, or for Schroedinger solver with one initial state only! This is because the Schroedinger solver evolves multiple initial conditions forward in time before evaluating the final objective function. Therefore, the adjoint backwards solve would need access to the primal states for each initial condition. Could be done by saving the TSTrajectories during each forward solve and restoring them later. TODO. 
-  if (timestepper_type == TimeStepperType::PETSCTS) {
-    if (decoherence_type == DecoherenceType::NONE && n_initial_conditions > 1) {
-      logger.exitWithError("PetsCTS timestepper only works for Schroedinger solver with one initial state, or for Lindblad solver. Please change timestepper type or initial condition settings.");
-    }
-  }
 }
 
 size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, DecoherenceType decoherence_type) const {
