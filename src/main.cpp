@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <sys/resource.h>
 #include <cassert>
+#include <algorithm>
+#include <cmath>
 #include "optimproblem.hpp"
 #include "output.hpp"
 #include "petsc.h"
@@ -310,6 +312,11 @@ int main(int argc,char **argv)
     printf("#########################\n\n");
   }
 
+  if (config.getTimestepperType() == TimeStepperType::PETSCTS) {
+    if (mpirank_world == 0) printf("WARNING: Finite Difference test with PETSc's adaptive timestepper gives weird results when EPS gets small! Better to switch to TSAdapt=NONE for finite differences testing.\n");
+    exit(1);
+  }
+
   double obj_org;
   double obj_pert1, obj_pert2;
 
@@ -323,37 +330,48 @@ int main(int argc,char **argv)
   /* --- Solve adjoint --- */
   if (mpirank_world == 0) printf("\nRunning optimizer eval_grad_f...\n");
   optimctx->evalGradF(xinit, grad);
-  VecView(grad, PETSC_VIEWER_STDOUT_WORLD);
+  // VecView(grad, PETSC_VIEWER_STDOUT_WORLD);
   
 
   /* --- Finite Differences --- */
   if (mpirank_world == 0) printf("\nFinite Difference testing...\n");
   double max_err = 0.0;
+  double max_abs_err = 0.0;
   for (PetscInt i=0; i<optimctx->getNdesign(); i++){
   // {int i=0;
 
+    double xi = 0.0;
+    VecGetValues(xinit, 1, &i, &xi);
+    const double eps_i = EPS * std::max(1.0, std::abs(xi));
+
     /* Evaluate f(p+eps)*/
-    VecSetValue(xinit, i, EPS, ADD_VALUES);
+    VecSetValue(xinit, i, eps_i, ADD_VALUES);
+    VecAssemblyBegin(xinit); VecAssemblyEnd(xinit);
     obj_pert1 = optimctx->evalF(xinit);
 
     /* Evaluate f(p-eps)*/
-    VecSetValue(xinit, i, -2*EPS, ADD_VALUES);
+    VecSetValue(xinit, i, -2*eps_i, ADD_VALUES);
+    VecAssemblyBegin(xinit); VecAssemblyEnd(xinit);
     obj_pert2 = optimctx->evalF(xinit);
 
     /* Eval FD and error */
-    double fd = (obj_pert1 - obj_pert2) / (2.*EPS);
-    double err = 0.0;
+    double fd = (obj_pert1 - obj_pert2) / (2.*eps_i);
     double gradi; 
     VecGetValues(grad, 1, &i, &gradi);
-    if (fd != 0.0) err = (gradi - fd) / fd;
-    if (mpirank_world == 0) printf(" %d: obj %1.14e, obj_pert1 %1.14e, obj_pert2 %1.14e, fd %1.14e, grad %1.14e, err %1.14e\n", i, obj_org, obj_pert1, obj_pert2, fd, gradi, err);
+    const double abs_err = std::abs(gradi - fd);
+    const double rel_denom = std::max({1.0, std::abs(fd), std::abs(gradi)});
+    const double err = abs_err / rel_denom;
+    if (mpirank_world == 0) printf(" %d: eps_i %1.14e, obj %1.14e, obj_pert1 %1.14e, obj_pert2 %1.14e, fd %1.14e, grad %1.14e, abs_err %1.14e, rel_err %1.14e\n", i, eps_i, obj_org, obj_pert1, obj_pert2, fd, gradi, abs_err, err);
     if (abs(err) > max_err) max_err = err;
+    if (abs_err > max_abs_err) max_abs_err = abs_err;
 
     /* Restore parameter */
-    VecSetValue(xinit, i, EPS, ADD_VALUES);
+    VecSetValue(xinit, i, eps_i, ADD_VALUES);
+    VecAssemblyBegin(xinit); VecAssemblyEnd(xinit);
   }
 
-  printf("\nMax. Finite Difference error: %1.14e\n\n", max_err);
+  printf("\nMax. Finite Difference relative error: %1.14e\n", max_err);
+  printf("Max. Finite Difference absolute error: %1.14e\n\n", max_abs_err);
   
 #endif
 
