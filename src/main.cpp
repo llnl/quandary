@@ -314,7 +314,6 @@ int main(int argc,char **argv)
 
   if (config.getTimestepperType() == TimeStepperType::PETSCTS) {
     if (mpirank_world == 0) printf("WARNING: Finite Difference test with PETSc's adaptive timestepper gives weird results when EPS gets small! Better to switch to TSAdapt=NONE for finite differences testing.\n");
-    exit(1);
   }
 
   double obj_org;

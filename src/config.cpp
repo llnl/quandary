@@ -1039,6 +1039,13 @@ void Config::validate() const {
       }
     }
   }
+
+  if (timestepper_type == TimeStepperType::PETSCTS && runtype != RunType::SIMULATION) {
+    if (optim_penalty_energy > 1e-13 && optim_penalty_leakage > 1e-13) {
+      logger.exitWithError("Gradient using Petsc's adaptive timestepping might be wrong if both the energy and the leakage penalties are enabled. It is advised to disable one of them, or use a non-adaptive time-stepper.\n");
+    }
+  }
+
 }
 
 size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, DecoherenceType decoherence_type) const {

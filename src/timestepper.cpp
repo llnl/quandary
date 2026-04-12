@@ -835,10 +835,6 @@ void CompositionalImplMidpoint::evolveBWD(const double tstop, const double tstar
 
 PetscTS::PetscTS(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper(ninit_local, mastereq_, ntime_, total_time_, output_, storeFWD_) {
 
-  if (eval_energy && eval_leakage) {
-    if (mpirank_world == 0) printf("WARNING: Gradient might be wrong if both the energy and the leakage penalties are enabled. It is advised to disable one of them.\n");
-  }
-
   ninit_pool = ninit_local; 
   ts_pool.resize(ninit_pool, nullptr);
   q_pool.resize(ninit_pool, nullptr);
