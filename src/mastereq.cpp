@@ -786,6 +786,9 @@ void MasterEq::setControlAmplitudes(const Vec x) {
     shift += getOscillator(ioscil)->getNParams();
   }
   VecRestoreArrayRead(x, &ptr);
+
+  // Controls changed: RHS will need neew assembly. 
+  RHSctx.assembled = false;
 }
 
 /* Pass MatMult operations for the RHS action onto a vector to Petsc */

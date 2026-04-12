@@ -946,6 +946,9 @@ Vec PetscTS::solveODE(int initid, int iinit_local, Vec rho_t0){
   TS ts_run = getTSForInit(iinit_local);
   Vec q_run = q_pool[iinit];
 
+  // Clear adjoint from previous calls on this TS.
+  TSAdjointReset(ts_run);
+
   /* Prepare storage for trajectory output data */
   if (writeTrajectoryDataFiles) {
     output->resetTrajectoryData(initid);
