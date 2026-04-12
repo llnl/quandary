@@ -417,8 +417,8 @@ class PetscTS : public TimeStepper {
     Vec redgrad_ts; ///< TS-internal gradient vector with PETSc communicator-compatible layout.
 
     Mat dRHSdp; ///< MatShell for applying derivative of the RHS to control parameters.
-    Mat dCostdY; ///< Dense matrix for derivative of integral costs wrt state.
-    Mat dCostdP; ///< Dense matrix for derivative of integral costs wrt parameters.
+    Mat dIntegralCostdY; ///< Dense matrix for derivative of integral costs wrt state.
+    Mat dIntegralCostdP; ///< Dense matrix for derivative of integral costs wrt parameters.
     PetscReal dRHSdp_time; ///< Cached time used by the RHSJacobianP MatShell callbacks.
     double adj_scale_leakage; ///< Per-solve scaling for leakage integral adjoint contribution.
     double adj_scale_weightedcost; ///< Per-solve scaling for weighted-cost integral adjoint contribution.
@@ -452,10 +452,10 @@ class PetscTS : public TimeStepper {
     static PetscErrorCode computedRHSdp(Mat A, Vec x, Vec y);
 
     // Cache primal state/time for quadrature derivative wrt state.
-    static PetscErrorCode dCostdYMatrixUpdate(TS ts, PetscReal t, Vec x, Mat A, Mat B, void *ptr);
+    static PetscErrorCode dIntegralCostdYUpdate(TS ts, PetscReal t, Vec x, Mat A, Mat B, void *ptr);
 
     // Cache primal state/time for quadrature derivative wrt parameters.
-    static PetscErrorCode dCostdPMatrixUpdate(TS ts, PetscReal t, Vec x, Mat A, void *ptr);
+    static PetscErrorCode dIntegralCostdPUpdate(TS ts, PetscReal t, Vec x, Mat A, void *ptr);
 
     // Callback function during TSSolve to evaluate trajectory data at each accepted time step 
     static PetscErrorCode monitorTrajectory(TS ts, PetscInt step, PetscReal time, Vec state, void *ctx);

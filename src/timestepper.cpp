@@ -846,11 +846,13 @@ PetscTS::PetscTS(size_t ninit_local, MasterEq* mastereq_, int ntime_, double tot
   MatCreateShell(PETSC_COMM_WORLD, PETSC_DECIDE, nparam_global, nstate_global, nparam_global, this, &dRHSdp);
   MatShellSetOperation(dRHSdp, MATOP_MULT_TRANSPOSE, (void(*)(void)) computedRHSdp);
 
-  const PetscInt ncost_terms = 3;
-  MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ncost_terms, nstate_global, NULL, &dCostdY);
-  MatSetUp(dCostdY);
-  MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ncost_terms, nparam_global, NULL, &dCostdP);
-  MatSetUp(dCostdP);
+  // TSSetCostGradients is configured with numcost=1, so quadrature Jacobians
+  // must provide a single combined running-cost channel for adjoint.
+  const PetscInt ncost_terms = 1;
+  MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ncost_terms, nstate_global, NULL, &dIntegralCostdY);
+  MatSetUp(dIntegralCostdY);
+  MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ncost_terms, nparam_global, NULL, &dIntegralCostdP);
+  MatSetUp(dIntegralCostdP);
 
   dRHSdp_time = 0.0;
   adj_scale_leakage = 0.0;
@@ -902,8 +904,8 @@ PetscTS::PetscTS(size_t ninit_local, MasterEq* mastereq_, int ntime_, double tot
     TS ts_quad_i;
     TSCreateQuadratureTS(ts_pool[i], PETSC_TRUE, &ts_quad_i);
     TSSetRHSFunction(ts_quad_i, NULL, IntegralCosts, this);
-    TSSetRHSJacobian(ts_quad_i, dCostdY, dCostdY, dCostdYMatrixUpdate, this);
-    TSSetRHSJacobianP(ts_quad_i, dCostdP, dCostdPMatrixUpdate, this);
+    TSSetRHSJacobian(ts_quad_i, dIntegralCostdY, dIntegralCostdY, dIntegralCostdYUpdate, this);
+    TSSetRHSJacobianP(ts_quad_i, dIntegralCostdP, dIntegralCostdPUpdate, this);
     VecCreate(PETSC_COMM_SELF, &q_pool[i]);
     VecSetSizes(q_pool[i], PETSC_DECIDE, 3);
     VecSetFromOptions(q_pool[i]);
@@ -933,8 +935,8 @@ PetscTS::~PetscTS() {
     if (tsi) TSDestroy(&tsi);
   }
   MatDestroy(&dRHSdp);
-  MatDestroy(&dCostdY);
-  MatDestroy(&dCostdP);
+  MatDestroy(&dIntegralCostdY);
+  MatDestroy(&dIntegralCostdP);
   VecDestroy(&redgrad_ts);
 }
 
@@ -1040,12 +1042,12 @@ PetscErrorCode PetscTS::computedRHSdp(Mat A, Vec xbar, Vec grad){
   return 0;
 }
 
-PetscErrorCode PetscTS::dCostdYMatrixUpdate(TS, PetscReal t, Vec xstate, Mat, Mat, void *ptr){
+PetscErrorCode PetscTS::dIntegralCostdYUpdate(TS, PetscReal t, Vec xstate, Mat, Mat, void *ptr){
   PetscTS *self = static_cast<PetscTS *>(ptr);
   self->dRHSdp_time = t;
   VecCopy(xstate, self->xprimal);
 
-  Mat dRdy = self->dCostdY;
+  Mat dRdy = self->dIntegralCostdY;
   MatZeroEntries(dRdy);
 
   Vec row;
@@ -1055,25 +1057,19 @@ PetscErrorCode PetscTS::dCostdYMatrixUpdate(TS, PetscReal t, Vec xstate, Mat, Ma
   VecGetOwnershipRange(row, &ilow, &iupp);
   const PetscScalar *vals = NULL;
 
+  // Build a single combined derivative row for all active running costs.
+  VecZeroEntries(row);
   if (self->eval_leakage) {
-    VecZeroEntries(row);
     self->evalLeakage_diff(self->xprimal, row, self->adj_scale_leakage);
-    VecGetArrayRead(row, &vals);
-    for (PetscInt j = ilow; j < iupp; ++j) {
-      MatSetValue(dRdy, 0, j, vals[j - ilow], INSERT_VALUES);
-    }
-    VecRestoreArrayRead(row, &vals);
   }
-
   if (self->eval_weightedcost) {
-    VecZeroEntries(row);
     self->evalWeightedCost_diff(self->dRHSdp_time, self->xprimal, row, self->adj_scale_weightedcost);
-    VecGetArrayRead(row, &vals);
-    for (PetscInt j = ilow; j < iupp; ++j) {
-      MatSetValue(dRdy, 1, j, vals[j - ilow], INSERT_VALUES);
-    }
-    VecRestoreArrayRead(row, &vals);
   }
+  VecGetArrayRead(row, &vals);
+  for (PetscInt j = ilow; j < iupp; ++j) {
+    MatSetValue(dRdy, 0, j, vals[j - ilow], INSERT_VALUES);
+  }
+  VecRestoreArrayRead(row, &vals);
 
   VecDestroy(&row);
 
@@ -1082,33 +1078,32 @@ PetscErrorCode PetscTS::dCostdYMatrixUpdate(TS, PetscReal t, Vec xstate, Mat, Ma
   return 0;
 }
 
-PetscErrorCode PetscTS::dCostdPMatrixUpdate(TS, PetscReal t, Vec xstate, Mat, void *ptr){
+PetscErrorCode PetscTS::dIntegralCostdPUpdate(TS, PetscReal t, Vec xstate, Mat, void *ptr){
   PetscTS *self = static_cast<PetscTS *>(ptr);
   self->dRHSdp_time = t;
   VecCopy(xstate, self->xprimal);
 
-  Mat dRdp = self->dCostdP;
-  MatZeroEntries(dRdp);
+  MatZeroEntries(self->dIntegralCostdP);
 
+  Vec prow;
+  VecDuplicate(self->redgrad_ts, &prow);
+  VecZeroEntries(prow);
   if (self->eval_energy) {
-    Vec prow;
-    VecDuplicate(self->redgrad_ts, &prow);
-    VecZeroEntries(prow);
     self->evalEnergy_diff(self->dRHSdp_time, self->adj_scale_energy, prow);
-
-    PetscInt ilow, iupp;
-    VecGetOwnershipRange(prow, &ilow, &iupp);
-    const PetscScalar *vals = NULL;
-    VecGetArrayRead(prow, &vals);
-    for (PetscInt j = ilow; j < iupp; ++j) {
-      MatSetValue(dRdp, 2, j, vals[j - ilow], INSERT_VALUES);
-    }
-    VecRestoreArrayRead(prow, &vals);
-    VecDestroy(&prow);
   }
 
-  MatAssemblyBegin(dRdp, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(dRdp, MAT_FINAL_ASSEMBLY);
+  PetscInt ilow, iupp;
+  VecGetOwnershipRange(prow, &ilow, &iupp);
+  const PetscScalar *vals = NULL;
+  VecGetArrayRead(prow, &vals);
+  for (PetscInt j = ilow; j < iupp; ++j) {
+    MatSetValue(self->dIntegralCostdP, 0, j, vals[j - ilow], INSERT_VALUES);
+  }
+  VecRestoreArrayRead(prow, &vals);
+  VecDestroy(&prow);
+
+  MatAssemblyBegin(self->dIntegralCostdP, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(self->dIntegralCostdP, MAT_FINAL_ASSEMBLY);
   return 0;
 }
 
