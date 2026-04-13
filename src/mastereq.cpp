@@ -119,6 +119,14 @@ MasterEq::MasterEq(const Config& config, Oscillator** oscil_vec_, bool quietmode
   PetscInt localsize_x  = 2 * dim / mpisize_petsc;  // local size of state vector x=[u,v]
   MatCreateShell(PETSC_COMM_WORLD, localsize_x, localsize_x, globalsize_x, globalsize_x, (void**) &RHSctx, &RHS);
   MatSetOptionsPrefix(RHS, "system");
+  // For MatShell, PETSc may create work vectors (e.g. KSP's output y) using the
+  // Mat's VecType. If we don't set this, y can end up as a plain seq/mpi vector
+  // even when the state x is Kokkos (e.g. -vec_type kokkos), which breaks
+  // AIJKokkos MatMult.
+  char vec_type_opt[128] = {0};
+  PetscBool vec_type_set = PETSC_FALSE;
+  PetscOptionsGetString(NULL, NULL, "-vec_type", vec_type_opt, sizeof(vec_type_opt), &vec_type_set);
+  if (vec_type_set) MatSetVecType(RHS, vec_type_opt);
   MatSetFromOptions(RHS); MatSetUp(RHS);
   MatAssemblyBegin(RHS,MAT_FINAL_ASSEMBLY); MatAssemblyEnd(RHS,MAT_FINAL_ASSEMBLY);
 
