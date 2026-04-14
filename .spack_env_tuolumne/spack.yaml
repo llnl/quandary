@@ -2,11 +2,11 @@
 # PETSc + Kokkos + ROCm (gfx942)
 #
 # Usage:
-#   spack env activate -d .spack_env_tuolumne
+#   spack env activate .spack_env_tuolumne/
 #   spack install
 spack:
   specs:
-  - quandary@main+test
+  - quandary@develop+test
     %llvm-amdgpu@=6.4.3
     ^cray-mpich%llvm-amdgpu@=6.4.3
     ^petsc@3.24.4+kokkos+rocm amdgpu_target=gfx942
@@ -27,14 +27,12 @@ spack:
   develop:
     quandary:
       path: ../
-      spec: quandary@=main
+      spec: quandary@=develop
 
   include:
   - ../.ci-scripts/radiuss-spack-configs/toss_4_x86_64_ib_cray/tuolumne/config.yaml
   - ../.ci-scripts/radiuss-spack-configs/toss_4_x86_64_ib_cray/tuolumne/packages.yaml
 
   config:
-    install_tree:
-      padded_length: 128
     flags:
       keep_werror: all
