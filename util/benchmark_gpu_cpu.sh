@@ -136,7 +136,7 @@ for variant in "${RUN_VARIANTS[@]}"; do
 
   # Run
   "${LAUNCHER[@]}" \
-    "$QUANDARY_BIN" "${QUANDARY_ARGS[@]}" "$RUN_DIR/config.toml" \
+    "$QUANDARY_BIN" "$RUN_DIR/config.toml" "${QUANDARY_ARGS[@]}" \
     --petsc-options "$PETSC_OPTS" \
     > "${OUTPUT_DIR}/${variant}.log" 2>&1
   EXIT_CODE=$?
