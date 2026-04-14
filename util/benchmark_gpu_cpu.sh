@@ -203,7 +203,7 @@ for variant in "${RUN_VARIANTS[@]}"; do
       LAUNCHER="flux run --env=HSA_XNACK=1 --env=MPICH_GPU_SUPPORT_ENABLED=1 --gpus-per-task=1"
       LAUNCHER_HAS_TASKS=0
     fi
-    PETSC_OPTS="-vec_type kokkos -mat_type aijkokkos -log_view -log_summary"
+    PETSC_OPTS="-vec_type kokkos -mat_type aijkokkos -log_view -log_view_gpu_time -log_summary"
   fi
 
   # Set up run directory
