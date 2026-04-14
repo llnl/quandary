@@ -1,0 +1,40 @@
+# Spack environment for Quandary on Tuolumne (MI300A APUs)
+# PETSc + Kokkos + ROCm (gfx942)
+#
+# Usage:
+#   spack env activate -d .spack_env_tuolumne
+#   spack install
+spack:
+  specs:
+  - quandary@main+test
+    %llvm-amdgpu@=6.4.3
+    ^cray-mpich%llvm-amdgpu@=6.4.3
+    ^petsc@3.24.4+kokkos+rocm amdgpu_target=gfx942
+      ~mmg~parmmg~saws~examples~ml~exodusii~zoltan
+      %llvm-amdgpu@=6.4.3
+    ^kokkos@4.6.02+apu+rocm cxxstd=17 amdgpu_target=gfx942
+      %llvm-amdgpu@=6.4.3
+    ^kokkos-kernels@4.6.02 %llvm-amdgpu@=6.4.3
+    ^hip@6.4.3%llvm-amdgpu@=6.4.3
+    ^hipblas@6.4.3%llvm-amdgpu@=6.4.3
+    ^hipblas-common@6.4.3
+
+  view: true
+
+  concretizer:
+    unify: true
+
+  develop:
+    quandary:
+      path: ../
+      spec: quandary@=main
+
+  include:
+  - ../.ci-scripts/radiuss-spack-configs/toss_4_x86_64_ib_cray/tuolumne/config.yaml
+  - ../.ci-scripts/radiuss-spack-configs/toss_4_x86_64_ib_cray/tuolumne/packages.yaml
+
+  config:
+    install_tree:
+      padded_length: 128
+    flags:
+      keep_werror: all
