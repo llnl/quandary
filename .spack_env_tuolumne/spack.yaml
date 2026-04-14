@@ -7,17 +7,14 @@
 spack:
   specs:
   - quandary@develop+test
-    %llvm-amdgpu@=6.4.3
-    ^cray-mpich%llvm-amdgpu@=6.4.3
+    %%llvm-amdgpu@6.4
     ^petsc@3.24.4+kokkos+rocm amdgpu_target=gfx942
       ~mmg~parmmg~saws~examples~ml~exodusii~zoltan
-      %llvm-amdgpu@=6.4.3
     ^kokkos@4.6.02+apu+rocm cxxstd=17 amdgpu_target=gfx942
-      %llvm-amdgpu@=6.4.3
-    ^kokkos-kernels@4.6.02 %llvm-amdgpu@=6.4.3
-    ^hip@6.4.3%llvm-amdgpu@=6.4.3
-    ^hipblas@6.4.3%llvm-amdgpu@=6.4.3
-    ^hipblas-common@6.4.3
+    ^kokkos-kernels@4.6.02
+    ^hip@6.4
+    ^hipblas@6.4
+    ^hipblas-common@6.4
 
   view: true
 
