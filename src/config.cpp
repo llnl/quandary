@@ -102,8 +102,8 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     nessential = validators::scalarOrVectorOr<size_t>(*system_table, "nessential", num_osc, nlevels);
 
-    // total_time is required, ntime and dt are optional (but if provided, must be consistent with total_time)
-    total_time = validators::field<double>(*system_table, "total_time").positive().value();
+    // total_time is required in the future. For backward capability, print warning if not provided and use ntime * dt instead.
+    total_time = validators::field<double>(*system_table, "total_time").positive().valueOr(-1.0);
     ntime = validators::field<size_t>(*system_table, "ntime").positive().valueOr(0);
     dt = validators::field<double>(*system_table, "dt").positive().valueOr(0.0);
 
@@ -874,9 +874,13 @@ void Config::printConfig(std::stringstream& log) const {
 
 void Config::finalize() {
   // Time domain specification: total_time is required, ntime and dt are optional but must be consistent with total_time if provided. If PetscTimestepper is used, ignore N and dt and print a warning if they were provided. For other timesteppers, either ntime or dt must be provided, and the other will be computed from total_time. If both are provided, check for consistency with total_time and print a warning if they are inconsistent.
+  if (total_time < 0.0) {
+    logger.log("# Warning: total_time not provided or negative. Setting total_time to ntime * dt = " + std::to_string(ntime * dt) + ". It is suggested to provide total_time and remove either ntime or dt from the configuration.\n");
+    total_time = ntime * dt;
+  }
   if (timestepper_type == TimeStepperType::PETSCTS) {
     if (ntime > 0 || dt > 0) {
-      logger.log("# Warning: ntime and dt are ignored when using PETSCTS timestepper. Using total_time = " + std::to_string(total_time) + ".\n");
+      logger.log("# Warning: PETSCTS timestepper is adaptive and ignores configuration input for ntime and dt.\n");
     }
   } else { // any timestepper other than PETSCTS
       if (ntime > 0 && dt > 0) { // if both are provided, check consistency with total_time. 
