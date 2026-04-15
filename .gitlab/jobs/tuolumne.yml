@@ -29,4 +29,12 @@ rocmcc_7_2_0_hip:
   variables:
     SPEC: "${PROJECT_TUOLUMNE_VARIANTS} +rocm amdgpu_target=gfx942 %%llvm-amdgpu@=7.2.0 ^hip@7.2.0 ^netlib-lapack ^cray-mpich%llvm-amdgpu ^petsc@3.24.4+kokkos+rocm amdgpu_target=gfx942 ^kokkos@4.6.02+apu+rocm cxxstd=17 amdgpu_target=gfx942 ${PROJECT_TUOLUMNE_DEPS}"
     PETSC_TEST_OPTIONS: "${PROJECT_TUOLUMNE_PETSC_GPU_OPTIONS}"
+    # Enable ROCm unified memory (XNACK) and Cray MPICH GPU-aware MPI for all
+    # flux tasks — these env vars propagate into the flux tasks.
+    HSA_XNACK: "1"
+    MPICH_GPU_SUPPORT_ENABLED: "1"
+    # Extra flags appended to the flux-run launcher for both ctest and pytest.
+    # -o gpu-affinity=off lets every rank see all GPUs in the alloc, so
+    # regression tests with up to 8 ranks can share the node's APUs.
+    MPI_EXTRA_FLAGS: "-o gpu-affinity=off"
   extends: .job_on_tuolumne
