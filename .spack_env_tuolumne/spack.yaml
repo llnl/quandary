@@ -5,13 +5,17 @@
 #   spack env activate .spack_env_tuolumne/
 #   spack install
 spack:
+  repos:
+    builtin::
+      git: https://github.com/spack/spack-packages.git
+      commit: 19195fc11b3b44a6ae3ac96233de1ab97b4892aa
   specs:
   - quandary@develop+test
     %%llvm-amdgpu@6.4
-    ^petsc@3.24.4+kokkos+rocm amdgpu_target=gfx942
-      ~mmg~parmmg~saws~examples~ml~exodusii~zoltan
-    ^kokkos@4.6.02+apu+rocm cxxstd=17 amdgpu_target=gfx942
-    ^kokkos-kernels@4.6.02
+    ^netlib-lapack
+    ^petsc@3.24+kokkos+rocm amdgpu_target=gfx942
+    ^kokkos@4.6+apu+rocm cxxstd=17 amdgpu_target=gfx942
+    ^kokkos-kernels@4.6
     ^hip@6.4
     ^hipblas@6.4
     ^hipblas-common@6.4
