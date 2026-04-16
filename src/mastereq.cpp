@@ -603,9 +603,9 @@ void MasterEq::initTransmonResonatorSparseMats(){
       }
       if (bd_nnz > 0) MatSetValues(Bd_vec[0], 1, &row, bd_nnz, bd_cols, bd_vals, ADD_VALUES);
 
-      // Ad_kl = - Jkl * n_t \otimes (a_r - a_r^+)
+      // Ad_kl = -Jkl * n_t \otimes (a_r - a_r^+)
       if (row_res < nresonator -1) {// upper (a_r part)
-        double val = - Jkl[0] * charge_factor * sqrt(row_res +1);
+        double val = -Jkl[0] * charge_factor * sqrt(row_res +1);
         if (fabs(val) > 1e-12) {
           ad_cols[ad_nnz] = row + 1;
           ad_vals[ad_nnz] = val;
@@ -661,7 +661,7 @@ void MasterEq::initTransmonResonatorSparseMats(){
       row_res = row_div % nresonator;
       const double charge_factor_right = row_tr - ncut - charge_offset;
       if (row_res < nresonator -1) {
-        double val = Jkl[0] * charge_factor_right * sqrt(row_res +1);
+        double val = -Jkl[0] * charge_factor_right * sqrt(row_res +1);
         if (fabs(val) > 1e-12) {
           bd_cols[bd_nnz] = row + dim_rho;
           bd_vals[bd_nnz] = val;
@@ -669,7 +669,7 @@ void MasterEq::initTransmonResonatorSparseMats(){
         }
       }
       if (row_res > 0) {
-        double val = Jkl[0] * charge_factor_right * sqrt(row_res);
+        double val = -Jkl[0] * charge_factor_right * sqrt(row_res);
         if (fabs(val) > 1e-12) {
           bd_cols[bd_nnz] = row - dim_rho;
           bd_vals[bd_nnz] = val;
@@ -682,7 +682,7 @@ void MasterEq::initTransmonResonatorSparseMats(){
       row_tr = row_mod / nresonator;
       row_res = row_mod % nresonator;
       if (row_res < nresonator -1) {
-        double val = -Jkl[0] * charge_factor_left * sqrt(row_res +1);
+        double val = - Jkl[0] * charge_factor_left * sqrt(row_res +1);
         if (fabs(val) > 1e-12) {
           ad_cols[ad_nnz] = row + 1;
           ad_vals[ad_nnz] = val;
@@ -690,7 +690,7 @@ void MasterEq::initTransmonResonatorSparseMats(){
         }
       }
       if (row_res > 0) {
-        double val =  Jkl[0] * charge_factor_left * sqrt(row_res);
+        double val = +Jkl[0] * charge_factor_left * sqrt(row_res);
         if (fabs(val) > 1e-12) {
           ad_cols[ad_nnz] = row - 1;
           ad_vals[ad_nnz] = val;
@@ -710,7 +710,7 @@ void MasterEq::initTransmonResonatorSparseMats(){
         }
       }
       if (row_res > 0) {  
-        double val = Jkl[0] * charge_factor_right * sqrt(row_res);
+        double val = +Jkl[0] * charge_factor_right * sqrt(row_res);
         if (fabs(val) > 1e-12) {
           ad_cols[ad_nnz] = row - dim_rho;
           ad_vals[ad_nnz] = val;
@@ -744,8 +744,10 @@ int MasterEq::assemble_RHS(const double t){
   // Evaluate and store time-dependent system coefficients (Jkl terms)
   if (transmon_resonator_system) {
     // Transmon-resonator specific coupling with sin(wdt), cos(wdt)
-    RHSctx.Bd_coeffs[0] = sin(eta[0]*t);  // + or - ??   
-    RHSctx.Ad_coeffs[0] = cos(eta[0]*t);  // + or - ??
+    RHSctx.Bd_coeffs[0] = sin(eta[0]*t);     
+    RHSctx.Ad_coeffs[0] = cos(eta[0]*t); 
+
+    // assert(fabs(RHSctx.Bd_coeffs[0]) < 1e-12); // ZERO IN THE LAB FRAME
 
   } else {
     // Standard Jkl coupling with cos(eta t), sin(eta t)
