@@ -265,13 +265,13 @@ class Quandary:
         # Get number of splines right
         if self.nsplines < 0:
             if self.spline_order == 0:
-                self.nsplines = int(np.max([np.rint(self.nsteps*self.dT/self.spline_knot_spacing+1), minspline])) 
+                self.nsplines = int(np.max([np.rint(self.T/self.spline_knot_spacing+1), minspline])) 
             else: 
                 self.nsplines = int(np.max([np.ceil(self.T/self.spline_knot_spacing+ 2), minspline]))
 
-            self.spline_knot_spacing = self.nsteps*self.dT / (self.nsplines-1) if self.spline_order == 0 else self.nsteps*self.dT / (self.nsplines-2)
+            self.spline_knot_spacing = self.T / (self.nsplines-1) if self.spline_order == 0 else self.nsteps*self.dT / (self.nsplines-2)
         else:
-            self.spline_knot_spacing= self.nsteps*self.dT/(self.nsplines-1) if self.spline_order == 0 else self.T/(self.nsplines - 2)
+            self.spline_knot_spacing= self.T/(self.nsplines-1) if self.spline_order == 0 else self.T/(self.nsplines - 2)
 
         # Estimate carrier wave frequencies
         if self.spline_order == 0 and len(self.carrier_frequency) == 0:
@@ -346,7 +346,7 @@ class Quandary:
             spline_order_org = self.spline_order
             self.spline_order = 0
             self.spline_knot_spacing = self.dT 
-            self.nsplines = np.max([2,int(np.ceil(self.nsteps*self.dT/self.spline_knot_spacing + 1))])
+            self.nsplines = np.max([2,int(np.ceil(self.T/self.spline_knot_spacing + 1))])
 
             pcof0 = self.downsample_pulses(pt0=pt0, qt0=qt0)
 
@@ -394,7 +394,7 @@ class Quandary:
             self.carrier_frequency = [[0.0] for _ in range(len(self.Ne))]
             self.spline_order = 0
             self.spline_knot_spacing = self.dT 
-            self.nsplines = np.max([2,int(np.ceil(self.nsteps*self.dT/self.spline_knot_spacing + 1))])
+            self.nsplines = np.max([2,int(np.ceil(self.T/self.spline_knot_spacing + 1))])
             pcof0 = self.downsample_pulses(pt0=pt0, qt0=qt0)
 
         result = self.__run(pcof0=pcof0, runtype="optimization", overwrite_popt=True, maxcores=maxcores, datadir=datadir, quandary_exec=quandary_exec, cygwinbash=cygwinbash, mpi_exec=mpi_exec, batchargs=batchargs)
@@ -407,52 +407,6 @@ class Quandary:
         
         return result
     
-
-    def evalControls(self, *, pcof0=[], points_per_ns=1,datadir="./run_dir", quandary_exec="", mpi_exec="mpirun -np ", cygwinbash=""):
-        """
-        Evaluate control pulses on a specific sample rate.       
-        
-        Optional arguments:
-        --------------------
-        pcof0         :  List of control parameters (bspline coefficients) that determine the controls pulse. If not given, the initial guess from Quandary class will be used (pcof0, or filename, or random initial control...)
-        points_per_ns :  sample rate of the resulting controls. Default: 1ns 
-        datadir       :  Directory for output files. Default: "./run_dir".
-                         If $QUANDARY_BASE_DATADIR is set, this will be relative to that directory, otherwise relative to current working directory
-        quandary_exec :  Path to Quandary's C++ executable if not in $PATH
-        mpi_exec      : String for MPI launcher prefix, e.g. "mpirun -np" or "srun -n". The string should include the flag for core counts, but not the number of cores itself which will be appended automatically
-        cygwinbash    : To run on Windows through Cygwin, set the path to Cygwin/bash.exe. Default: None.
-    
-        Returns:
-        ---------
-        time    :  List of time-points
-        pt, qt  :  Control pulses for each oscillator at each time point
-        """
-
-        # Copy original setting and overwrite number of time steps for simulation
-        nsteps_org = self.nsteps
-        dT_org = self.dT
-        self.nsteps = int(np.floor(self.T * points_per_ns))
-        self.dT = self.T/self.nsteps
-    
-        datadir = resolve_datadir(datadir)
-
-        # Execute quandary in 'evalcontrols' mode
-        datadir_controls = datadir +"_ppns"+str(points_per_ns)
-        os.makedirs(datadir_controls, exist_ok=True)
-        runtype = 'evalcontrols'
-        configfile_eval= self.__dump(pcof0=pcof0, runtype=runtype, datadir=datadir_controls)
-        err = execute(runtype=runtype, ncores=1, config_filename=configfile_eval, datadir=datadir_controls, quandary_exec=quandary_exec, verbose=False, mpi_exec=mpi_exec, cygwinbash=cygwinbash)
-        time, pt, qt, _, _, _, pcof, _, _ = self.get_results(datadir=datadir_controls, ignore_failure=True)
-
-        # Save pcof to config.popt
-        self.popt = pcof[:]
-    
-        # Restore original setting
-        self.nsteps = nsteps_org
-        self.dT = dT_org 
-
-        return time, pt, qt
-
 
     def downsample_pulses(self, *, pt0=[], qt0=[]):
         if self.spline_order == 0: #specifying (pt, qt) only makes sense for piecewise constant B-splines
@@ -472,7 +426,7 @@ class Quandary:
                     
                     for iosc in range(Nsys):
                         Nelem = np.size(pt0[iosc])
-                        dt = (self.nsteps*self.dT)/(Nelem-1) # time step corresponding to (pt0, qt0)
+                        dt = (self.T)/(Nelem-1) # time step corresponding to (pt0, qt0)
                         p_seg = pt0[iosc]
                         q_seg = qt0[iosc]
 
@@ -678,6 +632,7 @@ class Quandary:
         lines.append(f"nessential = {_toml_array(self.Ne)}")
         lines.append(f"ntime = {self.nsteps}")
         lines.append(f"dt = {self.dT}")
+        lines.append(f"total_time = {self.T}")
         lines.append(f"transition_frequency = {_toml_array(self.freq01)}")
         lines.append(f"selfkerr = {_toml_array(self.selfkerr)}")
 
@@ -978,7 +933,7 @@ class Quandary:
         # Get the control pulses for each qubit
         pt = []
         qt = []
-        ft = []
+        # ft = []
         for iosc in range(len(self.Ne)):
             # Read the control pulse file
             filename = os.path.join(datadir, f"control{iosc}.dat")
@@ -991,7 +946,7 @@ class Quandary:
             time = x[:,0]   # Time domain
             pt.append([x[n,1]*1e+3 for n in range(len(x[:,0]))])     # Rot frame p(t), MHz
             qt.append([x[n,2]*1e+3 for n in range(len(x[:,0]))])     # Rot frame q(t), MHz
-            ft.append([x[n,3]*1e+3 for n in range(len(x[:,0]))])     # Lab frame f(t)
+            # ft.append([x[n,3]*1e+3 for n in range(len(x[:,0]))])     # Lab frame f(t)
     
         return time, pt, qt, uT, expectedEnergy, population, pcof, infid_last, optim_hist
 
