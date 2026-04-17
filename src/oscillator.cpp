@@ -15,6 +15,13 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
 
   myid = id;
 
+  MPI_Comm_rank(PETSC_COMM_WORLD, &mpirank_petsc);
+  MPI_Comm_size(PETSC_COMM_WORLD, &mpisize_petsc);
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
+
+  MPILogger logger(mpirank_world);
+
+
   // Extract parameters from config
   const std::vector<size_t>& nlevels_all_ = config.getNLevels();
   nlevels = nlevels_all_[id];
@@ -32,7 +39,7 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   transmon_resonator_labframe = fabs(rot_freq[id]) < 1e-12;
   if (transmon_resonator && transmon_resonator_labframe) {
     // If transmon-resonator in lab frame, the evalControl function has been hardcoded to zero out the p-pulse: p(t) = 0.0. This is not going to give the right gradient, nor is this useful for optimization. It is only needed for validating the original control pulses. TODO: Remove or refactor. 
-    printf("WARNING: Transmon-resonator system in lab frame. The control function is hardcoded to have zero p-pulse, which is not useful for optimization. This is only intended for validating original control pulses. \n");
+    if (myid == 0) logger.log("\n WARNING: Transmon-resonator system in lab frame. The control function is hardcoded to have zero p-pulse, which is not useful for optimization. This is only intended for validating original control pulses. \n");
   }
 
   const std::vector<double>& carrier_freq_config = config.getCarrierFrequencies(id);
@@ -46,12 +53,6 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   const std::vector<double>& dephase_time_config = config.getDephaseTime();
   decay_time = decay_time_config[id];
   dephase_time = dephase_time_config[id];
-
-  MPI_Comm_rank(PETSC_COMM_WORLD, &mpirank_petsc);
-  MPI_Comm_size(PETSC_COMM_WORLD, &mpisize_petsc);
-  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
-
-  MPILogger logger(mpirank_world);
 
   // Get system dimension N (Schroedinger) or N^2 (Lindblad)
   PetscInt dim = 1;
