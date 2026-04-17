@@ -136,11 +136,15 @@ int main(int argc,char **argv)
   LinearSolverType linsolvetype = config.getLinearSolverType();
   int linsolve_maxiter = config.getLinearSolverMaxiter();
 
-  /* My time stepper */
+  // Store forward trajectory for gradient and optimization, except if Schroedinger solver is used with non-petsc Timestepper.
   bool storeFWD = false;
   RunType runtype = config.getRuntype();
-  if (mastereq->decoherence_type != DecoherenceType::NONE &&   
-     (runtype == RunType::GRADIENT || runtype == RunType::OPTIMIZATION) ) storeFWD = true;  // if NOT Schroedinger solver and running gradient optim: store forward states. Otherwise, they will be recomputed during gradient. 
+  if (runtype == RunType::GRADIENT || runtype == RunType::OPTIMIZATION) {
+    storeFWD = true;  
+    if (config.getTimestepperType() != TimeStepperType::PETSCTS && config.getDecoherenceType() == DecoherenceType::NONE) {
+      storeFWD=false;
+    }
+  }
 
   TimeStepperType timesteppertype = config.getTimestepperType();
   TimeStepper* mytimestepper = nullptr;

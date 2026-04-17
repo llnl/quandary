@@ -889,10 +889,12 @@ PetscTS::PetscTS(size_t ninit_local, MasterEq* mastereq_, int ntime_, double tot
     TSSetFromOptions(tsi);
 
     // Enable in-memory trajectory storage for adjoint solves.
-    TSSetSaveTrajectory(tsi);
-    TSTrajectory tj;
-    TSGetTrajectory(tsi, &tj);
-    TSTrajectorySetType(tj, tsi, TSTRAJECTORYMEMORY);
+    if (storeFWD_) {
+      TSSetSaveTrajectory(tsi);
+      TSTrajectory tj;
+      TSGetTrajectory(tsi, &tj);
+      TSTrajectorySetType(tj, tsi, TSTRAJECTORYMEMORY);
+    }
   };
 
   // Create a TS object for each initial condition. 
