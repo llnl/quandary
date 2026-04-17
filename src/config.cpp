@@ -1044,12 +1044,21 @@ void Config::validate() const {
     }
   }
 
-  if (timestepper_type == TimeStepperType::PETSCTS && runtype != RunType::SIMULATION) {
-    if (optim_penalty_energy > 1e-13 && optim_penalty_leakage > 1e-13) {
+  // Validate supported features for PetscTS timestepper
+  if (timestepper_type == TimeStepperType::PETSCTS) {
+    // Gradient of more than one integral penalty term not correct.
+    if (runtype != RunType::SIMULATION && optim_penalty_energy > 1e-13 && optim_penalty_leakage > 1e-13) {
       logger.exitWithError("Gradient using Petsc's adaptive timestepping might be wrong if both the energy and the leakage penalties are enabled. It is advised to disable one of them, or use a non-adaptive time-stepper.\n");
     }
   }
-
+  // Bspline0 parameterization doesn't work for adaptive PETSCTS timestepper! 
+  if (timestepper_type == TimeStepperType::PETSCTS) {
+    for (size_t i = 0; i < control_parameterizations.size(); i++) {
+      if (control_parameterizations[i].type == ControlType::BSPLINE0) {
+        logger.exitWithError("Control parameterization type BSPLINE0 is not compatible with PETSCTS adaptive timestepper. Use a different parameterization or timestepper.\n");
+      }
+    }
+  }
 }
 
 size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, DecoherenceType decoherence_type) const {
