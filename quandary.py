@@ -257,7 +257,7 @@ class Quandary:
             self.dT = self.T/self.nsteps
         else:
             self.nsteps = int(np.ceil(self.T / self.dT))
-            self.T = self.nsteps*self.dT
+            # self.T = self.nsteps*self.dT
         if self.verbose:
             print("Final time: ",self.T,"ns, Number of timesteps: ", self.nsteps,", dt=", self.T/self.nsteps, "ns")
             print("Maximum control amplitudes: ", self.maxctrl_MHz, "MHz")
@@ -284,8 +284,7 @@ class Quandary:
             self.carrier_frequency, _ = get_resonances(Ne=self.Ne, Ng=self.Ng, Hsys=self.Hsys, Hc_re=self.Hc_re, Hc_im=self.Hc_im, rotfreq=self.rotfreq, verbose=self.verbose, cw_amp_thres=self.cw_amp_thres, cw_prox_thres=self.cw_prox_thres, stdmodel=self.standardmodel)
 
         if self.verbose: 
-            print("\n")
-            print("Carrier frequencies (rot. frame): ", self.carrier_frequency)
+            print("Carrier frequencies: ", self.carrier_frequency)
             print("\n")
 
     def copy(self):
@@ -630,9 +629,10 @@ class Quandary:
         lines.append("[system]")
         lines.append(f"nlevels = {_toml_array(Nt)}")
         lines.append(f"nessential = {_toml_array(self.Ne)}")
-        lines.append(f"ntime = {self.nsteps}")
-        lines.append(f"dt = {self.dT}")
         lines.append(f"total_time = {self.T}")
+        if self.timestepper != "petscts":
+            lines.append(f"ntime = {self.nsteps}")
+            lines.append(f"dt = {self.dT}")
         lines.append(f"transition_frequency = {_toml_array(self.freq01)}")
         lines.append(f"selfkerr = {_toml_array(self.selfkerr)}")
 
