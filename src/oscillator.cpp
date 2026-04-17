@@ -28,6 +28,12 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   ground_freq = trans_freq[id] * 2.0 * M_PI;
   selfkerr = selfkerr_config[id] * 2.0 * M_PI;
   detuning_freq = 2.0 * M_PI * (trans_freq[id] - rot_freq[id]);
+  transmon_resonator = config.getTransmonResonator();
+  transmon_resonator_labframe = fabs(rot_freq[id]) < 1e-12;
+  if (transmon_resonator && transmon_resonator_labframe) {
+    // If transmon-resonator in lab frame, the evalControl function has been hardcoded to zero out the p-pulse: p(t) = 0.0. This is not going to give the right gradient, nor is this useful for optimization. It is only needed for validating the original control pulses. TODO: Remove or refactor. 
+    printf("WARNING: Transmon-resonator system in lab frame. The control function is hardcoded to have zero p-pulse, which is not useful for optimization. This is only intended for validating original control pulses. \n");
+  }
 
   const std::vector<double>& carrier_freq_config = config.getCarrierFrequencies(id);
   carrier_freq = carrier_freq_config;
@@ -141,6 +147,16 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
         // if BSPLINEAMP: Two values can be provided: First one for the amplitude (set above), second one for the phase which otherwise is set to 0.0 (overwrite here)
         if (basisfunctions[iseg]->getType() == ControlType::BSPLINEAMP) {
           params[params.size()-1] = controlinitialization.phase.value();
+        }
+      }
+
+      // If transmon-resonator, initiliize the imaginary parts alpha^2 = 0.0. Overwrite here
+      if (transmon_resonator) {
+        assert(carrier_freq.size() == 1);
+        int nparams = basisfunctions[iseg]->getNparams();
+        int istart = int(nparams/2); // THIS PROBABLY ONLY WORKS IF ONE CARRIER FREQUENCY IS USED! 
+        for (int i=istart; i<nparams; i++){
+          params[i] = 0.0;
         }
       }
     }
@@ -267,6 +283,10 @@ int Oscillator::evalControl(const double t, double* Re_ptr, double* Im_ptr){
             sum_p += cos_omt * Blt1 - sin_omt * Blt2; 
             sum_q += sin_omt * Blt1 + cos_omt * Blt2;
           }
+        }
+        if (transmon_resonator && transmon_resonator_labframe) {
+          // If transmon-resonator in lab frame hardcode p to zero. 
+          sum_p = 0.0;
         }
         *Re_ptr = sum_p;
         *Im_ptr = sum_q;

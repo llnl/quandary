@@ -50,6 +50,8 @@ class Oscillator {
     double total_time; ///< Final evolution time
     std::vector<ControlBasis *> basisfunctions; ///< Basis functions for control parameterization foreach time parameterization. Note: Currently only one parameterization is supported!
     std::vector<double> carrier_freq; ///< Frequencies of the carrier waves
+    bool transmon_resonator; ///< Whether modelling transmon-resonator system for SPAM reduction. If true, the imaginary part of alpha is initialized to zero.
+    bool transmon_resonator_labframe; ///< Switch for transmon resonator system to indicate whether this is lab or rotating frame
 
     int mpirank_world; ///< Rank of MPI_COMM_WORLD
     int mpirank_petsc; ///< Rank of PETSc's communicator
