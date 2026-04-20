@@ -218,23 +218,23 @@ double OptimProblem::evalF(const Vec x) {
     Vec finalstate = timestepper->solveODE(initid, iinit, rho_t0);
 
     /* Add to leakage penalty term */
-    obj_penal_leakage += obj_weights[iinit] * gamma_penalty_leakage * timestepper->getLeakageIntegral();
+    obj_penal_leakage += obj_weights[iinit_global] * gamma_penalty_leakage * timestepper->getLeakageIntegral();
 
     /* Add to running cost penalty term */
-    obj_penal_weightedcost += obj_weights[iinit] * gamma_penalty_weightedcost * timestepper->getWeightedCostIntegral();
+    obj_penal_weightedcost += obj_weights[iinit_global] * gamma_penalty_weightedcost * timestepper->getWeightedCostIntegral();
 
     /* Add to second derivative penalty term */
-    obj_penal_dpdm += obj_weights[iinit] * gamma_penalty_dpdm * timestepper->getDPDMIntegral();
+    obj_penal_dpdm += obj_weights[iinit_global] * gamma_penalty_dpdm * timestepper->getDPDMIntegral();
     
     /* Add to energy integral penalty term */
-    obj_penal_energy += obj_weights[iinit] * gamma_penalty_energy* timestepper->getEnergyIntegral();
+    obj_penal_energy += obj_weights[iinit_global] * gamma_penalty_energy* timestepper->getEnergyIntegral();
 
     /* Evaluate J(finalstate) and add to final-time cost */
     double obj_iinit_re = 0.0;
     double obj_iinit_im = 0.0;
     optim_target->evalJ(finalstate,  &obj_iinit_re, &obj_iinit_im);
-    obj_cost_re += obj_weights[iinit] * obj_iinit_re;
-    obj_cost_im += obj_weights[iinit] * obj_iinit_im;
+    obj_cost_re += obj_weights[iinit_global] * obj_iinit_re;
+    obj_cost_im += obj_weights[iinit_global] * obj_iinit_im;
 
     /* Add to final-time fidelity */
     double fidelity_iinit_re = 0.0;
@@ -370,22 +370,22 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
     if (timestepper->mastereq->decoherence_type == DecoherenceType::NONE) VecCopy(finalstate, store_finalstates[iinit]);
 
     /* Add to leakage penalty term */
-    obj_penal_leakage += obj_weights[iinit] * gamma_penalty_leakage * timestepper->getLeakageIntegral();
+    obj_penal_leakage += obj_weights[iinit_global] * gamma_penalty_leakage * timestepper->getLeakageIntegral();
 
     /* Add to running cost penalty term */
-    obj_penal_weightedcost += obj_weights[iinit] * gamma_penalty_weightedcost * timestepper->getWeightedCostIntegral();
+    obj_penal_weightedcost += obj_weights[iinit_global] * gamma_penalty_weightedcost * timestepper->getWeightedCostIntegral();
 
     /* Add to second derivative dpdm integral penalty term */
-    obj_penal_dpdm += obj_weights[iinit] * gamma_penalty_dpdm * timestepper->getDPDMIntegral();
+    obj_penal_dpdm += obj_weights[iinit_global] * gamma_penalty_dpdm * timestepper->getDPDMIntegral();
     /* Add to energy integral penalty term */
-    obj_penal_energy += obj_weights[iinit] * gamma_penalty_energy * timestepper->getEnergyIntegral();
+    obj_penal_energy += obj_weights[iinit_global] * gamma_penalty_energy * timestepper->getEnergyIntegral();
 
     /* Evaluate J(finalstate) and add to final-time cost */
     double obj_iinit_re = 0.0;
     double obj_iinit_im = 0.0;
     optim_target->evalJ(finalstate,  &obj_iinit_re, &obj_iinit_im);
-    obj_cost_re += obj_weights[iinit] * obj_iinit_re;
-    obj_cost_im += obj_weights[iinit] * obj_iinit_im;
+    obj_cost_re += obj_weights[iinit_global] * obj_iinit_re;
+    obj_cost_im += obj_weights[iinit_global] * obj_iinit_im;
 
     /* Add to final-time fidelity */
     double fidelity_iinit_re = 0.0;
@@ -404,10 +404,10 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
       /* Terminal condition for adjoint variable: Derivative of final time objective J */
       double obj_cost_re_bar, obj_cost_im_bar;
       optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
-      optim_target->evalJ_diff(finalstate, rho_t0_bar, obj_weights[iinit]*obj_cost_re_bar, obj_weights[iinit]*obj_cost_im_bar);
+      optim_target->evalJ_diff(finalstate, rho_t0_bar, obj_weights[iinit_global]*obj_cost_re_bar, obj_weights[iinit_global]*obj_cost_im_bar);
 
       /* Derivative of time-stepping */
-      timestepper->solveAdjointODE(iinit, rho_t0_bar, finalstate, obj_weights[iinit] * gamma_penalty_leakage, obj_weights[iinit]*gamma_penalty_weightedcost, obj_weights[iinit]*gamma_penalty_dpdm, obj_weights[iinit]*gamma_penalty_energy);
+      timestepper->solveAdjointODE(iinit, rho_t0_bar, finalstate, obj_weights[iinit_global] * gamma_penalty_leakage, obj_weights[iinit_global]*gamma_penalty_weightedcost, obj_weights[iinit_global]*gamma_penalty_dpdm, obj_weights[iinit_global]*gamma_penalty_energy);
 
       /* Add to optimizers's gradient */
       VecAXPY(G, 1.0, timestepper->redgrad);
@@ -481,10 +481,10 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
       /* Terminal condition for adjoint variable: Derivative of final time objective J */
       double obj_cost_re_bar, obj_cost_im_bar;
       optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
-      optim_target->evalJ_diff(store_finalstates[iinit], rho_t0_bar, obj_weights[iinit]*obj_cost_re_bar, obj_weights[iinit]*obj_cost_im_bar);
+      optim_target->evalJ_diff(store_finalstates[iinit], rho_t0_bar, obj_weights[iinit_global]*obj_cost_re_bar, obj_weights[iinit_global]*obj_cost_im_bar);
 
       /* Derivative of time-stepping */
-      timestepper->solveAdjointODE(iinit, rho_t0_bar, store_finalstates[iinit], obj_weights[iinit] * gamma_penalty_leakage, obj_weights[iinit]*gamma_penalty_weightedcost, obj_weights[iinit]*gamma_penalty_dpdm, obj_weights[iinit]*gamma_penalty_energy);
+      timestepper->solveAdjointODE(iinit, rho_t0_bar, store_finalstates[iinit], obj_weights[iinit_global] * gamma_penalty_leakage, obj_weights[iinit_global]*gamma_penalty_weightedcost, obj_weights[iinit_global]*gamma_penalty_dpdm, obj_weights[iinit_global]*gamma_penalty_energy);
 
       /* Add to optimizers's gradient */
       VecAXPY(G, 1.0, timestepper->redgrad);
