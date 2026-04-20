@@ -78,6 +78,61 @@ std::vector<SettingsType> parsePerSubsystemSettings(const toml::table& toml, con
   return std::vector<SettingsType>();
 }
 
+void parseInitialConditionLevels(const toml::table& init_cond_table, InitialConditionSettings& initial_condition, const MPILogger& logger) {
+  if (!init_cond_table.contains("levels")) {
+    return;
+  }
+
+  auto levels_node = init_cond_table["levels"];
+  auto* levels_array = levels_node.as_array();
+  if (!levels_array) {
+    logger.exitWithError("initial_condition.levels must be an array");
+  }
+  if (levels_array->empty()) {
+    logger.exitWithError("initial_condition.levels must not be empty");
+  }
+
+  // Case 1: levels = [[...], [...], ...]
+  if (levels_array->front().is_array()) {
+    std::vector<std::vector<size_t>> all_levels;
+    all_levels.reserve(levels_array->size());
+
+    for (size_t state_idx = 0; state_idx < levels_array->size(); ++state_idx) {
+      const auto& state_node = levels_array->at(state_idx);
+      auto* state_array = state_node.as_array();
+      if (!state_array) {
+        logger.exitWithError("initial_condition.levels must be either an array of integers or an array of integer arrays");
+      }
+      if (state_array->empty()) {
+        logger.exitWithError("initial_condition.levels entries must not be empty");
+      }
+
+      std::vector<size_t> state_levels;
+      state_levels.reserve(state_array->size());
+      for (size_t k = 0; k < state_array->size(); ++k) {
+        auto level_val = state_array->at(k).value<size_t>();
+        if (!level_val.has_value()) {
+          logger.exitWithError("initial_condition.levels entries must contain integer values");
+        }
+        state_levels.push_back(level_val.value());
+      }
+      all_levels.push_back(std::move(state_levels));
+    }
+
+    initial_condition.levels_list = std::move(all_levels);
+    initial_condition.levels = std::nullopt;
+    return;
+  }
+
+  // Case 2: levels = [...]
+  auto levels = validators::getOptionalVector<size_t>(levels_node);
+  if (!levels.has_value()) {
+    logger.exitWithError("initial_condition.levels must be either an array of integers or an array of integer arrays");
+  }
+  initial_condition.levels = std::move(levels);
+  initial_condition.levels_list = std::nullopt;
+}
+
 } // namespace
 
 
@@ -163,7 +218,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       logger.exitWithError("initial condition type not found.");
     }
     initial_condition.type = type_opt.value();
-    initial_condition.levels = validators::getOptionalVector<size_t>(init_cond_table["levels"]);
+    parseInitialConditionLevels(init_cond_table, initial_condition, logger);
     initial_condition.filename = validators::getOptional<std::string>(init_cond_table["filename"]);
     initial_condition.subsystem= validators::getOptionalVector<size_t>(init_cond_table["subsystem"]);
     
@@ -400,6 +455,7 @@ Config::Config(const MPILogger& logger, const ParsedConfigData& settings) : logg
   initial_condition.type = settings.initialcondition.value().type;
   initial_condition.filename = settings.initialcondition.value().filename;
   initial_condition.levels = settings.initialcondition.value().levels;
+  initial_condition.levels_list = settings.initialcondition.value().levels_list;
   initial_condition.subsystem = settings.initialcondition.value().subsystem;
 
   // Control and optimization parameters
@@ -607,6 +663,19 @@ std::string printVector(const std::vector<T>& vec) {
   return result;
 }
 
+template <typename T>
+std::string printVectorVector(const std::vector<std::vector<T>>& vec) {
+  if (vec.empty()) return "[]";
+
+  std::string result = "[";
+  result += printVector(vec[0]);
+  for (size_t i = 1; i < vec.size(); ++i) {
+    result += ", " + printVector(vec[i]);
+  }
+  result += "]";
+  return result;
+}
+
 
 std::string toString(const InitialConditionSettings& initial_condition) {
   auto type_str = "type = \"" + enumToString(initial_condition.type, INITCOND_TYPE_MAP) + "\"";
@@ -615,7 +684,11 @@ std::string toString(const InitialConditionSettings& initial_condition) {
       return "{" + type_str + ", filename = \"" + initial_condition.filename.value() + "\"}";
     case InitialConditionType::PRODUCT_STATE: {
       std::string out = "{" + type_str + ", levels = ";
-      out += printVector(initial_condition.levels.value());
+      if (initial_condition.levels_list.has_value()) {
+        out += printVectorVector(initial_condition.levels_list.value());
+      } else {
+        out += printVector(initial_condition.levels.value());
+      }
       out += "}";
       return out;
     }
@@ -1016,15 +1089,34 @@ void Config::validate() const {
     }
   }
   if (initial_condition.type == InitialConditionType::PRODUCT_STATE) {
-    if (!initial_condition.levels.has_value()) {
+    const bool has_single_levels = initial_condition.levels.has_value();
+    const bool has_levels_list = initial_condition.levels_list.has_value();
+    if (!has_single_levels && !has_levels_list) {
       logger.exitWithError("initialcondition of type PRODUCT_STATE must have 'levels'");
     }
-    if (initial_condition.levels->size() != nlevels.size()) {
-      logger.exitWithError("initialcondition of type PRODUCT_STATE must have exactly " + std::to_string(nlevels.size()) + " parameters, got " + std::to_string(initial_condition.levels->size()));
+    if (has_single_levels && has_levels_list) {
+      logger.exitWithError("initialcondition of type PRODUCT_STATE must provide either a single levels array or a list of levels arrays, not both");
     }
-    for (size_t k = 0; k < initial_condition.levels->size(); k++) {
-      if (initial_condition.levels->at(k) >= nlevels[k]) {
-        logger.exitWithError("ERROR in config setting. The requested product state initialization " + std::to_string(initial_condition.levels->at(k)) + " exceeds the number of allowed levels for that oscillator (" + std::to_string(nlevels[k]) + ").\n");
+
+    auto validateOneProductState = [this](const std::vector<size_t>& levels) {
+      if (levels.size() != nlevels.size()) {
+        logger.exitWithError("initialcondition of type PRODUCT_STATE must have exactly " + std::to_string(nlevels.size()) + " parameters, got " + std::to_string(levels.size()));
+      }
+      for (size_t k = 0; k < levels.size(); k++) {
+        if (levels[k] >= nlevels[k]) {
+          logger.exitWithError("ERROR in config setting. The requested product state initialization " + std::to_string(levels[k]) + " exceeds the number of allowed levels for that oscillator (" + std::to_string(nlevels[k]) + ").\n");
+        }
+      }
+    };
+
+    if (has_single_levels) {
+      validateOneProductState(initial_condition.levels.value());
+    } else {
+      if (initial_condition.levels_list->empty()) {
+        logger.exitWithError("initialcondition of type PRODUCT_STATE must contain at least one state in levels");
+      }
+      for (const auto& state_levels : initial_condition.levels_list.value()) {
+        validateOneProductState(state_levels);
       }
     }
   }
@@ -1065,10 +1157,19 @@ size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_se
   size_t n_initial_conditions = 0;
   switch (init_cond_settings.type) {
     case InitialConditionType::FROMFILE:
-    case InitialConditionType::PRODUCT_STATE:
     case InitialConditionType::PERFORMANCE:
     case InitialConditionType::ENSEMBLE:
       n_initial_conditions = 1;
+      break;
+    case InitialConditionType::PRODUCT_STATE:
+      if (init_cond_settings.levels_list.has_value()) {
+        if (init_cond_settings.levels_list->empty()) {
+          logger.exitWithError("initialcondition of type PRODUCT_STATE must contain at least one state in levels");
+        }
+        n_initial_conditions = init_cond_settings.levels_list->size();
+      } else {
+        n_initial_conditions = 1;
+      }
       break;
     case InitialConditionType::THREESTATES:
       n_initial_conditions = 3;

@@ -80,6 +80,7 @@ struct InitialConditionSettings {
   // Optional settings - populate based on type
   std::optional<std::string> filename; ///< For FROMFILE: File to read initial condition from
   std::optional<std::vector<size_t>> levels; ///< For PRODUCT_STATE: Quantum level for each oscillator
+  std::optional<std::vector<std::vector<size_t>>> levels_list; ///< For PRODUCT_STATE: Optional list of product states
   std::optional<std::vector<size_t>> subsystem; ///< For ENSEMBLE, DIAGONAL, BASIS: Oscillator IDs
 };
 

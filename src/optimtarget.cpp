@@ -3,6 +3,23 @@
 #include "defs.hpp"
 #include <string>
 
+namespace {
+
+PetscInt computeProductStateDiagIdFromNlevels(const std::vector<size_t>& level_indices, const std::vector<size_t>& nlevels) {
+  PetscInt diag_id = 0;
+  for (size_t k = 0; k < level_indices.size(); k++) {
+    PetscInt dim_postkron = 1;
+    for (size_t m = k + 1; m < level_indices.size(); m++) {
+      dim_postkron *= nlevels[m];
+    }
+    diag_id += level_indices[k] * dim_postkron;
+  }
+  return diag_id;
+}
+
+
+} // namespace
+
 OptimTarget::OptimTarget(){
   dim = 0;
   dim_rho = 0;
@@ -42,18 +59,11 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
   /* Get initial condition type and IDs */
   initcond = config.getInitialCondition();
 
-  /* Prepare initial state rho_t0 if PRODUCT_STATE or FROMFILE or ENSEMBLE initialization. Otherwise they are set within prepareInitialState during evalF. */
-  if (initcond.type == InitialConditionType::PRODUCT_STATE) {
+  /* Prepare initial state rho_t0 if a single PRODUCT_STATE or FROMFILE or ENSEMBLE initialization. Otherwise they are set within prepareInitialState during evalF. */
+  if (initcond.type == InitialConditionType::PRODUCT_STATE && !initcond.levels_list.has_value()) { // if _list is empty, then levels contains the only initial state. 
     const auto& level_indices = initcond.levels.value();
-    // Find the id within the global composite system 
-    PetscInt diag_id = 0;
-    for (size_t k=0; k < level_indices.size(); k++) {
-      PetscInt dim_postkron = 1;
-      for (size_t m=k+1; m < level_indices.size(); m++) {
-        dim_postkron *= mastereq->getOscillator(m)->getNLevels();
-      }
-      diag_id += level_indices[k] * dim_postkron;
-    }
+    // Find the id within the global composite system
+    PetscInt diag_id = computeProductStateDiagIdFromNlevels(level_indices, mastereq->nlevels);
     // Vectorize if lindblad solver
     PetscInt vec_id = diag_id;
     if (decoherence_type != DecoherenceType::NONE) vec_id = getVecID( diag_id, diag_id, dim_rho); 
@@ -409,7 +419,29 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
   } else if(initcond.type == InitialConditionType::FROMFILE) {
     /* Do nothing. Init cond is already stored */
   } else if(initcond.type == InitialConditionType::PRODUCT_STATE) {
-    /* Do nothing. Init cond is already stored */
+    if (!initcond.levels_list.has_value()) {
+      /* Do nothing. The init cond is already stored */
+    } else {
+      VecZeroEntries(rho0);
+
+      const auto& all_levels = initcond.levels_list.value();
+      const auto& level_indices = all_levels[static_cast<size_t>(iinit)];
+      PetscInt diag_id = computeProductStateDiagIdFromNlevels(level_indices, nlevels);
+
+      PetscInt elemid = diag_id;
+      if (decoherence_type != DecoherenceType::NONE) {
+        elemid = getVecID(diag_id, diag_id, dim_rho);
+      }
+
+      if (ilow <= elemid && elemid < iupp) {
+        PetscInt id_global_x = elemid + mpirank_petsc * localsize_u;
+        VecSetValue(rho0, id_global_x, 1.0, INSERT_VALUES);
+      }
+      VecAssemblyBegin(rho0);
+      VecAssemblyEnd(rho0);
+
+      initID = static_cast<int>(diag_id);
+    }
   } else if(initcond.type == InitialConditionType::ENSEMBLE) {
     /* Do nothing. Init cond is already stored */
   } else if (initcond.type == InitialConditionType::THREESTATES) {
