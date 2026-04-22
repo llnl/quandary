@@ -65,7 +65,7 @@ MasterEq::MasterEq(const Config& config, Oscillator** oscil_vec_, bool quietmode
     if (mpirank_world==0 && !quietmode) 
       printf("\n# Modelling transmon-resonator system.\n");
 
-    charge_offset = 2.*M_PI * config.getChargeOffset();
+    charge_offset = config.getChargeOffset();
     Ec = 2.*M_PI * config.getEc();  // Charging energy
     Ej = 2.*M_PI * config.getEj();
 
