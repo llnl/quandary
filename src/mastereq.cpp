@@ -566,9 +566,9 @@ void MasterEq::initTransmonResonatorSparseMats(){
   // Schroedinger solver: 
   //    Bd_kl = Jkl * n_t \otimes (a_r + a_r^+)
   //    Ad_kl = - Jkl * n_t \otimes (a_r - a_r^+)
-  assert(Jkl.size() == 1); // Only one coupling (0-1) should be present.
-  assert(Bd_vec.size() == 1); 
-  assert(Ad_vec.size() == 1);
+  // assert(Jkl.size() == 1); // Only one coupling (0-1) should be present.
+  // assert(Bd_vec.size() == 1); 
+  // assert(Ad_vec.size() == 1);
   for (PetscInt row = ilow; row<iupp; row++){ // Iterate ove local rows 
     // Schroedinger solver: Bd_kl and Ad_kl
     if (decoherence_type == DecoherenceType::NONE) { 

@@ -866,6 +866,8 @@ PetscTS::PetscTS(size_t ninit_local, MasterEq* mastereq_, int ntime_, double tot
     /* Explicit RK */
     TSSetType(tsi, TSRK);
     TSRKSetType(tsi, TSRK5DP);
+    // TSSetType(tsi, TSBDF);
+    // TSBDFSetOrder(tsi, 2); 
 
     // Pass the RHS function and Jacobian to Petsc.
     TSSetRHSFunction(tsi, NULL, TSComputeRHSFunctionLinear, mastereq->getRHSctx());

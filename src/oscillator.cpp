@@ -37,7 +37,7 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   detuning_freq = 2.0 * M_PI * (trans_freq[id] - rot_freq[id]);
   transmon_resonator = config.getTransmonResonator();
   transmon_resonator_labframe = fabs(rot_freq[id]) < 1e-12;
-  if (transmon_resonator && transmon_resonator_labframe) {
+  if (transmon_resonator && transmon_resonator_labframe && myid == 1) {
     // If transmon-resonator in lab frame, the evalControl function has been hardcoded to zero out the p-pulse: p(t) = 0.0. This is not going to give the right gradient, nor is this useful for optimization. It is only needed for validating the original control pulses. TODO: Remove or refactor. 
     if (myid == 0) logger.log("\n WARNING: Transmon-resonator system in lab frame. The control function is hardcoded to have zero p-pulse, which is not useful for optimization. This is only intended for validating original control pulses. \n");
   }
@@ -285,7 +285,7 @@ int Oscillator::evalControl(const double t, double* Re_ptr, double* Im_ptr){
             sum_q += sin_omt * Blt1 + cos_omt * Blt2;
           }
         }
-        if (transmon_resonator && transmon_resonator_labframe) {
+        if (transmon_resonator && transmon_resonator_labframe && myid == 1) {
           // If transmon-resonator in lab frame hardcode p to zero. 
           sum_p = 0.0;
         }
