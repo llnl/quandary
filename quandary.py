@@ -52,7 +52,7 @@ class Quandary:
     # Optimization targets and initial states options
     targetgate          # Complex target unitary in the essential level dimensions for gate optimization. Default: none
     targetstate         # Complex target state vector for state-to-state optimization. Default: none
-    initialcondition    # Choose from provided initial states at time t=0.0: "basis" (all basis states, default), "pure, 0,0,1,..." (one pure initial state |001...>), or pass a vector as initial state. Default: "basis" 
+    initialcondition    # Choose from provided initial states at time t=0.0: "basis" (all basis states, default), "pure, 0,0,1,..." (one pure initial state |001...>), "pure" with a list of lists (multiple pure initial states), or pass a vector as initial state. Default: "basis" 
     gate_rot_freq       # Specify frequencies to rotate a target gate (one per oscillator). Default: no rotation (0.0 for each oscillator)
 
     # Control pulse options
@@ -100,6 +100,7 @@ class Quandary:
     _gatefilename         : str 
     _initstatefilename    : str 
     _initialstate         : List[complex] = field(default_factory=list)
+    _initialcondition_levels : List[List[int]] = field(default_factory=list)
 
 
     Output parameters, available after Quandary has been executed (simulate or optimze)
@@ -182,6 +183,7 @@ class Quandary:
     _gatefilename         : str         = ""
     _initstatefilename    : str         = ""
     _initialstate         : List[complex] = field(default_factory=list)
+    _initialcondition_levels : List[List[int]] = field(default_factory=list)
     
     # Output parameters available after Quandary has been run
     popt        : List[float]   = field(default_factory=list)
@@ -231,9 +233,29 @@ class Quandary:
             self.optim_target = "file"
         if len(self.targetgate) > 0:
             self.optim_target = "gate, file"
+        self._initialcondition_levels = []
         if not isinstance(self.initialcondition, str):
-            self._initialstate=self.initialcondition.copy()
-            self.initialcondition = "file" 
+            raw_ic = self.initialcondition
+            # Accept Python-native pure state level specs:
+            #  - [l0, l1, ...]
+            #  - [[l0, l1, ...], [m0, m1, ...], ...]
+            if isinstance(raw_ic, (list, tuple)) and len(raw_ic) > 0 and all(isinstance(x, (list, tuple)) for x in raw_ic):
+                self._initialcondition_levels = [[int(v) for v in one_state] for one_state in raw_ic]
+                self.initialcondition = "pure"
+            elif isinstance(raw_ic, (list, tuple)) and len(raw_ic) == len(self.Ne) and all(isinstance(x, (int, np.integer)) for x in raw_ic):
+                self._initialcondition_levels = [[int(v) for v in raw_ic]]
+                self.initialcondition = "pure"
+            else:
+                self._initialstate = raw_ic.copy()
+                self.initialcondition = "file"
+
+        if self.initialcondition[0:4] == "pure" and len(self._initialcondition_levels) > 0:
+            for one_state in self._initialcondition_levels:
+                if len(one_state) != len(self.Ne):
+                    raise ValueError("For pure initial conditions, each level list must have one entry per oscillator.")
+                for iosc, lvl in enumerate(one_state):
+                    if lvl < 0 or lvl >= (self.Ne[iosc] + self.Ng[iosc]):
+                        raise ValueError(f"Invalid pure initial-condition level {lvl} for oscillator {iosc}.")
         # Convert maxctrl_MHz to a list for each oscillator, if not so already
         if isinstance(self.maxctrl_MHz, float) or isinstance(self.maxctrl_MHz, int):
             max_alloscillators = self.maxctrl_MHz
@@ -241,8 +263,13 @@ class Quandary:
         
         # Store the number of initial conditions and solver flag
         self._lindblad_solver = True if (len(self.T1)>0) or (len(self.T2)>0) else False
-        if self.initialcondition[0:4] == "file" or self.initialcondition[0:4] == "pure":
+        if self.initialcondition[0:4] == "file":
             self._ninit = 1
+        elif self.initialcondition[0:4] == "pure":
+            if len(self._initialcondition_levels) > 0:
+                self._ninit = len(self._initialcondition_levels)
+            else:
+                self._ninit = 1
         else:
             self._ninit = np.prod(self.Ne)
         if self._lindblad_solver:
@@ -530,6 +557,9 @@ class Quandary:
         def _toml_array(values):
             return "[" + ", ".join([str(v) for v in values]) + "]"
 
+        def _toml_array2(values2):
+            return "[" + ", ".join([_toml_array(vals) for vals in values2]) + "]"
+
         def _pair_indices(nsub):
             pairs = []
             for i in range(nsub):
@@ -695,8 +725,14 @@ class Quandary:
         if init_type == "file":
             lines.append(f"initial_condition = {{ type = {_toml_str('file')}, filename = {_toml_str(self._initstatefilename)} }}")
         elif init_type == "pure":
-            levels = [int(t) for t in init_tokens[1:] if len(t) > 0]
-            lines.append(f"initial_condition = {{ type = {_toml_str('state')}, levels = {_toml_array(levels)} }}")
+            if len(self._initialcondition_levels) > 0:
+                if len(self._initialcondition_levels) == 1:
+                    lines.append(f"initial_condition = {{ type = {_toml_str('state')}, levels = {_toml_array(self._initialcondition_levels[0])} }}")
+                else:
+                    lines.append(f"initial_condition = {{ type = {_toml_str('state')}, levels = {_toml_array2(self._initialcondition_levels)} }}")
+            else:
+                levels = [int(t) for t in init_tokens[1:] if len(t) > 0]
+                lines.append(f"initial_condition = {{ type = {_toml_str('state')}, levels = {_toml_array(levels)} }}")
         elif init_type in ["basis", "diagonal", "ensemble", "3states", "nplus1"]:
             if len(init_tokens) > 1:
                 subsys = [int(t) for t in init_tokens[1:] if len(t) > 0]
