@@ -532,7 +532,7 @@ template&lt;int n0, int n1, int n2, int n3, int n4&gt; </div>
 </div><div class="memdoc">
 
 <p>Matrix-vector products to apply the RHS system matrix to a state vector. </p>
-<p>Each function returns y = RHS*x. Matrix-free versions as well as sparse-matrix versions are implemented. Those functions will be passed to PETSc's MatMult operations to realize a Matrix-Vector Multiplication of the RHS with a state vector, such that one can call PETSc's MatMult(RHS, x, y) for the RHS. Note: The RHS matrix must be assembled before usage, see <a class="el" href="classMasterEq.html#aadb9c6cdd2162ee2df713e40a72f7d5c">MasterEq::assemble_RHS</a>. Matrix-free MatMult for 1 oscillator </p>
+<p>Each function returns y = RHS*x. Matrix-free versions as well as sparse-matrix versions are implemented. Those functions will be passed to PETSc's MatMult operations to realize a Matrix-Vector Multiplication of the RHS with a state vector, such that one can call PETSc's MatMult(RHS, x, y) for the RHS. Note: The RHS matrix must be assembled before usage, see <a class="el" href="classMasterEq.html#aadb9c6cdd2162ee2df713e40a72f7d5c">MasterEq::assemble_RHS</a> . Matrix-free MatMult for 1 oscillator </p>
 
 </div>
 </div>
