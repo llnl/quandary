@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773265459903,
+  "lastUpdate": 1777051075444,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -2859,6 +2859,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
             "value": 4342.2,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Tara Drwenski",
+            "username": "tdrwenski",
+            "email": "tdrwenski@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "5e1517520db6957773dddf0fef59cc43ecc6cab1",
+          "message": "Merge pull request #124 from llnl/petsc-vec-type-gpu\n\nPETSc VecType fix for GPUs",
+          "timestamp": "2026-04-24T16:46:25Z",
+          "url": "https://github.com/llnl/quandary/commit/5e1517520db6957773dddf0fef59cc43ecc6cab1"
+        },
+        "date": 1777051073585,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "value": 0.7089828711468726,
+            "range": "0.14682009468194243",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "value": 87.72,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "value": 5.513207664247602,
+            "range": "0.032096285738633316",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "value": 4339.43,
             "unit": "MB"
           }
         ]
