@@ -75,8 +75,15 @@ def run_test(simulation_dir, number_of_processes, config_file, files_to_compare,
     print("STDERR:\n", result.stderr)
     assert result.returncode == 0
 
-    matching_files = [file for pattern in files_to_compare
-                      for file in glob.glob(os.path.join(simulation_dir, BASE_DIR, pattern))]
+    base_dir = os.path.join(simulation_dir, BASE_DIR)
+    assert os.path.isdir(base_dir), f"Missing baseline directory: {base_dir}"
+    matching_files = []
+    for pattern in files_to_compare:
+        pattern_matches = glob.glob(os.path.join(base_dir, pattern))
+        assert pattern_matches, (
+            f"No baseline files in {base_dir} matching pattern '{pattern}'"
+        )
+        matching_files.extend(pattern_matches)
     for expected in matching_files:
         file_name = os.path.basename(expected)
         output = os.path.join(simulation_dir, DATA_OUT_DIR, file_name)
