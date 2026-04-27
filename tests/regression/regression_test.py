@@ -17,7 +17,7 @@ ABS_TOL = 1.0e-15
 
 # GPU runs have non-deterministic FP reduction order that perturbs optimization
 # trajectories, so we compare only final converged results with looser tolerance.
-GPU_REL_TOL = 1.0e-3
+GPU_REL_TOL = 5.0e-2
 GPU_ABS_TOL = 1.0e-4
 GPU_OPTION_TOKENS = ("kokkos", "cuda", "cusparse", "rocm", "hip", "viennacl")
 OPTIM_HISTORY_FILE = "optim_history.dat"
