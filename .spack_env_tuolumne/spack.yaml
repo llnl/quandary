@@ -13,7 +13,7 @@ spack:
   - quandary@develop+test
     %%llvm-amdgpu@6.4
     ^netlib-lapack
-    ^petsc@3.24+kokkos+rocm amdgpu_target=gfx942
+    ^petsc@3.24.4+kokkos+rocm amdgpu_target=gfx942
     ^kokkos@4.6+apu+rocm cxxstd=17 amdgpu_target=gfx942
     ^kokkos-kernels@4.6
     ^hip@6.4
