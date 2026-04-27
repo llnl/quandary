@@ -65,6 +65,13 @@ done
 command -v spack >/dev/null 2>&1 || die "spack not found in PATH"
 [[ "$VARIANTS" =~ ^(cpu|gpu|both)$ ]] || die "Invalid variants: $VARIANTS (must be cpu, gpu, or both)"
 
+# Warn if spack is older than 1.1.1
+SPACK_VERSION=$(spack --version 2>/dev/null | awk '{print $1}')
+MIN_SPACK_VERSION="1.1.1"
+if [ -n "$SPACK_VERSION" ] && [ "$(printf '%s\n' "$MIN_SPACK_VERSION" "$SPACK_VERSION" | sort -V | head -n1)" != "$MIN_SPACK_VERSION" ]; then
+  echo "WARNING: spack $SPACK_VERSION detected; $MIN_SPACK_VERSION or newer recommended" >&2
+fi
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
