@@ -34,9 +34,3 @@ variables:
   PROJECT_TUOLUMNE_VARIANTS: "+test"
 # Project specific deps for Tuolumne
   PROJECT_TUOLUMNE_DEPS: ""
-# PETSc runtime options for GPU testing
-  PROJECT_TUOLUMNE_PETSC_GPU_OPTIONS: "-vec_type kokkos -mat_type aijkokkos"
-# Extra flags appended to the flux-run launcher for both ctest and pytest.
-# --env pins HSA_XNACK (ROCm unified memory on MI300A) and
-# MPICH_GPU_SUPPORT_ENABLED (Cray MPICH GPU-aware MPI) onto every task;
-  PROJECT_TUOLUMNE_MPI_EXTRA_FLAGS: "--env=HSA_XNACK=1 --env=MPICH_GPU_SUPPORT_ENABLED=1 --gpus-per-node=4"
