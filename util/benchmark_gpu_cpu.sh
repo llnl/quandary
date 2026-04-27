@@ -27,10 +27,10 @@ Note:
 
 Examples:
   # CPU vs GPU comparison
-  ./util/benchmark_gpu_cpu.sh tests/performance/configs/nlevels_32_32_32_32.toml
+  ./util/benchmark_gpu_cpu.sh config_performance.toml
 
   # GPU only
-  ./util/benchmark_gpu_cpu.sh tests/performance/configs/nlevels_16_16_16_16.toml --variants gpu
+  ./util/benchmark_gpu_cpu.sh config_performance.toml --variants gpu
 EOF
 }
 
