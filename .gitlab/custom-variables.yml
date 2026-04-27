@@ -39,6 +39,4 @@ variables:
 # Extra flags appended to the flux-run launcher for both ctest and pytest.
 # --env pins HSA_XNACK (ROCm unified memory on MI300A) and
 # MPICH_GPU_SUPPORT_ENABLED (Cray MPICH GPU-aware MPI) onto every task;
-# -o gpu-affinity=off lets every rank see all GPUs in the alloc so
-# regression tests with up to 8 ranks can share the node's APUs.
-  PROJECT_TUOLUMNE_MPI_EXTRA_FLAGS: "-o gpu-affinity=off --env=HSA_XNACK=1 --env=MPICH_GPU_SUPPORT_ENABLED=1"
+  PROJECT_TUOLUMNE_MPI_EXTRA_FLAGS: "--env=HSA_XNACK=1 --env=MPICH_GPU_SUPPORT_ENABLED=1"
