@@ -221,12 +221,14 @@ void MasterEq::initSparseMatSolver(){
   MatCreate(PETSC_COMM_WORLD, &Bd);
   MatSetSizes(Ad, localsize, localsize, globalsize, globalsize);
   MatSetSizes(Bd, localsize, localsize, globalsize, globalsize);
-  MatSetFromOptions(Ad);
-  MatSetFromOptions(Bd);
+  MatSetType(Ad, MATMPIAIJ);
+  MatSetType(Bd, MATMPIAIJ);
   if (addT1 || addT2) MatMPIAIJSetPreallocation(Ad, noscillators+5, NULL, noscillators+5, NULL);
   MatMPIAIJSetPreallocation(Bd, 1, NULL, 1, NULL);
   MatSetUp(Ad);
   MatSetUp(Bd);
+  MatSetFromOptions(Ad);
+  MatSetFromOptions(Bd);
 
   MatSetOption(Ad, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
 
@@ -236,10 +238,10 @@ void MasterEq::initSparseMatSolver(){
     Mat myAcMatk = nullptr, myBcMatk = nullptr;
     MatCreate(PETSC_COMM_WORLD, &myAcMatk);
     MatCreate(PETSC_COMM_WORLD, &myBcMatk);
+    MatSetType(myAcMatk, MATMPIAIJ);
+    MatSetType(myBcMatk, MATMPIAIJ);
     MatSetSizes(myAcMatk, localsize, localsize, globalsize, globalsize);
     MatSetSizes(myBcMatk, localsize, localsize, globalsize, globalsize);
-    MatSetFromOptions(myAcMatk);
-    MatSetFromOptions(myBcMatk);
     if (decoherence_type != DecoherenceType::NONE) {
       MatMPIAIJSetPreallocation(myAcMatk, 4, NULL, 4, NULL);
       MatMPIAIJSetPreallocation(myBcMatk, 4, NULL, 4, NULL);
@@ -249,6 +251,8 @@ void MasterEq::initSparseMatSolver(){
     }
     MatSetUp(myAcMatk);
     MatSetUp(myBcMatk);
+    MatSetFromOptions(myAcMatk);
+    MatSetFromOptions(myBcMatk); 
     Ac_vec.push_back(myAcMatk);
     Bc_vec.push_back(myBcMatk);
   }
@@ -261,10 +265,10 @@ void MasterEq::initSparseMatSolver(){
         Mat myBdkl = nullptr;
         MatCreate(PETSC_COMM_WORLD, &myAdkl);
         MatCreate(PETSC_COMM_WORLD, &myBdkl);
+        MatSetType(myAdkl, MATMPIAIJ);
+        MatSetType(myBdkl, MATMPIAIJ);
         MatSetSizes(myAdkl, localsize, localsize, globalsize, globalsize);
         MatSetSizes(myBdkl, localsize, localsize, globalsize, globalsize);
-        MatSetFromOptions(myAdkl);
-        MatSetFromOptions(myBdkl);
         if (decoherence_type != DecoherenceType::NONE) {
           MatMPIAIJSetPreallocation(myAdkl, 4, NULL, 4, NULL);
           MatMPIAIJSetPreallocation(myBdkl, 4, NULL, 4, NULL);
@@ -274,6 +278,8 @@ void MasterEq::initSparseMatSolver(){
         }
         MatSetUp(myAdkl);
         MatSetUp(myBdkl);
+        MatSetFromOptions(myAdkl);
+        MatSetFromOptions(myBdkl);
         Ad_vec.push_back(myAdkl);
         Bd_vec.push_back(myBdkl);
       }
