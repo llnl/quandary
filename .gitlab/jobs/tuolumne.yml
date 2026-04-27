@@ -24,17 +24,11 @@ rocmcc_6_4_3_hip:
   variables:
     SPEC: "${PROJECT_TUOLUMNE_VARIANTS} +rocm amdgpu_target=gfx942 %%llvm-amdgpu@=6.4.3 ^hip@6.4.3 ^netlib-lapack ^cray-mpich%llvm-amdgpu ^petsc@3.24.4+kokkos+rocm amdgpu_target=gfx942 ^kokkos@4.6.02+apu+rocm cxxstd=17 amdgpu_target=gfx942 ${PROJECT_TUOLUMNE_DEPS}"
     PETSC_TEST_OPTIONS: "-vec_type kokkos -mat_type aijkokkos"
-    # --gpus-per-node=4 requests all 4 MI300A APUs so mpibind binds them across tasks;
     # --env pins HSA_XNACK (ROCm unified memory) and MPICH_GPU_SUPPORT_ENABLED (Cray MPICH GPU-aware MPI) onto every task.
-    MPI_EXTRA_FLAGS: "--gpus-per-node=4 --env=HSA_XNACK=1 --env=MPICH_GPU_SUPPORT_ENABLED=1"
+    MPI_EXTRA_FLAGS: "--env=HSA_XNACK=1 --env=MPICH_GPU_SUPPORT_ENABLED=1"
   extends: .job_on_tuolumne
 
 rocmcc_7_2_0_hip:
   variables:
     ON_TUOLUMNE: "OFF"
-  extends: .job_on_tuolumne
-
-cce_21_0_0:
-  variables:
-    MPI_EXTRA_FLAGS: "--gpus-per-task=0"
   extends: .job_on_tuolumne
