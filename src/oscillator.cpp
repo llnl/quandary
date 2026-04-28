@@ -41,6 +41,11 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
     // If transmon-resonator in lab frame, the evalControl function has been hardcoded to zero out the p-pulse: p(t) = 0.0. This is not going to give the right gradient, nor is this useful for optimization. It is only needed for validating the original control pulses. TODO: Remove or refactor. 
     if (myid == 0) logger.log("\n WARNING: Transmon-resonator system in lab frame. The control function is hardcoded to have zero p-pulse, which is not useful for optimization. This is only intended for validating original control pulses. \n");
   }
+  if (transmon_resonator) {
+    charge_offset = config.getChargeOffset();
+    Ec = 2.*M_PI * config.getEc();  // Charging energy
+    Ej = 2.*M_PI * config.getEj();
+  }
 
   const std::vector<double>& carrier_freq_config = config.getCarrierFrequencies(id);
   carrier_freq = carrier_freq_config;
@@ -379,6 +384,92 @@ double Oscillator::expectedEnergy(const Vec x) {
   if (decoherence_type != DecoherenceType::NONE)  dimmat = (PetscInt) sqrt(dim/2);
   else dimmat = (PetscInt) dim/2;
 
+  // If this is a transmon-resonator system and the ID is 0 (such that this is a transmon in the charge basis), then compute the charging and josephson energy instead of the expected excitation number in the fock basis. 
+  if (transmon_resonator && myid == 0) {
+    // charging energy: 4𝐸_𝐶 ∑_n (𝑛−𝑛_𝑔 )^2 |𝜓_𝑛 |^2  for Schroedinger, or 4𝐸_𝐶 ∑_𝑛(𝑛−𝑛_𝑔 )^2 𝜌_(𝑛,𝑛) for lindblad
+    // Josephson energy: =− 𝐸_𝐽 ∑_𝑛 Re(𝜓_𝑛^∗ 𝜓_(𝑛+1)) for Schroedinger, or −𝐸_𝐽 ∑_𝑛 𝑅𝑒(𝜌_(𝑛,𝑛+1) ) for Lindblad
+    double e_charging = 0.0;
+    double e_josephson = 0.0;
+    for (PetscInt i=0; i<dimmat; i++) {
+      /* Get the -ncut ... ncut numbering in the charge basis  */
+      PetscInt num_diag = i % (nlevels*dim_postOsc);
+      num_diag = num_diag / dim_postOsc; // iterates 0, ..., nlevels[id]
+      PetscInt idx_diag = i;
+      PetscInt idx_offdiag = i + dim_postOsc; // Access element (k,k+1)
+      
+      // Charging energy: Access diagonal element in the state vector, vectorize if Lindblad 
+      PetscInt n = num_diag - (nlevels-1)/2; // iterates from -ncut to ncut
+      double charging_weight = 4.0 * Ec * pow(n - charge_offset, 2);
+      double josephson_weight = - Ej; 
+      double diag_element_real = 0.0;
+      double diag_element_imag = 0.0;
+      double offdiag_element_real = 0.0;
+      double offdiag_element_imag = 0.0;
+      if (decoherence_type == DecoherenceType::NONE) { // Schroedinger 
+        // Diagonal: weight*|psi_k|^2
+        if (ilow <= idx_diag && idx_diag < iupp) {
+          PetscInt id_global_x = idx_diag + mpirank_petsc*localsize_u; 
+          VecGetValues(x, 1, &id_global_x, &diag_element_real);
+          id_global_x += localsize_u; 
+          VecGetValues(x, 1, &id_global_x, &diag_element_imag);
+        }
+        double my_diag_elem_real = diag_element_real;
+        double my_diag_elem_imag = diag_element_imag;
+        MPI_Allreduce(&my_diag_elem_real, &diag_element_real, 1, MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
+        MPI_Allreduce(&my_diag_elem_imag, &diag_element_imag, 1, MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
+        e_charging += charging_weight * diag_element_real * diag_element_real;
+        e_charging += charging_weight * diag_element_imag * diag_element_imag;
+        // Offdiagonal: weight*Re(psi_k^* psi_{k+1})
+        if (idx_offdiag < dimmat) { // Check if offdiagonal element (k,k+1) exists
+          if (ilow <= idx_offdiag && idx_offdiag < iupp) {
+            PetscInt id_global_x = idx_offdiag + mpirank_petsc*localsize_u; 
+            VecGetValues(x, 1, &id_global_x, &offdiag_element_real);
+            id_global_x += localsize_u; 
+            VecGetValues(x, 1, &id_global_x, &offdiag_element_imag);
+          }
+          // Need to communicate the numbers over petsc processors 
+          double my_offdiag_elem_real = offdiag_element_real;
+          double my_offdiag_elem_imag = offdiag_element_imag;
+          MPI_Allreduce(&my_offdiag_elem_real, &offdiag_element_real, 1, MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
+          MPI_Allreduce(&my_offdiag_elem_imag, &offdiag_element_imag, 1, MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
+          // Now compute the josephson energy
+          e_josephson += josephson_weight * (diag_element_real * offdiag_element_real + diag_element_imag * offdiag_element_imag);
+        }
+        
+      } else { // Lindblad 
+        // Vectorize indicees  
+        idx_diag = getVecID(i, i, dimmat); 
+        idx_offdiag = getVecID(i, i+dim_postOsc, dimmat); 
+
+        // Diagonal: weight*rho_kk
+        if (ilow <= idx_diag && idx_diag < iupp) {
+          PetscInt id_global_x = idx_diag + mpirank_petsc*localsize_u; 
+          VecGetValues(x, 1, &id_global_x, &diag_element_real);
+        }
+        e_charging += charging_weight * diag_element_real;
+
+        // Offdiagonal: weights*Re(rho_(k,k+1))
+        if (idx_offdiag < dimmat*dimmat) { // Check if offdiagonal element (k,k+1) exists
+          if (ilow <= idx_offdiag && idx_offdiag < iupp) {
+            PetscInt id_global_x = idx_offdiag + mpirank_petsc*localsize_u; 
+            VecGetValues(x, 1, &id_global_x, &offdiag_element_real);
+          }
+          e_josephson += josephson_weight * offdiag_element_real;
+        }
+      }
+    }
+    double expected = (e_charging + e_josephson ) / (2*M_PI);
+    // Sum up from all petsc processors, if not done so already
+    if (decoherence_type != DecoherenceType::NONE) {
+      double myexp = expected;
+      MPI_Allreduce(&myexp, &expected, 1, MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
+    }
+    printf("Expected charging energy: %f, expected josephson energy: %f, total expected energy: %f \n", e_charging/(2*M_PI), e_josephson/(2*M_PI), expected);
+    return expected;
+  }
+
+
+
   /* Iterate over diagonal elements to add up expected energy level */
   double expected = 0.0;
   for (PetscInt i=0; i<dimmat; i++) {
@@ -417,46 +508,46 @@ double Oscillator::expectedEnergy(const Vec x) {
 }
 
 
-void Oscillator::expectedEnergy_diff(const Vec x, Vec x_bar, const double obj_bar) {
-  PetscInt dim;
-  VecGetSize(x, &dim);
-  PetscInt dimmat;
-  if (decoherence_type != DecoherenceType::NONE) dimmat = (PetscInt) sqrt(dim/2);
-  else dimmat = dim/2;
-  double xdiag, val;
+// void Oscillator::expectedEnergy_diff(const Vec x, Vec x_bar, const double obj_bar) {
+//   PetscInt dim;
+//   VecGetSize(x, &dim);
+//   PetscInt dimmat;
+//   if (decoherence_type != DecoherenceType::NONE) dimmat = (PetscInt) sqrt(dim/2);
+//   else dimmat = dim/2;
+//   double xdiag, val;
 
-  /* Derivative of projective measure */
-  for (PetscInt i=0; i<dimmat; i++) {
-    PetscInt num_diag = i % (nlevels*dim_postOsc);
-    num_diag = num_diag / dim_postOsc;
-    if (decoherence_type != DecoherenceType::NONE) { // Lindblas solver
-      val = num_diag * obj_bar;
-      PetscInt idx_diag = getVecID(i, i, dimmat);
-      if (ilow <= idx_diag && idx_diag < iupp) {
-        PetscInt id_global_x = idx_diag + mpirank_petsc*localsize_u; 
-        VecSetValues(x_bar, 1, &id_global_x, &val, ADD_VALUES);
-      }
-    }
-    else {
-      // Real part
-      PetscInt idx_diag = i;
-      xdiag = 0.0;
-      if (ilow <= idx_diag && idx_diag < iupp) {
-        PetscInt id_global_x = idx_diag + mpirank_petsc*localsize_u; 
-        VecGetValues(x, 1, &id_global_x, &xdiag);
-        val = num_diag * xdiag * obj_bar;
-        VecSetValues(x_bar, 1, &id_global_x, &val, ADD_VALUES);
-        // Imaginary part
-        id_global_x += localsize_u; 
-        VecGetValues(x, 1, &id_global_x, &xdiag);
-        val = - num_diag * xdiag * obj_bar; // TODO: Is this a minus or a plus?? 
-        VecSetValues(x_bar, 1, &id_global_x, &val, ADD_VALUES);
-      }
-    }
-  }
-  VecAssemblyBegin(x_bar); VecAssemblyEnd(x_bar);
+//   /* Derivative of projective measure */
+//   for (PetscInt i=0; i<dimmat; i++) {
+//     PetscInt num_diag = i % (nlevels*dim_postOsc);
+//     num_diag = num_diag / dim_postOsc;
+//     if (decoherence_type != DecoherenceType::NONE) { // Lindblas solver
+//       val = num_diag * obj_bar;
+//       PetscInt idx_diag = getVecID(i, i, dimmat);
+//       if (ilow <= idx_diag && idx_diag < iupp) {
+//         PetscInt id_global_x = idx_diag + mpirank_petsc*localsize_u; 
+//         VecSetValues(x_bar, 1, &id_global_x, &val, ADD_VALUES);
+//       }
+//     }
+//     else {
+//       // Real part
+//       PetscInt idx_diag = i;
+//       xdiag = 0.0;
+//       if (ilow <= idx_diag && idx_diag < iupp) {
+//         PetscInt id_global_x = idx_diag + mpirank_petsc*localsize_u; 
+//         VecGetValues(x, 1, &id_global_x, &xdiag);
+//         val = num_diag * xdiag * obj_bar;
+//         VecSetValues(x_bar, 1, &id_global_x, &val, ADD_VALUES);
+//         // Imaginary part
+//         id_global_x += localsize_u; 
+//         VecGetValues(x, 1, &id_global_x, &xdiag);
+//         val = - num_diag * xdiag * obj_bar; // TODO: Is this a minus or a plus?? 
+//         VecSetValues(x_bar, 1, &id_global_x, &val, ADD_VALUES);
+//       }
+//     }
+//   }
+//   VecAssemblyBegin(x_bar); VecAssemblyEnd(x_bar);
 
-}
+// }
 
 
 void Oscillator::population(const Vec x, std::vector<double> &pop) {

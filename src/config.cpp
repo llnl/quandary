@@ -226,8 +226,8 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     transmon_resonator = validators::field<bool>(*system_table, "transmon_resonator").valueOr(false);
     if (transmon_resonator) {
       charge_offset = validators::field<double>(*system_table, "charge_offset").valueOr(0.0);
-      Ec = validators::field<double>(*system_table, "Ec").positive().valueOr(0.0);
-      Ej = validators::field<double>(*system_table, "Ej").positive().valueOr(0.0);
+      Ec = validators::field<double>(*system_table, "Ec").greaterThanEqual(0.0).valueOr(0.0);
+      Ej = validators::field<double>(*system_table, "Ej").greaterThanEqual(0.0).valueOr(0.0);
     }
 
     // Parse control options from [control] table

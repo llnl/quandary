@@ -52,6 +52,9 @@ class Oscillator {
     std::vector<double> carrier_freq; ///< Frequencies of the carrier waves
     bool transmon_resonator; ///< Whether modelling transmon-resonator system for SPAM reduction. If true, the imaginary part of alpha is initialized to zero.
     bool transmon_resonator_labframe; ///< Switch for transmon resonator system to indicate whether this is lab or rotating frame
+    double charge_offset;
+    double Ec;
+    double Ej; 
 
     int mpirank_world; ///< Rank of MPI_COMM_WORLD
     int mpirank_petsc; ///< Rank of PETSc's communicator
@@ -229,14 +232,14 @@ class Oscillator {
      */
     double expectedEnergy(const Vec x);
 
-    /**
-     * @brief Computes derivative of expected energy computation.
-     *
-     * @param x State vector
-     * @param x_bar Adjoint state vector to update
-     * @param obj_bar Adjoint of expected energy
-     */
-    void expectedEnergy_diff(const Vec x, Vec x_bar, const double obj_bar);
+    // /**
+    //  * @brief Computes derivative of expected energy computation.
+    //  *
+    //  * @param x State vector
+    //  * @param x_bar Adjoint state vector to update
+    //  * @param obj_bar Adjoint of expected energy
+    //  */
+    // void expectedEnergy_diff(const Vec x, Vec x_bar, const double obj_bar);
 
     /**
      * @brief Computes population in each energy level of this oscillator.
