@@ -124,7 +124,7 @@ int main(int argc,char **argv)
     int dim = config.getNLevels(0);
     transmon_eigenvectors.resize(dim, std::vector<double>(dim, 0.0));
     if (mpirank_world == 0) {
-      std::string eigvec_filename = config.getOutputDirectory() + "/H_transmon_eigenvectors.dat";
+      std::string eigvec_filename = "./H_transmon_eigenvectors.dat";
       std::ifstream infile(eigvec_filename);
       if (!infile.is_open()) {
         std::cerr << "ERROR: Could not open " << eigvec_filename << std::endl;
