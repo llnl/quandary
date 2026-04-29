@@ -435,7 +435,7 @@ double Oscillator::expectedEnergy(const Vec x) {
           // Now compute the josephson energy
           e_josephson += josephson_weight * (diag_element_real * offdiag_element_real + diag_element_imag * offdiag_element_imag);
         }
-        
+
       } else { // Lindblad 
         // Vectorize indicees  
         idx_diag = getVecID(i, i, dimmat); 
@@ -464,7 +464,7 @@ double Oscillator::expectedEnergy(const Vec x) {
       double myexp = expected;
       MPI_Allreduce(&myexp, &expected, 1, MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
     }
-    printf("Expected charging energy: %f, expected josephson energy: %f, total expected energy: %f \n", e_charging/(2*M_PI), e_josephson/(2*M_PI), expected);
+    // printf("Expected charging energy: %f, expected josephson energy: %f, total expected energy: %f \n", e_charging/(2*M_PI), e_josephson/(2*M_PI), expected);
     return expected;
   }
 
@@ -557,9 +557,79 @@ void Oscillator::population(const Vec x, std::vector<double> &pop) {
 
   assert (pop.size() == nlevels);
 
-  std::vector<double> mypop(nlevels, 0.0);
+  if (transmon_resonator && myid == 0) {
+    // Iterate over the eigenvectors 
+    for (size_t i=0; i<transmon_eigenvectors.size(); i++) {
+      double pop_i = 0.0;
+      // Schroedinger case: pop_i = \sum_r | sum_k eigenvector_i[k] * psi[k*Nr + r] |^2
+      if (decoherence_type == DecoherenceType::NONE) {
+        std::vector<double> local_sums(2 * dim_postOsc, 0.0);
+        std::vector<double> global_sums(2 * dim_postOsc, 0.0);
+        // Iterate over the resonator r
+        for (size_t r=0; r<dim_postOsc; r++) {
+          double sum_real = 0.0;
+          double sum_imag = 0.0;
+          // iterate over the transmon k 
+          for (size_t k=0; k<transmon_eigenvectors[i].size(); k++) {
+            PetscInt idx_k = k*dim_postOsc + r; // Access element (k,r) of the state vector
+            double eigenvec_k = transmon_eigenvectors[i][k];
+            double psi_kr_real = 0.0;
+            double psi_kr_imag = 0.0;
+            if (ilow <= idx_k && idx_k < iupp) {
+              PetscInt id_global_x = idx_k + mpirank_petsc*localsize_u; 
+              VecGetValues(x, 1, &id_global_x, &psi_kr_real);
+              id_global_x += localsize_u; 
+              VecGetValues(x, 1, &id_global_x, &psi_kr_imag);
+            }
+            sum_real += eigenvec_k * psi_kr_real;
+            sum_imag += eigenvec_k * psi_kr_imag;
+          }
+          local_sums[2 * r] = sum_real;
+          local_sums[2 * r + 1] = sum_imag;
+        } 
+        MPI_Allreduce(local_sums.data(), global_sums.data(), static_cast<int>(2 * dim_postOsc), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
+        for (size_t r=0; r<dim_postOsc; r++) {
+          double sum_real = global_sums[2 * r];
+          double sum_imag = global_sums[2 * r + 1];
+          pop_i += sum_real * sum_real + sum_imag * sum_imag;
+        }  
+        pop[i] = pop_i;
+
+      } else { // Lindblad case : pop_i = \sum_r sum_k sum_k' eigenvector_i[k] * eigenvector_i[k'] * rho[k*Nr + r, k'*Nr + r]
+        std::vector<double> local_sums(dim_postOsc, 0.0);
+        std::vector<double> global_sums(dim_postOsc, 0.0);
+        // Iterate over the resonator r
+        for (size_t r=0; r<dim_postOsc; r++) {
+          double sum_r = 0.0;
+          // iterate over the transmon k and k', upper diagonal part and add 2Re(...)
+          for (size_t k=0; k<transmon_eigenvectors[i].size(); k++) {
+            for (size_t kp=k; kp<transmon_eigenvectors[i].size(); kp++) {
+              PetscInt idx_kkp = getVecID(k*dim_postOsc + r, kp*dim_postOsc + r, dimN); // Access element (k,r),(k',r) of the density matrix
+              double rho_kkp_real = 0.0;
+              if (ilow <= idx_kkp && idx_kkp < iupp) {
+                PetscInt id_global_x = idx_kkp + mpirank_petsc*localsize_u; 
+                VecGetValues(x, 1, &id_global_x, &rho_kkp_real);
+              }
+              double eigenvec_k = transmon_eigenvectors[i][k];
+              double eigenvec_kp = transmon_eigenvectors[i][kp];
+              double coeff = (k == kp) ? 1.0 : 2.0;
+              sum_r += coeff * eigenvec_k * eigenvec_kp * rho_kkp_real; 
+            }
+          }
+          local_sums[r] = sum_r;
+        }
+        MPI_Allreduce(local_sums.data(), global_sums.data(), static_cast<int>(dim_postOsc), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
+        for (size_t r=0; r<dim_postOsc; r++) {
+          pop_i += global_sums[r];
+        }
+        pop[i] = pop_i;
+      }
+    }
+    return;
+  }
 
   /* Iterate over diagonal elements of the reduced density matrix for this oscillator */
+  std::vector<double> mypop(nlevels, 0.0);
   for (size_t i=0; i < nlevels; i++) {
     PetscInt identitystartID = i * dim_postOsc;
     /* Sum up elements from all dim_preOsc blocks of size (n_k * dim_postOsc) */

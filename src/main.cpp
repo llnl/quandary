@@ -118,7 +118,33 @@ int main(int argc,char **argv)
     oscil_vec[i] = new Oscillator(config, i, rand_engine, param_offset, quietmode);
     param_offset += oscil_vec[i]->getNParams();
   }
-
+  // If transmon-resonator system, load eigenvectors of the transmon Hamiltonian from file and store them in the 0'th oscillator. Filename is H_transmon_eigenvectors. Format is one vector per column, all real elements. Dimension is that of the first oscillator 
+  std::vector<std::vector<double>> transmon_eigenvectors;
+  if (config.getTransmonResonator()) {
+    int dim = config.getNLevels(0);
+    transmon_eigenvectors.resize(dim, std::vector<double>(dim, 0.0));
+    if (mpirank_world == 0) {
+      std::string eigvec_filename = config.getOutputDirectory() + "/H_transmon_eigenvectors.dat";
+      std::ifstream infile(eigvec_filename);
+      if (!infile.is_open()) {
+        std::cerr << "ERROR: Could not open " << eigvec_filename << std::endl;
+        MPI_Abort(MPI_COMM_WORLD, 1);
+      }
+      // File stores one eigenvector per column: read row-major, store transposed
+      for (int row = 0; row < dim; row++) {
+        for (int col = 0; col < dim; col++) {
+          infile >> transmon_eigenvectors[col][row];
+        }
+      }
+      infile.close();
+    }
+    // Broadcast eigenvectors to all ranks
+    for (int col = 0; col < dim; col++) {
+      MPI_Bcast(transmon_eigenvectors[col].data(), dim, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    }
+    // Store them to the 0'th oscillator 
+    oscil_vec[0]->setTransmonEigenvectors(transmon_eigenvectors);
+  }
 
   /* --- Initialize the Master Equation  --- */
   // Sanity check for matrix free solver

@@ -55,6 +55,7 @@ class Oscillator {
     double charge_offset;
     double Ec;
     double Ej; 
+    std::vector<std::vector<double>> transmon_eigenvectors; ///< Storage for transmon eigenvectors, used for computing the expected energy in the charge basis. Only set if myid=0.
 
     int mpirank_world; ///< Rank of MPI_COMM_WORLD
     int mpirank_petsc; ///< Rank of PETSc's communicator
@@ -83,6 +84,8 @@ class Oscillator {
     Oscillator(const Config& config, size_t id, std::mt19937 rand_engine, int param_offset, bool quietmode);
 
     virtual ~Oscillator();
+
+    void setTransmonEigenvectors(const std::vector<std::vector<double>>& eigenvectors) { transmon_eigenvectors = eigenvectors; };
 
     /**
      * @brief Retrieves the number of control parameters.
