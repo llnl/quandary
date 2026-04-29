@@ -211,6 +211,7 @@ then
     $cmake_exe \
         -C ${hostconfig_path} \
         ${cmake_options} \
+        -DENABLE_DOXYGEN=OFF \
         -DCMAKE_INSTALL_PREFIX=${install_dir} \
         ${project_dir}
 
@@ -333,6 +334,8 @@ then
     if [[ -n "${ROCM_PATH:-}" ]]; then
         export LD_LIBRARY_PATH="${ROCM_PATH}/lib:${LD_LIBRARY_PATH:-}"
     fi
+
+    mkdir -p ${perf_artifact_dir}
 
     timed_message "Run performance tests"
 
