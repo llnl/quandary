@@ -5,6 +5,10 @@
 # SPDX-License-Identifier: (MIT)
 ###############################################################################
 
+variables:
+  # SPINDLE_FLUXOPT=off is needed to work around petsc rpath issue with /dev/shm
+  MPI_EXTRA_FLAGS: "--env=SPINDLE_FLUXOPT=off"
+
 # Override reproducer section to define project specific variables.
 .tuolumne_reproducer_vars:
   script:
