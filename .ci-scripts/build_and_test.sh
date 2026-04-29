@@ -32,6 +32,8 @@ push_to_registry=${PUSH_TO_REGISTRY:-true}
 performance_tests=${PERFORMANCE_TESTS:-false}
 perf_artifact_dir=${PERF_ARTIFACT_DIR:-""}
 perf_results_file=${PERF_RESULTS_FILE:-""}
+petsc_test_options=${PETSC_TEST_OPTIONS:-""}
+mpi_extra_flags=${MPI_EXTRA_FLAGS:-""}
 
 # REGISTRY_TOKEN allows you to provide your own personal access token to the CI
 # registry. Be sure to set the token with at least read access to the registry.
@@ -207,6 +209,12 @@ then
         mpi_opt="--overlap"
         cmake_options="-DBLT_MPI_COMMAND_APPEND:STRING=--overlap"
     fi
+    if [[ -n "${mpi_extra_flags}" ]]
+    then
+        # BLT_MPI_COMMAND_APPEND is a CMake list — use ; as separator.
+        blt_extra=$(echo "${mpi_extra_flags}" | tr ' ' ';')
+        cmake_options="${cmake_options} -DBLT_MPI_COMMAND_APPEND:STRING=${blt_extra}"
+    fi
 
     $cmake_exe \
         -C ${hostconfig_path} \
@@ -265,14 +273,17 @@ then
     eval `${spack_cmd} env activate ${spack_env_path} --sh`
     python -m pip install -e . --prefer-binary
     mpi_exe=$(grep 'MPIEXEC_EXECUTABLE' "${hostconfig_path}" | cut -d'"' -f2 | sed 's/;/ /g')
+    if [[ -n "${mpi_extra_flags}" ]]; then
+        mpi_exe="${mpi_exe} ${mpi_extra_flags}"
+    fi
 
     # TODO cfg: remove this later
     timed_message "Run regression tests with deprecated cfg config (excluding python tests which are run below)"
-    cd tests/regression && pytest -v -s --mpi-exec="${mpi_exe}" --config-format=cfg .
+    cd tests/regression && pytest -v -s --mpi-exec="${mpi_exe}" --config-format=cfg --petsc-options="${petsc_test_options}" .
     cd ${project_dir}
 
     timed_message "Run regression tests"
-    pytest -v -s -m "not performance" --mpi-exec="${mpi_exe}"
+    pytest -v -s -m "not performance" --mpi-exec="${mpi_exe}" --petsc-options="${petsc_test_options}"
 
     timed_message "Quandary tests completed"
 fi
@@ -295,6 +306,9 @@ then
     timed_message "Run performance tests"
 
     mpi_exe=$(grep 'MPIEXEC_EXECUTABLE' "${hostconfig_path}" | cut -d'"' -f2 | sed 's/;/ /g')
+    if [[ -n "${mpi_extra_flags}" ]]; then
+        mpi_exe="${mpi_exe} ${mpi_extra_flags}"
+    fi
     pytest -v -s -m performance --mpi-exec="${mpi_exe}" --mpi-opt="${mpi_opt}" --benchmark-json=${perf_results_file}
 
     if [[ -d "${perf_artifact_dir}" ]]
