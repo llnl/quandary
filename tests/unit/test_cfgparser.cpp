@@ -4,10 +4,7 @@
 
 #include "config.hpp"
 
-class CfgParserTest : public ::testing::Test {
- protected:
-  MPILogger logger = MPILogger(0, false);
-};
+class CfgParserTest : public ::testing::Test {};
 
 TEST_F(CfgParserTest, ParseBasicSettings) {
   Config config = Config::fromCfgString(
@@ -20,7 +17,7 @@ TEST_F(CfgParserTest, ParseBasicSettings) {
         collapse_type = none
         initialcondition = basis
       )",
-      logger);
+      false);
 
   EXPECT_EQ(config.getNTime(), 500);
   EXPECT_DOUBLE_EQ(config.getDt(), 0.05);
@@ -37,7 +34,7 @@ TEST_F(CfgParserTest, ParseVectorSettings) {
         rotfreq = 0.0, 0.0
         initialcondition = basis
       )",
-      logger);
+      false);
 
   auto nlevels = config.getNLevels();
   EXPECT_EQ(nlevels.size(), 2);
@@ -63,7 +60,7 @@ TEST_F(CfgParserTest, ParseOutputSettings) {
         output0 = population
         output1 = population, expectedEnergy
       )",
-      logger);
+      false);
 
   // Verify output settings
   auto output = config.getOutputObservables();
@@ -83,7 +80,7 @@ TEST_F(CfgParserTest, ParseStructSettings) {
         optim_target = gate, cnot
         initialcondition = diagonal, 0
       )",
-      logger);
+      false);
 
   const auto& target = config.getOptimTarget();
   EXPECT_EQ(target.type, TargetType::GATE);
@@ -103,7 +100,7 @@ TEST_F(CfgParserTest, ApplyDefaults) {
         transfreq = 4.1
         initialcondition = basis
       )",
-      logger);
+      false);
 
   EXPECT_EQ(config.getDecoherenceType(), DecoherenceType::NONE); // Default
   EXPECT_EQ(config.getRotationFrequency()[0], 0.0); // Default
@@ -119,7 +116,7 @@ TEST_F(CfgParserTest, InitialCondition_FromFile) {
         rotfreq = 0.0
         initialcondition = file, test.dat
       )",
-      logger);
+      false);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::FROMFILE);
   EXPECT_EQ(initcond.filename.value(), "test.dat");
@@ -136,7 +133,7 @@ TEST_F(CfgParserTest, InitialCondition_Pure) {
         rotfreq = 0.0, 0.0
         initialcondition = pure, 1, 0
       )",
-      logger);
+      false);
   const auto& initcond = config.getInitialCondition();
   // Test backward compatibility: "pure" in CFG should map to PRODUCT_STATE
   EXPECT_EQ(initcond.type, InitialConditionType::PRODUCT_STATE);
@@ -154,7 +151,7 @@ TEST_F(CfgParserTest, InitialCondition_Performance) {
         rotfreq = 0.0
         initialcondition = performance
       )",
-      logger);
+      false);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::PERFORMANCE);
   EXPECT_EQ(config.getNInitialConditions(), 1);
@@ -171,7 +168,7 @@ TEST_F(CfgParserTest, InitialCondition_Ensemble) {
         collapse_type = decay
         initialcondition = ensemble, 0, 1
       )",
-      logger);
+      false);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::ENSEMBLE);
   EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>({0, 1}));
@@ -189,7 +186,7 @@ TEST_F(CfgParserTest, InitialCondition_ThreeStates) {
         collapse_type = decay
         initialcondition = 3states
       )",
-      logger);
+      false);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::THREESTATES);
   EXPECT_EQ(config.getNInitialConditions(), 3);
@@ -206,7 +203,7 @@ TEST_F(CfgParserTest, InitialCondition_NPlusOne_SingleOscillator) {
         collapse_type = decay
         initialcondition = nplus1
       )",
-      logger);
+      false);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::NPLUSONE);
   // For nlevels = [3], system dimension N = 3, so n_initial_conditions = N + 1 = 4
@@ -224,7 +221,7 @@ TEST_F(CfgParserTest, InitialCondition_NPlusOne_MultipleOscillators) {
         collapse_type = decay
         initialcondition = nplus1
       )",
-      logger);
+      false);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::NPLUSONE);
   // For nlevels = [2, 3], system dimension N = 2 * 3 = 6, so n_initial_conditions = N + 1 = 7
@@ -243,7 +240,7 @@ TEST_F(CfgParserTest, InitialCondition_Diagonal_Schrodinger) {
         collapse_type = none
         initialcondition = diagonal, 1
       )",
-      logger);
+      false);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::DIAGONAL);
   EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>({1}));
@@ -263,7 +260,7 @@ TEST_F(CfgParserTest, InitialCondition_Basis_Schrodinger) {
         collapse_type = none
         initialcondition = basis, 1
       )",
-      logger);
+      false);
   // For Schrodinger solver, BASIS is converted to DIAGONAL, so n_initial_conditions = nessential[1] = 2
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::DIAGONAL);
@@ -283,7 +280,7 @@ TEST_F(CfgParserTest, InitialCondition_Basis_Lindblad) {
         collapse_type = decay
         initialcondition = basis, 1
       )",
-      logger);
+      false);
   const auto& initcond = config.getInitialCondition();
   EXPECT_EQ(initcond.type, InitialConditionType::BASIS);
   EXPECT_EQ(initcond.subsystem.value(), std::vector<size_t>({1}));
@@ -302,7 +299,7 @@ TEST_F(CfgParserTest, ControlParameterizations_Spline0) {
         initialcondition = basis
         control_segments0 = spline0, 150, 0.0, 1.0
       )",
-      logger);
+      false);
 
   const auto& control_seg0 = config.getControlParameterizations(0);
   EXPECT_EQ(control_seg0.type, ControlType::BSPLINE0);
@@ -323,7 +320,7 @@ TEST_F(CfgParserTest, ControlParameterizations_Spline) {
         control_segments0 = spline, 10
         control_segments1 = spline, 20, 0.0, 1.0
       )",
-      logger);
+      false);
 
   // Check first oscillator 
   const auto& control_seg0 = config.getControlParameterizations(0);
@@ -352,7 +349,7 @@ TEST_F(CfgParserTest, ControlParameterizations_Defaults) {
         control_segments1 = spline0, 150, 0.0, 1.0
         control_bounds1 = 2.0
       )",
-      logger);
+      false);
 
   // Check first oscillator has default settings
   const auto& control_seg0 = config.getControlParameterizations(0);
@@ -389,7 +386,7 @@ TEST_F(CfgParserTest, ControlInitialization_Defaults) {
         initialcondition = basis
         control_initialization1 = random, 2.0
       )",
-      logger);
+      false);
 
   // Check first oscillator has default settings
   const auto& control_init0 = config.getControlInitializations(0);
@@ -427,7 +424,7 @@ TEST_F(CfgParserTest, ControlInitializationSettings) {
         control_segments4 = spline_amplitude, 10, 1.0
         control_initialization4 = random, 5.0, 5.1
       )",
-      logger);
+      false);
 
   // Check first oscillator
   const auto& control_init0 = config.getControlInitializations(0);
@@ -469,7 +466,7 @@ TEST_F(CfgParserTest, ControlInitialization_File) {
         initialcondition = basis
         control_initialization0 = file, myparams.dat
       )",
-      logger);
+      false);
 
   const auto& control_init0 = config.getControlInitializations(0);
   EXPECT_EQ(control_init0.type, ControlInitializationType::FILE);
@@ -488,7 +485,7 @@ TEST_F(CfgParserTest, ControlBounds) {
         control_segments0 = spline, 10, 0.0, 1.0, step, 0.1, 0.2, 0.3, 0.4, 0.5, spline0, 20, 1.0, 2.0
         control_bounds0 = 1.5
       )",
-      logger);
+      false);
 
   // Check control bound
   const double control_bound0 = config.getControlAmplitudeBound(0);
@@ -512,7 +509,7 @@ TEST_F(CfgParserTest, CarrierFrequencies) {
         initialcondition = basis
         carrier_frequency0 = 1.0, 2.0
       )",
-      logger);
+      false);
 
   const auto& carrier_freq0 = config.getCarrierFrequencies(0);
   EXPECT_EQ(carrier_freq0.size(), 2);
@@ -531,7 +528,7 @@ TEST_F(CfgParserTest, OptimTarget_GateType) {
         initialcondition = basis
         optim_target = gate, cnot
       )",
-      logger);
+      false);
 
   const auto& target = config.getOptimTarget();
   EXPECT_EQ(target.type, TargetType::GATE);
@@ -549,7 +546,7 @@ TEST_F(CfgParserTest, OptimTarget_GateFromFile) {
         initialcondition = basis
         optim_target = gate, file, /path/to/gate.dat
       )",
-      logger);
+      false);
 
   const auto& target = config.getOptimTarget();
   EXPECT_EQ(target.type, TargetType::GATE);
@@ -568,7 +565,7 @@ TEST_F(CfgParserTest, OptimTarget_PureState) {
         initialcondition = basis
         optim_target = pure, 0, 1, 2
       )",
-      logger);
+      false);
 
   const auto& target = config.getOptimTarget();
   // Test backward compatibility: "pure" in CFG should map to STATE
@@ -592,7 +589,7 @@ TEST_F(CfgParserTest, OptimTarget_FromFile) {
         initialcondition = basis
         optim_target = file, /path/to/targetstate.dat
       )",
-      logger);
+      false);
 
   const auto& target = config.getOptimTarget();
   EXPECT_EQ(target.type, TargetType::STATE);
@@ -610,7 +607,7 @@ TEST_F(CfgParserTest, OptimTarget_DefaultNone) {
         rotfreq = 0.0
         initialcondition = basis
       )",
-      logger);
+      false);
 
   const auto& target = config.getOptimTarget();
   EXPECT_EQ(target.type, TargetType::NONE);
@@ -627,7 +624,7 @@ TEST_F(CfgParserTest, OptimWeights) {
         initialcondition = basis
         optim_weights = 2.0
       )",
-      logger);
+      false);
 
   const auto& weights = config.getOptimWeights();
   EXPECT_EQ(weights.size(), 4);

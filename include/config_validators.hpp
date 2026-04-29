@@ -1,22 +1,23 @@
 #pragma once
 
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <toml++/toml.hpp>
+#include <type_traits>
 #include <vector>
 
 /**
- * @brief Validation utilities for TOML configuration parsing.
+ * @brief Validation utilities for configuration parsing.
  *
- * Provides a chainable API for type-safe TOML field extraction and validation. Chain validation
+ * Provides a chainable API for type-safe value validation. Chain validation
  * methods together, then extract the final value in one operation with clear error messages.
  *
  * ## Basic Usage
  *
- * 1. Create a validator for option "key" within toml_table using
- *      - `validators::field<T>(toml_table, "key")`: for scalar fields
- *      - `validators::vectorField<T>(toml_table, "key")`: for vector fields
+ * 1. Create a validator using:
+ *      - `validators::field<T>(value, "key")`: for scalar fields
+ *      - `validators::vectorField<T>(value, "key")`: for vector fields
  * 2. Append chainable validation methods from below as needed:
  *    For scalar fields:
  *      - `greaterThan(value)`: Field must be > value
@@ -33,14 +34,14 @@
  *
  * ## Examples
  * @code
- * // Parse a required positive double with key "step_size".
- * double step_size = validators::field<double>(toml, "step_size").positive().value();
+ * // Validate a required positive double with key "step_size".
+ * double step_size = validators::field<double>(step_size_opt, "step_size").positive().value();
  *
- * // Parse an optional string with key "output_dir" with default value "./data_out"
- * std::string output_dir = validators::field<std::string>(toml, "output_dir").valueOr("./data_out");
+ * // Validate an optional string with key "output_dir" with default value "./data_out"
+ * std::string output_dir = validators::field<std::string>(output_dir_opt, "output_dir").valueOr("./data_out");
  *
- * // Parse a required vector of positive doubles with key "frequencies", defaulting to {1.0, 2.0}
- * std::vector<double> frequencies = validators::vectorField<double>(toml, "frequencies").minLength(1).positive().valueOr(std::vector<double>{1.0, 2.0});
+ * // Validate a vector of positive doubles with key "frequencies", defaulting to {1.0, 2.0}
+ * std::vector<double> frequencies = validators::vectorField<double>(frequencies_opt, "frequencies").minLength(1).positive().valueOr(std::vector<double>{1.0, 2.0});
  *
  * @endcode
  *
@@ -52,39 +53,21 @@
 namespace validators {
 
 /**
- * @brief Helper to get readable type names for error messages
- */
-template <typename T>
-std::string getTypeName() {
-  if constexpr (std::is_same_v<T, int> || std::is_same_v<T, int64_t>) {
-    return "integer";
-  } else if constexpr (std::is_same_v<T, size_t>) {
-    return "nonnegative integer";
-  } else if constexpr (std::is_same_v<T, double> || std::is_same_v<T, float>) {
-    return "number";
-  } else if constexpr (std::is_same_v<T, std::string>) {
-    return "string";
-  } else if constexpr (std::is_same_v<T, bool>) {
-    return "boolean";
-  } else {
-    return "unknown type";
-  }
-}
-
-/**
  * @brief Exception thrown when configuration validation fails.
  */
 class ValidationError : public std::runtime_error {
  public:
   ValidationError(const std::string& field, const std::string& message)
       : std::runtime_error("Validation error for field '" + field + "': " + message) {}
+  explicit ValidationError(const std::string& message)
+      : std::runtime_error(message) {}
 };
 
 /**
- * @brief Chainable validator for scalar TOML fields.
+ * @brief Chainable validator for scalar fields.
  *
- * This class provides type-safe extraction and validation of single-value fields from
- * TOML configuration using the method chaining pattern described above.
+ * This class provides type-safe validation of single values using the method chaining
+ * pattern described above.
  *
  * ## Available Validation Methods
  *
@@ -106,14 +89,14 @@ class ValidationError : public std::runtime_error {
 template <typename T>
 class Validator {
  private:
-  const toml::table& config;
+  std::optional<T> val;
   std::string key;
   std::optional<T> greater_than;
   std::optional<T> greater_than_equal;
   std::optional<T> less_than;
 
  public:
-  Validator(const toml::table& config_, const std::string& key_) : config(config_), key(key_) {}
+  Validator(std::optional<T> val_, const std::string& key_) : val(std::move(val_)), key(key_) {}
 
   /**
    * @brief Requires value to be strictly greater than threshold.
@@ -159,22 +142,6 @@ class Validator {
   }
 
  private:
-  std::optional<T> extractValue() {
-    // If key doesn't exist, return nullopt
-    if (!config.contains(key)) {
-      return std::nullopt;
-    }
-
-    // Key exists, try to extract value with type checking
-    auto val = config[key].template value<T>();
-    if (!val) {
-      // Key exists but wrong type - always an error
-      throw ValidationError(key, "wrong type (expected " + getTypeName<T>() + ")");
-    }
-
-    return val;
-  }
-
   T validateValue(T result) {
     if (greater_than && result <= *greater_than) {
       std::ostringstream oss;
@@ -208,8 +175,6 @@ class Validator {
    * @throws ValidationError If validation fails
    */
   T value() {
-    auto val = extractValue();
-
     if (!val) {
       throw ValidationError(key, "field not found");
     }
@@ -228,18 +193,18 @@ class Validator {
    * @throws ValidationError If field exists but validation fails
    */
   T valueOr(T default_value_) {
-    auto val = extractValue();
-    if (!val) return default_value_; // Key doesn't exist - use default
-
-    return validateValue(*val); // Key exists - validate it (will throw on wrong type)
+    if (!val) {
+      return default_value_;
+    }
+    return validateValue(*val);
   }
 };
 
 /**
- * @brief Chainable validator for vector TOML fields.
+ * @brief Chainable validator for vector fields.
  *
- * This class provides type-safe extraction and validation of array fields from
- * TOML configuration using the method chaining pattern described above.
+ * This class provides type-safe validation of vector/array fields using the method
+ * chaining pattern described above.
  *
  * ## Available Validation Methods
  *
@@ -252,25 +217,19 @@ class Validator {
  * - `value()`: Extract validated array (throws if field missing or invalid)
  * - `valueOr(default)`: Extract array or return default if field missing
  *
- * ## Type Requirements
- *
- * The element type T must be a type supported by the TOML library (int, double, string, bool).
- * For numeric types, you can use the positive() validation. For other types, only
- * array-level validations (length) are available.
- *
  * @tparam T Element type of the vector (int, double, string, bool, etc.)
  */
 template <typename T>
 class VectorValidator {
  private:
-  const toml::table& config;
+  std::optional<std::vector<T>> val;
   std::string key;
   std::optional<size_t> min_length;
   std::optional<size_t> exact_length;
   bool is_positive = false;
 
  public:
-  VectorValidator(const toml::table& config_, const std::string& key_) : config(config_), key(key_) {}
+  VectorValidator(std::optional<std::vector<T>> val_, const std::string& key_) : val(std::move(val_)), key(key_) {}
 
   /**
    * @brief Requires minimum vector length.
@@ -305,34 +264,6 @@ class VectorValidator {
   }
 
  private:
-  std::optional<std::vector<T>> extractVector() {
-    // If key doesn't exist, return nullopt
-    if (!config.contains(key)) {
-      return std::nullopt;
-    }
-
-    // Key exists, check if it's an array
-    auto* arr = config[key].as_array();
-    if (!arr) {
-      // Key exists but wrong type - always an error
-      throw ValidationError(key, "wrong type (expected array)");
-    }
-
-    // Extract and validate array elements
-    std::vector<T> result;
-    for (size_t i = 0; i < arr->size(); ++i) {
-      auto val = arr->at(i).template value<T>();
-      if (!val) {
-        std::ostringstream oss;
-        oss << "element [" << i << "] wrong type (expected " << getTypeName<T>() << ")";
-        throw ValidationError(key, oss.str());
-      }
-      result.push_back(*val);
-    }
-
-    return result;
-  }
-
   std::vector<T> validateVector(std::vector<T> result) {
     if (exact_length && result.size() != *exact_length) {
       std::ostringstream oss;
@@ -346,13 +277,13 @@ class VectorValidator {
       throw ValidationError(key, oss.str());
     }
 
-    for (size_t i = 0; i < result.size(); ++i) {
-      T& element = result[i];
-
-      if (is_positive && element <= T{0}) {
-        std::ostringstream oss;
-        oss << "element [" << i << "] must be positive, got " << element;
-        throw ValidationError(key, oss.str());
+    if constexpr (std::is_arithmetic_v<T>) {
+      for (size_t i = 0; i < result.size(); ++i) {
+        if (is_positive && result[i] <= T{0}) {
+          std::ostringstream oss;
+          oss << "element [" << i << "] must be positive, got " << result[i];
+          throw ValidationError(key, oss.str());
+        }
       }
     }
 
@@ -367,8 +298,6 @@ class VectorValidator {
    * @throws ValidationError If validation fails
    */
   std::vector<T> value() {
-    auto val = extractVector();
-
     if (!val) {
       throw ValidationError(key, "field not found");
     }
@@ -384,10 +313,10 @@ class VectorValidator {
    * @throws ValidationError If field exists but validation fails
    */
   std::vector<T> valueOr(const std::vector<T>& default_value_) {
-    auto val = extractVector();
-    if (!val) return default_value_; // Key doesn't exist - use default
-
-    return validateVector(*val); // Key exists - validate it (will throw on wrong type)
+    if (!val) {
+      return default_value_;
+    }
+    return validateVector(*val);
   }
 };
 
@@ -397,13 +326,13 @@ class VectorValidator {
  * Helper function to start a validation chain for scalar fields.
  *
  * @tparam T Type of field to validate
- * @param config_ TOML table containing the field
- * @param key_ Name of the field to validate
+ * @param val_ Optional value to validate
+ * @param key_ Name of the field (for error messages)
  * @return A Validator for chaining validation rules
  */
 template <typename T>
-Validator<T> field(const toml::table& config_, const std::string& key_) {
-  return Validator<T>(config_, key_);
+Validator<T> field(std::optional<T> val_, const std::string& key_ = "value") {
+  return Validator<T>(std::move(val_), key_);
 }
 
 /**
@@ -412,149 +341,13 @@ Validator<T> field(const toml::table& config_, const std::string& key_) {
  * Helper function to start a validation chain for array/vector fields.
  *
  * @tparam T Element type of the vector
- * @param config_ TOML table containing the field
- * @param key_ Name of the field to validate
+ * @param val_ Optional vector to validate
+ * @param key_ Name of the field (for error messages)
  * @return A VectorValidator for chaining validation rules
  */
 template <typename T>
-VectorValidator<T> vectorField(const toml::table& config_, const std::string& key_) {
-  return VectorValidator<T>(config_, key_);
-}
-
-/**
- * @brief Extracts an optional scalar value from a TOML node.
- *
- * Helper for extracting optional scalar values when the validator API doesn't fit well
- * (e.g., nested structures or conditional parsing). If the node doesn't exist or
- * contains a type mismatch, returns nullopt.
- *
- * @tparam T Type of the scalar value
- * @tparam NodeType Type of the TOML node
- * @param node TOML node that may contain a value
- * @return Value if node exists and has matching type, nullopt otherwise
- */
-template <typename T, typename NodeType>
-std::optional<T> getOptional(const toml::node_view<NodeType>& node) {
-  return node.template value<T>();
-}
-
-/**
- * @brief Extracts an optional vector from a TOML node.
- *
- * Helper for extracting vectors when the validator API doesn't fit well
- * (e.g., nested structures or conditional parsing). If the node is not
- * an array or contains type mismatches, returns nullopt.
- *
- * @tparam T Element type of the vector
- * @tparam NodeType Type of the TOML node
- * @param node TOML node that may contain an array
- * @return Vector if node is a valid array with matching types, nullopt otherwise
- */
-template <typename T, typename NodeType>
-std::optional<std::vector<T>> getOptionalVector(const toml::node_view<NodeType>& node) {
-  auto* arr = node.as_array();
-  if (!arr) return std::nullopt;
-
-  std::vector<T> result;
-  for (size_t i = 0; i < arr->size(); ++i) {
-    auto val = arr->at(i).template value<T>();
-    if (!val) return std::nullopt; // Type mismatch in array element
-    result.push_back(*val);
-  }
-
-  return result;
-}
-
-/**
- * @brief Extracts a required table from a TOML configuration.
- *
- * Validates that the specified key exists and contains a table.
- *
- * @param config Parent TOML table
- * @param key Name of the table field
- * @return Reference to the table
- * @throws ValidationError if table is missing or wrong type
- */
-inline const toml::table& getRequiredTable(const toml::table& config, const std::string& key) {
-  if (!config.contains(key)) {
-    throw ValidationError(key, "table is required");
-  }
-
-  auto* table = config[key].as_table();
-  if (!table) {
-    throw ValidationError(key, "must be a table");
-  }
-
-  return *table;
-}
-
-/**
- * @brief Parses a field that can be either a scalar (applied to all) or an exact-size array.
- *
- * For per-oscillator settings, this allows users to specify either:
- * - A single scalar value: `transition_frequency = 4.1` (applied to all oscillators)
- * - An array of exact size: `transition_frequency = [4.1, 4.2, 4.3]` (one per oscillator)
- *
- * @tparam T Element type (int, double, etc.)
- * @param config TOML table containing the field
- * @param key Name of the field
- * @param expected_size Expected array size (e.g., num_oscillators)
- * @return Vector of expected_size elements
- * @throws ValidationError if field is missing, wrong type, or array has wrong size
- */
-template <typename T>
-std::vector<T> scalarOrVector(const toml::table& config, const std::string& key, size_t expected_size) {
-  if (!config.contains(key)) {
-    throw ValidationError(key, "field not found");
-  }
-
-  if (auto* arr = config[key].as_array()) {
-    // Array: must have exact expected size
-    if (arr->size() != expected_size) {
-      std::ostringstream oss;
-      oss << "array must have exactly " << expected_size << " elements, got " << arr->size();
-      throw ValidationError(key, oss.str());
-    }
-    std::vector<T> result;
-    for (size_t i = 0; i < arr->size(); ++i) {
-      auto val = arr->at(i).template value<T>();
-      if (!val) {
-        std::ostringstream oss;
-        oss << "element [" << i << "] wrong type (expected " << getTypeName<T>() << ")";
-        throw ValidationError(key, oss.str());
-      }
-      result.push_back(*val);
-    }
-    return result;
-  }
-
-  if (auto val = config[key].template value<T>()) {
-    // Scalar: fill vector with this value
-    return std::vector<T>(expected_size, *val);
-  }
-
-  throw ValidationError(key, "must be either a scalar value or an array of " + getTypeName<T>());
-}
-
-/**
- * @brief Parses an optional field that can be either a scalar or an exact-size array.
- *
- * Same as scalarOrVector but returns default_value if field is missing.
- *
- * @tparam T Element type (int, double, etc.)
- * @param config TOML table containing the field
- * @param key Name of the field
- * @param expected_size Expected array size (e.g., num_oscillators)
- * @param default_value Default vector to return if field is missing
- * @return Vector of expected_size elements
- * @throws ValidationError if field has wrong type or array has wrong size
- */
-template <typename T>
-std::vector<T> scalarOrVectorOr(const toml::table& config, const std::string& key, size_t expected_size, const std::vector<T>& default_value) {
-  if (!config.contains(key)) {
-    return default_value;
-  }
-  return scalarOrVector<T>(config, key, expected_size);
+VectorValidator<T> vectorField(std::optional<std::vector<T>> val_, const std::string& key_ = "value") {
+  return VectorValidator<T>(std::move(val_), key_);
 }
 
 } // namespace validators

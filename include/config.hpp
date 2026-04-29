@@ -21,6 +21,105 @@
 #include "config_defaults.hpp"
 #include "config_validators.hpp"
 
+/**
+ * @brief Identity type wrapper - passes through the type unchanged.
+ *
+ * Used with ConfigFieldsT to create ValidatedConfig where all fields are concrete types.
+ */
+template <typename T>
+using Identity = T;
+
+/**
+ * @brief Templated configuration data struct for field definitions.
+ *
+ * This template allows the same field definitions to be instantiated as:
+ * - ValidatedConfig (Wrapper = Identity): All fields are concrete types (validated config)
+ * - Setup (Wrapper = std::optional): All fields are optional (for input from TOML/Python)
+ *
+ * Example expansion for a field like `Wrapper<size_t> ntime`:
+ *   - Setup:           std::optional<size_t> ntime;  (user may or may not set it)
+ *   - ValidatedConfig: size_t ntime;                 (always has a validated value)
+ *
+ * Fields that are inherently optional (like hamiltonian files) don't use the Wrapper
+ * and remain std::optional in both instantiations (optional even after validation).
+ *
+ * @tparam Wrapper Type wrapper template - either Identity or std::optional
+ */
+template <template <typename> class Wrapper>
+struct ConfigFieldsT {
+  // System parameters
+  Wrapper<std::vector<size_t>> nlevels; ///< Number of levels per subsystem
+  Wrapper<std::vector<size_t>> nessential; ///< Number of essential levels per subsystem (Default: same as nlevels)
+  Wrapper<size_t> ntime; ///< Number of time steps used for time-integration
+  Wrapper<double> dt; ///< Time step size (ns). Determines final time: T=ntime*dt
+  Wrapper<std::vector<double>> transition_frequency; ///< Fundamental transition frequencies for each oscillator (GHz)
+  Wrapper<std::vector<double>> selfkerr; ///< Self-kerr frequencies for each oscillator (GHz)
+  Wrapper<std::vector<double>> crosskerr_coupling; ///< Cross-kerr coupling frequencies for each oscillator coupling (GHz)
+  Wrapper<std::vector<double>> dipole_coupling; ///< Dipole-dipole coupling frequencies for each oscillator coupling (GHz)
+  Wrapper<std::vector<double>> rotation_frequency; ///< Rotational wave approximation frequencies for each subsystem (GHz)
+  Wrapper<DecoherenceType> decoherence_type; ///< Switch between Schroedinger and Lindblad solver
+  Wrapper<std::vector<double>> decay_time; ///< Time of decay operation (T1) per oscillator (for Lindblad solver)
+  Wrapper<std::vector<double>> dephase_time; ///< Time of dephase operation (T2) per oscillator (for Lindblad solver)
+  Wrapper<InitialConditionSettings> initial_condition; ///< Initial condition configuration
+
+  // Inherently optional - no Wrapper
+  std::optional<std::string> hamiltonian_file_Hsys; ///< File to read the system Hamiltonian from
+  std::optional<std::string> hamiltonian_file_Hc; ///< File to read the control Hamiltonian from
+
+  // Control parameters
+  Wrapper<bool> control_zero_boundary_condition; ///< Decide whether control pulses should start and end at zero
+  Wrapper<std::vector<ControlParameterizationSettings>> control_parameterizations; ///< Control parameterizations for each oscillator
+  Wrapper<std::vector<ControlInitializationSettings>> control_initializations; ///< Control initializations for each oscillator
+  Wrapper<std::vector<double>> control_amplitude_bounds; ///< Control amplitude bounds for each oscillator
+  Wrapper<std::vector<std::vector<double>>> carrier_frequencies; ///< Carrier frequencies for each oscillator
+
+  // Optimization parameters
+  Wrapper<OptimTargetSettings> optim_target; ///< Grouped optimization target configuration
+  Wrapper<ObjectiveType> optim_objective; ///< Objective function measure
+  Wrapper<std::vector<double>> optim_weights; ///< Weights for summing up the objective function
+  Wrapper<double> optim_tol_grad_abs; ///< Absolute gradient tolerance
+  Wrapper<double> optim_tol_grad_rel; ///< Relative gradient tolerance
+  Wrapper<double> optim_tol_final_cost; ///< Final time cost tolerance
+  Wrapper<double> optim_tol_infidelity; ///< Infidelity tolerance
+  Wrapper<size_t> optim_maxiter; ///< Maximum iterations
+  Wrapper<double> optim_tikhonov_coeff; ///< Coefficient of Tikhonov regularization for the design variables
+  Wrapper<bool> optim_tikhonov_use_x0; ///< Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
+  Wrapper<double> optim_penalty_leakage; ///< Leakage penalty coefficient
+  Wrapper<double> optim_penalty_weightedcost; ///< Weighted cost penalty coefficient
+  Wrapper<double> optim_penalty_weightedcost_width; ///< Width parameter for weighted cost penalty
+  Wrapper<double> optim_penalty_dpdm; ///< Second derivative penalty coefficient
+  Wrapper<double> optim_penalty_energy; ///< Energy penalty coefficient
+  Wrapper<double> optim_penalty_variation; ///< Amplitude variation penalty coefficient
+
+  // Output parameters
+  Wrapper<std::string> output_directory; ///< Directory for output files
+  Wrapper<std::vector<OutputType>> output_observables; ///< Specify the desired observables.
+  Wrapper<size_t> output_timestep_stride; ///< Output frequency in the time domain: write output every N time-steps
+  Wrapper<size_t> output_optimization_stride; ///< Frequency of writing output during optimization iterations
+
+  // Solver parameters
+  Wrapper<RunType> runtype; ///< Runtype options: simulation, gradient, or optimization
+  Wrapper<bool> usematfree; ///< Use matrix free solver, instead of sparse matrix implementation
+  Wrapper<LinearSolverType> linearsolver_type; ///< Solver type for solving the linear system at each time step
+  Wrapper<size_t> linearsolver_maxiter; ///< Set maximum number of iterations for the linear solver
+  Wrapper<TimeStepperType> timestepper_type; ///< The time-stepping algorithm
+  Wrapper<int> rand_seed; ///< Fixed seed for the random number generator for reproducibility
+};
+
+/**
+ * @brief Validated configuration data with concrete types.
+ *
+ * All fields have been validated and contain final values.
+ */
+using ValidatedConfig = ConfigFieldsT<Identity>;
+
+/**
+ * @brief Raw input configuration data with optional fields.
+ *
+ * Used for receiving configuration from TOML parsing or Python bindings.
+ * All fields are optional to allow partial specification with defaults.
+ */
+using Setup = ConfigFieldsT<std::optional>;
 
 /**
  * @brief Configuration class containing all validated settings.
@@ -29,6 +128,12 @@
  * validated with defaults set. Handles parsing from TOML configuration files
  * and deprecated CFG format, as well as printing log of used configuration.
  * This class is immutable after construction.
+ *
+ * @note Error handling: Use exceptions (std::runtime_error, std::invalid_argument)
+ * instead of logger.exitWithError(). The Config class is called from Python via
+ * nanobind, and exitWithError terminates the process — crashing Jupyter notebooks
+ * and other interactive sessions. Exceptions are caught by nanobind and converted
+ * to Python exceptions, allowing graceful error handling.
  *
  * @note Adding a new toml configuration option:
  *
@@ -56,161 +161,176 @@
  */
 class Config {
  private:
-  // Logging
   MPILogger logger; ///< MPI-aware logger for output messages.
-
-  // General options
-  std::vector<size_t> nlevels; ///< Number of levels per subsystem
-  std::vector<size_t> nessential; ///< Number of essential levels per subsystem (Default: same as nlevels)
-  size_t ntime; ///< Number of time steps used for time-integration
-  double dt; ///< Time step size (ns). Determines final time: T=ntime*dt
-  std::vector<double> transition_frequency; ///< Fundamental transition frequencies for each oscillator (GHz)
-  std::vector<double> selfkerr; ///< Self-kerr frequencies for each oscillator (GHz)
-  std::vector<double> crosskerr_coupling; ///< Cross-kerr coupling frequencies for each oscillator coupling (GHz)
-  std::vector<double> dipole_coupling; ///< Dipole-dipole coupling frequencies for each oscillator coupling (GHz)
-  std::vector<double> rotation_frequency; ///< Rotational wave approximation frequencies for each subsystem (GHz)
-  DecoherenceType decoherence_type; ///< Switch between Schroedinger and Lindblad solver
-  std::vector<double> decay_time; ///< Time of decay operation (T1) per oscillator (for Lindblad solver)
-  std::vector<double> dephase_time; ///< Time of dephase operation (T2) per oscillator (for Lindblad solver)
-  size_t n_initial_conditions; ///< Number of initial conditions
-  InitialConditionSettings initial_condition; ///< Initial condition configuration
-  std::optional<std::string> hamiltonian_file_Hsys; ///< File to read the system Hamiltonian from
-  std::optional<std::string> hamiltonian_file_Hc; ///< File to read the control Hamiltonian from
-
-  // Optimization options
-  bool control_zero_boundary_condition; ///< Decide whether control pulses should start and end at zero
-  std::vector<ControlParameterizationSettings> control_parameterizations; ///< Control parameterizations for each oscillator
-  std::vector<ControlInitializationSettings> control_initializations; ///< Control initializations for each oscillator
-  std::vector<double> control_amplitude_bounds; ///< Control amplitude bounds for each oscillator
-  std::vector<std::vector<double>> carrier_frequencies; ///< Carrier frequencies for each oscillator
-  OptimTargetSettings optim_target; ///< Grouped optimization target configuration
-  ObjectiveType optim_objective; ///< Objective function measure
-  std::vector<double> optim_weights; ///< Weights for summing up the objective function
-  double optim_tol_grad_abs; ///< Absolute gradient tolerance
-  double optim_tol_grad_rel; ///< Relative gradient tolerance
-  double optim_tol_final_cost; ///< Final time cost tolerance
-  double optim_tol_infidelity; ///< Infidelity tolerance
-  size_t optim_maxiter; ///< Maximum iterations
-  double optim_tikhonov_coeff; ///< Coefficient of Tikhonov regularization for the design variables
-  bool optim_tikhonov_use_x0; ///< Switch to use Tikhonov regularization with ||x - x_0||^2 instead of ||x||^2
-  double optim_penalty_leakage; ///< Leakage penalty coefficient
-  double optim_penalty_weightedcost; ///< Weighted cost penalty coefficient
-  double optim_penalty_weightedcost_width; ///< Width parameter for weighted cost penalty
-  double optim_penalty_dpdm; ///< Second derivative penalty coefficient
-  double optim_penalty_energy; ///< Energy penalty coefficient
-  double optim_penalty_variation; ///< Amplitude variation penalty coefficient
-
-  // Output and runtypes
-  std::string output_directory; ///< Directory for output files
-  std::vector<OutputType> output_observables; ///< Specify the desired observables.
-  size_t output_timestep_stride; ///< Output frequency in the time domain: write output every <num> time-step
-  size_t output_optimization_stride; ///< Frequency of writing output during optimization iterations
-  RunType runtype; ///< Runtype options: simulation, gradient, or optimization
-  bool usematfree; ///< Use matrix free solver, instead of sparse matrix implementation
-  LinearSolverType linearsolver_type; ///< Solver type for solving the linear system at each time step
-  size_t linearsolver_maxiter; ///< Set maximum number of iterations for the linear solver
-  TimeStepperType timestepper_type; ///< The time-stepping algorithm
-  int rand_seed; ///< Fixed seed for the random number generator for reproducibility
+  ValidatedConfig data; ///< All validated configuration fields.
+  size_t n_initial_conditions; ///< Number of initial conditions (computed, not in ValidatedConfig)
 
  public:
-  Config(const MPILogger& logger, const toml::table& table);
+  /**
+   * @brief Constructs a Config from a Setup struct (primary constructor).
+   *
+   * This is the main constructor that all other constructors delegate to.
+   * It validates all fields using the validator chains in config_validators.hpp,
+   * applies defaults for missing optional fields, and calls finalize()/validate()
+   * for cross-field consistency checks.
+   *
+   * Used directly from Python (nanobind) and programmatic C++ use, where the
+   * caller populates a Setup struct with std::optional fields.
+   *
+   * @param input The pre-parsed configuration input data
+   * @param quiet_mode Whether to suppress logging output
+   */
+  Config(const Setup& input, bool quiet_mode = false);
 
-  // TODO cfg: delete this when .cfg format is removed.
-  Config(const MPILogger& logger, const ParsedConfigData& settings);
+  /**
+   * @brief Constructs a Config from a TOML table.
+   *
+   * Extracts TOML values into a Setup struct (via extractSetup() in config.cpp),
+   * then delegates to Config(Setup). The extraction helpers convert TOML nodes
+   * into std::optional<T> to match the Setup field types.
+   *
+   * @param table Parsed TOML table
+   * @param quiet_mode Whether to suppress logging output
+   */
+  Config(const toml::table& table, bool quiet_mode = false);
+
+  /**
+   * @brief Constructs a Config from legacy .cfg format (deprecated).
+   * @todo Delete this when .cfg format is removed.
+   */
+  Config(const ParsedConfigData& settings, bool quiet_mode = false);
 
   ~Config() = default;
 
-  static Config fromFile(const std::string& filename, const MPILogger& logger);
-  static Config fromToml(const std::string& toml_filename, const MPILogger& logger);
-  static Config fromTomlString(const std::string& toml_content, const MPILogger& logger);
+  /**
+   * @brief Load a Config from a file, auto-detecting TOML or legacy .cfg format.
+   * @param filename Path to the configuration file
+   * @param quiet_mode Whether to suppress logging output
+   */
+  static Config fromFile(const std::string& filename, bool quiet_mode = false);
 
-  // TODO cfg: delete these when .cfg format is removed.
-  static Config fromCfg(const std::string& cfg_filename, const MPILogger& logger);
-  static Config fromCfgString(const std::string& cfg_content, const MPILogger& logger);
+  /**
+   * @brief Load a Config from a TOML file.
+   * @param toml_filename Path to the TOML configuration file
+   * @param quiet_mode Whether to suppress logging output
+   */
+  static Config fromToml(const std::string& toml_filename, bool quiet_mode = false);
 
+  /**
+   * @brief Load a Config from a TOML-formatted string.
+   * @param toml_content String containing TOML configuration
+   * @param quiet_mode Whether to suppress logging output
+   */
+  static Config fromTomlString(const std::string& toml_content, bool quiet_mode = false);
+
+  /**
+   * @brief Load a Config from a legacy .cfg file (deprecated).
+   * @todo Delete this when .cfg format is removed.
+   */
+  static Config fromCfg(const std::string& cfg_filename, bool quiet_mode = false);
+
+  /**
+   * @brief Load a Config from a legacy .cfg-formatted string (deprecated).
+   * @todo Delete this when .cfg format is removed.
+   */
+  static Config fromCfgString(const std::string& cfg_content, bool quiet_mode = false);
+
+  /**
+   * @brief Serialize the validated configuration to TOML format.
+   * @param log Output stream to write the TOML representation to
+   */
   void printConfig(std::stringstream& log) const;
 
+  /**
+   * @brief Convert settings structs to human-readable strings.
+   *
+   * Used for TOML config logging and Python __repr__ methods.
+   */
+  static std::string toString(const InitialConditionSettings& initial_condition);
+  static std::string toString(const OptimTargetSettings& optim_target);
+  static std::string toString(const ControlParameterizationSettings& control_param);
+  static std::string toString(const ControlInitializationSettings& control_init);
+
   // getters
-  const std::vector<size_t>& getNLevels() const { return nlevels; }
-  size_t getNLevels(size_t i_osc) const { return nlevels[i_osc]; }
-  size_t getNumOsc() const { return nlevels.size(); }
-  const std::vector<size_t>& getNEssential() const { return nessential; }
-  size_t getNEssential(size_t i_osc) const { return nessential[i_osc]; }
-  size_t getNTime() const { return ntime; }
-  double getDt() const { return dt; }
-  double getTotalTime() const { return ntime * dt; }
+  const std::vector<size_t>& getNLevels() const { return data.nlevels; }
+  size_t getNLevels(size_t i_osc) const { return data.nlevels[i_osc]; }
+  size_t getNumOsc() const { return data.nlevels.size(); }
+  const std::vector<size_t>& getNEssential() const { return data.nessential; }
+  size_t getNEssential(size_t i_osc) const { return data.nessential[i_osc]; }
+  size_t getNTime() const { return data.ntime; }
+  double getDt() const { return data.dt; }
+  double getTotalTime() const { return data.ntime * data.dt; }
 
-  const std::vector<double>& getTransitionFrequency() const { return transition_frequency; }
-  const std::vector<double>& getSelfKerr() const { return selfkerr; }
-  const std::vector<double>& getCrossKerrCoupling() const { return crosskerr_coupling; }
-  const std::vector<double>& getDipoleCoupling() const { return dipole_coupling; }
-  const std::vector<double>& getRotationFrequency() const { return rotation_frequency; }
-  DecoherenceType getDecoherenceType() const { return decoherence_type; }
-  const std::vector<double>& getDecayTime() const { return decay_time; }
-  const std::vector<double>& getDephaseTime() const { return dephase_time; }
+  const std::vector<double>& getTransitionFrequency() const { return data.transition_frequency; }
+  const std::vector<double>& getSelfKerr() const { return data.selfkerr; }
+  const std::vector<double>& getCrossKerrCoupling() const { return data.crosskerr_coupling; }
+  const std::vector<double>& getDipoleCoupling() const { return data.dipole_coupling; }
+  const std::vector<double>& getRotationFrequency() const { return data.rotation_frequency; }
+  DecoherenceType getDecoherenceType() const { return data.decoherence_type; }
+  const std::vector<double>& getDecayTime() const { return data.decay_time; }
+  const std::vector<double>& getDephaseTime() const { return data.dephase_time; }
   size_t getNInitialConditions() const { return n_initial_conditions; }
-  const InitialConditionSettings& getInitialCondition() const { return initial_condition; }
-  const std::optional<std::string>& getHamiltonianFileHsys() const { return hamiltonian_file_Hsys; }
-  const std::optional<std::string>& getHamiltonianFileHc() const { return hamiltonian_file_Hc; }
+  const InitialConditionSettings& getInitialCondition() const { return data.initial_condition; }
+  const std::optional<std::string>& getHamiltonianFileHsys() const { return data.hamiltonian_file_Hsys; }
+  const std::optional<std::string>& getHamiltonianFileHc() const { return data.hamiltonian_file_Hc; }
 
-  const ControlParameterizationSettings& getControlParameterizations(size_t i_osc) const { return control_parameterizations[i_osc]; }
-  bool getControlZeroBoundaryCondition() const { return control_zero_boundary_condition; }
+  const ControlParameterizationSettings& getControlParameterizations(size_t i_osc) const { return data.control_parameterizations[i_osc]; }
+  bool getControlZeroBoundaryCondition() const { return data.control_zero_boundary_condition; }
   const ControlInitializationSettings& getControlInitializations(size_t i_osc) const {
-    return control_initializations[i_osc];
+    return data.control_initializations[i_osc];
   }
-  double getControlAmplitudeBound(size_t i_osc) const { return control_amplitude_bounds[i_osc]; }
-  const std::vector<double>& getCarrierFrequencies(size_t i_osc) const { return carrier_frequencies[i_osc]; }
-  const OptimTargetSettings& getOptimTarget() const { return optim_target; }
-  ObjectiveType getOptimObjective() const { return optim_objective; }
-  const std::vector<double>& getOptimWeights() const { return optim_weights; }
-  double getOptimTolGradAbs() const { return optim_tol_grad_abs; }
-  double getOptimTolGradRel() const { return optim_tol_grad_rel; }
-  double getOptimTolFinalCost() const { return optim_tol_final_cost; }
-  double getOptimTolInfidelity() const { return optim_tol_infidelity; }
-  size_t getOptimMaxiter() const { return optim_maxiter; }
-  double getOptimTikhonovCoeff() const { return optim_tikhonov_coeff; }
-  bool getOptimTikhonovUseX0() const { return optim_tikhonov_use_x0; }
-  double getOptimPenaltyLeakage() const { return optim_penalty_leakage; }
-  double getOptimPenaltyWeightedCost() const { return optim_penalty_weightedcost; }
-  double getOptimPenaltyWeightedCostWidth() const { return optim_penalty_weightedcost_width; }
-  double getOptimPenaltyDpdm() const { return optim_penalty_dpdm; }
-  double getOptimPenaltyEnergy() const { return optim_penalty_energy; }
-  double getOptimPenaltyVariation() const { return optim_penalty_variation; }
+  double getControlAmplitudeBound(size_t i_osc) const { return data.control_amplitude_bounds[i_osc]; }
+  const std::vector<double>& getCarrierFrequencies(size_t i_osc) const { return data.carrier_frequencies[i_osc]; }
+  const OptimTargetSettings& getOptimTarget() const { return data.optim_target; }
+  ObjectiveType getOptimObjective() const { return data.optim_objective; }
+  const std::vector<double>& getOptimWeights() const { return data.optim_weights; }
+  double getOptimTolGradAbs() const { return data.optim_tol_grad_abs; }
+  double getOptimTolGradRel() const { return data.optim_tol_grad_rel; }
+  double getOptimTolFinalCost() const { return data.optim_tol_final_cost; }
+  double getOptimTolInfidelity() const { return data.optim_tol_infidelity; }
+  size_t getOptimMaxiter() const { return data.optim_maxiter; }
+  double getOptimTikhonovCoeff() const { return data.optim_tikhonov_coeff; }
+  bool getOptimTikhonovUseX0() const { return data.optim_tikhonov_use_x0; }
+  double getOptimPenaltyLeakage() const { return data.optim_penalty_leakage; }
+  double getOptimPenaltyWeightedCost() const { return data.optim_penalty_weightedcost; }
+  double getOptimPenaltyWeightedCostWidth() const { return data.optim_penalty_weightedcost_width; }
+  double getOptimPenaltyDpdm() const { return data.optim_penalty_dpdm; }
+  double getOptimPenaltyEnergy() const { return data.optim_penalty_energy; }
+  double getOptimPenaltyVariation() const { return data.optim_penalty_variation; }
 
-  const std::string& getOutputDirectory() const { return output_directory; }
-  const std::vector<OutputType>& getOutputObservables() const { return output_observables; }
-  size_t getOutputTimestepStride() const { return output_timestep_stride; }
-  size_t getOutputOptimizationStride() const { return output_optimization_stride; }
-  RunType getRuntype() const { return runtype; }
-  bool getUseMatFree() const { return usematfree; }
-  LinearSolverType getLinearSolverType() const { return linearsolver_type; }
-  size_t getLinearSolverMaxiter() const { return linearsolver_maxiter; }
-  TimeStepperType getTimestepperType() const { return timestepper_type; }
-  int getRandSeed() const { return rand_seed; }
+  const std::string& getOutputDirectory() const { return data.output_directory; }
+  const std::vector<OutputType>& getOutputObservables() const { return data.output_observables; }
+  size_t getOutputTimestepStride() const { return data.output_timestep_stride; }
+  size_t getOutputOptimizationStride() const { return data.output_optimization_stride; }
+  RunType getRuntype() const { return data.runtype; }
+  bool getUseMatFree() const { return data.usematfree; }
+  LinearSolverType getLinearSolverType() const { return data.linearsolver_type; }
+  size_t getLinearSolverMaxiter() const { return data.linearsolver_maxiter; }
+  TimeStepperType getTimestepperType() const { return data.timestepper_type; }
+  int getRandSeed() const { return data.rand_seed; }
 
  private:
+  /**
+   * @brief Finalizes configuration after initial validation
+   *
+   * This method is called after the constructor finishes basic validation
+   * and applies secondary transformations, dependencies between parameters,
+   * and final default value application that depends on other parameters.
+   */
   void finalize();
+
+  /**
+   * @brief Validates final configuration for consistency
+   *
+   * This method performs additional validation on the finalized configuration
+   * to ensure all parameters are consistent with each other and satisfy
+   * requirements for simulation. Called after finalize().
+   */
   void validate() const;
 
   size_t computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, DecoherenceType decoherence_type) const;
 
   void setRandSeed(int rand_seed_);
-
-  // Helper function to parse a single control parameterization table
-  ControlParameterizationSettings parseControlParameterizationSpecs(const toml::table& param_table) const;
-
-  // Helper function to parse a single control initialization table
-  ControlInitializationSettings parseControlInitializationSpecs(const toml::table& table) const;
-
-  /**
-   * @brief Parses optimization target settings from TOML table
-   *
-   * @param table TOML table containing the configuration
-   * @param num_osc Number of oscillators
-   * @return Parsed optimization target settings
-   */
-  OptimTargetSettings parseOptimTarget(const toml::table& table, size_t num_osc) const;
-
 
   // TODO cfg: delete these when .cfg format is removed.
   template <typename T>

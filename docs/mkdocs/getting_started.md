@@ -49,12 +49,21 @@ You can silence Quandary by adding the `--quiet` command line argument.
 
 ### Python Interface
 
-For Python interface, after cloning quandary:
+Quandary provides two Python interfaces: a **deprecated** interface (`quandary`) and a **new nanobind-based** interface (`quandary.new`). Both are installed together via `pip`.
+
+#### Installation
+
+After setting `PKG_CONFIG_PATH` to your PETSc installation and ensuring MPI compiler wrappers (`mpicc`, `mpicxx`) are in your `PATH`, install with:
+
 ```console
-pip install -e .
+pip install .
 ```
 
-Test the Python interface with a working example:
+This compiles the C++ nanobind extension and installs everything including type stubs for IDE autocompletion. For development (editable Python sources), use `pip install -e .` instead — note that in editable mode type stubs may not be visible to IDEs.
+
+#### Deprecated interface
+
+Test the deprecated interface with a working example:
 ```console
 cd examples
 python example_cnot.py
@@ -67,7 +76,12 @@ This example demonstrates:
 - Running optimization
 - Plotting results
 
-The output will show optimization progress and generate control pulse plots.
+#### New nanobind interface (`quandary.new`)
+
+The new interface provides direct in-process integration with the C++ code and type-safe configuration.
+It is imported as `from quandary.new import *`.
+
+See the [Jupyter Notebook Tutorial](QuandaryNewInterface_HowTo.ipynb) in `examples/` for a full walkthrough.
 
 ## Next Steps
 
