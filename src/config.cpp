@@ -714,6 +714,11 @@ std::string toString(const InitialConditionSettings& initial_condition) {
     case InitialConditionType::NPLUSONE:
     case InitialConditionType::PERFORMANCE:
       return "{" + type_str + "}";
+    case InitialConditionType::TRANS_EVECS:
+      std::string out = "{" + type_str + ", levels = ";
+      out += printVector(initial_condition.levels.value());
+      out += "}";
+      return out;
   }
   return "unknown";
 }
@@ -1207,7 +1212,13 @@ size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_se
         n_initial_conditions = (size_t)pow(n_initial_conditions, 2.0);
       }
       break;
-  }
+    case InitialConditionType::TRANS_EVECS:
+      if (!init_cond_settings.levels.has_value()) {
+        logger.exitWithError("initialcondition of type TRANS_EVECS must have 'levels' parameter");
+      }
+      n_initial_conditions = init_cond_settings.levels.value().size();
+      break;
+  } 
   // logger.log("Number of initial conditions: " + std::to_string(n_initial_conditions) + "\n");
   return n_initial_conditions;
 }

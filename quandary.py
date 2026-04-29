@@ -1,3 +1,4 @@
+import ast
 import os, os.path, copy
 import numpy as np
 from subprocess import run, PIPE, Popen, call
@@ -256,6 +257,12 @@ class Quandary:
                 for iosc, lvl in enumerate(one_state):
                     if lvl < 0 or lvl >= (self.Ne[iosc] + self.Ng[iosc]):
                         raise ValueError(f"Invalid pure initial-condition level {lvl} for oscillator {iosc}.")
+        
+        if self.initialcondition[0:14] == "transmon_evecs":
+            # find "levels" in the string and extract the levels from the provided list 
+            levels_str = self.initialcondition.split("levels =")[1].strip()
+            self._initialcondition_levels = ast.literal_eval(levels_str)
+
         # Convert maxctrl_MHz to a list for each oscillator, if not so already
         if isinstance(self.maxctrl_MHz, float) or isinstance(self.maxctrl_MHz, int):
             max_alloscillators = self.maxctrl_MHz
@@ -274,6 +281,8 @@ class Quandary:
             self._ninit = np.prod(self.Ne)
         if self._lindblad_solver:
             self._ninit = self._ninit**2
+        if self.initialcondition[0:14] == "transmon_evecs":
+            self._ninit = len(self._initialcondition_levels)
         
         # Estimate the number of required time steps
         if self.dT < 0:
@@ -740,7 +749,7 @@ class Quandary:
             else:
                 lines.append(f"initial_condition = {{ type = {_toml_str(init_type)} }}")
         else:
-            lines.append(f"initial_condition = {{ type = {_toml_str(init_type)} }}")
+            lines.append(f"initial_condition = {{ type = {_toml_str(init_type)}, levels = {_toml_array(self._initialcondition_levels)} }}")
 
         # Hamiltonian files
         if not self.standardmodel:

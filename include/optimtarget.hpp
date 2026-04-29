@@ -41,6 +41,8 @@ class OptimTarget{
     PetscInt ilow; ///< First index of the local sub vector u,v
     PetscInt iupp; ///< Last index (+1) of the local sub vector u,v
 
+    std::vector<Vec> transmon_eigvec_kron_vec; ///< For transmon eigenvector initial states, store the precomputed vectors eig[i] \otimes |0><0| for the full system, where eig[i] is the i-th eigenvector of the transmon in the charge basis. This will be used during initial state preparation in evalF.
+
     Vec aux; ///< Auxiliary vector for gate optimization objective computation
     bool quietmode; ///< Flag for quiet mode operation
 

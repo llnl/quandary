@@ -170,6 +170,46 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
   }
   VecAssemblyBegin(rho_t0); VecAssemblyEnd(rho_t0);
 
+  // Set up transmon eigenvectors here for use in initial state preparation 
+  if (initcond.type == InitialConditionType::TRANS_EVECS) {
+    // For each index i in the levels, compute and store the vector eig[i] \otimes |0> for the full system, where eig[i] is the i-th eigenvector of the transmon in the charge basis. This will be used during initial state preparation in evalF. If Lindblad solver, form eig[i] eig[i]^dagger \otimes |0><0| and vectorize
+    const auto& level_ids = initcond.levels.value();
+    const auto& osc = mastereq->getOscillator(0);
+    for (size_t i=0; i<level_ids.size(); i++) {
+      const auto& eigvec = osc->getTransmonEigenvectors()[level_ids[i]];
+      Vec rho0_i;
+      VecDuplicate(rho_t0, &rho0_i);
+      VecZeroEntries(rho0_i);
+      // Fill rho0_i with the vector eig[i] \otimes |0> or its counterpart for the density matrix, if lindblad solver. 
+      if (decoherence_type != DecoherenceType::NONE) { // Lindblad solver, form eig[i] eig[i]^dagger \otimes |0><0| and vectorize
+        for (size_t m=0; m<eigvec.size(); m++) {
+          for (size_t n=0; n<eigvec.size(); n++) {
+            double val_re = eigvec[m]*eigvec[n];
+            int row = m * mastereq->nlevels[1]; // account for the transmon
+            int col = n * mastereq->nlevels[1];
+            PetscInt elemid = getVecID(row,col,dim_rho);
+            if (ilow <= elemid && elemid < iupp) {
+              PetscInt id_global_x =  elemid + mpirank_petsc*localsize_u;
+              VecSetValue(rho0_i, id_global_x, val_re, INSERT_VALUES); 
+            }
+          }
+        }
+      } else { // Schroedinger solver, fill vector
+        for (size_t m=0; m<eigvec.size(); m++) {
+          double val_re = eigvec[m];
+          PetscInt elemid = m * mastereq->nlevels[1]; // account for the transmon
+          if (ilow <= elemid && elemid < iupp) {
+            PetscInt id_global_x =  elemid + mpirank_petsc*localsize_u; 
+            VecSetValue(rho0_i, id_global_x, val_re, INSERT_VALUES);
+          }
+        }
+      }
+      VecAssemblyBegin(rho0_i); VecAssemblyEnd(rho0_i);
+      transmon_eigvec_kron_vec.push_back(rho0_i);
+    }
+  }
+
+
   /* Allocate storage for the target state */
   VecCreate(PETSC_COMM_WORLD, &targetstate); 
   PetscInt globalsize = 2 * mastereq->getDim();  // Global state vector: 2 for real and imaginary part
@@ -385,7 +425,7 @@ void OptimTarget::HilbertSchmidtOverlap_diff(Vec statebar, bool scalebypurity, c
 }
 
 
-int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential, Vec rho0){
+int OptimTarget::prepareInitialState(const int iinit_global, const int ninit, const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential, Vec rho0){
 
   PetscInt elemID;
   double val;
@@ -425,7 +465,7 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
       VecZeroEntries(rho0);
 
       const auto& all_levels = initcond.levels_list.value();
-      const auto& level_indices = all_levels[static_cast<size_t>(iinit)];
+      const auto& level_indices = all_levels[static_cast<size_t>(iinit_global)];
       PetscInt diag_id = computeProductStateDiagIdFromNlevels(level_indices, nlevels);
 
       PetscInt elemid = diag_id;
@@ -448,8 +488,8 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
     assert(decoherence_type != DecoherenceType::NONE);
     VecZeroEntries(rho0);
 
-    /* Set the <iinit>'th initial state */
-    if (iinit == 0) {
+    /* Set the <iinit_global>'th initial state */
+    if (iinit_global == 0) {
       // 1st initial state: rho(0)_IJ = 2(N-i)/(N(N+1)) Delta_IJ
       initID = 1;
       for (PetscInt i_full = 0; i_full<dim_rho; i_full++) {
@@ -460,7 +500,7 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
           VecSetValue(rho0, id_global_x, val, INSERT_VALUES);
         }
       }
-    } else if (iinit == 1) {
+    } else if (iinit_global == 1) {
       // 2nd initial state: rho(0)_IJ = 1/N
       initID = 2;
       for (PetscInt i_full = 0; i_full<dim_rho; i_full++) {
@@ -473,7 +513,7 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
           }
         }
       }
-    } else if (iinit == 2) {
+    } else if (iinit_global == 2) {
       // 3rd initial state: rho(0)_IJ = 1/N Delta_IJ
       initID = 3;
       for (PetscInt i_full = 0; i_full<dim_rho; i_full++) {
@@ -492,16 +532,16 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
   } else if (initcond.type == InitialConditionType::NPLUSONE) {
     assert(decoherence_type != DecoherenceType::NONE);
 
-    if (iinit < dim_rho) {// Diagonal e_j e_j^\dag
+    if (iinit_global < dim_rho) {// Diagonal e_j e_j^\dag
       VecZeroEntries(rho0);
-      elemID = getVecID(iinit, iinit, dim_rho);
+      elemID = getVecID(iinit_global, iinit_global, dim_rho);
       val = 1.0;
       if (ilow <= elemID && elemID < iupp) {
         PetscInt id_global_x = elemID+ mpirank_petsc*localsize_u;
         VecSetValues(rho0, 1, &id_global_x, &val, INSERT_VALUES);
       }
     }
-    else if (iinit == dim_rho) { // fully rotated 1/d*Ones(d)
+    else if (iinit_global == dim_rho) { // fully rotated 1/d*Ones(d)
       for (PetscInt i=0; i<dim_rho; i++){
         for (PetscInt j=0; j<dim_rho; j++){
           elemID = getVecID(i,j,dim_rho);
@@ -517,7 +557,7 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
       printf("Wrong initial condition index. Should never happen!\n");
       exit(1);
     }
-    initID = iinit;
+    initID = iinit_global;
     VecAssemblyBegin(rho0); VecAssemblyEnd(rho0);
   } else if (initcond.type == InitialConditionType::DIAGONAL) {
     const auto& initcond_IDs = initcond.subsystem.value();
@@ -532,7 +572,7 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
     }
 
     /* Compute index of the nonzero element in rho_m(0) = E_pre \otimes |m><m| \otimes E_post */
-    diagelem = iinit * dim_post;
+    diagelem = iinit_global * dim_post;
     if (dim_ess < dim_rho)  diagelem = mapEssToFull(diagelem, nlevels, nessential);
 
     // Vectorize if Lindblad
@@ -546,8 +586,8 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
     VecAssemblyBegin(rho0); VecAssemblyEnd(rho0);
 
     /* Set initial conditon ID */
-    if (decoherence_type != DecoherenceType::NONE) initID = iinit * ninit + iinit;
-    else initID = iinit;
+    if (decoherence_type != DecoherenceType::NONE) initID = iinit_global * ninit + iinit_global;
+    else initID = iinit_global;
 
   } else if (initcond.type == InitialConditionType::BASIS) {
     const auto& initcond_IDs = initcond.subsystem.value();
@@ -565,8 +605,8 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
 
     /* Get index (k,j) of basis element B_{k,j} for this initial condition index iinit */
     PetscInt k, j;
-    k = iinit % ( (int) sqrt(ninit) );
-    j = iinit / ( (int) sqrt(ninit) );
+    k = iinit_global % ( (int) sqrt(ninit) );
+    j = iinit_global / ( (int) sqrt(ninit) );
 
     /* Set initial condition ID */
     initID = j * ( (int) sqrt(ninit)) + k;
@@ -632,13 +672,17 @@ int OptimTarget::prepareInitialState(const int iinit, const int ninit, const std
       delete [] rows;
       delete [] vals;
     }
-
     /* Assemble rho0 */
     VecAssemblyBegin(rho0); VecAssemblyEnd(rho0);
+
+  } else if (initcond.type ==InitialConditionType::TRANS_EVECS){
+    VecCopy(transmon_eigvec_kron_vec[iinit_global], rho0);
+    initID = static_cast<int>(iinit_global);
+
   } else {
     printf("ERROR! Wrong initial condition type.\n This should never happen!\n");
     exit(1);
-}
+  }
 
   return initID;
 }

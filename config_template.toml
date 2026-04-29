@@ -54,6 +54,9 @@ initial_condition = {type = "basis"}
 # initial_condition = {type = "basis", subsystem = [0, 1]}
 # initial_condition = {type = "file", filename = "path/to/initial_state.dat"}
 
+## For transmon-resonator system, additional option is to use the transmon eigenvectors as initial states. The levels indicate which eigenvalues to be taken (and how many)
+# initial_condition = {type = "transmon_evecs", levels = [0,1] }
+
 # Optional: Read system Hamiltonian from file (default: none - use built-in Hamiltonian)
 # hamiltonian_file_Hsys = "/path/to/system_hamiltonian.dat"
 # Optional: Read control Hamiltonian from file (default: none - use built-in Hamiltonian)

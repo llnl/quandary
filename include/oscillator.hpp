@@ -86,6 +86,7 @@ class Oscillator {
     virtual ~Oscillator();
 
     void setTransmonEigenvectors(const std::vector<std::vector<double>>& eigenvectors) { transmon_eigenvectors = eigenvectors; };
+    const std::vector<std::vector<double>>& getTransmonEigenvectors() const { return transmon_eigenvectors; };
 
     /**
      * @brief Retrieves the number of control parameters.

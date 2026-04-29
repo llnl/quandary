@@ -56,7 +56,8 @@ enum class InitialConditionType {
   BASIS,         ///< Basis state
   THREESTATES,   ///< Three-state system
   NPLUSONE,      ///< N+1 state system
-  PERFORMANCE    ///< Performance test configuration
+  PERFORMANCE,   ///< Performance test configuration
+  TRANS_EVECS    ///< Transmon eigenvectors
 };
 
 const std::map<std::string, InitialConditionType> INITCOND_TYPE_MAP = {
@@ -67,7 +68,8 @@ const std::map<std::string, InitialConditionType> INITCOND_TYPE_MAP = {
     {"basis", InitialConditionType::BASIS},
     {"3states", InitialConditionType::THREESTATES},
     {"nplus1", InitialConditionType::NPLUSONE},
-    {"performance", InitialConditionType::PERFORMANCE}
+    {"performance", InitialConditionType::PERFORMANCE},
+    {"transmon_evecs", InitialConditionType::TRANS_EVECS}
 };
 
 /**
