@@ -1,5 +1,6 @@
 #include "timestepper.hpp"
 #include "petscvec.h"
+#include <cmath>
 
 TimeStepper::TimeStepper() {
   mastereq = NULL;
@@ -99,6 +100,10 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
     output->resetTrajectoryData(initid);
   }
 
+  // Reset resonator field values for this trajectory
+  resonator_field_re.clear();
+  resonator_field_im.clear();
+
   /* Set initial condition  */
   VecCopy(rho_t0, x);
 
@@ -127,11 +132,16 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
     /* current time */
     double tstart = n * dt;
     double tstop  = (n+1) * dt;
-
+    
     /* store and write current state. */
     if (storeFWD) VecCopy(x, store_states[n]);
     if (writeTrajectoryDataFiles) {
       output->evalTrajectoryData(n, tstart, x, mastereq);
+    }
+
+    /* Evaluate resonator field value */
+    if (mastereq->getTransmonResonatorSystem()) {
+      appendResonatorFieldSample(tstart, x);
     }
 
     /* Take one time step */
@@ -175,14 +185,121 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
     dpdm_states.clear();
   }
 
+  /* Add last time-step's Resonator field value */
+  if (mastereq->getTransmonResonatorSystem()) {
+    appendResonatorFieldSample(ntime * dt, x);
+  }
+ 
   /* Write last time step and close files */
   if (writeTrajectoryDataFiles) {
     output->evalTrajectoryData(ntime, ntime*dt, x, mastereq);
     output->writeTrajectoryData();
+
+    if (mastereq->getTransmonResonatorSystem()) {
+      output->writeResonatorFieldTrajectory(resonator_field_re, resonator_field_im);
+    }
   }
   
 
   return x;
+}
+
+void TimeStepper::appendResonatorFieldSample(double time, const Vec x) {
+
+  assert(mastereq->getNOscillators() == 2);  // Only for transmon-resonator systems. 
+
+  double field_re = 0.0;
+  double field_im = 0.0;
+  evalResonatorField(x, &field_re, &field_im);
+
+  resonator_field_re.push_back(field_re);
+  resonator_field_im.push_back(field_im);
+}
+
+void TimeStepper::evalResonatorField(const Vec x, double* field_re, double* field_im) const {
+  *field_re = 0.0;
+  *field_im = 0.0;
+
+  const PetscInt dim_rho = mastereq->getDimRho();
+  const PetscInt nlevels_res = static_cast<PetscInt>(mastereq->nlevels.back());
+  if (nlevels_res <= 1) {
+    return;
+  }
+
+  const PetscScalar* xptr = nullptr;
+  VecGetArrayRead(x, &xptr);
+
+  double local_re = 0.0;
+  double local_im = 0.0;
+
+  if (mastereq->decoherence_type == DecoherenceType::NONE) {
+    // Exchange only one boundary element with neighboring PETSc ranks.
+    // This avoids off-process VecGetValues calls for MPI vectors.
+    double sendbuf[2] = {0.0, 0.0};
+    double recvbuf[2] = {0.0, 0.0};
+    if (localsize_u > 0) {
+      sendbuf[0] = xptr[localsize_u - 1];
+      sendbuf[1] = xptr[2 * localsize_u - 1];
+    }
+    const int rank_prev = (mpirank_petsc > 0) ? (mpirank_petsc - 1) : MPI_PROC_NULL;
+    const int rank_next = (mpirank_petsc + 1 < mpisize_petsc) ? (mpirank_petsc + 1) : MPI_PROC_NULL;
+    MPI_Sendrecv(sendbuf, 2, MPI_DOUBLE, rank_next, 27182,
+                 recvbuf, 2, MPI_DOUBLE, rank_prev, 27182,
+                 PETSC_COMM_WORLD, MPI_STATUS_IGNORE);
+
+    // <psi|I \otimes a|psi> = sum_{m,r>=1} sqrt(r) * conj(psi_{m,r-1}) * psi_{m,r}
+    for (PetscInt idx = ilow; idx < iupp; ++idx) {
+      const PetscInt r = idx % nlevels_res;
+      if (r <= 0) {
+        continue;
+      }
+
+      const PetscInt local_curr = idx - ilow;
+      const double psi_curr_re = xptr[local_curr];
+      const double psi_curr_im = xptr[local_curr + localsize_u];
+
+      const PetscInt idx_prev = idx - 1;
+      double psi_prev_re = 0.0;
+      double psi_prev_im = 0.0;
+      if (ilow <= idx_prev && idx_prev < iupp) {
+        const PetscInt local_prev = idx_prev - ilow;
+        psi_prev_re = xptr[local_prev];
+        psi_prev_im = xptr[local_prev + localsize_u];
+      } else {
+        psi_prev_re = recvbuf[0];
+        psi_prev_im = recvbuf[1];
+      }
+
+      const double coeff = sqrt(static_cast<double>(r));
+      local_re += coeff * (psi_prev_re * psi_curr_re + psi_prev_im * psi_curr_im);
+      local_im += coeff * (psi_prev_re * psi_curr_im - psi_prev_im * psi_curr_re);
+    }
+  } else {
+    // Tr((I \otimes a)rho) = sum_{m,r>=1} sqrt(r) * rho_{(m,r),(m,r-1)}
+    for (PetscInt vecid = ilow; vecid < iupp; ++vecid) {
+      const PetscInt row = vecid % dim_rho;
+      const PetscInt col = vecid / dim_rho;
+
+      if (row != col + 1) {
+        continue;
+      }
+
+      const PetscInt r = row % nlevels_res;
+      if (r <= 0) {
+        continue;
+      }
+
+      const PetscInt local = vecid - ilow;
+      const double coeff = sqrt(static_cast<double>(r));
+      local_re += coeff * xptr[local];
+      local_im += coeff * xptr[local + localsize_u];
+    }
+  }
+
+  VecRestoreArrayRead(x, &xptr);
+
+  MPI_Allreduce(&local_re, field_re, 1, MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
+  MPI_Allreduce(&local_im, field_im, 1, MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
 }
 
 
@@ -958,6 +1075,10 @@ Vec PetscTS::solveODE(int initid, int iinit_local, Vec rho_t0){
     output->resetTrajectoryData(initid);
   }
 
+  // Clear resonator field values
+  resonator_field_re.clear();
+  resonator_field_im.clear();
+
   /* Reset the time stepper */
   TSSetTime(ts_run, 0.0);
   TSSetStepNumber(ts_run, 0);
@@ -989,6 +1110,9 @@ Vec PetscTS::solveODE(int initid, int iinit_local, Vec rho_t0){
   TSGetStepNumber(ts_run, &nsteps);
   if (writeTrajectoryDataFiles) {
     output->writeTrajectoryData();
+    if (mastereq->getTransmonResonatorSystem()) {
+      output->writeResonatorFieldTrajectory(resonator_field_re, resonator_field_im);
+    }
   }
 
   return x;
@@ -1138,6 +1262,11 @@ PetscErrorCode PetscTS::IntegralCosts(TS, PetscReal t, Vec x, Vec F, void *ctx){
 PetscErrorCode PetscTS::monitorTrajectory(TS ts, PetscInt step, PetscReal time, Vec state, void *ctx){
   (void)ts;
   PetscTS *self = static_cast<PetscTS *>(ctx); // The base Timestepper class.
+
+  // Add to resonator field trajectory. 
+  if (self->mastereq->getTransmonResonatorSystem()){
+    self->appendResonatorFieldSample(time, state);
+  }
 
   // evaluate trajectory output 
   if (self->writeTrajectoryDataFiles) {

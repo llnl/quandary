@@ -23,6 +23,8 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
 
   /* Store number of initial conditions per init-processor group */
   ninit_local = ninit / mpisize_init; 
+  resonator_field_re_local.resize(ninit_local);
+  resonator_field_im_local.resize(ninit_local);
 
   /*  If Schroedingers solver, allocate storage for the final states at time T for each initial condition. Schroedinger's solver does not store the time-trajectories during forward ODE solve, but instead recomputes the primal states during the adjoint solve. Therefore we need to store the terminal condition for the backwards primal solve. Be aware that the final states stored here will be overwritten during backwards computation!! */
   if (timestepper->mastereq->decoherence_type == DecoherenceType::NONE) {
@@ -161,6 +163,13 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
   VecZeroEntries(xtmp);
 }
 
+void OptimProblem::storeResonatorFieldTrajectory(int iinit_local) {
+  if (iinit_local < 0 || iinit_local >= ninit_local) {
+    return;
+  }
+  resonator_field_re_local[iinit_local] = timestepper->getResonatorFieldRe();
+  resonator_field_im_local[iinit_local] = timestepper->getResonatorFieldIm();
+}
 
 OptimProblem::~OptimProblem() {
   delete [] mygrad;
@@ -191,7 +200,7 @@ double OptimProblem::evalF(const Vec x) {
   /* Pass design vector x to oscillators */
   mastereq->setControlAmplitudes(x); 
 
-  /*  Iterate over initial condition */
+  /* Reset */
   obj_cost  = 0.0;
   obj_regul = 0.0;
   obj_penal_leakage = 0.0;
@@ -205,6 +214,12 @@ double OptimProblem::evalF(const Vec x) {
   double fidelity_re = 0.0;
   double fidelity_im = 0.0;
   for (int iinit = 0; iinit < ninit_local; iinit++) {
+    resonator_field_re_local[iinit].clear();
+    resonator_field_im_local[iinit].clear();
+  }
+
+  /*  Iterate over initial condition */
+  for (int iinit = 0; iinit < ninit_local; iinit++) {
       
     /* Prepare the initial condition in [rank * ninit_local, ... , (rank+1) * ninit_local - 1] */
     int iinit_global = mpirank_init * ninit_local + iinit;
@@ -216,6 +231,7 @@ double OptimProblem::evalF(const Vec x) {
 
     /* Run forward with initial condition initid */
     Vec finalstate = timestepper->solveODE(initid, iinit, rho_t0);
+    storeResonatorFieldTrajectory(iinit);
 
     /* Add to leakage penalty term */
     obj_penal_leakage += obj_weights[iinit_global] * gamma_penalty_leakage * timestepper->getLeakageIntegral();
@@ -270,7 +286,7 @@ double OptimProblem::evalF(const Vec x) {
   } else {
     fidelity = fidelity_re; 
   }
- 
+
   /* Finalize the objective function */
   obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im);
 
@@ -338,7 +354,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
     }
   }
 
-  /*  Iterate over initial condition */
+  /* Reset */ 
   obj_cost = 0.0;
   obj_regul = 0.0;
   obj_penal_leakage = 0.0;
@@ -351,6 +367,12 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   double obj_cost_im = 0.0;
   double fidelity_re = 0.0;
   double fidelity_im = 0.0;
+  for (int iinit = 0; iinit < ninit_local; iinit++) {
+    resonator_field_re_local[iinit].clear();
+    resonator_field_im_local[iinit].clear();
+  }
+
+  /*  Iterate over initial condition */
   for (int iinit = 0; iinit < ninit_local; iinit++) {
 
     /* Prepare the initial condition */
@@ -365,6 +387,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
 
     /* Run forward with initial condition rho_t0 */
     Vec finalstate = timestepper->solveODE(initid, iinit, rho_t0);
+    storeResonatorFieldTrajectory(iinit);
 
     /* Store the final state for the Schroedinger solver */
     if (timestepper->mastereq->decoherence_type == DecoherenceType::NONE) VecCopy(finalstate, store_finalstates[iinit]);

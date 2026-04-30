@@ -55,6 +55,12 @@ class TimeStepper{
     double weightedcost_integral; ///< Sums the integral over weighted cost function
     double weightedcost_width; ///< Width parameter for weighted cost function
 
+    std::vector<double> resonator_field_re; ///< Real part trajectory of <I \otimes a>(t) for current forward solve
+    std::vector<double> resonator_field_im; ///< Imaginary part trajectory of <I \otimes a>(t) for current forward solve
+
+    void appendResonatorFieldSample(double time, const Vec x);
+    void evalResonatorField(const Vec x, double* field_re, double* field_im) const;
+
   public:
     MasterEq* mastereq; ///< Pointer to master equation solver
     int ntime; ///< Number of time steps
@@ -102,6 +108,8 @@ class TimeStepper{
     double getWeightedCostIntegral(){ return weightedcost_integral; };
     double getEnergyIntegral(){ return energy_integral; };
     double getDPDMIntegral(){ return dpdm_integral; };
+    const std::vector<double>& getResonatorFieldRe() const { return resonator_field_re; };
+    const std::vector<double>& getResonatorFieldIm() const { return resonator_field_im; };
 
     /**
      * @brief Solves the ODE forward in time.

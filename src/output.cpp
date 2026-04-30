@@ -359,3 +359,35 @@ void Output::writeTrajectoryData(){
     }
   }
 }
+
+
+void Output::writeResonatorFieldTrajectory(const std::vector<double>& resonator_field_re, const std::vector<double>& resonator_field_im) const {
+  if (mpirank_petsc != 0) {
+    return;
+  }
+
+  if (resonator_field_re.size() != resonator_field_im.size()) {
+    printf("ERROR: Resonator field trajectory real and imaginary parts have different sizes.\n");
+    exit(1);
+  }
+
+  if (trajectory_times.empty() || resonator_field_re.empty() || resonator_field_im.empty()) {
+    return;
+  }
+
+  char filename[255];
+  snprintf(filename, 254, "%s/resonator_field.iinit%04d.dat", output_dir.c_str(), trajectory_initid);
+  FILE* file = fopen(filename, "w");
+  if (file == nullptr) {
+    printf("ERROR: Could not open file %s\n", filename);
+    exit(1);
+  }
+  fprintf(file, "#\"time\"      \"Re(<I\\otimes a> rho)\"      \"Im(<I\\otimes a> rho)\"\n");
+
+  const size_t nsamples = std::min(trajectory_times.size(), std::min(resonator_field_re.size(), resonator_field_im.size()));
+  for (size_t s = 0; s < nsamples; ++s) {
+    fprintf(file, "%.8f %1.14e %1.14e\n", trajectory_times[s], resonator_field_re[s], resonator_field_im[s]);
+  }
+  fclose(file);
+}
+

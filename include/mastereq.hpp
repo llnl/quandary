@@ -176,6 +176,7 @@ class MasterEq{
     * @brief Initializes sparse matrices for transmon-resonator system. 
     */
     void initTransmonResonatorSparseMats();
+    bool getTransmonResonatorSystem() const { return transmon_resonator_system; }
 
     /**
      * @brief Retrieves the i-th oscillator.

@@ -52,6 +52,8 @@ class OptimProblem {
   Vec rho_t0; ///< Storage for initial condition of the ODE
   Vec rho_t0_bar; ///< Storage for adjoint initial condition of the adjoint ODE (aka the terminal condition)
   std::vector<Vec> store_finalstates; ///< Storage for final states for each initial condition
+  std::vector<std::vector<double>> resonator_field_re_local; ///< Real part trajectories of <I \otimes a> per local initial condition
+  std::vector<std::vector<double>> resonator_field_im_local; ///< Imaginary part trajectories of <I \otimes a> per local initial condition
 
   OptimTarget* optim_target; ///< Pointer to the optimization target (gate or state)
 
@@ -92,6 +94,8 @@ class OptimProblem {
   double* mygrad; ///< Auxiliary gradient storage
     
   Vec xtmp; ///< Temporary vector storage
+
+  void storeResonatorFieldTrajectory(int iinit_local);
   
   public: 
     Output* output; ///< Pointer to output handler
@@ -120,6 +124,8 @@ class OptimProblem {
    * @return int Number of optimization parameters
    */
   int getNdesign(){ return ndesign; };
+  const std::vector<std::vector<double>>& getResonatorFieldReLocal() const { return resonator_field_re_local; };
+  const std::vector<std::vector<double>>& getResonatorFieldImLocal() const { return resonator_field_im_local; };
 
   /**
    * @brief Retrieves the current objective function value.

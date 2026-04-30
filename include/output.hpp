@@ -125,6 +125,15 @@ class Output{
      */
     void writeTrajectoryData();
 
+    /** 
+     * @brief Write resonator field trajectories
+     * 
+     * @param std::vector<double> resonator_field_re Trajectory of real part of resonator field <I \otimes a>(t) 
+     * @param std::vector<double> resonator_field_im Trajectory of imaginary part of resonator field <I \otimes a>(t) 
+     */
+    // void writeResonatorFieldTrajectories() const;
+    void writeResonatorFieldTrajectory(const std::vector<double>& resonator_field_re, const std::vector<double>& resonator_field_im) const;
+
     /**
      * @brief Writes control parameters to file. 
      */
