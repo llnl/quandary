@@ -1,6 +1,20 @@
 #include "timestepper.hpp"
 #include "petscvec.h"
+#include <algorithm>
 #include <cmath>
+
+namespace {
+std::string formatDuration(double seconds) {
+  const long long s = static_cast<long long>(std::max(0.0, std::round(seconds)));
+  const long long h = s / 3600;
+  const long long m = (s % 3600) / 60;
+  const long long sec = s % 60;
+
+  char buf[32];
+  snprintf(buf, sizeof(buf), "%02lld:%02lld:%02lld", h, m, sec);
+  return std::string(buf);
+}
+}
 
 TimeStepper::TimeStepper() {
   mastereq = NULL;
@@ -975,6 +989,10 @@ PetscTS::PetscTS(size_t ninit_local, MasterEq* mastereq_, int ntime_, double tot
   adj_scale_leakage = 0.0;
   adj_scale_weightedcost = 0.0;
   adj_scale_energy = 0.0;
+  monitor_wall_start = 0.0;
+  monitor_last_report = 0.0;
+  monitor_initid = -1;
+  monitor_report_interval = 5.0;
 
   // Helper function to create TS objects
   auto configureTS = [&](TS tsi) {
@@ -1090,6 +1108,14 @@ Vec PetscTS::solveODE(int initid, int iinit_local, Vec rho_t0){
   /* Set initial condition for timestepping */
   VecCopy(rho_t0, x);
   TSSetSolution(ts_run, x);
+
+  monitor_initid = initid;
+  monitor_wall_start = MPI_Wtime();
+  monitor_last_report = monitor_wall_start;
+  if (mpirank_world == 0) {
+    printf("Forward solve iinit=%d started (T=%1.6f).\n", monitor_initid, total_time);
+    fflush(stdout);
+  }
 
   // Reset/setup trajectory for this forward solve after solution is known.
   TSResetTrajectory(ts_run);
@@ -1262,6 +1288,28 @@ PetscErrorCode PetscTS::IntegralCosts(TS, PetscReal t, Vec x, Vec F, void *ctx){
 PetscErrorCode PetscTS::monitorTrajectory(TS ts, PetscInt step, PetscReal time, Vec state, void *ctx){
   (void)ts;
   PetscTS *self = static_cast<PetscTS *>(ctx); // The base Timestepper class.
+
+  if (self->mpirank_world == 0 && self->total_time > 0.0) {
+    const double now = MPI_Wtime();
+    const double elapsed = std::max(0.0, now - self->monitor_wall_start);
+    const double progress = std::max(0.0, std::min(1.0, static_cast<double>(time) / self->total_time));
+    const bool is_final = progress >= 0.999999;
+    const bool should_report = (now - self->monitor_last_report >= self->monitor_report_interval) || is_final;
+
+    if (should_report && progress > 0.0) {
+      const double eta = elapsed * (1.0 - progress) / progress;
+      printf("Forward solve iinit=%d step=%d t=%1.6f/%1.6f (%5.1f%%) elapsed=%s eta=%s\n",
+             self->monitor_initid,
+             static_cast<int>(step),
+             static_cast<double>(time),
+             self->total_time,
+             100.0 * progress,
+             formatDuration(elapsed).c_str(),
+             formatDuration(eta).c_str());
+      fflush(stdout);
+      self->monitor_last_report = now;
+    }
+  }
 
   // Add to resonator field trajectory. 
   if (self->mastereq->getTransmonResonatorSystem()){

@@ -431,6 +431,10 @@ class PetscTS : public TimeStepper {
     double adj_scale_leakage; ///< Per-solve scaling for leakage integral adjoint contribution.
     double adj_scale_weightedcost; ///< Per-solve scaling for weighted-cost integral adjoint contribution.
     double adj_scale_energy; ///< Per-solve scaling for energy integral adjoint contribution.
+    double monitor_wall_start; ///< Wall-clock start time for current forward solve.
+    double monitor_last_report; ///< Last wall-clock time where monitor status was printed.
+    int monitor_initid; ///< Initial-condition id currently being propagated.
+    double monitor_report_interval; ///< Minimum wall-clock interval between monitor reports.
 
     TS getTSForInit(int iinit_local) const {
       if (iinit_local < 0 || iinit_local >= ninit_pool) {
