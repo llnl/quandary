@@ -81,6 +81,7 @@ class Quandary:
     # General options
     rand_seed            # Set a fixed random number generator seed. Default: None (non-reproducable)
     print_frequency_iter # Output frequency for optimization iterations. (Print every <x> iterations). Default: 1
+    output_frequency     # Frequency (in number of timesteps) to store intermediate results during propagation. Default: 1 (write every time step)
     usematfree           # Switch to use matrix-free (rather than sparse-matrix) solver. Default: True
     verbose              # Switch to turn on more screen output for debugging. Default: False
 
@@ -159,6 +160,7 @@ class Quandary:
     # General options
     rand_seed              : int  = None
     print_frequency_iter   : int  = 1
+    output_frequency       : int  = 1
     usematfree             : bool = True 
     verbose                : bool = False
     # Internal configuration. Should not be changed by user.
@@ -237,6 +239,8 @@ class Quandary:
         
         # Estimate the number of required time steps
         if self.dT < 0:
+            if self.timestepper == "petscts":
+                self.dT = 1.0 # Dummy. Petsc will adapt the timesteps size during forward simulation. 
             if self.standardmodel==True: # set up the standard Hamiltonian first
                 Ntot = [sum(x) for x in zip(self.Ne, self.Ng)]
                 self.Hsys, self.Hc_re, self.Hc_im = hamiltonians(N=Ntot, freq01=self.freq01, selfkerr=self.selfkerr, crosskerr=self.crosskerr, Jkl=self.Jkl, rotfreq=self.rotfreq, verbose=self.verbose)
@@ -244,7 +248,7 @@ class Quandary:
             self.dT = self.T/self.nsteps
         else:
             self.nsteps = int(np.ceil(self.T / self.dT))
-            self.T = self.nsteps*self.dT
+            # self.T = self.nsteps*self.dT
         if self.verbose:
             print("Final time: ",self.T,"ns, Number of timesteps: ", self.nsteps,", dt=", self.T/self.nsteps, "ns")
             print("Maximum control amplitudes: ", self.maxctrl_MHz, "MHz")
@@ -252,13 +256,13 @@ class Quandary:
         # Get number of splines right
         if self.nsplines < 0:
             if self.spline_order == 0:
-                self.nsplines = int(np.max([np.rint(self.nsteps*self.dT/self.spline_knot_spacing+1), minspline])) 
+                self.nsplines = int(np.max([np.rint(self.T/self.spline_knot_spacing+1), minspline])) 
             else: 
                 self.nsplines = int(np.max([np.ceil(self.T/self.spline_knot_spacing+ 2), minspline]))
 
-            self.spline_knot_spacing = self.nsteps*self.dT / (self.nsplines-1) if self.spline_order == 0 else self.nsteps*self.dT / (self.nsplines-2)
+            self.spline_knot_spacing = self.T / (self.nsplines-1) if self.spline_order == 0 else self.nsteps*self.dT / (self.nsplines-2)
         else:
-            self.spline_knot_spacing= self.nsteps*self.dT/(self.nsplines-1) if self.spline_order == 0 else self.T/(self.nsplines - 2)
+            self.spline_knot_spacing= self.T/(self.nsplines-1) if self.spline_order == 0 else self.T/(self.nsplines - 2)
 
         # Estimate carrier wave frequencies
         if self.spline_order == 0 and len(self.carrier_frequency) == 0:
@@ -271,8 +275,7 @@ class Quandary:
             self.carrier_frequency, _ = get_resonances(Ne=self.Ne, Ng=self.Ng, Hsys=self.Hsys, Hc_re=self.Hc_re, Hc_im=self.Hc_im, rotfreq=self.rotfreq, verbose=self.verbose, cw_amp_thres=self.cw_amp_thres, cw_prox_thres=self.cw_prox_thres, stdmodel=self.standardmodel)
 
         if self.verbose: 
-            print("\n")
-            print("Carrier frequencies (rot. frame): ", self.carrier_frequency)
+            print("Carrier frequencies: ", self.carrier_frequency)
             print("\n")
 
     def copy(self):
@@ -333,7 +336,7 @@ class Quandary:
             spline_order_org = self.spline_order
             self.spline_order = 0
             self.spline_knot_spacing = self.dT 
-            self.nsplines = np.max([2,int(np.ceil(self.nsteps*self.dT/self.spline_knot_spacing + 1))])
+            self.nsplines = np.max([2,int(np.ceil(self.T/self.spline_knot_spacing + 1))])
 
             pcof0 = self.downsample_pulses(pt0=pt0, qt0=qt0)
 
@@ -381,7 +384,7 @@ class Quandary:
             self.carrier_frequency = [[0.0] for _ in range(len(self.Ne))]
             self.spline_order = 0
             self.spline_knot_spacing = self.dT 
-            self.nsplines = np.max([2,int(np.ceil(self.nsteps*self.dT/self.spline_knot_spacing + 1))])
+            self.nsplines = np.max([2,int(np.ceil(self.T/self.spline_knot_spacing + 1))])
             pcof0 = self.downsample_pulses(pt0=pt0, qt0=qt0)
 
         result = self.__run(pcof0=pcof0, runtype="optimization", overwrite_popt=True, maxcores=maxcores, datadir=datadir, quandary_exec=quandary_exec, cygwinbash=cygwinbash, mpi_exec=mpi_exec, batchargs=batchargs)
@@ -459,7 +462,7 @@ class Quandary:
                     
                     for iosc in range(Nsys):
                         Nelem = np.size(pt0[iosc])
-                        dt = (self.nsteps*self.dT)/(Nelem-1) # time step corresponding to (pt0, qt0)
+                        dt = (self.T)/(Nelem-1) # time step corresponding to (pt0, qt0)
                         p_seg = pt0[iosc]
                         q_seg = qt0[iosc]
 
@@ -661,8 +664,10 @@ class Quandary:
         lines.append("[system]")
         lines.append(f"nlevels = {_toml_array(Nt)}")
         lines.append(f"nessential = {_toml_array(self.Ne)}")
-        lines.append(f"ntime = {self.nsteps}")
-        lines.append(f"dt = {self.dT}")
+        lines.append(f"total_time = {self.T}")
+        if self.timestepper != "petscts":
+            lines.append(f"ntime = {self.nsteps}")
+            lines.append(f"dt = {self.dT}")
         lines.append(f"transition_frequency = {_toml_array(self.freq01)}")
         lines.append(f"selfkerr = {_toml_array(self.selfkerr)}")
 
@@ -817,7 +822,7 @@ class Quandary:
         lines.append("\n[output]")
         lines.append("directory = \"./\"")
         lines.append("observables = [\"population\", \"expectedEnergy\", \"fullstate\"]")
-        lines.append("timestep_stride = 1")
+        lines.append(f"timestep_stride = {self.output_frequency}")
         lines.append(f"optimization_stride = {self.print_frequency_iter}")
 
         # [solver]
@@ -956,7 +961,7 @@ class Quandary:
         # Get the control pulses for each qubit
         pt = []
         qt = []
-        ft = []
+        # ft = []
         for iosc in range(len(self.Ne)):
             # Read the control pulse file
             filename = os.path.join(datadir, f"control{iosc}.dat")
@@ -969,7 +974,7 @@ class Quandary:
             time = x[:,0]   # Time domain
             pt.append([x[n,1]*1e+3 for n in range(len(x[:,0]))])     # Rot frame p(t), MHz
             qt.append([x[n,2]*1e+3 for n in range(len(x[:,0]))])     # Rot frame q(t), MHz
-            ft.append([x[n,3]*1e+3 for n in range(len(x[:,0]))])     # Lab frame f(t)
+            # ft.append([x[n,3]*1e+3 for n in range(len(x[:,0]))])     # Lab frame f(t)
     
         return time, pt, qt, uT, expectedEnergy, population, pcof, infid_last, optim_hist
 

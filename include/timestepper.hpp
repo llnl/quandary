@@ -81,7 +81,7 @@ class TimeStepper{
      * @param output_ Pointer to output handler
      * @param storeFWD_ Flag to store forward states
      */
-    TimeStepper(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_); 
+    TimeStepper(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_); 
 
     virtual ~TimeStepper(); 
 
@@ -104,15 +104,26 @@ class TimeStepper{
     double getDPDMIntegral(){ return dpdm_integral; };
 
     /**
+     * @brief Get the smallest timestep size used during timestepping.
+     *
+     * For adaptive timestepping methods, returns the minimum timestep size chosen.
+     * For fixed timestep methods, returns the regular timestep size (dt).
+     *
+     * @return double Smallest timestep size
+     */
+    virtual double getMinTimestepSize() const { return dt; }
+
+    /**
      * @brief Solves the ODE forward in time.
      * 
      * This performs the time-stepping to propagate an initial condition to the final time.
      *
      * @param initid Initial condition identifier
+     * @param iinit_local Local index of initial condition for this processor
      * @param rho_t0 Initial state vector
      * @return Vec Final state vector at time T
      */
-    Vec solveODE(int initid, Vec rho_t0);
+    virtual Vec solveODE(int initid, int iinit_local, Vec rho_t0);
 
     /**
      * @brief Solves the adjoint ODE backward in time.
@@ -120,6 +131,7 @@ class TimeStepper{
      * This performs backward time-stepping to backpropagate an adjoint initial condition at 
      * final time (aka a terminal condtion) to time t=0, while accumulating the reduced gradient. 
      *
+     * @param iinit_local Local index of initial condition for this processor
      * @param rho_t0_bar Terminal condition for adjoint state
      * @param finalstate Final state from forward evolution
      * @param Jbar_leakage Adjoint of leakage integral term
@@ -127,7 +139,7 @@ class TimeStepper{
      * @param Jbar_dpdm Adjoint of second-order derivative variation
      * @param Jbar_energy Adjoint of energy integral term
      */
-    void solveAdjointODE(Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy);
+    virtual void solveAdjointODE(int iinit_local, Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy);
 
     /**
      * @brief Evaluates leakage into guard levels 
@@ -246,7 +258,7 @@ class ExplEuler : public TimeStepper {
      * @param output_ Pointer to output handler
      * @param storeFWD_ Flag to store forward states
      */
-    ExplEuler(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_);
+    ExplEuler(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_);
 
     ~ExplEuler();
 
@@ -312,7 +324,7 @@ class ImplMidpoint : public TimeStepper {
      * @param output_ Pointer to output handler
      * @param storeFWD_ Flag to store forward states
      */
-    ImplMidpoint(MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_);
+    ImplMidpoint(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_);
 
     ~ImplMidpoint();
 
@@ -378,7 +390,7 @@ class CompositionalImplMidpoint : public ImplMidpoint {
      * @param output_ Pointer to output handler
      * @param storeFWD_ Flag to store forward states
      */
-    CompositionalImplMidpoint(int order_, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_);
+    CompositionalImplMidpoint(size_t ninit_local, int order_, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_);
 
     ~CompositionalImplMidpoint();
 
@@ -402,4 +414,76 @@ class CompositionalImplMidpoint : public ImplMidpoint {
      * @param compute_gradient Flag to compute gradient
      */
     void evolveBWD(const double tstart, const double tstop, const Vec x_stop, Vec x_adj, Vec grad, bool compute_gradient);
+};
+
+
+/**
+ * @brief Petsc's adaptive timestepper
+ */
+class PetscTS : public TimeStepper {
+  protected:
+    TS ts;      ///< Backward-compatible alias to ts_pool[0].
+    std::vector<TS> ts_pool; ///< One PETSc TS per initial condition.
+    int ninit_pool; ///< Number of TS instances in ts_pool.
+    std::vector<Vec> q_pool; ///< One quadrature state vector per TS/initial condition.
+    Vec redgrad_ts; ///< TS-internal gradient vector with PETSc communicator-compatible layout.
+
+    Mat dRHSdp; ///< MatShell for applying derivative of the RHS to control parameters.
+    Mat dIntegralCostdY; ///< Dense matrix for derivative of integral costs wrt state.
+    Mat dIntegralCostdP; ///< Dense matrix for derivative of integral costs wrt parameters.
+    PetscReal dRHSdp_time; ///< Cached time used by the RHSJacobianP MatShell callbacks.
+    double adj_scale_leakage; ///< Per-solve scaling for leakage integral adjoint contribution.
+    double adj_scale_weightedcost; ///< Per-solve scaling for weighted-cost integral adjoint contribution.
+    double adj_scale_energy; ///< Per-solve scaling for energy integral adjoint contribution.
+    double min_timestep_size; ///< Smallest timestep size chosen during adaptive timestepping
+
+    TS getTSForInit(int iinit_local) const {
+      if (iinit_local < 0 || iinit_local >= ninit_pool) {
+        return ts_pool[0];
+      }
+      return ts_pool[iinit_local];
+    }
+
+
+  public:
+    PetscTS(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_);
+    ~PetscTS();
+
+    // Use Petsc's TSSolve function to solve the ODE
+    Vec solveODE(int initid, int iinit_local, Vec rho_t0) override;
+
+    // Use Petsc's TSAdjointSolve for backpropagation
+    void solveAdjointODE(int iinit_local, Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) override;
+
+    // Wrapper to assemble RHS if the time step t has changed. 
+    static PetscErrorCode RHSMatrixUpdate(TS ts, PetscReal t, Vec, Mat, Mat, void *ptr);
+
+    // Cache primal state/time for Jacobian w.r.t. parameters.
+    static PetscErrorCode dRHSdpMatrixUpdate(TS ts, PetscReal t, Vec x, Mat A, void *ptr);
+
+    // y = (dRHS/dp)^T x, implemented via MasterEq::compute_dRHS_dParams.
+    static PetscErrorCode computedRHSdp(Mat A, Vec x, Vec y);
+
+    // Cache primal state/time for quadrature derivative wrt state.
+    static PetscErrorCode dIntegralCostdYUpdate(TS ts, PetscReal t, Vec x, Mat A, Mat B, void *ptr);
+
+    // Cache primal state/time for quadrature derivative wrt parameters.
+    static PetscErrorCode dIntegralCostdPUpdate(TS ts, PetscReal t, Vec x, Mat A, void *ptr);
+
+    // Callback function during TSSolve to evaluate trajectory data at each accepted time step 
+    static PetscErrorCode monitorTrajectory(TS ts, PetscInt step, PetscReal time, Vec state, void *ctx);
+
+    // Callback for integral cost functions
+    static PetscErrorCode IntegralCosts(TS, PetscReal t, Vec x, Vec F, void *ctx);
+
+    // THESE ARE NOT USED. Instead the below solveODE overwrites the default time-stepping by calling TSSolve. 
+    void evolveFWD(const double, const double, Vec) override {};
+    void evolveBWD(const double, const double, const Vec, Vec, Vec, bool) override {};
+
+    /**
+     * @brief Get the smallest timestep size chosen during adaptive timestepping.
+     *
+     * @return double Smallest timestep size from the last forward solve
+     */
+    double getMinTimestepSize() const override { return min_timestep_size; }
 };

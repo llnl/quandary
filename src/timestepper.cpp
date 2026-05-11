@@ -13,7 +13,7 @@ TimeStepper::TimeStepper() {
   writeTrajectoryDataFiles = false;
 }
 
-TimeStepper::TimeStepper(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper() {
+TimeStepper::TimeStepper(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper() {
   mastereq = mastereq_;
   ntime = ntime_;
   total_time = total_time_;
@@ -92,7 +92,7 @@ Vec TimeStepper::getState(size_t tindex){
   return store_states[tindex];
 }
 
-Vec TimeStepper::solveODE(int initid, Vec rho_t0){
+Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
 
   /* Open output files */
   if (writeTrajectoryDataFiles) {
@@ -186,7 +186,7 @@ Vec TimeStepper::solveODE(int initid, Vec rho_t0){
 }
 
 
-void TimeStepper::solveAdjointODE(Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) {
+void TimeStepper::solveAdjointODE(int iinit_local, Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) {
 
   /* Reset gradient */
   VecZeroEntries(redgrad);
@@ -489,7 +489,7 @@ void TimeStepper::evalEnergy_diff(double time, double Jbar, Vec redgrad){
 
 void TimeStepper::evolveBWD(const double /*tstart*/, const double /*tstop*/, const Vec /*x_stop*/, Vec /*x_adj*/, Vec /*grad*/, bool /*compute_gradient*/){}
 
-ExplEuler::ExplEuler(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper(mastereq_, ntime_, total_time_, output_, storeFWD_) {
+ExplEuler::ExplEuler(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper(ninit_local, mastereq_, ntime_, total_time_, output_, storeFWD_) {
   MatCreateVecs(mastereq->getRHS(), &stage, NULL);
   VecZeroEntries(stage);
 }
@@ -527,7 +527,7 @@ void ExplEuler::evolveBWD(const double tstop,const  double tstart,const  Vec x, 
 
 }
 
-ImplMidpoint::ImplMidpoint(MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_) : TimeStepper(mastereq_, ntime_, total_time_, output_, storeFWD_) {
+ImplMidpoint::ImplMidpoint(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_) : TimeStepper(ninit_local, mastereq_, ntime_, total_time_, output_, storeFWD_) {
 
   /* Create and reset the intermediate vectors */
   MatCreateVecs(mastereq->getRHS(), &stage, NULL);
@@ -736,7 +736,7 @@ int ImplMidpoint::NeumannSolve(Mat A, Vec b, Vec y, double alpha, bool transpose
 
 
 
-CompositionalImplMidpoint::CompositionalImplMidpoint(int order_, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_): ImplMidpoint(mastereq_, ntime_, total_time_, linsolve_type_, linsolve_maxiter_, output_, storeFWD_) {
+CompositionalImplMidpoint::CompositionalImplMidpoint(size_t ninit_local, int order_, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_): ImplMidpoint(ninit_local, mastereq_, ntime_, total_time_, linsolve_type_, linsolve_maxiter_, output_, storeFWD_) {
 
   order = order_;
 
@@ -831,4 +831,331 @@ void CompositionalImplMidpoint::evolveBWD(const double tstop, const double tstar
     tcurr = tcurr - gamma[istage]*dt;
   }
   assert(fabs(tcurr - tstart) < 1e-12);
+}
+
+PetscTS::PetscTS(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper(ninit_local, mastereq_, ntime_, total_time_, output_, storeFWD_) {
+
+  ninit_pool = ninit_local; 
+  ts_pool.resize(ninit_pool, nullptr);
+  q_pool.resize(ninit_pool, nullptr);
+
+  // Prepare a shared dRHSdp MatShell used by all TS objects.
+  PetscInt nstate_global, nparam_global;
+  VecGetSize(x, &nstate_global);
+  VecGetSize(redgrad, &nparam_global);
+  MatCreateShell(PETSC_COMM_WORLD, PETSC_DECIDE, nparam_global, nstate_global, nparam_global, this, &dRHSdp);
+  MatShellSetOperation(dRHSdp, MATOP_MULT_TRANSPOSE, (void(*)(void)) computedRHSdp);
+
+  // TSSetCostGradients is configured with numcost=1, so quadrature Jacobians
+  // must provide a single combined running-cost channel for adjoint.
+  const PetscInt ncost_terms = 1;
+  MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ncost_terms, nstate_global, NULL, &dIntegralCostdY);
+  MatSetUp(dIntegralCostdY);
+  MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ncost_terms, nparam_global, NULL, &dIntegralCostdP);
+  MatSetUp(dIntegralCostdP);
+
+  dRHSdp_time = 0.0;
+  adj_scale_leakage = 0.0;
+  adj_scale_weightedcost = 0.0;
+  adj_scale_energy = 0.0;
+  min_timestep_size = total_time;  // Initialize to maximum possible value
+
+  // Helper function to create TS objects
+  auto configureTS = [&](TS tsi) {
+    TSSetProblemType(tsi, TS_LINEAR);
+
+    /* Explicit RK */
+    TSSetType(tsi, TSRK);
+    TSRKSetType(tsi, TSRK5DP);
+
+    // Pass the RHS function and Jacobian to Petsc.
+    TSSetRHSFunction(tsi, NULL, TSComputeRHSFunctionLinear, mastereq->getRHSctx());
+    TSSetRHSJacobian(tsi, mastereq->getRHS(), mastereq->getRHS(), RHSMatrixUpdate, mastereq->getRHSctx());
+    TSSetRHSJacobianP(tsi, dRHSdp, dRHSdpMatrixUpdate, this);
+
+    // Set time domain and adaptivity.
+    TSSetTime(tsi, 0.0);
+    TSSetMaxTime(tsi, total_time);
+    TSSetExactFinalTime(tsi, TS_EXACTFINALTIME_MATCHSTEP);
+    TSAdapt adapt;
+    TSGetAdapt(tsi, &adapt);
+    TSAdaptSetType(adapt, TSADAPTBASIC);
+    // TSAdaptSetType(adapt, TSADAPTNONE);
+    // TSSetTimeStep(tsi, total_time / ntime);
+    double atol = 1e-7;
+    double rtol = 1e-7;
+    TSSetTolerances(tsi, atol, NULL, rtol, NULL);
+
+    TSMonitorSet(tsi, PetscTS::monitorTrajectory, this, NULL);
+    TSSetFromOptions(tsi);
+
+    // Enable in-memory trajectory storage for adjoint solves.
+    if (storeFWD_) {
+      TSSetSaveTrajectory(tsi);
+      TSTrajectory tj;
+      TSGetTrajectory(tsi, &tj);
+      TSTrajectorySetType(tj, tsi, TSTRAJECTORYMEMORY);
+    }
+  };
+
+  // Create a TS object for each initial condition. 
+  for (int i = 0; i < ninit_pool; i++) {
+    TSCreate(PETSC_COMM_SELF, &ts_pool[i]);
+    configureTS(ts_pool[i]);
+
+    // Attach quadrature integrator and a integral state per TS instance.
+    TS ts_quad_i;
+    TSCreateQuadratureTS(ts_pool[i], PETSC_TRUE, &ts_quad_i);
+    TSSetRHSFunction(ts_quad_i, NULL, IntegralCosts, this);
+    TSSetRHSJacobian(ts_quad_i, dIntegralCostdY, dIntegralCostdY, dIntegralCostdYUpdate, this);
+    TSSetRHSJacobianP(ts_quad_i, dIntegralCostdP, dIntegralCostdPUpdate, this);
+    VecCreate(PETSC_COMM_SELF, &q_pool[i]);
+    VecSetSizes(q_pool[i], PETSC_DECIDE, 3);
+    VecSetFromOptions(q_pool[i]);
+    VecSet(q_pool[i], 0.0);
+    TSSetSolution(ts_quad_i, q_pool[i]);
+  }
+
+  // Keep existing member as alias to first TS instance.
+  ts = ts_pool[0];
+
+  // Create an internal TS gradient 
+  VecCreate(PETSC_COMM_SELF, &redgrad_ts);
+  VecSetSizes(redgrad_ts, PETSC_DECIDE, nparam_global);
+  VecSetFromOptions(redgrad_ts);
+  VecZeroEntries(redgrad_ts);
+
+  // // Gradient of quadrature register callbacks for r, dr/dy, dr/dp
+  // TSSetCostIntegrand(ts, 1, q, IntegralCosts, DRDYFunction,DRDPFunction,ctx);
+
+}
+
+PetscTS::~PetscTS() {
+  for (auto &qi : q_pool) {
+    if (qi) VecDestroy(&qi);
+  }
+  for (auto &tsi : ts_pool) {
+    if (tsi) TSDestroy(&tsi);
+  }
+  MatDestroy(&dRHSdp);
+  MatDestroy(&dIntegralCostdY);
+  MatDestroy(&dIntegralCostdP);
+  VecDestroy(&redgrad_ts);
+}
+
+Vec PetscTS::solveODE(int initid, int iinit_local, Vec rho_t0){
+  // Grab the timestepper for this initial condit
+  const int iinit = iinit_local;;
+  TS ts_run = getTSForInit(iinit_local);
+  Vec q_run = q_pool[iinit];
+
+  // Clear adjoint from previous calls on this TS.
+  TSAdjointReset(ts_run);
+
+  /* Prepare storage for trajectory output data */
+  if (writeTrajectoryDataFiles) {
+    output->openTrajectoryDataFiles("rho", initid);
+  }
+
+  /* Reset the time stepper */
+  TSSetTime(ts_run, 0.0);
+  TSSetStepNumber(ts_run, 0);
+  TSSetTimeStep(ts_run, 0.1);  // This is Petsc's default initial guess. Will be adpted during TSSolve().
+
+  /* Reset integral terms for this initial condition. */
+  VecSet(q_run, 0.0);
+  
+  /* Reset minimum timestep tracking for this solve */
+  min_timestep_size = total_time;
+  
+  /* Set initial condition for timestepping */
+  VecCopy(rho_t0, x);
+  TSSetSolution(ts_run, x);
+
+  // Reset/setup trajectory for this forward solve after solution is known.
+  TSResetTrajectory(ts_run);
+
+  /* Solve the ODE */
+  TSSolve(ts_run, x);
+
+  /* Store integral cost terms */
+  const PetscScalar *terms;
+  VecGetArrayRead(q_run, &terms);
+  leakage_integral = terms[0] / total_time;
+  weightedcost_integral = terms[1] / total_time;
+  energy_integral = terms[2] / total_time;
+  VecRestoreArrayRead(q_run, &terms);
+
+  /* Close trajectory data files. */
+  PetscInt nsteps;
+  TSGetStepNumber(ts_run, &nsteps);
+  if (writeTrajectoryDataFiles) {
+    output->closeTrajectoryDataFiles();
+  }
+
+  return x;
+}
+
+void PetscTS::solveAdjointODE(int iinit_local, Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) {
+  TS ts_run = getTSForInit(iinit_local);
+  (void)Jbar_dpdm;
+
+  // Scaling.
+  adj_scale_leakage = Jbar_leakage / total_time;
+  adj_scale_weightedcost = Jbar_weightedcost / total_time;
+  adj_scale_energy = Jbar_energy / total_time;
+
+  /* Build terminal adjoint condition lambda(T) and terminal parameter gradient mu(T). */
+  VecCopy(finalstate, xprimal);
+  TSSetSolution(ts_run, xprimal);
+
+  VecCopy(rho_t0_bar, xadj);
+  VecZeroEntries(redgrad_ts);
+  TSSetCostGradients(ts_run, 1, &xadj, &redgrad_ts);
+
+  // backward solve
+  TSAdjointSolve(ts_run);
+
+  // Copy gradient to timestepper:
+  VecCopy(redgrad_ts, redgrad);
+
+}
+
+
+PetscErrorCode PetscTS::RHSMatrixUpdate(TS, PetscReal t, Vec, Mat, Mat, void *ptr){
+  MatShellCtx *ctx = (MatShellCtx *)ptr;
+  if (!ctx->assembled || fabs(t - ctx->time) > 1e-8) {
+    ctx->mastereq->assemble_RHS(t);
+  }
+  return 0;
+};
+
+
+PetscErrorCode PetscTS::dRHSdpMatrixUpdate(TS, PetscReal t, Vec xstate, Mat, void *ptr){
+
+  PetscTS *self = static_cast<PetscTS *>(ptr);
+  self->dRHSdp_time = t;
+  VecCopy(xstate, self->xprimal);
+
+  return 0;
+}
+
+
+PetscErrorCode PetscTS::computedRHSdp(Mat A, Vec xbar, Vec grad){
+  PetscTS *self;
+  MatShellGetContext(A, (void**)&self);
+
+  VecZeroEntries(grad); // Need to reset here because compute_dRHS_dParams adds to grad. 
+  self->mastereq->compute_dRHS_dParams(self->dRHSdp_time, self->xprimal, xbar, 1.0, grad);
+
+  return 0;
+}
+
+PetscErrorCode PetscTS::dIntegralCostdYUpdate(TS, PetscReal t, Vec xstate, Mat, Mat, void *ptr){
+  PetscTS *self = static_cast<PetscTS *>(ptr);
+  self->dRHSdp_time = t;
+  VecCopy(xstate, self->xprimal);
+
+  Mat dRdy = self->dIntegralCostdY;
+  MatZeroEntries(dRdy);
+
+  Vec row;
+  VecDuplicate(self->xprimal, &row);
+
+  PetscInt ilow, iupp;
+  VecGetOwnershipRange(row, &ilow, &iupp);
+  const PetscScalar *vals = NULL;
+
+  // Build a single combined derivative row for all active running costs.
+  VecZeroEntries(row);
+  if (self->eval_leakage) {
+    self->evalLeakage_diff(self->xprimal, row, self->adj_scale_leakage);
+  }
+  if (self->eval_weightedcost) {
+    self->evalWeightedCost_diff(self->dRHSdp_time, self->xprimal, row, self->adj_scale_weightedcost);
+  }
+  VecGetArrayRead(row, &vals);
+  for (PetscInt j = ilow; j < iupp; ++j) {
+    MatSetValue(dRdy, 0, j, vals[j - ilow], INSERT_VALUES);
+  }
+  VecRestoreArrayRead(row, &vals);
+
+  VecDestroy(&row);
+
+  MatAssemblyBegin(dRdy, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(dRdy, MAT_FINAL_ASSEMBLY);
+  return 0;
+}
+
+PetscErrorCode PetscTS::dIntegralCostdPUpdate(TS, PetscReal t, Vec xstate, Mat, void *ptr){
+  PetscTS *self = static_cast<PetscTS *>(ptr);
+  self->dRHSdp_time = t;
+  VecCopy(xstate, self->xprimal);
+
+  MatZeroEntries(self->dIntegralCostdP);
+
+  Vec prow;
+  VecDuplicate(self->redgrad_ts, &prow);
+  VecZeroEntries(prow);
+  if (self->eval_energy) {
+    self->evalEnergy_diff(self->dRHSdp_time, self->adj_scale_energy, prow);
+  }
+
+  PetscInt ilow, iupp;
+  VecGetOwnershipRange(prow, &ilow, &iupp);
+  const PetscScalar *vals = NULL;
+  VecGetArrayRead(prow, &vals);
+  for (PetscInt j = ilow; j < iupp; ++j) {
+    MatSetValue(self->dIntegralCostdP, 0, j, vals[j - ilow], INSERT_VALUES);
+  }
+  VecRestoreArrayRead(prow, &vals);
+  VecDestroy(&prow);
+
+  MatAssemblyBegin(self->dIntegralCostdP, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(self->dIntegralCostdP, MAT_FINAL_ASSEMBLY);
+  return 0;
+}
+
+
+
+PetscErrorCode PetscTS::IntegralCosts(TS, PetscReal t, Vec x, Vec F, void *ctx){
+  PetscTS *self = static_cast<PetscTS *>(ctx); // The base Timestepper class.
+  PetscScalar *integral_terms;
+  VecGetArray(F, &integral_terms);
+
+  integral_terms[0] = 0.0;
+  integral_terms[1] = 0.0;
+  integral_terms[2] = 0.0;
+
+  /* Evaluate the cost integrand at time t, given state x. Store result in F. */
+  if (self->eval_leakage)       integral_terms[0] = self->evalLeakage(x);
+  if (self->eval_weightedcost)  integral_terms[1] = self->evalWeightedCost(t, x);
+  if (self->eval_energy)        integral_terms[2] = self->evalEnergy(t);
+  // TODO: DPDM integral term
+
+  VecRestoreArray(F, &integral_terms);
+  return 0;
+}
+
+PetscErrorCode PetscTS::monitorTrajectory(TS ts, PetscInt step, PetscReal time, Vec state, void *ctx){
+  (void)ts;
+  (void)step;
+  (void)time;
+  PetscTS *self = static_cast<PetscTS *>(ctx); // The base Timestepper class.
+
+  // Get the current timestep size and update minimum if needed
+  if (step > 1){
+    PetscReal dt_current;
+    TSGetTimeStep(ts, &dt_current);
+    if (dt_current > 0 && dt_current < self->min_timestep_size) {
+      self->min_timestep_size = dt_current;
+    }
+  }
+
+  // evaluate trajectory output 
+  if (self->writeTrajectoryDataFiles) {
+    self->output->writeTrajectoryDataFiles(step, time, state, self->mastereq);
+  }
+
+  return 0;
 }

@@ -184,6 +184,7 @@ linearsolver = { type = "gmres", maxiter = 20 }
 # "IMR" - Implicit Midpoint Rule (IMR) of 2nd order,
 # "IMR4" - Compositional IMR of order 2 using 3 stages,
 # "IMR8" - Compositional IMR of order 8 using 15 stages,
+# "PETSCTS" - Petsc's adaptive timestepping (5th order explicit RK)
 # "EE" - Explicit Euler (EE) of 1st order, (for debugging only)
 timestepper = "IMR"
 # Fixed seed for the random number generator. Comment out, or set negative if seed should be random (non-reproducable)
