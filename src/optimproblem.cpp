@@ -374,6 +374,9 @@ double OptimProblem::evalF(const Vec x) {
     // if (mpirank_world == 0) printf("\nRiemannian distance objective: %1.14e\n\n", obj_riemannian);
     // obj_cost = obj_riemannian;
     obj_riemann = optim_penalty_riemannian * obj_riemannian;
+    obj_cost = 0.0; // Set to zero, so that riemannian objective is used. Choose optim_penalty_riemannian =1.0. 
+    obj_cost_re = 0.0;
+    obj_cost_im = 0.0;
   }
 
   /* Evaluate Tikhonov regularization term: gamma/2 * ||x-x0||^2*/
@@ -605,7 +608,9 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
     // if (mpirank_world == 0) printf("\nRiemannian distance objective: %1.14e\n\n", obj_riemannian);
     // obj_cost = obj_riemannian;
     obj_riemann = optim_penalty_riemannian * obj_riemannian;
-
+    obj_cost = 0.0; 
+    obj_cost_re = 0.0;
+    obj_cost_im = 0.0;
   }
 
   /* Evaluate Tikhonov regularization term += gamma/2 * ||x||^2*/
@@ -775,10 +780,10 @@ PetscErrorCode TaoMonitor(Tao tao,void*ptr){
     finalReason_str = "Optimization converged with small infidelity.";
     TaoSetConvergedReason(tao, TAO_CONVERGED_USER);
     lastIter = true;
-  } else if (obj_cost <= ctx->getTolFinalCost()) {
-    finalReason_str = "Optimization converged with small final time cost.";
-    TaoSetConvergedReason(tao, TAO_CONVERGED_USER);
-    lastIter = true;
+  // } else if (obj_cost <= ctx->getTolFinalCost()) {
+  //   finalReason_str = "Optimization converged with small final time cost.";
+  //   TaoSetConvergedReason(tao, TAO_CONVERGED_USER);
+  //   lastIter = true;
   } else if (iter == ctx->getMaxIter()) {
     finalReason_str = "Optimization stopped at maximum number of iterations.";
     lastIter = true;

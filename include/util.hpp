@@ -251,25 +251,6 @@ int read_vector(const char *filename, double *var, int dim, bool quietmode=false
  */
 int getEigvals(const Mat A, const int neigvals, std::vector<double>& eigvals, std::vector<Vec>& eigvecs);
 
-/**
- * @brief Computes eigenvalues of a complex matrix A+iB.
- *
- * Requires compilation with SLEPc for eigenvalue computations.
- *
- * @param A Real part of complex matrix
- * @param B Imaginary part of complex matrix
- * @param neigvals Number of eigenvalues to compute
- * @param eigvals_re Vector of real parts of eigenvalues
- * @param eigvals_im Vector to store imaginary parts of eigenvalues
- */
-int getEigenComplex(const Mat A_re, const Mat A_im, std::unique_ptr<std::vector<double>>& eigvals_re, std::unique_ptr<std::vector<double>>& eigvals_im, Mat& Evecs_re, Mat& Evecs_im, bool print=false);
-
-int testEigenComplex(const Mat A_re, const Mat A_im, const std::unique_ptr<std::vector<double>>& eigvals_re, const std::unique_ptr<std::vector<double>>& eigvals_im, const Mat& Evecs_re, const Mat& Evecs_im);
-
-int reconstructMatrixFromEigenComplex(const std::unique_ptr<std::vector<double>>& eigvals_re, const std::unique_ptr<std::vector<double>>& eigvals_im, const Mat& Evecs_re, const Mat& Evecs_im, Mat& A_re_out, Mat& A_im_out, const bool do_log=false, const Mat& Atest_re=NULL, const Mat& Atest_im=NULL);
-
-
-double computeMatrixLogTaylor(const Mat& A_re, const Mat& A_im, Mat& logA_re, Mat& logA_im);
 
 /**
  * @brief Tests if complex matrix A+iB is unitary.
@@ -372,3 +353,50 @@ T parseEnum(const std::optional<std::string>& opt_str, const std::map<std::strin
   auto result = parseEnum(opt_str.value(), enum_map);
   return result.value_or(default_value);
 }
+
+
+// ##### NEW EIGENDECOMPOSITION
+int getEigendecompositionComplex(Mat C_re, Mat C_im, Vec eigvals_re, Vec eigvals_im, Mat eigvecs_re, Mat eigvecs_im);
+
+int testEigendecompositionComplex(Mat C_re, Mat C_im, Vec eigvals_re, Vec eigvals_im, Mat eigvecs_re, Mat eigvecs_im);
+
+
+int reconstructMatrixFromEigenComplex(const Vec& eigvals_re, const Vec& eigvals_im, const Mat& Evecs_re, const Mat& Evecs_im, Mat& A_re_out, Mat& A_im_out, const bool do_log=false, const Mat& Atest_re=NULL, const Mat& Atest_im=NULL);
+
+
+// Helper function for complex dot product: out = a^H * b, where a and b are complex vectors represented by their real and imaginary parts.
+auto complexDot = [](const std::vector<double>& a_re, const std::vector<double>& a_im, const std::vector<double>& b_re, const std::vector<double>& b_im, double& out_re, double& out_im) {
+    double sum_re = 0.0;
+    double sum_im = 0.0;
+    PetscInt m = (PetscInt)a_re.size();
+    for (PetscInt i = 0; i < m; i++) {
+        sum_re += a_re[i] * b_re[i] + a_im[i] * b_im[i];
+        sum_im += a_re[i] * b_im[i] - a_im[i] * b_re[i];
+    }
+    out_re = sum_re;
+    out_im = sum_im;
+};
+
+
+// Helper function for complex vector norm: ||a|| = sqrt(sum_i (a_re[i]^2 + a_im[i]^2))
+auto complexNorm = [](const std::vector<double>& a_re, const std::vector<double>& a_im) {
+    double sum = 0.0;
+    PetscInt m = (PetscInt)a_re.size();
+    for (PetscInt i = 0; i < m; i++) {
+        sum += a_re[i] * a_re[i] + a_im[i] * a_im[i];
+    }
+    return std::sqrt(sum);
+};
+
+
+
+struct MatShellCtx_ComplexEig {
+    Mat C_re;
+    Mat C_im;
+    PetscInt n;
+    Vec tmp_re;
+    Vec tmp_im;
+};
+
+
+PetscErrorCode MatMultShell_M(Mat M, Vec x, Vec y);

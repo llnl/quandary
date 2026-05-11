@@ -899,10 +899,11 @@ class Quandary:
             "Gradient"               : optim_hist_tmp[:,2],
             "Fidelity"               : optim_hist_tmp[:,4],
             "Cost"                   : optim_hist_tmp[:,5],
-            "Tikhonov"               : optim_hist_tmp[:,6],
-            "Penalty-Leakage"        : optim_hist_tmp[:,7],
-            "Penalty-StateVariation" : optim_hist_tmp[:,8],
-            "Penalty-TotalEnergy"    : optim_hist_tmp[:,9],
+            "Riemann"                : optim_hist_tmp[:,6],
+            "Tikhonov"               : optim_hist_tmp[:,7],
+            "Penalty-Leakage"        : optim_hist_tmp[:,8],
+            "Penalty-StateVariation" : optim_hist_tmp[:,9],
+            "Penalty-TotalEnergy"    : optim_hist_tmp[:,10],
         }
 
 

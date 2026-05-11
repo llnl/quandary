@@ -734,289 +734,7 @@ bool isUnitary(const Mat V_re, const Mat V_im){
 }
 
 
-int getEigenComplex(const Mat A_re, const Mat A_im, std::unique_ptr<std::vector<double>>& eigvals_re, std::unique_ptr<std::vector<double>>& eigvals_im, Mat& Evecs_re, Mat& Evecs_im, bool print){
-
-  PetscInt dim;
-  MatGetSize(A_re, &dim, NULL);
-
-  /* Set up the larger matrix A = [A_re -A_im; A_im A_re] */
-  Mat A;
-  MatCreate(PETSC_COMM_WORLD, &A);
-  MatSetSizes(A, PETSC_DECIDE, PETSC_DECIDE, 2*dim, 2*dim);
-  MatSetFromOptions(A);
-  MatSetUp(A);
-
-  // Number of eigenvalues to compute of the larger matrix A=[A_re -A_im; A_im A_re]
-  int neigvals = 2*dim; 
-
-  // Create storage of Evecs_re and Evecs_im
-  if (Evecs_re) MatDestroy(&Evecs_re);
-  if (Evecs_im) MatDestroy(&Evecs_im);
-  MatCreate(PETSC_COMM_WORLD, &Evecs_re);
-  MatSetSizes(Evecs_re, PETSC_DECIDE, PETSC_DECIDE, dim, dim);
-  MatSetFromOptions(Evecs_re);
-  MatSetUp(Evecs_re);
-  MatCreate(PETSC_COMM_WORLD, &Evecs_im);
-  MatSetSizes(Evecs_im, PETSC_DECIDE, PETSC_DECIDE, dim, dim);
-  MatSetFromOptions(Evecs_im);
-  MatSetUp(Evecs_im);
-
-  for (PetscInt i=0; i<dim; i++){
-    for (PetscInt j=0; j<dim; j++){
-      double val_re, val_im;
-      MatGetValue(A_re, i, j, &val_re);
-      MatGetValue(A_im, i, j, &val_im);
-      // Set A_ij
-      MatSetValue(A, i, j, val_re, INSERT_VALUES);               // Top-left
-      MatSetValue(A, i, j + dim, -val_im, INSERT_VALUES);       // Top-right
-      MatSetValue(A, i + dim, j, val_im, INSERT_VALUES);        // Bottom-left
-      MatSetValue(A, i + dim, j + dim, val_re, INSERT_VALUES);  // Bottom-right
-    }
-  }
-  MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY); 
-  MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
-
-  /* Create Slepc's eigensolver */
-  EPS eigensolver;       
-  EPSCreate(PETSC_COMM_WORLD, &eigensolver);
-  EPSSetOperators(eigensolver, A, NULL);
-  EPSSetProblemType(eigensolver, EPS_NHEP);
-  EPSSetFromOptions(eigensolver);
-  EPSSetDimensions(eigensolver,neigvals,PETSC_DEFAULT,PETSC_DEFAULT);
-
-  // Solve eigenvalue problem
-  EPSSolve(eigensolver);
-  // EPSView(eigensolver, PETSC_VIEWER_STDOUT_WORLD);
-
-  /* Get information about convergence */
-  // int its, nev, maxit;
-  // EPSType type;
-  // double tol;
-  // EPSGetIterationNumber(eigensolver,&its);
-  // EPSGetType(eigensolver,&type);
-  // EPSGetDimensions(eigensolver,&nev,NULL,NULL);
-  // EPSGetTolerances(eigensolver,&tol,&maxit);
-  int nconv = 0;
-  EPSGetConverged(eigensolver, &nconv );
-  if (nconv < neigvals){
-    printf("ERROR: Only %d eigenvalues converged, but %d requested!\n", nconv, neigvals);
-    return 1;
-  }
-  // PetscPrintf(PETSC_COMM_WORLD," Solution method: %s\n",type);
-  // PetscPrintf(PETSC_COMM_WORLD," Number of requested eigenpairs: %D\n",nev);
-  // PetscPrintf(PETSC_COMM_WORLD," Number of iterations taken: %D / %D\n",its, maxit);
-  // PetscPrintf(PETSC_COMM_WORLD," Stopping condition: tol=%.4g\n",(double)tol);
-  // PetscPrintf(PETSC_COMM_WORLD," Number of converged eigenpairs: %D\n\n",nconv);
-
-  // Get the result
-  eigvals_re->clear();
-  eigvals_im->clear();
-  eigvals_re->resize(nconv);
-  eigvals_im->resize(nconv);
-  MatZeroEntries(Evecs_re);
-  MatZeroEntries(Evecs_im);
-  Vec eigvecLarge_re;
-  Vec eigvecLarge_im;
-  MatCreateVecs(A, &eigvecLarge_re, NULL);
-  MatCreateVecs(A, &eigvecLarge_im, NULL);
-  Vec v_re, v_im;
-  MatCreateVecs(A_re, &v_re, NULL);
-  MatCreateVecs(A_re, &v_im, NULL);
-  double kr, ki;
-  int found_eigenpairs = 0;
-  for (int j=0; j<nconv; j++) {
-    // Get the j-th eigenvalue
-    EPSGetEigenvalue(eigensolver, j, &kr, &ki);
-    // Get the eigenvector of the larger matrix
-    EPSGetEigenvector( eigensolver, j, eigvecLarge_re, eigvecLarge_im);
-    for (PetscInt i=0; i<2*dim; i++){
-      double val_re, val_im;
-      VecGetValues(eigvecLarge_re, 1, &i, &val_re);
-      VecGetValues(eigvecLarge_im, 1, &i, &val_im);
-    }
-    // Error of the eigensolver for this eigenvalue
-    // double error;
-    // EPSComputeError( eigensolver, j, EPS_ERROR_RELATIVE, &error );
-    // printf("%1.8e + i%1.8e (err %f)\n", kr, ki, error);
-
-    // TODO: Check for multiplicity of an eigenvalue here? 
-
-    // Set up the smaller vector v = evec[:dim] + 1j evec[dim:] and test whether this is an eigenvector of the complex matrix A_re + i A_im.
-    // v_re = eigvecLarge_re[:dim] - eigvecLarge_im[dim:]
-    // v_im = eigvecLarge_im[:dim] + eigvecLarge_re[dim:]
-    VecZeroEntries(v_re);
-    VecZeroEntries(v_im);
-    for (PetscInt i=0; i<dim; i++){
-      double val_re, val_im;
-      PetscInt idx = i;
-      VecGetValues(eigvecLarge_re, 1, &idx, &val_re);
-      VecGetValues(eigvecLarge_im, 1, &idx, &val_im);
-      VecSetValue(v_re, i, val_re, INSERT_VALUES);
-      VecSetValue(v_im, i, val_im, INSERT_VALUES);
-      idx += dim;
-      VecGetValues(eigvecLarge_re, 1, &idx, &val_re);
-      VecGetValues(eigvecLarge_im, 1, &idx, &val_im);
-      VecSetValue(v_re, i, -val_im, ADD_VALUES);
-      VecSetValue(v_im, i, val_re, ADD_VALUES);
-    }
-    VecAssemblyBegin(v_re); VecAssemblyEnd(v_re);
-    VecAssemblyBegin(v_im); VecAssemblyEnd(v_im);
-
-    // Test the norm of v, should be zero for half of them (unless multiplicity):
-    double norm_v_re, norm_v_im;
-    VecNorm(v_re, NORM_2, &norm_v_re);
-    VecNorm(v_im, NORM_2, &norm_v_im);
-    double norm_v = sqrt(norm_v_re*norm_v_re + norm_v_im*norm_v_im);
-    // printf("Norm of eigenvector %d: %1.14e \n", j, norm_v);
-
-    // Discard if this is a zero vector 
-    if (!(norm_v > 1e-10)) {
-      // printf("Discarding eigenvalue %1.8e + i%1.8e with zero eigenvector.\n", kr, ki);
-      continue;
-    }
-
-    // Else, normalize v and store the eigenpair
-    VecScale(v_re, 1.0/norm_v);
-    VecScale(v_im, 1.0/norm_v);
-    // printf("Setting eigenvalue %d: %1.8e + i%1.8e, vnorm=%1.8e\n", found_eigenpairs, kr, ki, norm_v);
-    for (PetscInt i=0; i<dim; i++){
-      double val_re, val_im;
-      VecGetValues(v_re, 1, &i, &val_re);
-      VecGetValues(v_im, 1, &i, &val_im);
-      MatSetValue(Evecs_re, i, found_eigenpairs, val_re, INSERT_VALUES);
-      MatSetValue(Evecs_im, i, found_eigenpairs, val_im, INSERT_VALUES);
-      // printf("Setting eigenvector %d at row %d col %d\n", j, i, found_eigenpairs);
-    }
-
-    /* Store the eigenvalue */
-    eigvals_re->at(found_eigenpairs) = kr;
-    eigvals_im->at(found_eigenpairs) = ki;
-    found_eigenpairs++;
-  }
-  
-  eigvals_re->resize(found_eigenpairs);
-  eigvals_im->resize(found_eigenpairs);
-
-  MatAssemblyBegin(Evecs_re, MAT_FINAL_ASSEMBLY); 
-  MatAssemblyEnd(Evecs_re, MAT_FINAL_ASSEMBLY);
-  MatAssemblyBegin(Evecs_im, MAT_FINAL_ASSEMBLY); 
-  MatAssemblyEnd(Evecs_im, MAT_FINAL_ASSEMBLY);
-
-  if (print) {
-    // Print each eigenvalue
-    printf("Eigen decomposition of U^dagger V done.\n");
-    for (size_t i=0; i<eigvals_re->size(); i++){
-      double phase = atan2(eigvals_im->at(i), eigvals_re->at(i));
-      double abs = sqrt( eigvals_re->at(i)*eigvals_re->at(i) + eigvals_im->at(i)*eigvals_im->at(i) );
-      printf("Eigenvalue %d: %f + i*%f, abs=%f, phase = %f \n", i, eigvals_re->at(i), eigvals_im->at(i), abs,  phase*180.0/M_PI);
-    }
-    MatView(Evecs_re, NULL);
-    MatView(Evecs_im, NULL);
-
-  }
-
-  /* Clean up*/
-  EPSDestroy(&eigensolver);
-  MatDestroy(&A);
-  VecDestroy(&eigvecLarge_re);
-  VecDestroy(&eigvecLarge_im);
-  VecDestroy(&v_re);
-  VecDestroy(&v_im);
-
-  return 0;
-}
-
-
-int testEigenComplex(const Mat A_re, const Mat A_im, const std::unique_ptr<std::vector<double>>& eigvals_re, const std::unique_ptr<std::vector<double>>& eigvals_im, const Mat& Evecs_re, const Mat& Evecs_im) {
-  PetscInt dim;
-  MatGetSize(A_re, &dim, NULL);
-  Vec v_re, v_im;
-  MatCreateVecs(Evecs_re, &v_re, NULL);
-  MatCreateVecs(Evecs_im, &v_im, NULL);
-    Vec Av_re, Av_im;
-    MatCreateVecs(A_re, &Av_re, NULL);
-    MatCreateVecs(A_re, &Av_im, NULL);
- 
-  // Test total number of eigenvalues = dim
-  if (eigvals_re->size()!= dim){
-    printf("Error in RiemannianDistance: Wrong number of eigenvalues received: %d instead of %d\n", (int)eigvals_re->size(), dim);
-    return 1;
-  }
-  for (size_t i=0; i<eigvals_re->size(); i++){
-    // Get eigenvector i
-    MatGetColumnVector(Evecs_re, v_re, i);
-    MatGetColumnVector(Evecs_im, v_im, i);
-
-    // Test norm one of each eigenvector
-    double norm_re, norm_im;
-    VecNorm(v_re, NORM_2, &norm_re);
-    VecNorm(v_im, NORM_2, &norm_im);
-    double norm = sqrt(norm_re*norm_re + norm_im*norm_im);
-    if (fabs(norm - 1.0) > 1e-12){
-      printf("Error in RiemannianDistance: Eigenvector %d has norm %f != 1!\n", (int)i, norm);
-      return 1;
-    }
-
-    // Test that A v = lambda v
-    // Av_re = A_re v_re - A_im v_im
-    MatMult(A_re, v_re, Av_re);
-    MatMult(A_im, v_im, Av_im);
-    VecAXPY(Av_re, -1.0, Av_im); // Av_re = A_re v_re - A_im v_im
-    // Av_im = A_re v_im + A_im v_re
-    MatMult(A_re, v_im, Av_im);
-    MatMultAdd(A_im, v_re, Av_im, Av_im); // Av_im = A_re v_im + A_im v_re
-    // Test difference elementwise
-    for (size_t j=0; j<dim; j++){
-      double val_re, val_im, valAv_re, valAv_im;
-      VecGetValues(v_re, 1, (PetscInt*)&j, &val_re);
-      VecGetValues(v_im, 1, (PetscInt*)&j, &val_im);
-      VecGetValues(Av_re, 1, (PetscInt*)&j, &valAv_re);
-      VecGetValues(Av_im, 1, (PetscInt*)&j, &valAv_im);
-      double diff_re = valAv_re - (eigvals_re->at(i)*val_re - eigvals_im->at(i)*val_im);
-      double diff_im = valAv_im - (eigvals_re->at(i)*val_im + eigvals_im->at(i)*val_re);
-      if (fabs(diff_re) > 1e-10 || fabs(diff_im) > 1e-10){
-        printf("Error in RiemannianDistance: Vector %d is not an eigenvector! Diff = %f + i*%f\n", (int)i, diff_re, diff_im);
-        return 1;
-      }
-    }
-
-    // Test orthogonality of v to all other eigenvectors
-    for (size_t j=0; j<eigvals_re->size(); j++){
-      if (j==i) continue;
-      Vec v2_re, v2_im;
-      MatCreateVecs(Evecs_re, &v2_re, NULL);
-      MatCreateVecs(Evecs_im, &v2_im, NULL);
-      MatGetColumnVector(Evecs_re, v2_re, j);
-      MatGetColumnVector(Evecs_im, v2_im, j);
-      double dot_re1, dot_im1, dot_re2, dot_im2;
-      VecDot(v_re, v2_re, &dot_re1);
-      VecDot(v_im, v2_im, &dot_re2);
-      VecDot(v_re, v2_im, &dot_im1);
-      VecDot(v_im, v2_re, &dot_im2);
-      double dot_re = dot_re1 + dot_re2;
-      double dot_im = dot_im1 - dot_im2;
-      if (fabs(dot_re) > 1e-5 || fabs(dot_im) > 1e-5){
-        printf("WARNING in RiemannianDistance: Eigenvector %d is not orthogonal to eigenvector %d! Dot = %1.14e + i*%1.14e\n", (int)i, (int)j, dot_re, dot_im);
-        // exit(1);
-        return 1;
-      }
-      VecDestroy(&v2_re);
-      VecDestroy(&v2_im);
-    }
-
-  }
-
-  // Cleanup
-  VecDestroy(&v_re);
-  VecDestroy(&v_im);
-  VecDestroy(&Av_re);
-  VecDestroy(&Av_im);
-
-  return 0;
-}
-
-
-int reconstructMatrixFromEigenComplex(const std::unique_ptr<std::vector<double>>& eigvals_re, const std::unique_ptr<std::vector<double>>& eigvals_im, const Mat& Evecs_re, const Mat& Evecs_im, Mat& Aout_re, Mat& Aout_im, const bool do_log, const Mat& Atest_re, const Mat& Atest_im){
+int reconstructMatrixFromEigenComplex(const Vec& eigvals_re, const Vec& eigvals_im, const Mat& Evecs_re, const Mat& Evecs_im, Mat& Aout_re, Mat& Aout_im, const bool do_log, const Mat& Atest_re, const Mat& Atest_im){
 // Compute A_out = Evecs * diag(evals) * Evecs^dagger, or the log thereof 
 // A_out_re = V_re * (D_re V_re^T + D_im V_im^T) - V_im * (D_im V_re^T - D_re V_im^T)
 // A_out_im = V_im * (D_re V_re^T + D_im V_im^T) + V_re * (D_im V_re^T - D_re V_im^T)
@@ -1029,6 +747,12 @@ int reconstructMatrixFromEigenComplex(const std::unique_ptr<std::vector<double>>
   MatZeroEntries(Aout_re);
   MatZeroEntries(Aout_im);
 
+  // Get array pointers from eigenvalue vectors
+  const PetscScalar* eigvals_re_ptr;
+  const PetscScalar* eigvals_im_ptr;
+  VecGetArrayRead(eigvals_re, &eigvals_re_ptr);
+  VecGetArrayRead(eigvals_im, &eigvals_im_ptr);
+
   // First compute D*V^dagger, for V=Evecs, and D=diag(evals) or D=log(diag(evals))
   // LVT_1 = D_re V_re^T + D_im V_im^T
   // LVT_2 = D_im V_re^T - D_re V_im^T
@@ -1040,8 +764,8 @@ int reconstructMatrixFromEigenComplex(const std::unique_ptr<std::vector<double>>
   MatDuplicate(VreT, MAT_DO_NOT_COPY_VALUES, &LVT_2);
   for (size_t row=0; row<dim; row++){
     // scale each row by the diagonal matrix D
-    double diag_re = eigvals_re->at(row); // for reconstruction of A
-    double diag_im = eigvals_im->at(row);
+    double diag_re = eigvals_re_ptr[row]; // for reconstruction of A
+    double diag_im = eigvals_im_ptr[row];
     if (do_log) { // for reconstruction of log(A), compute log of d = diag_re + i diag_im. Know that d is on unit circle, so log(d) = i*phi with phi = atan2(diag_im, diag_re)
       double phi = atan2(diag_im, diag_re);
       diag_re = 0.0;
@@ -1060,6 +784,10 @@ int reconstructMatrixFromEigenComplex(const std::unique_ptr<std::vector<double>>
   MatAssemblyEnd(LVT_1, MAT_FINAL_ASSEMBLY);
   MatAssemblyBegin(LVT_2, MAT_FINAL_ASSEMBLY); 
   MatAssemblyEnd(LVT_2, MAT_FINAL_ASSEMBLY);
+
+  // Release array pointers
+  VecRestoreArrayRead(eigvals_re, &eigvals_re_ptr);
+  VecRestoreArrayRead(eigvals_im, &eigvals_im_ptr);
 
   // printf("log(diag) @ Evecs: \n");
   // MatView(LVT_1, NULL);
@@ -1095,9 +823,9 @@ int reconstructMatrixFromEigenComplex(const std::unique_ptr<std::vector<double>>
     // if (do_log)
     //   printf("Reconstruction test of log(A): ||log(A) - log(A)_test||_F = %1.14e + i*%1.14e\n", norm_re, norm_im);
     // else
-    //   printf("Reconstruction test: ||A - A_test||_F = %1.14e + i*%1.14e\n", norm_re, norm_im);
+      // printf("Reconstruction test: ||A - A_test||_F = %1.14e + i*%1.14e\n", norm_re, norm_im);
     if (norm_re > 1e-6 || norm_im > 1e-6){
-      printf("Error: Reconstruction from eigen decomposition failed!\n");
+      printf("Error: Reconstruction from eigen decomposition failed! norm = %1.14e + i*%1.14e\n", norm_re, norm_im);
       // exit(1);
       return 1;
     }
@@ -1207,3 +935,356 @@ bool hasSuffix(const std::string& str, const std::string& suffix) {
   return str.size() >= suffix.size() &&
     str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
+
+
+// ############### NEW EIGENDECOMPOSITION 
+int getEigendecompositionComplex(Mat C_re, Mat C_im, Vec eigvals_re, Vec eigvals_im, Mat eigvecs_re, Mat eigvecs_im) {
+
+    /* Reset */
+    MatZeroEntries(eigvecs_re);
+    MatZeroEntries(eigvecs_im);
+    VecZeroEntries(eigvals_re);
+    VecZeroEntries(eigvals_im);
+
+    // Get dimension of C
+    PetscInt n;
+    MatGetSize(C_re, &n, NULL);
+
+    /*************/
+    /* Solve eigenvalue problem of the larger real-valued matrix M = [Re(C) -Im(C); Im(C) Re(C)] */ 
+    /*************/
+
+    // Set up the larger real-valued matrix M = [Re(C) -Im(C); Im(C) Re(C)] as a MatShell
+    Mat M;
+    MatShellCtx_ComplexEig ctx;
+    ctx.C_re = C_re;
+    ctx.C_im = C_im;
+    ctx.n = n;
+    MatCreateVecs(C_re, NULL, &ctx.tmp_re);
+    MatCreateVecs(C_re, NULL, &ctx.tmp_im);
+
+    MatCreateShell(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, 2*n, 2*n, &ctx, &M);
+    MatShellSetOperation(M, MATOP_MULT, (void(*)(void))MatMultShell_M);
+
+    // Set up the eigenproblem solver for M
+    int neigvals = 2*n; // number of eigenvalues to compute
+    EPS eps;
+    EPSCreate(PETSC_COMM_WORLD, &eps);
+    EPSSetOperators(eps, M, NULL);
+    EPSSetProblemType(eps, EPS_NHEP); // non-Hermitian eigenvalue problem
+    // EPSSetTolerances(eps, 1e-12, 500);
+    EPSSetFromOptions(eps);
+    EPSSetDimensions(eps, neigvals, PETSC_DEFAULT, PETSC_DEFAULT);
+
+    // Solve the eigenproblem for M
+    EPSSolve(eps);
+    PetscInt numConv;;
+    EPSGetConverged(eps, &numConv);
+    if (numConv < neigvals) {
+        printf("ERROR: Only %d eigenvalues converged out of %d requested.\n", numConv, neigvals);
+        return -1;
+    }
+    // printf("Got %d converged eigenvalues for the real matrix M.\n", numConv);
+
+    // Retrieve store the eigenvalues of M
+    Vec evalsM_real, evalsM_imag;
+    MatCreateVecs(M, NULL, &evalsM_real);
+    MatCreateVecs(M, NULL, &evalsM_imag);
+    for (PetscInt i = 0; i < numConv && i < 2*n; i++) {
+        // printf("Retrieving eigenvalue %d of M...\n", (int)i);
+        PetscScalar kr, ki;
+        EPSGetEigenvalue(eps, i, &kr, &ki);
+        VecSetValue(evalsM_real, i, kr, INSERT_VALUES);
+        VecSetValue(evalsM_imag, i, ki, INSERT_VALUES);
+    }
+    VecAssemblyBegin(evalsM_real); VecAssemblyEnd(evalsM_real);
+    VecAssemblyBegin(evalsM_imag); VecAssemblyEnd(evalsM_imag);
+
+    // printf("Here are the eigenvalues of M:\n");
+    // printComplexVector(evalsM_real, evalsM_imag);
+
+    /*************/
+    /* Sort eigenvalues of M into distinct groups */ 
+    /*************/
+
+    auto roundKey = [](double x) -> long long {
+        double tol = 1e-10; // tolerance for grouping eigenvalues
+        return llround(x / tol); // multiplies by 1/tol and rounds to the nearest integer
+    };
+    struct Key {
+        long long re;
+        long long im;
+        bool operator<(const Key& other) const {
+            if (re != other.re) return re < other.re;
+            return im < other.im;
+        }
+    };
+
+    // Group eigenvalues of M by (Re, Im)
+    std::map<Key, std::vector<PetscInt>> groups;
+    for (PetscInt k = 0; k < 2*n; k++) {
+        PetscScalar lam_re, lam_im;
+        VecGetValues(evalsM_real, 1, &k, &lam_re);
+        VecGetValues(evalsM_imag, 1, &k, &lam_im);
+        Key key{roundKey((double)lam_re), roundKey((double)lam_im)};
+        groups[key].push_back(k);
+    }
+
+    // // print out all the groups:
+    // printf("Eigenvalue groups of M:\n");
+    // for (const auto& entry : groups) {
+    //     const std::vector<PetscInt>& ids = entry.second;
+    //     if (ids.empty()) {
+    //         printf("Empty group\n");
+    //         continue;
+    //     }
+    //     PetscScalar lam_re, lam_im;
+    //     VecGetValues(evalsM_real, 1, &ids[0], &lam_re);
+    //     VecGetValues(evalsM_imag, 1, &ids[0], &lam_im);
+    //     printf("Group (Re, Im) = (%f, %f) with %d eigenvalues\n", (double)lam_re, (double)lam_im, (int)ids.size());
+    // }
+
+    /*************/
+    /* Set eigenvalues and vectors of C from those of M  */ 
+    /*************/
+
+    double tol_vtest = 1e-3; // tolerance for zero checks
+    double tol_qr = 1e-9;
+
+    Vec z_re, z_im;
+    MatCreateVecs(M, NULL, &z_re);
+    MatCreateVecs(M, NULL, &z_im);
+ 
+    // Reset counter of eigenvalues of C found so far
+    int eigCount = 0;
+
+    // Iterate over groups of distinct eigenvalues of M 
+    for (const auto& entry : groups) {
+        const std::vector<PetscInt>& ids = entry.second;
+        if (ids.empty()) {
+            printf("Skipping empty group. SHOULD NEVER HAPPEN!?\n");
+            continue;
+        }
+        // printf("Processing group with %d eigenvalues of M: ", (int)ids.size());
+        // for (PetscInt idx : ids) {
+        //     printf(" %d ", (int)idx);
+        // }
+        // printf("\n");
+        
+        // Build Vtest columns and orthonormalize with modified Gram-Schmidt
+        std::vector<std::pair<std::vector<double>, std::vector<double>>> basis;
+        for (PetscInt idx : ids) {
+            // Get an eigenvector of M corresponding to this eigenvalue
+            EPSGetEigenvector(eps, idx, z_re, z_im);  
+
+            // Compute vtest = z^top + i * z^bottom
+            std::vector<double> v_re(n, 0.0);
+            std::vector<double> v_im(n, 0.0);
+            const PetscScalar *z_re_array, *z_im_array;
+            VecGetArrayRead(z_re, &z_re_array);
+            VecGetArrayRead(z_im, &z_im_array);
+            for (PetscInt i = 0; i < n; i++) {
+                PetscInt top = i;
+                PetscInt bot = i + n;
+                v_re[i] = z_re_array[top] - z_im_array[bot];
+                v_im[i] = z_im_array[top] + z_re_array[bot];
+            }
+            VecRestoreArrayRead(z_re, &z_re_array);
+            VecRestoreArrayRead(z_im, &z_im_array);
+
+            // Normalize vtest or set to zero otherwise if it is small
+            double nrm = complexNorm(v_re, v_im);
+            if (nrm <= tol_vtest) {
+              for (PetscInt i = 0; i < n; i++) {
+                  v_re[i] = 0.0;
+                  v_im[i] = 0.0;
+              }
+            } else {
+              for (PetscInt i = 0; i < n; i++) {
+                  v_re[i] /= nrm;
+                  v_im[i] /= nrm;
+              }
+            }
+
+            // Orthonormalize to other vectors in this basis using modified Gram-Schmidt
+            for (const auto& q : basis) {
+                double dot_re = 0.0, dot_im = 0.0;
+                complexDot(q.first, q.second, v_re, v_im, dot_re, dot_im);
+                for (PetscInt i = 0; i < n; i++) {
+                    double q_re = q.first[i];
+                    double q_im = q.second[i];
+                    v_re[i] -= dot_re * q_re - dot_im * q_im;
+                    v_im[i] -= dot_re * q_im + dot_im * q_re;
+                }
+            }
+
+            // Normalize again and add to basis if not zero
+            nrm = complexNorm(v_re, v_im);
+            if (nrm > tol_qr) {
+                for (PetscInt i = 0; i < n; i++) {
+                    v_re[i] /= nrm;
+                    v_im[i] /= nrm;
+                }
+                basis.emplace_back(std::move(v_re), std::move(v_im));
+            }
+        }
+
+        // Store basis vectors and eigenvalue in this group for C
+        for (const auto& q : basis) {
+            if (eigCount >= n) {
+                break;
+            }
+            PetscScalar lam_re, lam_im;
+            VecGetValues(evalsM_real, 1, &ids[0], &lam_re);
+            VecGetValues(evalsM_imag, 1, &ids[0], &lam_im);
+            VecSetValue(eigvals_re, eigCount, lam_re, INSERT_VALUES);
+            VecSetValue(eigvals_im, eigCount, lam_im, INSERT_VALUES);
+            for (PetscInt i = 0; i < n; i++) {
+                MatSetValue(eigvecs_re, i, eigCount, q.first[i], INSERT_VALUES);
+                MatSetValue(eigvecs_im, i, eigCount, q.second[i], INSERT_VALUES);
+            }
+            eigCount++;
+        }
+        if (eigCount >= n) {
+            break;
+        }
+    }
+
+    VecAssemblyBegin(eigvals_re); VecAssemblyEnd(eigvals_re);
+    VecAssemblyBegin(eigvals_im); VecAssemblyEnd(eigvals_im);
+    MatAssemblyBegin(eigvecs_re, MAT_FINAL_ASSEMBLY); MatAssemblyEnd(eigvecs_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(eigvecs_im, MAT_FINAL_ASSEMBLY); MatAssemblyEnd(eigvecs_im, MAT_FINAL_ASSEMBLY);
+
+    VecDestroy(&z_re);
+    VecDestroy(&z_im);
+
+    VecDestroy(&evalsM_real);
+    VecDestroy(&evalsM_imag);
+
+    EPSDestroy(&eps);
+    VecDestroy(&ctx.tmp_re);
+    VecDestroy(&ctx.tmp_im);
+    MatDestroy(&M);
+
+    return eigCount;
+}
+
+int testEigendecompositionComplex(Mat C_re, Mat C_im, Vec eigvals_re, Vec eigvals_im, Mat eigvecs_re, Mat eigvecs_im) {
+    PetscInt n;
+    MatGetSize(C_re, &n, NULL);
+    int ierr = 0;
+
+    Vec v_re, v_im;
+    Vec Cv_re, Cv_im;
+    MatCreateVecs(eigvecs_re, NULL, &v_re);
+    MatCreateVecs(eigvecs_im, NULL, &v_im);
+    MatCreateVecs(C_re, NULL, &Cv_re);
+    MatCreateVecs(C_im, NULL, &Cv_im);
+
+    for (PetscInt k = 0; k < n; k++) {
+        // Get eigenvalue and eigenvector
+        PetscScalar lambda_re, lambda_im;
+        VecGetValues(eigvals_re, 1, &k, &lambda_re);
+        VecGetValues(eigvals_im, 1, &k, &lambda_im);
+        MatGetColumnVector(eigvecs_re, v_re, k);
+        MatGetColumnVector(eigvecs_im, v_im, k);
+
+        /* TEST whether C * v = lambda * v for each eigenpair */
+
+        // Compute C * v = (C_re*v_re - C_im*v_im) + i(C_re*v_im + C_im*v_re)
+        MatMult(C_im, v_im, Cv_re);  // Cv_re = Im(C) * v_im
+        VecScale(Cv_re, -1.0); // Cv_re = -Im(C) * v_im
+        MatMultAdd(C_re, v_re, Cv_re, Cv_re); // Cv_re += Re(C) * v_re
+        MatMult(C_re, v_im, Cv_im); // Cv_im = Re(C) * v_im
+        MatMultAdd(C_im, v_re, Cv_im, Cv_im); // Cv_im += Im(C) * v_re
+        // Substract lambda * v and test if zero. 
+        for (PetscInt i = 0; i < n; i++) {
+            PetscScalar vre, vim;
+            PetscScalar diff_re, diff_im;
+            VecGetValues(v_re, 1, &i, &vre);
+            VecGetValues(v_im, 1, &i, &vim);
+            VecGetValues(Cv_re, 1, &i, &diff_re);
+            VecGetValues(Cv_im, 1, &i, &diff_im);
+            diff_re -= lambda_re * vre - lambda_im * vim;
+            diff_im -= lambda_re * vim + lambda_im * vre;
+            if (fabs((double)diff_re) > 1e-6 || fabs((double)diff_im) > 1e-6) {
+                printf("Eigenpair %d failed the test: C*v != lambda*v\n", (int)k);
+                ierr++;
+            }
+        }
+
+        /* TEST whether norm of v is 1 */
+        PetscReal norm_re, norm_im;
+        VecNorm(v_re, NORM_2, &norm_re);
+        VecNorm(v_im, NORM_2, &norm_im);
+        double norm_v = sqrt(norm_re*norm_re + norm_im*norm_im);
+        if (fabs(norm_v - 1.0) > 1e-6) {
+            printf("Eigenvector %d is not normalized (norm = %f)\n", (int)k, norm_v);
+            ierr++;
+        }
+
+        /* TEST orghogonality of v to all other eigenvectors */
+        for (PetscInt j=0; j<n; j++) {
+            if (j == k) continue;
+            Vec vj_re, vj_im;
+            MatCreateVecs(eigvecs_re, NULL, &vj_re);
+            MatCreateVecs(eigvecs_im, NULL, &vj_im);
+            MatGetColumnVector(eigvecs_re, vj_re, j);
+            MatGetColumnVector(eigvecs_im, vj_im, j);
+            // Compute dot product <v_j, v_k> = vj_re^T * vk_re + vj_im^T * vk_im + i(vj_re^T * vk_im - vj_im^T * vk_re)
+            double dot_re1, dot_im1, dot_re2, dot_im2;
+            VecDot(vj_re, v_re, &dot_re1);
+            VecDot(vj_im, v_im, &dot_re2);
+            VecDot(vj_re, v_im, &dot_im1);
+            VecDot(vj_im, v_re, &dot_im2);
+            double dot_re = dot_re1 + dot_re2;
+            double dot_im = dot_im1 - dot_im2;
+            if (fabs(dot_re) > 1e-5 || fabs(dot_im) > 1e-5) {
+                printf("Eigenvectors %d and %d are not orthogonal (dot = %1.8e + %1.8ei)\n", k, j, dot_re, dot_im);
+                ierr++;
+            }
+            VecDestroy(&vj_re);
+            VecDestroy(&vj_im);
+        }
+    }
+    VecDestroy(&v_re);
+    VecDestroy(&v_im);
+    VecDestroy(&Cv_re);
+    VecDestroy(&Cv_im);
+    return ierr;
+}
+
+PetscErrorCode MatMultShell_M(Mat M, Vec x, Vec y) {
+    MatShellCtx_ComplexEig *ctx = nullptr;
+    MatShellGetContext(M, (void**)&ctx);
+    PetscInt n = ctx->n;
+
+    // Build index sets for top/bottom and split x/y into views
+    IS is_top, is_bot;
+    ISCreateStride(PETSC_COMM_SELF, n, 0, 1, &is_top);
+    ISCreateStride(PETSC_COMM_SELF, n, n, 1, &is_bot);
+    Vec x_top, x_bot, y_top, y_bot;
+    VecGetSubVector(x, is_top, &x_top);
+    VecGetSubVector(x, is_bot, &x_bot);
+    VecGetSubVector(y, is_top, &y_top);
+    VecGetSubVector(y, is_bot, &y_bot);
+
+    // y_top = Re(C)*x_top - Im(C)*x_bot
+    MatMult(ctx->C_re, x_top, y_top);
+    MatMult(ctx->C_im, x_bot, ctx->tmp_re);
+    VecAXPY(y_top, -1.0, ctx->tmp_re);
+
+    // y_bot = Im(C)*x_top + Re(C)*x_bot
+    MatMult(ctx->C_im, x_top, y_bot);
+    MatMult(ctx->C_re, x_bot, ctx->tmp_im);
+    VecAXPY(y_bot, 1.0, ctx->tmp_im);
+
+    VecRestoreSubVector(x, is_top, &x_top);
+    VecRestoreSubVector(x, is_bot, &x_bot);
+    VecRestoreSubVector(y, is_top, &y_top);
+    VecRestoreSubVector(y, is_bot, &y_bot);
+    ISDestroy(&is_top);
+    ISDestroy(&is_bot);
+
+    return 0;
+};

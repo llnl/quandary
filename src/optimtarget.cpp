@@ -18,8 +18,6 @@ OptimTarget::OptimTarget(){
   mpisize_petsc=0;
   mpirank_petsc=0;
   mpirank_world=0;
-  Evecs_UdV_re = NULL;
-  Evecs_UdV_im = NULL;
 }
 
 
@@ -234,19 +232,31 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, double total_
     VecSetFromOptions(aux);
   }
 
-  /* Allocate storage of eigenvalues of U_final, size dim */
-  evals_UdV_re = std::make_unique<std::vector<double>>(mastereq->getDim());
-  evals_UdV_im = std::make_unique<std::vector<double>>(mastereq->getDim());
+  /* Allocate storage of eigenvalues and vectors of U_final, size dim */
+  VecCreate(PETSC_COMM_WORLD, &eigvals_UdV_re); 
+  VecSetSizes(eigvals_UdV_re, dim / mpisize_petsc, dim);
+  VecSetFromOptions(eigvals_UdV_re);
+  VecCreate(PETSC_COMM_WORLD, &eigvals_UdV_im); 
+  VecSetSizes(eigvals_UdV_im, dim / mpisize_petsc, dim);
+  VecSetFromOptions(eigvals_UdV_im);
+  MatCreate(PETSC_COMM_WORLD, &eigvecs_UdV_re);
+  MatSetSizes(eigvecs_UdV_re, dim / mpisize_petsc, dim, dim, dim);
+  MatSetFromOptions(eigvecs_UdV_re);
+  MatCreate(PETSC_COMM_WORLD, &eigvecs_UdV_im);
+  MatSetSizes(eigvecs_UdV_im, dim / mpisize_petsc, dim, dim, dim);
+  MatSetFromOptions(eigvecs_UdV_im);
 }
 
 OptimTarget::~OptimTarget(){
   if (objective_type == ObjectiveType::JFROBENIUS) VecDestroy(&aux);
 
-  if (Evecs_UdV_re != NULL) MatDestroy(&Evecs_UdV_re);
-  if (Evecs_UdV_im != NULL) MatDestroy(&Evecs_UdV_im); 
-
   VecDestroy(&targetstate);
   delete targetgate;
+
+  VecDestroy(&eigvals_UdV_re);
+  VecDestroy(&eigvals_UdV_im);
+  MatDestroy(&eigvecs_UdV_re);
+  MatDestroy(&eigvecs_UdV_im);
 }
 
 double OptimTarget::FrobeniusDistance(const Vec state){
@@ -843,46 +853,76 @@ double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_i
   MatAXPY(UdagV_im, -1.0, tmp, SAME_NONZERO_PATTERN);
   MatDestroy(&tmp);
 
+  /* Reset eigenvectors and values */
+  MatZeroEntries(eigvecs_UdV_re);
+  MatZeroEntries(eigvecs_UdV_im);
+  VecZeroEntries(eigvals_UdV_re);
+  VecZeroEntries(eigvals_UdV_im);
 
   /* Get eigendecomposition of A=U^dagger V */
-  bool printevals = false;
-  int ierr = getEigenComplex(UdagV_re, UdagV_im, evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im, printevals);
-  if (ierr > 0) {
-    return 0.0;
+  int neigvals = getEigendecompositionComplex(UdagV_re, UdagV_im, eigvals_UdV_re, eigvals_UdV_im, eigvecs_UdV_re, eigvecs_UdV_im);
+  if (neigvals != dim) {
+    printf("\n ERROR: Could not compute all eigenvectors.\n\n");
+    exit(1);
   }
 
-  // Test the eigendecomposition of UdagV. 
-  ierr = testEigenComplex(UdagV_re, UdagV_im, evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im);
-  if (ierr > 0) {
-    return 0.0;
-  }
-  // Test the reconstruction of UdagV from its eigendecomposition
+  // Test the eigendecomposition (UdagV*v = lambda*v, norm, orthogonality)
+  int ierr_tests = testEigendecompositionComplex(UdagV_re, UdagV_im, eigvals_UdV_re, eigvals_UdV_im, eigvecs_UdV_re, eigvecs_UdV_im);
+
   Mat UdagV_test_re, UdagV_test_im;
-  ierr = reconstructMatrixFromEigenComplex(evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im, UdagV_test_re, UdagV_test_im, false, UdagV_re, UdagV_im);
+  int ierr = reconstructMatrixFromEigenComplex(eigvals_UdV_re, eigvals_UdV_im, eigvecs_UdV_re, eigvecs_UdV_im, UdagV_test_re, UdagV_test_im, false, UdagV_re, UdagV_im);
   if (ierr > 0) {
-    return 0.0;
+    printf("\n ERROR in reconstruction. ");
   }
   MatDestroy(&UdagV_test_re);
   MatDestroy(&UdagV_test_im);
 
+
+  if (ierr_tests > 0) {
+      printf("\n ERROR: Eigendecomposition test failed.\n\n");
+
+      // For debugging: print the final unitary, eigenvalues, and eigenvectors 
+      printf("UdagV:\n");
+      MatView(UdagV_re, PETSC_VIEWER_STDOUT_WORLD);
+      MatView(UdagV_im, PETSC_VIEWER_STDOUT_WORLD);
+      printf("Eigenvalues of UdagV:\n");
+      VecView(eigvals_UdV_re, PETSC_VIEWER_STDOUT_WORLD);
+      VecView(eigvals_UdV_im, PETSC_VIEWER_STDOUT_WORLD);
+      printf("Eigenvectors of UdagV:\n");
+      MatView(eigvecs_UdV_re, PETSC_VIEWER_STDOUT_WORLD);
+      MatView(eigvecs_UdV_im, PETSC_VIEWER_STDOUT_WORLD);
+
+      exit(1);
+  }  
+
   /* Sum up the objective function from eigenvalue phases, eigval = e^{i*theta} */
   // For phase invariance, sum up theta_average first
   double avg_theta = 0.0;
+  const PetscScalar* eigvals_UdV_re_ptr;
+  const PetscScalar* eigvals_UdV_im_ptr;
+  VecGetArrayRead(eigvals_UdV_re, &eigvals_UdV_re_ptr);
+  VecGetArrayRead(eigvals_UdV_im, &eigvals_UdV_im_ptr);
   if (phase_invariant) {
-    for (int i=0; i<evals_UdV_re->size(); i++){
-      double theta = atan2(evals_UdV_im->at(i), evals_UdV_re->at(i));
+    for (int i=0; i<neigvals; i++){
+      // double theta = atan2(eigvals_UdV_im->at(i), eigvals_UdV_re->at(i));
+      double theta = atan2(eigvals_UdV_im_ptr[i], eigvals_UdV_re_ptr[i]);
       avg_theta += theta;
     }
     avg_theta = avg_theta / double(dim);
   }
   // Sum up the objective function 
   double obj = 0.0;
-  for (int i=0; i<evals_UdV_re->size(); i++){
-    double theta = atan2(evals_UdV_im->at(i), evals_UdV_re->at(i));
+  for (int i=0; i<neigvals; i++){
+    // double theta = atan2(eigvals_UdV_im->at(i), eigvals_UdV_re->at(i));
+    double theta = atan2(eigvals_UdV_im_ptr[i], eigvals_UdV_re_ptr[i]);
     obj += (theta - avg_theta) * (theta - avg_theta);
     // if (mpirank_world == 0) printf("Eigenvalue %d: %f + i*%f  -> theta (degree)= %f \n", j, evals_UdV_re->at(j), evals_UdV_im->at(j), theta*180.0/M_PI);
   }
-  obj = obj / 2.0;
+  VecRestoreArrayRead(eigvals_UdV_re, &eigvals_UdV_re_ptr);
+  VecRestoreArrayRead(eigvals_UdV_im, &eigvals_UdV_im_ptr);
+  
+  // Scale the objective function by the dimension
+  obj = obj / 2.0 / double(dim);
 
   /* Clean up */
   MatDestroy(&UdagV_re);
@@ -894,68 +934,13 @@ double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_i
 
 void OptimTarget::RiemannianDistance_diff(const Mat U_final_re, const Mat U_final_im, Mat U_final_re_bar, Mat U_final_im_bar, bool phase_invariant){
 /* Compute derivative of the Riemannian distance:
- *      U_final_bar = - U_final * log(U_final^\dagger V) 
- *                    + (tr log(U^† V))/d * U  (if phase_invariant)
+ *      U_final_bar = 1/dim *(- U_final * log(U_final^\dagger V) 
+ *                    + (tr log(U^† V))/d * U  (if phase_invariant) )
  */
-
-  
-  // // TEST for Obj_cost = sum_ij U_final_re(i,j)
-  // // Gradient: U_final_re_bar(i,j) = 1.0
-  // MatZeroEntries(U_final_re_bar);
-  // MatZeroEntries(U_final_im_bar);
-  // for (int i=0; i<dim; i++){
-  //   for (int j=0; j<dim; j++){
-  //     // MatSetValue(U_final_re_bar, i, j, 1.0, ADD_VALUES);
-  //     double val_ufinal_re, val_ufinal_im;
-  //     MatGetValue(U_final_re, i, j, &val_ufinal_re);
-  //     MatGetValue(U_final_im, i, j, &val_ufinal_im);
-  //     if (i < dim/2 && j < dim/2) {
-  //       MatSetValue(U_final_re_bar, i, j, 2.0*val_ufinal_re, ADD_VALUES);
-  //       MatSetValue(U_final_im_bar, i, j, 2.0*val_ufinal_im, ADD_VALUES);
-  //     }
-  //   }
-  // }
-  // MatAssemblyBegin(U_final_re_bar, MAT_FINAL_ASSEMBLY); 
-  // MatAssemblyEnd(U_final_re_bar, MAT_FINAL_ASSEMBLY);
-  // MatAssemblyBegin(U_final_im_bar, MAT_FINAL_ASSEMBLY); 
-  // MatAssemblyEnd(U_final_im_bar, MAT_FINAL_ASSEMBLY);
-  // return;
-
-  // // TEST THE RECONSTRUCTION OF log(UdagV)
-  // // Get log from taylor seriesexpansion. NOT WORKING.
-  // Mat logUdagV_taylor_re, logUdagV_taylor_im;
-  // double error_est = computeMatrixLogTaylor(UdagV_re, UdagV_im, logUdagV_taylor_re, logUdagV_taylor_im);
-  // printf("Matrix log Taylor series expansion error estimate: %e \n", error_est);
-
-  // // Test Reconstruct log(UdagV) from eigen decomposition of UdagV
-  // printf("\n\n\n TESTING RECONSTRUCTION\n\n");
-  // Mat log_test_re, log_test_im;
-  // reconstructMatrixFromEigenComplex(evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im, log_test_re, log_test_im, true);
-
-  // printf("UdagV:\n");
-  // MatView(UdagV_re, NULL);
-  // MatView(UdagV_im, NULL);
-  // printf("log_UdagV:\n");
-  // MatView(log_test_re, NULL);
-  // MatView(log_test_im, NULL);
-  // printf("Eigenvectors of UdagV:\n");
-  // MatView(Evecs_UdV_re, NULL);
-  // MatView(Evecs_UdV_im, NULL);
-  // //print all eigenvalues:
-  // for (int j=0; j<evals_UdV_re->size(); j++){
-  //   double theta = atan2(evals_UdV_im->at(j), evals_UdV_re->at(j));
-  //   printf("Eigenvalue %d: %f + i*%f  -> theta (degree)= %f, theta(radiants) = %f \n", j, evals_UdV_re->at(j), evals_UdV_im->at(j), theta*180.0/M_PI, theta);
-  // }
-  
-  // MatDestroy(&log_test_re);
-  // MatDestroy(&log_test_im);
-  // // MatDestroy(&logUdagV_taylor_re);
-  // // MatDestroy(&logUdagV_taylor_im);
-  // exit(1);
 
   // Reconstruct log(U^\dagger V) from eigen decomposition of UdagV
   Mat logUdagV_re, logUdagV_im;
-  int ierr = reconstructMatrixFromEigenComplex(evals_UdV_re, evals_UdV_im, Evecs_UdV_re, Evecs_UdV_im, logUdagV_re, logUdagV_im, true);
+  int ierr = reconstructMatrixFromEigenComplex(eigvals_UdV_re, eigvals_UdV_im, eigvecs_UdV_re, eigvecs_UdV_im, logUdagV_re, logUdagV_im, true);
   if (ierr > 0){
     return;
   }
@@ -985,13 +970,21 @@ void OptimTarget::RiemannianDistance_diff(const Mat U_final_re, const Mat U_fina
   // If phase invariant, add (tr log(U^† V))/d * U_final to the gradient
   if (phase_invariant) {
     double trace = 0.0;
-    for (int i=0; i<evals_UdV_re->size(); i++){
-      double theta = atan2(evals_UdV_im->at(i), evals_UdV_re->at(i));
+    const PetscScalar* eigvals_UdV_re_ptr;
+    const PetscScalar* eigvals_UdV_im_ptr;
+    VecGetArrayRead(eigvals_UdV_re, &eigvals_UdV_re_ptr);
+    VecGetArrayRead(eigvals_UdV_im, &eigvals_UdV_im_ptr);
+    for (int i=0; i<dim; i++){
+      double theta = atan2(eigvals_UdV_im_ptr[i], eigvals_UdV_re_ptr[i]);
       trace += theta;
     }
+    VecRestoreArrayRead(eigvals_UdV_re, &eigvals_UdV_re_ptr);
+    VecRestoreArrayRead(eigvals_UdV_im, &eigvals_UdV_im_ptr);
     trace = trace / double(dim);
     MatAXPY(U_final_re_bar, trace, U_final_re, SAME_NONZERO_PATTERN);
     MatAXPY(U_final_im_bar, trace, U_final_im, SAME_NONZERO_PATTERN);
   }
 
+  MatScale(U_final_re_bar, 1.0/double(dim));
+  MatScale(U_final_im_bar, 1.0/double(dim));
 }
