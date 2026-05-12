@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777068913092,
+  "lastUpdate": 1778611956943,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -2947,6 +2947,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
             "value": 4126.07,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Tara Drwenski",
+            "username": "tdrwenski",
+            "email": "tdrwenski@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "6deaa085ce94b38c8f499183fc2f3284a3cca0ad",
+          "message": "Merge pull request #127 from llnl/use-tuo-gpu-testing\n\nUse Tuolumne for GPU testing on CI",
+          "timestamp": "2026-05-12T18:04:32Z",
+          "url": "https://github.com/llnl/quandary/commit/6deaa085ce94b38c8f499183fc2f3284a3cca0ad"
+        },
+        "date": 1778611955753,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "value": 0.7259155694628134,
+            "range": "0.33307985106951987",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "value": 85.34,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "value": 5.065840002847835,
+            "range": "0.03621407041570066",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "value": 4127.36,
             "unit": "MB"
           }
         ]
