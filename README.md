@@ -15,10 +15,10 @@ Feel free to reach out to Stefanie Guenther [guenther5@llnl.gov] for any questio
 Both user and code documentation is available [here](https://software.llnl.gov/quandary/).
 
 # Building
-Quandary uses CMake and [BLT](https://github.com/LLNL/blt) to handle builds. Since BLT is included as a
-submodule, first make sure you run:
+Quandary uses CMake and [BLT](https://github.com/LLNL/blt) to handle builds. Quandary depends on
+several submodules, so first make sure you run:
 ```
-git submodule init && git submodule update
+git submodule update --init --recursive
 ```
 
 This project relies on Petsc [https://petsc.org/release/] to handle (parallel) linear algebra. You can either use Spack to install Quandary alongside Petsc, or use CMake to install Quandary given an existing Petsc installation. 
@@ -44,10 +44,7 @@ Spack can be used to install Quandary, including the required dependency on Pets
     ```
     Note: This step could take a while the first time. The second time you run this is should be much faster, only looking for changes in the environment or local code.
 
-Note that `spack install` will build Quandary using CMake from your local source code and install the binary in your Spack environment. To install Quandary's python interface and the python dependencies, use
-```
-pip install -e .
-```
+Note that `spack install` will build Quandary using CMake from your local source code and install the binary in your Spack environment.
 
 #### Optional Spack environment variations
 The Spack environment used to build Quandary is defined in `.spack_env/spack.yaml`.
@@ -96,19 +93,47 @@ sudo cmake --install . --prefix /your/install/path
 
 ### Python dependencies and interface
 
-Create a virtual environment (e.g. with conda, venv, ...) and then use `pip install -e .` to install the python dependencies and activate Quandary's python interface. For example, for Conda environments, do:
-```
-conda create --name myenv
-conda activate myenv
-pip install -e .
-```
-Or for venv, do:
+Quandary has two Python interfaces:
+- **New (nanobind)**: `from quandary.new import *` — the recommended interface, built on nanobind C++ bindings.
+- **Old (deprecated)**: `from quandary import *` — the legacy class-based interface, which will be removed in a future version.
+
+Create and activate a Python environment — venv or conda both work.
+
+For venv:
 ```
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e .
 ```
-In additional to installing dependencies, the `pip install` command also enables that your python scripts can find Quandary's python interface functions, which are defined in `quandary.py`.
+For Conda:
+```
+conda create --name myenv python pip
+conda activate myenv
+```
+
+Ensure PETSc is discoverable by setting the following environment variables:
+```
+export PETSC_DIR=/path/to/petsc          # e.g. /opt/homebrew/opt/petsc
+export PETSC_ARCH=                       # leave empty for system installs (Homebrew, apt, etc.)
+export PKG_CONFIG_PATH=$PETSC_DIR/lib/pkgconfig:$PKG_CONFIG_PATH
+```
+
+Install Quandary:
+```
+pip install .
+```
+
+`pip install .` invokes CMake under the hood (via [scikit-build-core](https://scikit-build-core.readthedocs.io/)) to compile the nanobind C++ extension. It requires:
+- **PETSc**: visible via `PKG_CONFIG_PATH` (see above)
+- **MPI**: MPI compiler wrappers (`mpicc`, `mpicxx`) must be in your `PATH`
+
+PETSc, mpi4py, and Quandary's C++ extension must all link against the same MPI. Using `pip` for mpi4py (rather than `conda install mpi4py`) avoids pulling in a conflicting MPI.
+
+Use `pip install -e .` instead if you want to edit the Python source files without reinstalling on every change. In editable mode the C++ extension is still compiled, but the generated type stubs may not be visible to IDEs.
+
+To also install development dependencies (required for running tests):
+```
+pip install -e ".[dev]"
+```
 
 
 # Running
@@ -119,8 +144,9 @@ which takes one argument being the name of the test-case's configuration file. T
 
 You can silence Quandary output by adding the `--quiet` argument to the above commands.
 
-The `examples/` folder exemplifies the usage of Quandary's Python interface. 
+The `examples/` folder exemplifies the usage of Quandary's Python interface.
 * `python example_cnot.py`
+* `QuandaryNewInterface_HowTo.ipynb` demonstrates the new nanobind-based Python interface
 
 # Building Documentation Locally
 

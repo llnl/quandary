@@ -15,6 +15,7 @@
 namespace ConfigDefaults {
 
 // General options
+const double TRANSITION_FREQUENCY = 0.0; ///< Default fundamental transition frequency (GHz)
 const double ROTATION_FREQUENCY = 0.0; ///< Default rotational wave approximation frequency (GHz)
 const double SELFKERR = 0.0; ///< Default self-kerr frequency (GHz)
 const double CROSSKERR_COUPLING = 0.0; ///< Default cross-kerr frequency (GHz)

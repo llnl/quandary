@@ -2,7 +2,7 @@
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(INC_DIR ${PROJECT_SOURCE_DIR}/include)
 file(GLOB_RECURSE SRC_FILES ${SRC_DIR}/*.cpp)
-list(REMOVE_ITEM SRC_FILES ${SRC_DIR}/main.cpp)
+list(REMOVE_ITEM SRC_FILES ${SRC_DIR}/entry.cpp)
 file(GLOB_RECURSE HEADER_FILES ${INC_DIR}/*.hpp)
 
 # Target definition
@@ -15,22 +15,21 @@ blt_add_library(
 )
 
 blt_add_executable(
-    NAME quandary
-    SOURCES ${SRC_DIR}/main.cpp
+    NAME quandary_bin
+    SOURCES ${SRC_DIR}/entry.cpp
     DEPENDS_ON quandary_lib
 )
+set_target_properties(quandary_bin PROPERTIES OUTPUT_NAME quandary)
 
 # Toml settings
 target_compile_definitions(quandary_lib PUBLIC TOML_ENABLE_UNRELEASED_FEATURES=1)
 
 # PETSc
-find_package(PkgConfig REQUIRED)
-pkg_search_module(PETSC REQUIRED IMPORTED_TARGET PETSc)
 target_link_libraries(quandary_lib PUBLIC PkgConfig::PETSC)
 
 # Put executable in root directory
 set_target_properties(
-    quandary
+    quandary_bin
     PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}
 )
@@ -42,15 +41,21 @@ if(SANITY_CHECK)
 endif()
 
 # Optional: Link to SLEPC
-option(WITH_SLEPC "Link to SLEPC" OFF)
 if(WITH_SLEPC)
-    find_package(PkgConfig REQUIRED)
-    pkg_search_module(SLEPC REQUIRED IMPORTED_TARGET SLEPc)
     target_link_libraries(quandary_lib PUBLIC PkgConfig::SLEPC)
     target_compile_options(quandary_lib PUBLIC -DWITH_SLEPC)
 endif()
 
+if(PETSC_LIBRARY_DIRS)
+    set_property(TARGET quandary_bin APPEND PROPERTY
+        INSTALL_RPATH "${PETSC_LIBRARY_DIRS}")
+endif()
+if(SLEPC_LIBRARY_DIRS AND WITH_SLEPC)
+    set_property(TARGET quandary_bin APPEND PROPERTY
+        INSTALL_RPATH "${SLEPC_LIBRARY_DIRS}")
+endif()
+
 install(
-    TARGETS quandary
+    TARGETS quandary_bin
     RUNTIME DESTINATION bin
 )
