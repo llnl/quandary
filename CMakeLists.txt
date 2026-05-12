@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 3.23)
 
 project(
     Quandary
-    VERSION 4.4
+    VERSION 4.5
     LANGUAGES CXX C
 )
-set(PROJECT_VERSION_SUFFIX "")
+set(PROJECT_VERSION_SUFFIX "-dev")
 set(FULL_VERSION "${PROJECT_VERSION}${PROJECT_VERSION_SUFFIX}")
 set(QUANDARY_GIT_SHA "")
 
