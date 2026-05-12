@@ -97,17 +97,17 @@ Quandary has two Python interfaces:
 - **New (nanobind)**: `from quandary.new import *` — the recommended interface, built on nanobind C++ bindings.
 - **Old (deprecated)**: `from quandary import *` — the legacy class-based interface, which will be removed in a future version.
 
-Create a virtual environment and use `pip` to install Quandary's Python interface.
+Create and activate a Python environment — venv or conda both work.
 
-For Conda:
-```
-conda create --name myenv
-conda activate myenv
-```
-Or for venv:
+For venv:
 ```
 python3 -m venv .venv
 source .venv/bin/activate
+```
+For Conda:
+```
+conda create --name myenv python pip
+conda activate myenv
 ```
 
 Ensure PETSc is discoverable by setting the following environment variables:
@@ -124,7 +124,9 @@ pip install .
 
 `pip install .` invokes CMake under the hood (via [scikit-build-core](https://scikit-build-core.readthedocs.io/)) to compile the nanobind C++ extension. It requires:
 - **PETSc**: visible via `PKG_CONFIG_PATH` (see above)
-- **MPI**: MPI compiler wrappers (`mpicc`, `mpicxx`) must be in your `PATH`, or set `MPI_ROOT` to your MPI installation prefix
+- **MPI**: MPI compiler wrappers (`mpicc`, `mpicxx`) must be in your `PATH`
+
+PETSc, mpi4py, and Quandary's C++ extension must all link against the same MPI. Using `pip` for mpi4py (rather than `conda install mpi4py`) avoids pulling in a conflicting MPI.
 
 Use `pip install -e .` instead if you want to edit the Python source files without reinstalling on every change. In editable mode the C++ extension is still compiled, but the generated type stubs may not be visible to IDEs.
 
