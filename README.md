@@ -15,10 +15,10 @@ Feel free to reach out to Stefanie Guenther [guenther5@llnl.gov] for any questio
 Both user and code documentation is available [here](https://software.llnl.gov/quandary/).
 
 # Building
-Quandary uses CMake and [BLT](https://github.com/LLNL/blt) to handle builds. Since BLT is included as a
-submodule, first make sure you run:
+Quandary uses CMake and [BLT](https://github.com/LLNL/blt) to handle builds. Quandary depends on
+several submodules, so first make sure you run:
 ```
-git submodule init && git submodule update
+git submodule update --init --recursive
 ```
 
 This project relies on Petsc [https://petsc.org/release/] to handle (parallel) linear algebra. You can either use Spack to install Quandary alongside Petsc, or use CMake to install Quandary given an existing Petsc installation. 
