@@ -15,7 +15,6 @@
 #include <limits>
 #include <random>
 #include <type_traits>
-#include "cfgparser.hpp"
 #include "defs.hpp"
 #include "mpi_logger.hpp"
 #include "config_defaults.hpp"
@@ -27,7 +26,7 @@
  *
  * Contains validated, typed configuration parameters. All fields have been
  * validated with defaults set. Handles parsing from TOML configuration files
- * and deprecated CFG format, as well as printing log of used configuration.
+ * and printing log of used configuration.
  * This class is immutable after construction.
  *
  * @note Adding a new toml configuration option:
@@ -115,18 +114,11 @@ class Config {
  public:
   Config(const MPILogger& logger, const toml::table& table);
 
-  // TODO cfg: delete this when .cfg format is removed.
-  Config(const MPILogger& logger, const ParsedConfigData& settings);
-
   ~Config() = default;
 
   static Config fromFile(const std::string& filename, const MPILogger& logger);
   static Config fromToml(const std::string& toml_filename, const MPILogger& logger);
   static Config fromTomlString(const std::string& toml_content, const MPILogger& logger);
-
-  // TODO cfg: delete these when .cfg format is removed.
-  static Config fromCfg(const std::string& cfg_filename, const MPILogger& logger);
-  static Config fromCfgString(const std::string& cfg_content, const MPILogger& logger);
 
   void printConfig(std::stringstream& log) const;
 
@@ -210,13 +202,4 @@ class Config {
    * @return Parsed optimization target settings
    */
   OptimTargetSettings parseOptimTarget(const toml::table& table, size_t num_osc) const;
-
-
-  // TODO cfg: delete these when .cfg format is removed.
-  template <typename T>
-  std::vector<std::vector<T>> parseOscillatorSettingsCfg(const std::optional<std::map<int, std::vector<T>>>& indexed, size_t num_entries, const std::vector<T>& default_values = {}) const;
-
-  std::vector<ControlParameterizationSettings> parseControlParameterizationsCfg(const std::optional<std::map<int, ControlParameterizationData>>& parameterizations_map) const;
-
-  std::vector<ControlInitializationSettings> parseControlInitializationsCfg(const std::optional<std::map<int, ControlInitializationSettings>>& init_configs) const;
 };
