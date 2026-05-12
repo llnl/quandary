@@ -72,11 +72,11 @@ generate-job-lists:
     LOCAL_JOBS_PATH: ".gitlab/jobs"
   script:
     - cat ${RADIUSS_JOBS_PATH}/dane.yml ${LOCAL_JOBS_PATH}/dane.yml > dane-jobs.yml
-    - cat ${RADIUSS_JOBS_PATH}/tioga.yml ${LOCAL_JOBS_PATH}/tioga.yml > tioga-jobs.yml
+    - cat ${RADIUSS_JOBS_PATH}/tuolumne.yml ${LOCAL_JOBS_PATH}/tuolumne.yml > tuolumne-jobs.yml
   artifacts:
     paths:
       - dane-jobs.yml
-      - tioga-jobs.yml
+      - tuolumne-jobs.yml
 
 # DANE
 dane-up-check:
@@ -104,27 +104,27 @@ dane-build-and-test:
     forward:
       pipeline_variables: true
 
-# TIOGA
-tioga-up-check:
-  extends: [.tioga, .machine-check]
+# TUOLUMNE
+tuolumne-up-check:
+  extends: [.tuolumne, .machine-check]
   variables:
-    ASSOCIATED_CHILD_PIPELINE: "tioga-build-and-test"
+    ASSOCIATED_CHILD_PIPELINE: "tuolumne-build-and-test"
 
-tioga-build-and-test:
+tuolumne-build-and-test:
   stage: build-and-test
-  extends: [.tioga]
-  needs: [tioga-up-check, generate-job-lists]
+  extends: [.tuolumne]
+  needs: [tuolumne-up-check, generate-job-lists]
   trigger:
     include:
       - local: '.gitlab/custom-jobs.yml'
-      - component: $CI_SERVER_FQDN/radiuss/radiuss-shared-ci/tioga-pipeline@v2026.02.1
+      - component: $CI_SERVER_FQDN/radiuss/radiuss-shared-ci/tuolumne-pipeline@v2026.02.1
         inputs:
           job_cmd: $JOB_CMD
-          shared_alloc: $TIOGA_SHARED_ALLOC
-          job_alloc: $TIOGA_JOB_ALLOC
+          shared_alloc: $TUOLUMNE_SHARED_ALLOC
+          job_alloc: $TUOLUMNE_JOB_ALLOC
           github_project_name: $GITHUB_PROJECT_NAME
           github_project_org: $GITHUB_PROJECT_ORG
-      - artifact: 'tioga-jobs.yml'
+      - artifact: 'tuolumne-jobs.yml'
         job: 'generate-job-lists'
     strategy: depend
     forward:

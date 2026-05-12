@@ -1,5 +1,6 @@
 import glob
 import os
+import re
 import subprocess
 import pandas as pd
 import pytest
@@ -13,6 +14,8 @@ pytestmark = pytest.mark.regression
 
 REL_TOL = 1.0e-7
 ABS_TOL = 1.0e-15
+
+GPU_OPTION_TOKENS = ("kokkos",)
 
 BASE_DIR = "base"
 DATA_OUT_DIR = "data_out"
@@ -38,12 +41,30 @@ def load_test_cases():
 TEST_CASES = load_test_cases()
 
 
+def is_gpu_mode(petsc_options: str) -> bool:
+    """Detect GPU execution from tokens in PETSc runtime options (e.g. aijkokkos)."""
+    lower = petsc_options.lower()
+    return any(token in lower for token in GPU_OPTION_TOKENS)
+
+
+def get_runtype(config_path: str) -> str:
+    """Read the runtype value from a quandary .cfg or .toml config file."""
+    with open(config_path, 'r') as f:
+        for line in f:
+            m = re.match(r'^\s*runtype\s*=\s*"?(\w+)"?', line)
+            if m:
+                return m.group(1)
+    raise ValueError(f"runtype not found in {config_path}")
+
+
 @pytest.mark.parametrize("test_case", TEST_CASES, ids=lambda x: x.simulation_name)
 def test_eval(test_case: Case, request):
     exact = request.config.getoption("--exact")
     mpi_exec = request.config.getoption("--mpi-exec")
     mpi_opt = request.config.getoption("--mpi-opt")
     config_format = request.config.getoption("--config-format")
+    petsc_options = request.config.getoption("--petsc-options")
+    gpu_mode = is_gpu_mode(petsc_options)
 
     simulation_name = test_case.simulation_name
     files_to_compare = test_case.files_to_compare
@@ -56,11 +77,17 @@ def test_eval(test_case: Case, request):
     if not os.path.exists(config_file):
         pytest.skip(f"Config file {config_file} not found for format '{config_format}'")
 
+    runtype = get_runtype(config_file)
+    if gpu_mode and runtype == "optimization":
+        pytest.skip("Optimization tests run on CPU only — results aren't reliably "
+                    "comparable to CPU baselines on GPU. The gradient and simulation "
+                    "tests cover the GPU code paths.")
+
     for number_of_processes in number_of_processes_list:
-        run_test(simulation_dir, number_of_processes, config_file, files_to_compare, exact, mpi_exec, mpi_opt)
+        run_test(simulation_dir, number_of_processes, config_file, files_to_compare, exact, mpi_exec, mpi_opt, petsc_options)
 
 
-def run_test(simulation_dir, number_of_processes, config_file, files_to_compare, exact, mpi_exec, mpi_opt):
+def run_test(simulation_dir, number_of_processes, config_file, files_to_compare, exact, mpi_exec, mpi_opt, petsc_options):
     os.chdir(simulation_dir)
 
     command = build_mpi_command(
@@ -68,7 +95,8 @@ def run_test(simulation_dir, number_of_processes, config_file, files_to_compare,
         num_processes=number_of_processes,
         mpi_opt=mpi_opt,
         quandary_path=QUANDARY_PATH,
-        config_file=config_file)
+        config_file=config_file,
+        petsc_options=petsc_options)
     print(f"Running command: \"{' '.join(command)}\"")
     result = subprocess.run(command, capture_output=True, text=True, check=False)
     print("STDOUT:\n", result.stdout)
