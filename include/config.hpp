@@ -117,7 +117,6 @@ class Config {
   ~Config() = default;
 
   static Config fromFile(const std::string& filename, const MPILogger& logger);
-  static Config fromToml(const std::string& toml_filename, const MPILogger& logger);
   static Config fromTomlString(const std::string& toml_content, const MPILogger& logger);
 
   void printConfig(std::stringstream& log) const;

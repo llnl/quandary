@@ -327,10 +327,6 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 }
 
 Config Config::fromFile(const std::string& filename, const MPILogger& logger) {
-  return Config::fromToml(filename, logger);
-}
-
-Config Config::fromToml(const std::string& filename, const MPILogger& logger) {
   toml::table toml = toml::parse_file(filename);
   return Config(logger, toml);
 }
