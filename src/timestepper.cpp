@@ -13,7 +13,7 @@ TimeStepper::TimeStepper() {
   writeTrajectoryDataFiles = false;
 }
 
-TimeStepper::TimeStepper(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper() {
+TimeStepper::TimeStepper(size_t /* ninit_local */, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper() {
   mastereq = mastereq_;
   ntime = ntime_;
   total_time = total_time_;
@@ -92,7 +92,7 @@ Vec TimeStepper::getState(size_t tindex){
   return store_states[tindex];
 }
 
-Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
+Vec TimeStepper::solveODE(int initid, int /* iinit_local */, Vec rho_t0){
 
   /* Open output files */
   if (writeTrajectoryDataFiles) {
@@ -186,7 +186,7 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
 }
 
 
-void TimeStepper::solveAdjointODE(int iinit_local, Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) {
+void TimeStepper::solveAdjointODE(int /* iinit_local */, Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) {
 
   /* Reset gradient */
   VecZeroEntries(redgrad);
