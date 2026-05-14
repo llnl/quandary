@@ -781,8 +781,8 @@ void Config::printConfig(std::stringstream& log) const {
   log << "total_time = " << formatDouble(total_time) << "\n";
   // if not using PETSCTS timestepper, also print ntime and dt
   if (timestepper_type != TimeStepperType::PETSCTS) {
-  log << "ntime = " << ntime << "\n";
-  log << "dt = " << dt << "\n";
+    log << "ntime = " << ntime << "\n";
+    log << "dt = " << dt << "\n";
   }
   log << "transition_frequency = " << printVector(transition_frequency) << "\n";
   log << "selfkerr = " << printVector(selfkerr) << "\n";
