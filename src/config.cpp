@@ -212,7 +212,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     optim_objective = parseEnum(optimization_table["objective"].value<std::string>(), OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
 
     // Parse optional weights
-    optim_weights = validators::vectorField<double>(optimization_table, "weights").valueOr({ConfigDefaults::OPTIM_WEIGHT});
+    optim_weights = validators::vectorField<double>(optimization_table, "weights").valueOr({});
 
     // Parse optional optimization tolerances
     if (!optimization_table.contains("tolerance")) {
@@ -705,9 +705,9 @@ void Config::finalize() {
   }
 
   // Scale optimization weights such that they sum up to one
-  // If a single value was provided, replicate it for all initial conditions
-  if (optim_weights.size() == 1) {
-    copyLast(optim_weights, n_initial_conditions);
+  // If unspecified, default to uniform weights across initial conditions
+  if (optim_weights.empty()) {
+    optim_weights.assign(n_initial_conditions, ConfigDefaults::OPTIM_WEIGHT);
   } else if (optim_weights.size() != n_initial_conditions) {
     logger.exitWithError("optim_weights vector has length " + std::to_string(optim_weights.size()) + " but must have length " + std::to_string(n_initial_conditions) + " (number of initial conditions)");
   }
