@@ -1090,7 +1090,6 @@ size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_se
       }
       break;
   }
-  // logger.log("Number of initial conditions: " + std::to_string(n_initial_conditions) + "\n");
   return n_initial_conditions;
 }
 

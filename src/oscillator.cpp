@@ -231,12 +231,6 @@ void Oscillator::evalControlVariationDiff(Vec G, double var_reg_bar, int skip_to
 
 int Oscillator::evalControl(const double t, double* Re_ptr, double* Im_ptr){
 
-  // // Sanity check 
-  // if ( t > total_time ){
-  //   printf("ERROR: accessing spline outside of [0,T] at %f. Should never happen! Bug.\n", t);
-  //   exit(1);
-  // }
-
   // Default: Non controllable oscillator. Will typically be overwritten below. 
   *Re_ptr = 0.0;
   *Im_ptr = 0.0;
@@ -315,12 +309,6 @@ int Oscillator::evalControl_diff(const double t, double* grad, const double pbar
 }
 
 int Oscillator::evalControl_Labframe(const double t, double* f){
-
-  // Sanity check 
-  if ( t > total_time ){
-    printf("ERROR: accessing spline outside of [0,T] at %f. Should never happen! Bug.\n", t);
-    exit(1);
-  }
 
   /* Evaluate the spline at time t  */
   *f = 0.0;
