@@ -75,6 +75,7 @@ class TimeStepper{
     /**
      * @brief Constructor for time stepper.
      *
+     * @param ninit_local Number of initial conditions assigned to this processor
      * @param mastereq_ Pointer to master equation solver
      * @param ntime_ Number of time steps
      * @param total_time_ Final evolution time
@@ -252,6 +253,7 @@ class ExplEuler : public TimeStepper {
     /**
      * @brief Constructor for explicit Euler scheme.
      *
+     * @param ninit_local Number of initial conditions assigned to this processor
      * @param mastereq_ Pointer to master equation solver
      * @param ntime_ Number of time steps
      * @param total_time_ Final evolution time
@@ -316,6 +318,7 @@ class ImplMidpoint : public TimeStepper {
     /**
      * @brief Constructor for implicit midpoint scheme.
      *
+     * @param ninit_local Number of initial conditions assigned to this processor
      * @param mastereq_ Pointer to master equation solver
      * @param ntime_ Number of time steps
      * @param total_time_ Final evolution time
@@ -381,6 +384,7 @@ class CompositionalImplMidpoint : public ImplMidpoint {
     /**
      * @brief Constructor for compositional implicit midpoint scheme.
      *
+     * @param ninit_local Number of initial conditions assigned to this processor
      * @param order_ Order of the compositional method
      * @param mastereq_ Pointer to master equation solver
      * @param ntime_ Number of time steps
@@ -446,37 +450,132 @@ class PetscTS : public TimeStepper {
 
 
   public:
+    /**
+     * @brief Constructor for PetscTS.
+     *
+     * @param ninit_local Number of initial conditions assigned to this processor
+     * @param mastereq_ Pointer to master equation solver
+     * @param ntime_ Number of time steps, will be ignored since PetscTS uses adaptive time-stepping
+     * @param total_time_ Final evolution time
+     * @param output_ Pointer to output handler
+     * @param storeFWD_ Flag to store forward states
+     */
     PetscTS(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_);
     ~PetscTS();
 
-    // Use Petsc's TSSolve function to solve the ODE
+    /**
+     * @brief Overwrites the default time-stepping by calling PETSc's TSSolve.
+     * 
+     * @param initid Initial condition identifier
+     * @param iinit_local Local index of initial condition for this processor
+     * @param rho_t0 Initial state vector
+     * @return Vec Final state vector at time T
+     */
     Vec solveODE(int initid, int iinit_local, Vec rho_t0) override;
 
-    // Use Petsc's TSAdjointSolve for backpropagation
+    /** 
+     * @brief Overwrites the default adjoint time-stepping by calling PETSc's TSSolve on the adjoint system.
+     * 
+     * @param iinit_local Local index of initial condition for this processor
+     * @param rho_t0_bar Terminal condition for adjoint state
+     * @param finalstate Final state from forward evolution
+     * @param Jbar_leakage Adjoint seed of leakage integral term
+     * @param Jbar_weightedcost Adjoint seed of weighted cost integral term
+     * @param Jbar_dpdm Adjoint seed of second-order derivative variation term
+     * @param Jbar_energy Adjoint seed of energy integral term
+     */
     void solveAdjointODE(int iinit_local, Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) override;
 
-    // Wrapper to assemble RHS if the time step t has changed. 
+    /** 
+     * @brief PETSc callback to update the RHS matrix for the forward system at time t.
+      *
+      * This is called by PETSc's TS at each time step to get the current system matrix. We use it to update the MasterEq's RHS MatShell with the current time and assemble it, which is needed for time-dependent Hamiltonian terms.
+      * @param ts PETSc TS context
+      * @param t Current time
+      * @param x Current state vector (not used here, but required by PETSc's interface)
+      * @param A Matrix to store the RHS (Jacobian) for the forward system
+      * @param B Matrix to store the mass matrix (not used here, but required by PETSc's interface)
+      * @param ptr Pointer to PetscTS object (self)
+      * @return PetscErrorCode PETSc error code
+     */
     static PetscErrorCode RHSMatrixUpdate(TS ts, PetscReal t, Vec, Mat, Mat, void *ptr);
 
-    // Cache primal state/time for Jacobian w.r.t. parameters.
+    /**
+     * @brief PETSc callback to update the matrix for the derivative of the RHS with respect to control parameters at time t.
+     * 
+     * @param ts PETSc TS context
+     * @param t Current time
+     * @param x Current state vector (not used here, but required by PETSc's interface)
+     * @param A Matrix to store the derivative of the RHS with respect to parameters
+     * @param ptr Pointer to MasterEq context
+     * @return PetscErrorCode PETSc error code
+     */
     static PetscErrorCode dRHSdpMatrixUpdate(TS ts, PetscReal t, Vec x, Mat A, void *ptr);
 
-    // y = (dRHS/dp)^T x, implemented via MasterEq::compute_dRHS_dParams.
+    /** 
+     * @brief PETSc callback to compute the action of the derivative of the RHS with respect to parameters on a vector, used during adjoint solves.
+     *  
+     * Computes y = (dRHS/dp)^T x via MasterEq::compute_dRHS_dParams.
+     * 
+     * @param A Matrix representing the derivative of the RHS with respect to parameters
+     * @param x Input vector
+     * @param y Output vector
+     * @return PetscErrorCode PETSc error code
+     */
     static PetscErrorCode computedRHSdp(Mat A, Vec x, Vec y);
 
-    // Cache primal state/time for quadrature derivative wrt state.
+    /** 
+     * @brief PETSc callback to evaluate integral cost functions at time t for the current state x.
+     * 
+     * @param ts PETSc TS context
+     * @param t Current time
+     * @param x Current state vector
+     * @param F Vector to store the evaluated integral cost function values
+     * @param ctx Pointer to PetscTS object (self)
+     * @return PetscErrorCode PETSc error code
+     */
+    static PetscErrorCode IntegralCosts(TS, PetscReal t, Vec x, Vec F, void *ctx);
+
+    /** 
+     * @brief PETSc callback to update the matrix for the derivative of integral cost functions with respect to the state at time t.
+     * 
+     * @param ts PETSc TS context
+     * @param t Current time
+     * @param x Current state vector
+     * @param A Matrix to store the derivative of integral cost functions with respect to the state
+     * @param B Matrix to store additional information (not used here, but required by PETSc's interface)
+     * @param ptr Pointer to PetscTS object (self)
+     * @return PetscErrorCode PETSc error code
+     */
     static PetscErrorCode dIntegralCostdYUpdate(TS ts, PetscReal t, Vec x, Mat A, Mat B, void *ptr);
 
-    // Cache primal state/time for quadrature derivative wrt parameters.
+    /** 
+     * @brief PETSc callback to update the matrix for the derivative of integral cost functions with respect to the parameters at time t.
+     * 
+     * @param ts PETSc TS context
+     * @param t Current time
+     * @param x Current state vector
+     * @param A Matrix to store the derivative of integral cost functions with respect to the parameters
+     * @param ptr Pointer to PetscTS object (self)
+     * @return PetscErrorCode PETSc error code
+     */
     static PetscErrorCode dIntegralCostdPUpdate(TS ts, PetscReal t, Vec x, Mat A, void *ptr);
 
     // Callback function during TSSolve to evaluate trajectory data at each accepted time step 
+    /**
+     * @brief PETSc callback to monitor the trajectory during time-stepping and write data to output files.
+      *
+      * This is called by PETSc's TS at each accepted time step. We use it to write trajectory data to output files via the Output handler, and also to track the minimum timestep size chosen by the adaptive time-stepping.
+      * @param ts PETSc TS context
+      * @param step Current time step index
+      * @param time Current time
+      * @param state Current state vector
+      * @param ctx Pointer to PetscTS object (self) 
+      * @return PetscErrorCode PETSc error code
+     */
     static PetscErrorCode monitorTrajectory(TS ts, PetscInt step, PetscReal time, Vec state, void *ctx);
 
-    // Callback for integral cost functions
-    static PetscErrorCode IntegralCosts(TS, PetscReal t, Vec x, Vec F, void *ctx);
-
-    // THESE ARE NOT USED. Instead the below solveODE overwrites the default time-stepping by calling TSSolve. 
+    // THESE ARE NOT USED. Instead, solveODE and solveAdjointODE overwrites the default time-stepping by calling TSSolve. 
     void evolveFWD(const double, const double, Vec) override {};
     void evolveBWD(const double, const double, const Vec, Vec, Vec, bool) override {};
 
