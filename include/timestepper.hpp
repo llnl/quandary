@@ -498,7 +498,7 @@ class PetscTS : public TimeStepper {
       * @param ptr Pointer to PetscTS object (self)
       * @return PetscErrorCode PETSc error code
      */
-    static PetscErrorCode RHSMatrixUpdate(TS ts, PetscReal t, Vec, Mat, Mat, void *ptr);
+    static PetscErrorCode RHSMatrixUpdate(TS ts, PetscReal t, Vec x, Mat A, Mat B, void *ptr);
 
     /**
      * @brief PETSc callback to update the matrix for the derivative of the RHS with respect to control parameters at time t.
@@ -507,7 +507,7 @@ class PetscTS : public TimeStepper {
      * @param t Current time
      * @param x Current state vector (not used here, but required by PETSc's interface)
      * @param A Matrix to store the derivative of the RHS with respect to parameters
-     * @param ptr Pointer to MasterEq context
+     * @param ptr Pointer to PetscTS object (self)
      * @return PetscErrorCode PETSc error code
      */
     static PetscErrorCode dRHSdpMatrixUpdate(TS ts, PetscReal t, Vec x, Mat A, void *ptr);
@@ -534,7 +534,7 @@ class PetscTS : public TimeStepper {
      * @param ctx Pointer to PetscTS object (self)
      * @return PetscErrorCode PETSc error code
      */
-    static PetscErrorCode IntegralCosts(TS, PetscReal t, Vec x, Vec F, void *ctx);
+    static PetscErrorCode IntegralCosts(TS ts, PetscReal t, Vec x, Vec F, void *ctx);
 
     /** 
      * @brief PETSc callback to update the matrix for the derivative of integral cost functions with respect to the state at time t.
