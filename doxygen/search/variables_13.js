@@ -11,15 +11,14 @@ var searchData=
   ['time_8',['time',['../structMatShellCtx.html#a7444246ae4834351b67ceee29481287c',1,'MatShellCtx']]],
   ['time_5fstepper_5ftype_5fmap_9',['TIME_STEPPER_TYPE_MAP',['../defs_8hpp.html#ac2351b58393efd465c118b208ad97f6e',1,'defs.hpp']]],
   ['timestepper_10',['timestepper',['../classOptimProblem.html#aadd1fcb24bb7d743311ea2c683e024ec',1,'OptimProblem']]],
-  ['timestepper_5ftype_11',['timestepper_type',['../namespaceConfigDefaults.html#a5357a9456e4e8c98ed9e5e6552c1c18e',1,'ConfigDefaults::TIMESTEPPER_TYPE'],['../structParsedConfigData.html#acaa1b6ac305b7bc909f973d449cd25a8',1,'ParsedConfigData::timestepper_type']]],
+  ['timestepper_5ftype_11',['TIMESTEPPER_TYPE',['../namespaceConfigDefaults.html#a5357a9456e4e8c98ed9e5e6552c1c18e',1,'ConfigDefaults']]],
   ['tmp_12',['tmp',['../classImplMidpoint.html#a6861512bb0197df1d3264de687ee739a',1,'ImplMidpoint']]],
   ['tol_5ffinal_5fcost_13',['tol_final_cost',['../classOptimProblem.html#a91dec33aa83245c50bf31c26ff086e3a',1,'OptimProblem']]],
   ['tol_5fgrad_5fabs_14',['tol_grad_abs',['../classOptimProblem.html#a45773be706494f4b1d56cd1f40b5bee6',1,'OptimProblem']]],
   ['tol_5fgrad_5frel_15',['tol_grad_rel',['../classOptimProblem.html#a350ae1ad7811bd2f734a049064926fed',1,'OptimProblem']]],
   ['tol_5finfidelity_16',['tol_infidelity',['../classOptimProblem.html#a8f60c518d08cc2e8da7c16c7d2a5882b',1,'OptimProblem']]],
   ['total_5ftime_17',['total_time',['../classTimeStepper.html#a4094b333f65e347f95c78aea0effe544',1,'TimeStepper']]],
-  ['transfreq_18',['transfreq',['../structParsedConfigData.html#ab6968cbeea879d3e1a62780ea881a696',1,'ParsedConfigData']]],
-  ['tstart_19',['tstart',['../structControlParameterizationSettings.html#a81142aa76d5ff4290c6fe2f49eb247ca',1,'ControlParameterizationSettings::tstart'],['../classControlBasis.html#a1f1820a85ad416f02245084619ffb720',1,'ControlBasis::tstart']]],
-  ['tstop_20',['tstop',['../structControlParameterizationSettings.html#aad2481cc40537125c9cc0e8239ab6d14',1,'ControlParameterizationSettings::tstop'],['../classControlBasis.html#af89673125f7918b75b723b7589e4b19f',1,'ControlBasis::tstop']]],
-  ['type_21',['type',['../structInitialConditionSettings.html#a2f09aa5d54cccf1dc6a797801b23264f',1,'InitialConditionSettings::type'],['../structOptimTargetSettings.html#a2734151e59b14707f31f188f941d4eb1',1,'OptimTargetSettings::type'],['../structControlParameterizationSettings.html#ad7fdd37718ed5418c58ed3a680fc3603',1,'ControlParameterizationSettings::type'],['../structControlInitializationSettings.html#a38361168ada36cecbc7b6aa568dc8540',1,'ControlInitializationSettings::type']]]
+  ['tstart_18',['tstart',['../structControlParameterizationSettings.html#a81142aa76d5ff4290c6fe2f49eb247ca',1,'ControlParameterizationSettings::tstart'],['../classControlBasis.html#a1f1820a85ad416f02245084619ffb720',1,'ControlBasis::tstart']]],
+  ['tstop_19',['tstop',['../structControlParameterizationSettings.html#aad2481cc40537125c9cc0e8239ab6d14',1,'ControlParameterizationSettings::tstop'],['../classControlBasis.html#af89673125f7918b75b723b7589e4b19f',1,'ControlBasis::tstop']]],
+  ['type_20',['type',['../structInitialConditionSettings.html#a2f09aa5d54cccf1dc6a797801b23264f',1,'InitialConditionSettings::type'],['../structOptimTargetSettings.html#a2734151e59b14707f31f188f941d4eb1',1,'OptimTargetSettings::type'],['../structControlParameterizationSettings.html#ad7fdd37718ed5418c58ed3a680fc3603',1,'ControlParameterizationSettings::type'],['../structControlInitializationSettings.html#a38361168ada36cecbc7b6aa568dc8540',1,'ControlInitializationSettings::type']]]
 ];

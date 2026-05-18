@@ -25,10 +25,10 @@ var searchData=
   ['tikhonov_5fuse_5fx0_22',['tikhonov_use_x0',['../classOptimProblem.html#a99d4925bab2647cd1082e6eecfb598b5',1,'OptimProblem']]],
   ['time_23',['time',['../structMatShellCtx.html#a7444246ae4834351b67ceee29481287c',1,'MatShellCtx']]],
   ['time_5fstepper_5ftype_5fmap_24',['TIME_STEPPER_TYPE_MAP',['../defs_8hpp.html#ac2351b58393efd465c118b208ad97f6e',1,'defs.hpp']]],
-  ['timestepper_25',['timestepper',['../classTimeStepper.html#a88c17d2b22882ca947e83c25e903be1d',1,'TimeStepper::TimeStepper()'],['../classTimeStepper.html#a29d1e7d86ea1d20606bc1c6b24a49a8c',1,'TimeStepper::TimeStepper(MasterEq *mastereq_, int ntime_, double total_time_, Output *output_, bool storeFWD_)'],['../classOptimProblem.html#aadd1fcb24bb7d743311ea2c683e024ec',1,'OptimProblem::timestepper'],['../classTimeStepper.html',1,'TimeStepper']]],
+  ['timestepper_25',['timestepper',['../classOptimProblem.html#aadd1fcb24bb7d743311ea2c683e024ec',1,'OptimProblem::timestepper'],['../classTimeStepper.html#a88c17d2b22882ca947e83c25e903be1d',1,'TimeStepper::TimeStepper()'],['../classTimeStepper.html#a29d1e7d86ea1d20606bc1c6b24a49a8c',1,'TimeStepper::TimeStepper(MasterEq *mastereq_, int ntime_, double total_time_, Output *output_, bool storeFWD_)'],['../classTimeStepper.html',1,'TimeStepper']]],
   ['timestepper_2ecpp_26',['timestepper.cpp',['../timestepper_8cpp.html',1,'']]],
   ['timestepper_2ehpp_27',['timestepper.hpp',['../timestepper_8hpp.html',1,'']]],
-  ['timestepper_5ftype_28',['timestepper_type',['../namespaceConfigDefaults.html#a5357a9456e4e8c98ed9e5e6552c1c18e',1,'ConfigDefaults::TIMESTEPPER_TYPE'],['../structParsedConfigData.html#acaa1b6ac305b7bc909f973d449cd25a8',1,'ParsedConfigData::timestepper_type']]],
+  ['timestepper_5ftype_28',['TIMESTEPPER_TYPE',['../namespaceConfigDefaults.html#a5357a9456e4e8c98ed9e5e6552c1c18e',1,'ConfigDefaults']]],
   ['timesteppertype_29',['TimeStepperType',['../defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cc',1,'defs.hpp']]],
   ['tmp_30',['tmp',['../classImplMidpoint.html#a6861512bb0197df1d3264de687ee739a',1,'ImplMidpoint']]],
   ['tol_5ffinal_5fcost_31',['tol_final_cost',['../classOptimProblem.html#a91dec33aa83245c50bf31c26ff086e3a',1,'OptimProblem']]],
@@ -37,10 +37,9 @@ var searchData=
   ['tol_5finfidelity_34',['tol_infidelity',['../classOptimProblem.html#a8f60c518d08cc2e8da7c16c7d2a5882b',1,'OptimProblem']]],
   ['tolower_35',['tolower',['../util_8hpp.html#a5d6e3db40777f209b7aec4fe21b0b977',1,'toLower(std::string str):&#160;util.cpp'],['../util_8cpp.html#a5d6e3db40777f209b7aec4fe21b0b977',1,'toLower(std::string str):&#160;util.cpp']]],
   ['total_5ftime_36',['total_time',['../classTimeStepper.html#a4094b333f65e347f95c78aea0effe544',1,'TimeStepper']]],
-  ['transfreq_37',['transfreq',['../structParsedConfigData.html#ab6968cbeea879d3e1a62780ea881a696',1,'ParsedConfigData']]],
-  ['tstart_38',['tstart',['../structControlParameterizationSettings.html#a81142aa76d5ff4290c6fe2f49eb247ca',1,'ControlParameterizationSettings::tstart'],['../classControlBasis.html#a1f1820a85ad416f02245084619ffb720',1,'ControlBasis::tstart']]],
-  ['tstop_39',['tstop',['../structControlParameterizationSettings.html#aad2481cc40537125c9cc0e8239ab6d14',1,'ControlParameterizationSettings::tstop'],['../classControlBasis.html#af89673125f7918b75b723b7589e4b19f',1,'ControlBasis::tstop']]],
-  ['type_40',['type',['../structControlParameterizationSettings.html#ad7fdd37718ed5418c58ed3a680fc3603',1,'ControlParameterizationSettings::type'],['../structInitialConditionSettings.html#a2f09aa5d54cccf1dc6a797801b23264f',1,'InitialConditionSettings::type'],['../structOptimTargetSettings.html#a2734151e59b14707f31f188f941d4eb1',1,'OptimTargetSettings::type'],['../structControlInitializationSettings.html#a38361168ada36cecbc7b6aa568dc8540',1,'ControlInitializationSettings::type']]],
-  ['type_20requirements_41',['Type Requirements',['../classvalidators_1_1VectorValidator.html#autotoc_md7',1,'']]],
-  ['types_42',['Supported Types',['../namespacevalidators.html#autotoc_md2',1,'']]]
+  ['tstart_37',['tstart',['../classControlBasis.html#a1f1820a85ad416f02245084619ffb720',1,'ControlBasis::tstart'],['../structControlParameterizationSettings.html#a81142aa76d5ff4290c6fe2f49eb247ca',1,'ControlParameterizationSettings::tstart']]],
+  ['tstop_38',['tstop',['../classControlBasis.html#af89673125f7918b75b723b7589e4b19f',1,'ControlBasis::tstop'],['../structControlParameterizationSettings.html#aad2481cc40537125c9cc0e8239ab6d14',1,'ControlParameterizationSettings::tstop']]],
+  ['type_39',['type',['../structControlParameterizationSettings.html#ad7fdd37718ed5418c58ed3a680fc3603',1,'ControlParameterizationSettings::type'],['../structInitialConditionSettings.html#a2f09aa5d54cccf1dc6a797801b23264f',1,'InitialConditionSettings::type'],['../structOptimTargetSettings.html#a2734151e59b14707f31f188f941d4eb1',1,'OptimTargetSettings::type'],['../structControlInitializationSettings.html#a38361168ada36cecbc7b6aa568dc8540',1,'ControlInitializationSettings::type']]],
+  ['type_20requirements_40',['Type Requirements',['../classvalidators_1_1VectorValidator.html#autotoc_md7',1,'']]],
+  ['types_41',['Supported Types',['../namespacevalidators.html#autotoc_md2',1,'']]]
 ];

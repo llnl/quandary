@@ -12,10 +12,10 @@ var searchData=
   ['control_5finitialization_5ftype_5fmap_9',['CONTROL_INITIALIZATION_TYPE_MAP',['../defs_8hpp.html#afbd5a170171bf64efb13ba86b9bc7651',1,'defs.hpp']]],
   ['control_5fre_10',['control_Re',['../structMatShellCtx.html#a9ba1788479840f371c24f631cc988f87',1,'MatShellCtx']]],
   ['control_5fspline_5fcount_11',['CONTROL_SPLINE_COUNT',['../namespaceConfigDefaults.html#ae6014d60fe6dc57a08869d21b7f5e501',1,'ConfigDefaults']]],
-  ['control_5ftype_12',['control_type',['../namespaceConfigDefaults.html#a169e18a10d4fbb012c6a75c30cee71d4',1,'ConfigDefaults::CONTROL_TYPE'],['../structControlParameterizationData.html#af817de5de0cbeee747f4c1016b792709',1,'ControlParameterizationData::control_type']]],
+  ['control_5ftype_12',['CONTROL_TYPE',['../namespaceConfigDefaults.html#a169e18a10d4fbb012c6a75c30cee71d4',1,'ConfigDefaults']]],
   ['control_5ftype_5fmap_13',['CONTROL_TYPE_MAP',['../defs_8hpp.html#ae0b3b31e4106fcfdffbe51378b7592e0',1,'defs.hpp']]],
-  ['control_5fzero_5fboundary_5fcondition_14',['control_zero_boundary_condition',['../namespaceConfigDefaults.html#a63172fa39538870137441fc4bdf97f79',1,'ConfigDefaults::CONTROL_ZERO_BOUNDARY_CONDITION'],['../classOscillator.html#a98e679242ba73fb23ca07038fc6abd07',1,'Oscillator::control_zero_boundary_condition'],['../structParsedConfigData.html#a1a0d55d8b5a09d9ad01159b76470590d',1,'ParsedConfigData::control_zero_boundary_condition']]],
+  ['control_5fzero_5fboundary_5fcondition_14',['control_zero_boundary_condition',['../classOscillator.html#a98e679242ba73fb23ca07038fc6abd07',1,'Oscillator::control_zero_boundary_condition'],['../namespaceConfigDefaults.html#a63172fa39538870137441fc4bdf97f79',1,'ConfigDefaults::CONTROL_ZERO_BOUNDARY_CONDITION']]],
   ['controltype_15',['controltype',['../classControlBasis.html#aa47f10d7033e83b174a97d6cc7e91d89',1,'ControlBasis']]],
-  ['crosskerr_16',['crosskerr',['../classMasterEq.html#a3d861dd8d9ad6f4e9b04e0109d3ee128',1,'MasterEq::crosskerr'],['../structMatShellCtx.html#a6d70c2aeb5c6016d867aab74747d0125',1,'MatShellCtx::crosskerr'],['../structParsedConfigData.html#a70c6ae2e87d92f279405d0d13544b0b2',1,'ParsedConfigData::crosskerr']]],
+  ['crosskerr_16',['crosskerr',['../structMatShellCtx.html#a6d70c2aeb5c6016d867aab74747d0125',1,'MatShellCtx::crosskerr'],['../classMasterEq.html#a3d861dd8d9ad6f4e9b04e0109d3ee128',1,'MasterEq::crosskerr']]],
   ['crosskerr_5fcoupling_17',['CROSSKERR_COUPLING',['../namespaceConfigDefaults.html#a607165765752c578c7bef246b432fa7e',1,'ConfigDefaults']]]
 ];

@@ -93,8 +93,6 @@ $(function() {
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a91e69bb7163aa78062dd85dcdd2428b6" id="r_a91e69bb7163aa78062dd85dcdd2428b6"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a91e69bb7163aa78062dd85dcdd2428b6">Config</a> (const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;logger, const toml::table &amp;table)</td></tr>
 <tr class="separator:a91e69bb7163aa78062dd85dcdd2428b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6fd28555069a4f2d9b94321fb4efb812" id="r_a6fd28555069a4f2d9b94321fb4efb812"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a6fd28555069a4f2d9b94321fb4efb812">Config</a> (const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;logger, const <a class="el" href="structParsedConfigData.html">ParsedConfigData</a> &amp;settings)</td></tr>
-<tr class="separator:a6fd28555069a4f2d9b94321fb4efb812"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afd1b8e9a2f731db838bb5856670e314c" id="r_afd1b8e9a2f731db838bb5856670e314c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#afd1b8e9a2f731db838bb5856670e314c">~Config</a> ()=default</td></tr>
 <tr class="separator:afd1b8e9a2f731db838bb5856670e314c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa3b487804df5f269c9c86f5556ec2bb2" id="r_aa3b487804df5f269c9c86f5556ec2bb2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#aa3b487804df5f269c9c86f5556ec2bb2">printConfig</a> (std::stringstream &amp;log) const</td></tr>
@@ -206,18 +204,12 @@ Public Member Functions</h2></td></tr>
 Static Public Member Functions</h2></td></tr>
 <tr class="memitem:af3fbc264397827ba4ca50bdd7365f27a" id="r_af3fbc264397827ba4ca50bdd7365f27a"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classConfig.html">Config</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#af3fbc264397827ba4ca50bdd7365f27a">fromFile</a> (const std::string &amp;filename, const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;logger)</td></tr>
 <tr class="separator:af3fbc264397827ba4ca50bdd7365f27a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a264d531eae652baafba935e997664fab" id="r_a264d531eae652baafba935e997664fab"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classConfig.html">Config</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a264d531eae652baafba935e997664fab">fromToml</a> (const std::string &amp;toml_filename, const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;logger)</td></tr>
-<tr class="separator:a264d531eae652baafba935e997664fab"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae8dd504998dc4ef94fee24146f50e338" id="r_ae8dd504998dc4ef94fee24146f50e338"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classConfig.html">Config</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#ae8dd504998dc4ef94fee24146f50e338">fromTomlString</a> (const std::string &amp;toml_content, const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;logger)</td></tr>
-<tr class="separator:ae8dd504998dc4ef94fee24146f50e338"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5cf7e9c5494ff83587658eab8bfcb5a3" id="r_a5cf7e9c5494ff83587658eab8bfcb5a3"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classConfig.html">Config</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a5cf7e9c5494ff83587658eab8bfcb5a3">fromCfg</a> (const std::string &amp;cfg_filename, const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;logger)</td></tr>
-<tr class="separator:a5cf7e9c5494ff83587658eab8bfcb5a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abda181e7225b0f5e375d7412c68d9ef7" id="r_abda181e7225b0f5e375d7412c68d9ef7"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classConfig.html">Config</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#abda181e7225b0f5e375d7412c68d9ef7">fromCfgString</a> (const std::string &amp;cfg_content, const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;logger)</td></tr>
-<tr class="separator:abda181e7225b0f5e375d7412c68d9ef7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4592a429c929a7f97c49296d8f8b5e57" id="r_a4592a429c929a7f97c49296d8f8b5e57"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="classConfig.html">Config</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a4592a429c929a7f97c49296d8f8b5e57">fromString</a> (const std::string &amp;toml_content, const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;logger)</td></tr>
+<tr class="separator:a4592a429c929a7f97c49296d8f8b5e57"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Configuration class containing all validated settings. </p>
-<p>Contains validated, typed configuration parameters. All fields have been validated with defaults set. Handles parsing from TOML configuration files and deprecated CFG format, as well as printing log of used configuration. This class is immutable after construction.</p>
+<p>Contains validated, typed configuration parameters. All fields have been validated with defaults set. Handles parsing from TOML configuration files and printing log of used configuration. This class is immutable after construction.</p>
 <dl class="section note"><dt>Note</dt><dd>Adding a new toml configuration option:</dd></dl>
 <p>1) Add new member variable to the <a class="el" href="classConfig.html" title="Configuration class containing all validated settings.">Config</a> class below</p>
 <p>2) Add parsing logic in constructor Config::Config(toml::table) in <a class="el" href="config_8cpp.html">src/config.cpp</a>. Either access directly from toml table, or use chains of validators for type-safe extraction and validation. For example:</p>
@@ -237,7 +229,7 @@ Static Public Member Functions</h2></td></tr>
 <p>4) Add printing logic in <a class="el" href="classConfig.html#aa3b487804df5f269c9c86f5556ec2bb2">Config::printConfig()</a> in <a class="el" href="config_8cpp.html">src/config.cpp</a> </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a91e69bb7163aa78062dd85dcdd2428b6" name="a91e69bb7163aa78062dd85dcdd2428b6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a91e69bb7163aa78062dd85dcdd2428b6">&#9670;&#160;</a></span>Config() <span class="overload">[1/2]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a91e69bb7163aa78062dd85dcdd2428b6">&#9670;&#160;</a></span>Config()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -253,34 +245,6 @@ Static Public Member Functions</h2></td></tr>
           <td></td>
           <td class="paramtype">const toml::table &amp;&#160;</td>
           <td class="paramname"><em>table</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a6fd28555069a4f2d9b94321fb4efb812" name="a6fd28555069a4f2d9b94321fb4efb812"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6fd28555069a4f2d9b94321fb4efb812">&#9670;&#160;</a></span>Config() <span class="overload">[2/2]</span></h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">Config::Config </td>
-          <td>(</td>
-          <td class="paramtype">const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;&#160;</td>
-          <td class="paramname"><em>logger</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="structParsedConfigData.html">ParsedConfigData</a> &amp;&#160;</td>
-          <td class="paramname"><em>settings</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -318,78 +282,6 @@ Static Public Member Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a5cf7e9c5494ff83587658eab8bfcb5a3" name="a5cf7e9c5494ff83587658eab8bfcb5a3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5cf7e9c5494ff83587658eab8bfcb5a3">&#9670;&#160;</a></span>fromCfg()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="classConfig.html">Config</a> Config::fromCfg </td>
-          <td>(</td>
-          <td class="paramtype">const std::string &amp;&#160;</td>
-          <td class="paramname"><em>cfg_filename</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;&#160;</td>
-          <td class="paramname"><em>logger</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">static</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="abda181e7225b0f5e375d7412c68d9ef7" name="abda181e7225b0f5e375d7412c68d9ef7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abda181e7225b0f5e375d7412c68d9ef7">&#9670;&#160;</a></span>fromCfgString()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="classConfig.html">Config</a> Config::fromCfgString </td>
-          <td>(</td>
-          <td class="paramtype">const std::string &amp;&#160;</td>
-          <td class="paramname"><em>cfg_content</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;&#160;</td>
-          <td class="paramname"><em>logger</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">static</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-</div>
-</div>
 <a id="af3fbc264397827ba4ca50bdd7365f27a" name="af3fbc264397827ba4ca50bdd7365f27a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af3fbc264397827ba4ca50bdd7365f27a">&#9670;&#160;</a></span>fromFile()</h2>
 
@@ -426,8 +318,8 @@ Static Public Member Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a264d531eae652baafba935e997664fab" name="a264d531eae652baafba935e997664fab"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a264d531eae652baafba935e997664fab">&#9670;&#160;</a></span>fromToml()</h2>
+<a id="a4592a429c929a7f97c49296d8f8b5e57" name="a4592a429c929a7f97c49296d8f8b5e57"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4592a429c929a7f97c49296d8f8b5e57">&#9670;&#160;</a></span>fromString()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -436,43 +328,7 @@ Static Public Member Functions</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="classConfig.html">Config</a> Config::fromToml </td>
-          <td>(</td>
-          <td class="paramtype">const std::string &amp;&#160;</td>
-          <td class="paramname"><em>toml_filename</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="classMPILogger.html">MPILogger</a> &amp;&#160;</td>
-          <td class="paramname"><em>logger</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">static</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="ae8dd504998dc4ef94fee24146f50e338" name="ae8dd504998dc4ef94fee24146f50e338"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae8dd504998dc4ef94fee24146f50e338">&#9670;&#160;</a></span>fromTomlString()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="classConfig.html">Config</a> Config::fromTomlString </td>
+          <td class="memname"><a class="el" href="classConfig.html">Config</a> Config::fromString </td>
           <td>(</td>
           <td class="paramtype">const std::string &amp;&#160;</td>
           <td class="paramname"><em>toml_content</em>, </td>

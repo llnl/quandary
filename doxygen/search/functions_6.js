@@ -37,7 +37,7 @@ var searchData=
   ['getnlevels_34',['getnlevels',['../classOscillator.html#a5b47ab00b35ecd5a79b3202dc37fdd8f',1,'Oscillator::getNLevels()'],['../classConfig.html#aeae8d01d86a9641b8837a5fa90984761',1,'Config::getNLevels(size_t i_osc) const'],['../classConfig.html#a25bb0e26b426f50ca748de11c564a519',1,'Config::getNLevels() const']]],
   ['getnoscillators_35',['getNOscillators',['../classMasterEq.html#a601f1831ffce18ea5be8fd68e7bd60c2',1,'MasterEq']]],
   ['getnparameterizations_36',['getNParameterizations',['../classOscillator.html#adb0bba46929bea69230dc23801b3bd64',1,'Oscillator']]],
-  ['getnparams_37',['getnparams',['../classControlBasis.html#a8b33a918ba140a5e79c3ed79adba6c9b',1,'ControlBasis::getNparams()'],['../classOscillator.html#aee2b84d3889ff76408152dae66d8ecd5',1,'Oscillator::getNParams()']]],
+  ['getnparams_37',['getnparams',['../classOscillator.html#aee2b84d3889ff76408152dae66d8ecd5',1,'Oscillator::getNParams()'],['../classControlBasis.html#a8b33a918ba140a5e79c3ed79adba6c9b',1,'ControlBasis::getNparams()']]],
   ['getnsegparams_38',['getNSegParams',['../classOscillator.html#a430bac75451bd17fe689c9aa29b5ea91',1,'Oscillator']]],
   ['getnsplines_39',['getnsplines',['../classControlBasis.html#a5c95a686ca2774a926966fd6a261d150',1,'ControlBasis::getNSplines()'],['../classBSpline2nd.html#a15d6d09ed4cd7c3f3789882e01a1d8a9',1,'BSpline2nd::getNSplines()'],['../classBSpline2ndAmplitude.html#abf50ce68cfccee035d2681d6c7f6dfed',1,'BSpline2ndAmplitude::getNSplines()'],['../classBSpline0.html#a65024112892da5c571843909ed201202',1,'BSpline0::getNSplines()'],['../classOscillator.html#a7f3e6be83c024d95d3f7d47456f529fc',1,'Oscillator::getNSplines()']]],
   ['getntime_40',['getNTime',['../classConfig.html#a333020995f024f40f984f13784382263',1,'Config']]],

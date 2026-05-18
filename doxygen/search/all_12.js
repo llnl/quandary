@@ -4,7 +4,7 @@ var searchData=
   ['scalarorvector_1',['scalarOrVector',['../namespacevalidators.html#a59bec4f9f65e8d40500bba45a4e727bb',1,'validators']]],
   ['scalarorvectoror_2',['scalarOrVectorOr',['../namespacevalidators.html#a36d4f222b5073501a1c4e5cc65731e18',1,'validators']]],
   ['scaling_3',['scaling',['../structControlParameterizationSettings.html#a7f5ccdde4c22bc701706c9e0cd72860c',1,'ControlParameterizationSettings::scaling'],['../classBSpline2ndAmplitude.html#a69194b3b1c11bc768877708f72fd2d6e',1,'BSpline2ndAmplitude::scaling']]],
-  ['selfkerr_4',['selfkerr',['../namespaceConfigDefaults.html#ab2fd917dcabb16476ba5f8d75ea17650',1,'ConfigDefaults::SELFKERR'],['../structParsedConfigData.html#ac14b5f7a7a1daafa44751d19255aed87',1,'ParsedConfigData::selfkerr'],['../classOscillator.html#a513b9eaa57c7351982ad1acfa81d374c',1,'Oscillator::selfkerr']]],
+  ['selfkerr_4',['selfkerr',['../namespaceConfigDefaults.html#ab2fd917dcabb16476ba5f8d75ea17650',1,'ConfigDefaults::SELFKERR'],['../classOscillator.html#a513b9eaa57c7351982ad1acfa81d374c',1,'Oscillator::selfkerr']]],
   ['set_5frhs_5fmatmult_5foperation_5',['set_RHS_MatMult_operation',['../classMasterEq.html#a9e3fcf025c5e78f7cd5bed77d48660a7',1,'MasterEq']]],
   ['setcontrolamplitudes_6',['setControlAmplitudes',['../classMasterEq.html#af747a9c4013860f785cd80fe52e7f457',1,'MasterEq']]],
   ['setevaldpdm_7',['setEvalDPDM',['../classTimeStepper.html#a95750967adb5aba62a078c5807806bc5',1,'TimeStepper']]],
