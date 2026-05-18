@@ -124,9 +124,9 @@
                     <div class="col-md-9" role="main">
 
 <h1 id="configuration-options">Configuration Options</h1>
-<p>Quandary supports <a href="https://toml.io/en/">TOML</a> configuration files (recommended) and legacy CFG format.</p>
+<p>Quandary uses <a href="https://toml.io/en/">TOML</a> configuration files.</p>
 <h2 id="toml-configuration">TOML Configuration</h2>
-<p>TOML is the recommended configuration format. It provides a clear, hierarchical structure and better validation.</p>
+<p>TOML provides a clear, hierarchical structure and validated parsing.</p>
 <p>Note that some parameter names differ between TOML and the Python interface.
 For a complete cross-reference of all parameters, see the <a href="../parameter_reference/">Parameter Reference</a>.</p>
 <h2 id="configuration-template">Configuration Template</h2>
@@ -174,7 +174,7 @@ decoherence = { type = &quot;none&quot;,              # &quot;none&quot;, &quot;
               }
 
 # Specify the initial conditions that are to be propagated
-# Avalable initial condition types:
+# Available initial condition types:
 # &quot;basis&quot; - all basis states of the full composite system, or of specified subsystems (subsystem = [...])
 # &quot;state&quot; - single initial state specified as levels of a product state (levels = [...])
 # &quot;file&quot; - read one initial state from file (filename = &quot;...&quot;)
@@ -216,7 +216,7 @@ carrier_frequency = [
   {subsystem = 1, value = [0.0, -0.2252, -0.1]}
 ]
 # Option 2: Same array of frequencies for all subsystems using a table
-# carrier_frequency = { values = [0.0, -0.2252, -0.1] }
+# carrier_frequency = { value = [0.0, -0.2252, -0.1] }
 # Option 3: Same array of frequencies for all subsystems using shorthand
 # carrier_frequency = [0.0, -0.2252, -0.1]
 
@@ -284,7 +284,7 @@ penalty = { leakage = 0.0,                # Penalize leakage into guard levels
             dpdm = 0.0,                   # Penalize 2nd derivative of state populations
             variation = 0.0,              # Penalize control pulse variation (for 0-th order Bsplines)
             weightedcost = 0.0,           # Penalize time-weighted cost function integral
-            weightedcost_width = 0.0      # Width paramter for weighted cost function integral
+            weightedcost_width = 0.0      # Width parameter for weighted cost function integral
           }
 
 [output]

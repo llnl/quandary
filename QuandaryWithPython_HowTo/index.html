@@ -989,7 +989,7 @@ quandary = Quandary(Ne=Ne, Ng=Ng, freq01=freq01, selfkerr=selfkerr, Jkl=Jkl, tar
 # Optionally: Bound the maximum control pulse amplitude per qubit, or comment out.
 quandary.maxctrl_MHz = [5.0]  # [MHz]
 
-# Optimize with Quandary. Check help(quandary.optimize) for optional arguments. This runs Quandary in the background on <prod(ne)> cores. 
+# Optimize with Quandary. Check help(quandary.optimize) for optional arguments. This runs Quandary in the background on &lt;prod(Ne)&gt; cores. 
 t, p, q, infidelity, expectedEnergy, population = quandary.optimize()
 print(f"\nOptimized Fidelity = {1.0 - infidelity}")
 
@@ -1002,7 +1002,7 @@ plot_results_1osc(quandary, p[0], q[0], expectedEnergy[0], population[0])
 # Other plotting functions: 
 # plot_pulse(Ne, t, p, q)                       # Plot only the pulses for each qubit
 # plot_expectedEnergy(Ne, time, expectedEnergy) # Plot the trajectory of the expected energy level over time
-# plot_population(Ne, time, population)         # Plot the trajecotry of the qubit's level occupations over time</prod(ne)></div>
+# plot_population(Ne, time, population)         # Plot the trajecotry of the qubit's level occupations over time</div>
 </div>
 </div>
 </div>
@@ -1014,7 +1014,7 @@ plot_results_1osc(quandary, p[0], q[0], expectedEnergy[0], population[0])
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Executing ' mpirun -np  3 quandary ./config.cfg --quiet . Runtype:  optimization ...
+<pre>Executing ' mpirun -np  3 quandary ./config.toml --quiet . Runtype:  optimization ...
     Objective             Tikhonov                Penalty-Leakage        Penalty-StateVar       Penalty-TotalEnergy    Penalty-CtrlVar
 0  9.01413770665704e-01 + 1.14880994107351e-06 + 4.92008024113254e-05 + 1.59677761749278e-06 + 1.82940089620197e-05 + 0.00000000000000e+00  Fidelity = 9.85862293342961e-02  ||Grad|| = 3.02938565436338e-01
 1  4.46562869956035e-01 + 1.09663002122803e-06 + 1.53556555689983e-05 + 2.13023995821287e-06 + 2.83396267611865e-05 + 0.00000000000000e+00  Fidelity = 5.53437130043965e-01  ||Grad|| = 4.82739122708045e-01
@@ -1231,9 +1231,9 @@ print("Fidelity = ", 1.0 - infidelity2)</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Executing ' mpirun -np  3 quandary ./config.cfg --quiet . Runtype:  simulation ...
+<pre>Executing ' mpirun -np  3 quandary ./config.toml --quiet . Runtype:  simulation ...
 Fidelity =  0.999916180161363
-Executing ' mpirun -np  3 quandary ./config.cfg --quiet . Runtype:  simulation ...
+Executing ' mpirun -np  3 quandary ./config.toml --quiet . Runtype:  simulation ...
 Fidelity =  0.999912289800873
 </pre>
 </div>
@@ -1317,7 +1317,7 @@ plot_pulse(Ne, t_ds, p_ds, q_ds)
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Executing ' mpirun -np  1 quandary ./config.cfg --quiet . Runtype:  evalcontrols ...
+<pre>Executing ' mpirun -np  1 quandary ./config.toml --quiet . Runtype:  evalcontrols ...
 </pre>
 </div>
 </div>
@@ -1691,7 +1691,7 @@ print("Test fidelity = ", test_fid)</div>
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Executing ' mpirun -np  1 quandary ./config.cfg --quiet . Runtype:  optimization ...
+<pre>Executing ' mpirun -np  1 quandary ./config.toml --quiet . Runtype:  optimization ...
     Objective             Tikhonov                Penalty-Leakage        Penalty-StateVar       Penalty-TotalEnergy    Penalty-CtrlVar
 0  5.02049583478701e-01 + 2.56090704561570e-10 + 0.00000000000000e+00 + 9.01784421151395e-15 + 8.98449028423572e-09 + 0.00000000000000e+00  Fidelity = 4.97950416521299e-01  ||Grad|| = 1.33055979431340e-01
 1  4.62265425914091e-02 + 1.73742095334636e-07 + 0.00000000000000e+00 + 1.24752998393009e-09 + 1.00933850676236e-05 + 0.00000000000000e+00  Fidelity = 9.53773457408591e-01  ||Grad|| = 3.24748385751329e-01
@@ -1738,7 +1738,7 @@ Plotting results...
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Executing ' mpirun -np  2 quandary ./config.cfg --quiet . Runtype:  simulation ...
+<pre>Executing ' mpirun -np  2 quandary ./config.toml --quiet . Runtype:  simulation ...
 Test fidelity =  0.9999983222139354
 </pre>
 </div>
@@ -1866,7 +1866,7 @@ plot_results_1osc(quandary_lblad, pt[0], qt[0], expectedEnergy[0], population[0]
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Executing ' mpirun -np  1 quandary ./config.cfg --quiet . Runtype:  optimization ...
+<pre>Executing ' mpirun -np  1 quandary ./config.toml --quiet . Runtype:  optimization ...
     Objective             Tikhonov                Penalty-Leakage        Penalty-StateVar       Penalty-TotalEnergy    Penalty-CtrlVar
 0  5.04302153193254e-01 + 2.10627618973362e-10 + 7.68884448559118e-13 + 1.30073858299733e-14 + 6.26929913180880e-09 + 0.00000000000000e+00  Fidelity = 4.95697846806746e-01  ||Grad|| = 1.06633467203195e-01
 1  4.72015038447107e-02 + 1.74549639007923e-07 + 2.92029258595263e-06 + 1.65120445024727e-09 + 1.01403330272047e-05 + 0.00000000000000e+00  Fidelity = 9.52798496155289e-01  ||Grad|| = 2.87426078195549e-01
@@ -1875,10 +1875,10 @@ plot_results_1osc(quandary_lblad, pt[0], qt[0], expectedEnergy[0], population[0]
 Optimization converged with small final time cost.
 
 Optimized Fidelity = 0.999985110181464
-Executing ' mpirun -np  1 quandary ./config.cfg --quiet . Runtype:  simulation ...
+Executing ' mpirun -np  1 quandary ./config.toml --quiet . Runtype:  simulation ...
 
 Fidelity under noise = 0.999771006775087
-Executing ' mpirun -np  1 quandary ./config.cfg --quiet . Runtype:  optimization ...
+Executing ' mpirun -np  1 quandary ./config.toml --quiet . Runtype:  optimization ...
     Objective             Tikhonov                Penalty-Leakage        Penalty-StateVar       Penalty-TotalEnergy    Penalty-CtrlVar
 0  2.28993224913099e-04 + 1.07258244109532e-07 + 2.43336388444282e-11 + 0.00000000000000e+00 + 6.22907730287354e-06 + 0.00000000000000e+00  Fidelity = 9.99771006775087e-01  ||Grad|| = 6.13164245554497e-02
 1  2.26078220585180e-04 + 1.06806858565545e-07 + 2.39668918007565e-11 + 0.00000000000000e+00 + 6.20290239183761e-06 + 0.00000000000000e+00  Fidelity = 9.99773921779415e-01  ||Grad|| = 1.20347930207001e-02
@@ -1992,7 +1992,7 @@ Plotting results...
 <span class="c1">#     - Set 'verbose=True' when constructing the Quandary object. Inspect the output, in particular the selected carrier wave frequencies. Do they make sense for your target gate?</span>
 <span class="c1">#     - Increase the number of iterations (maxiter)</span>
 <span class="c1">#     - Increase the number of Bspline basis functions (increase nsplines, or decrease spline_knot_spacing)</span>
-<span class="c1">#     - Inspect the files written to './run_dir/' (or the user-defined alternative output directory). In particular config.cfg, targetgate/state.dat.</span>
+<span class="c1">#     - Inspect the files written to './run_dir/' (or the user-defined alternative output directory). In particular config.toml, targetgate/state.dat.</span>
 
 <span class="c1"># * What to do if the results don't match to other software, or to my expectations?</span>
 <span class="c1">#     - Turn on 'verbose=True' and check screen output of quandary.simulate(). Anything suspicious?</span>
@@ -2005,13 +2005,13 @@ Plotting results...
 <div class="clipboard-copy-txt" id="cell-10"># ## FAQs
 
 # * What to do if the optimizer does not converge?
-#     - Run again with a different initial guess (rand_seed=<different integer="">, randomize_ctrl_init=True/False, initctrl_MHz=<double>)
-#     - Remove or increase the control bounds (maxctrl_MHz=<larger double="" list="" or="">)
+#     - Run again with a different initial guess (rand_seed=&lt;different integer&gt;, randomize_ctrl_init=True/False, initctrl_MHz=&lt;double&gt;)
+#     - Remove or increase the control bounds (maxctrl_MHz=&lt;larger double or list&gt;)
 #     - Increase the time domain (T)
 #     - Set 'verbose=True' when constructing the Quandary object. Inspect the output, in particular the selected carrier wave frequencies. Do they make sense for your target gate?
 #     - Increase the number of iterations (maxiter)
 #     - Increase the number of Bspline basis functions (increase nsplines, or decrease spline_knot_spacing)
-#     - Inspect the files written to './run_dir/' (or the user-defined alternative output directory). In particular config.cfg, targetgate/state.dat.
+#     - Inspect the files written to './run_dir/' (or the user-defined alternative output directory). In particular config.toml, targetgate/state.dat.
 
 # * What to do if the results don't match to other software, or to my expectations?
 #     - Turn on 'verbose=True' and check screen output of quandary.simulate(). Anything suspicious?
@@ -2019,7 +2019,7 @@ Plotting results...
 #         * Simulate the pulses again with smaller Pmin and compare the uT or fidelity. If the fidelity differs significantly, time-step size should be decreased further (by using a larger "Pmin"). Have a look at the 'timestep_richardson_est' function in quandary.py, which might be helpful to do this test.  
 #     - Check if the correct pulses are used (e.g. by plotting the returned p and q after "simulation" runs as well as after calling 'evalControl(..)')
 
-# Any time: Please reach out to guenther5@llnl.gov if you have any questions, concerns, or if you found a bug.  </larger></double></different></div>
+# Any time: Please reach out to guenther5@llnl.gov if you have any questions, concerns, or if you found a bug.  </div>
 </div>
 </div>
 </div>
