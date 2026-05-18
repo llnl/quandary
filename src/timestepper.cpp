@@ -94,9 +94,9 @@ Vec TimeStepper::getState(size_t tindex){
 
 Vec TimeStepper::solveODE(int initid, Vec rho_t0){
 
-  /* Open output files */
+  /* Prepare storage for trajectory output data */
   if (writeTrajectoryDataFiles) {
-    output->openTrajectoryDataFiles("rho", initid);
+    output->initTrajectoryData(initid, mastereq);
   }
 
   /* Set initial condition  */
@@ -131,7 +131,7 @@ Vec TimeStepper::solveODE(int initid, Vec rho_t0){
     /* store and write current state. */
     if (storeFWD) VecCopy(x, store_states[n]);
     if (writeTrajectoryDataFiles) {
-      output->writeTrajectoryDataFiles(n, tstart, x, mastereq);
+      output->evalTrajectoryData(n, tstart, x, mastereq);
     }
 
     /* Take one time step */
@@ -177,8 +177,8 @@ Vec TimeStepper::solveODE(int initid, Vec rho_t0){
 
   /* Write last time step and close files */
   if (writeTrajectoryDataFiles) {
-    output->writeTrajectoryDataFiles(ntime, ntime*dt, x, mastereq);
-    output->closeTrajectoryDataFiles();
+    output->evalTrajectoryData(ntime, ntime*dt, x, mastereq);
+    output->writeTrajectoryData();
   }
   
 

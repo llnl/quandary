@@ -1,6 +1,7 @@
 #include <sys/stat.h> 
 #include <petscmat.h>
 #include <iostream> 
+#include <vector>
 #include "config.hpp"
 #include "mastereq.hpp"
 #pragma once
@@ -25,6 +26,8 @@ class Output{
   FILE* optimfile; ///< Output file for logging optimization progress
   int output_timestep_stride; ///< Time domain output frequency (write every N time steps)
   std::vector<OutputType> output_observables; ///< List of output types applied to all oscillators
+  int ntime; ///< Total number of time steps in the simulation
+  double dt; ///< Time step size
 
   size_t noscillators; ///< Number of oscillators in the system
   bool writeFullState; ///< Flag to determine if evolution of full state vector should be written to file
@@ -32,12 +35,17 @@ class Output{
   bool writeExpectedEnergy_comp; ///< Flag to determine if evolution of expected energy of the full composite system should be written to file
   bool writePopulation; ///< Flag to determine if the evolution of the energy level occupations per oscillator should be written to files
   bool writePopulation_comp; ///< Flag to determine if the evolution of the energy level occupations of the full composite system should be written to file
-  FILE *ufile; ///< File for writing real part of fullstate evolution
-  FILE *vfile; ///< File for writing imaginary part of fullstate evolution
-  std::vector<FILE *>expectedfile; ///< Files for expected energy evolution per oscillator
-  std::vector<FILE *>populationfile; ///< Files for population evolution per oscillator
-  FILE *expectedfile_comp; ///< File for expected energy evolution of the full composite system
-  FILE *populationfile_comp; ///< File for population evolution of the full composite system
+
+  // Trajectory output buffers (written at end of simulation)
+  int trajectory_initid; ///< Initial condition identifier for buffered trajectory output
+  std::vector<double> trajectory_times; ///< Stored output times
+  std::vector<std::vector<double>> expected_energy_buffer; ///< [oscillator][timepoint]
+  std::vector<double> expected_energy_comp_buffer; ///< [timepoint]
+  std::vector<std::vector<std::vector<double>>> population_buffer; ///< [oscillator][timepoint][level]
+  std::vector<std::vector<double>> population_comp_buffer; ///< [timepoint][level]
+  std::vector<std::vector<double>> fullstate_re_buffer; ///< [timepoint][state index]
+  std::vector<std::vector<double>> fullstate_im_buffer; ///< [timepoint][state index]
+  size_t trajectory_timepoint_count; ///< Number of buffered trajectory samples
 
   // VecScatter scat; ///< PETSc's scatter context for state communication across cores
   // Vec xseq; ///< Sequential vector for I/O operations
@@ -91,10 +99,8 @@ class Output{
      *
      * @param params Current parameter vector
      * @param mastereq Pointer to master equation solver
-     * @param ntime Total number of time steps
-     * @param dt Time step size
      */
-    void writeControls(Vec params, MasterEq* mastereq, int ntime, double dt);
+    void writeControls(Vec params, MasterEq* mastereq);
 
     /**
      * @brief Writes gradient vector for debugging adjoint calculations.
@@ -106,32 +112,28 @@ class Output{
     void writeGradient(Vec grad);
 
     /**
-     * @brief Opens data files for time evolution output for one oscillator.
+     * @brief Prepares buffers to store time evolution output. Called before time-stepping begins.
      *
-     * Prepares files for writing full state, expected energy, and population evolution data. Called before timestepping starts. 
-     *
-     * @param prefix Filename prefix for output files
      * @param initid Initial condition identifier
+     * @param mastereq Pointer to master equation solver
      */
-    void openTrajectoryDataFiles(std::string prefix, int initid);
+    void initTrajectoryData(int initid, MasterEq* mastereq);
 
     /**
-     * @brief Writes time evolution data to files.
+     * @brief Computes time evolution output and stores it in internal buffers.
      *
-     * Outputs state vector, expected energies, and populations at current time step. Called at each time step 
+     * Outputs state vector, expected energies, and populations at current time step. Called at each time step.
      *
      * @param timestep Current time step number
      * @param time Current time value
      * @param state Current state vector
      * @param mastereq Pointer to master equation solver
      */
-    void writeTrajectoryDataFiles(int timestep, double time, const Vec state, MasterEq* mastereq);
+    void evalTrajectoryData(int timestep, double time, const Vec state, MasterEq* mastereq);
 
     /**
-     * @brief Closes open time evolution data files.
-     *
-     * Properly closes and flushes all output files after time-stepping completion.
+     * @brief Writes time evolution data from internal buffers to files. Called after time-stepping.
      */
-    void closeTrajectoryDataFiles();
+    void writeTrajectoryData();
 
 };
