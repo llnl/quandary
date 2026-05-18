@@ -13,7 +13,7 @@ void printHelp() {
   printf("  quandary --version\n");
   printf("  quandary --help\n");
   printf("\nOPTIONS:\n");
-  printf("  <config_file>    Configuration file: .toml (preferred) or .cfg (deprecated) specifying system parameters\n");
+  printf("  <config_file>    TOML configuration file specifying system parameters\n");
   printf("  --quiet           Reduce output verbosity\n");
   printf("  --petsc-options   Pass options directly to PETSc/SLEPc (in quotes)\n");
   printf("  --version         Show version information\n");

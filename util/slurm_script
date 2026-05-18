@@ -11,7 +11,7 @@ echo -n 'This machine is '; hostname
 echo -n 'My jobid is '; echo $SLURM_JOBID
 echo -n 'Timestamp START: ';date 
 
-srun -n36 ./quandary AxC.cfg 
+srun -n36 ./quandary AxC.toml
 
 echo -n 'Timestamp ';date
 echo 'Done'

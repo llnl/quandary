@@ -47,9 +47,3 @@ To instead do an exact comparison, you can do:
 ```
 pytest --exact
 ```
-
-## Use cfg files
-Use deprecated cfg format for regression tests:
-```
-pytest tests/regression/ --config-format=cfg
-```
