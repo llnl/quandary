@@ -35,13 +35,13 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   ground_freq = trans_freq[id] * 2.0 * M_PI;
   selfkerr = selfkerr_config[id] * 2.0 * M_PI;
   detuning_freq = 2.0 * M_PI * (trans_freq[id] - rot_freq[id]);
-  transmon_resonator = config.getTransmonResonator();
-  transmon_resonator_labframe = fabs(rot_freq[id]) < 1e-12;
-  if (transmon_resonator && transmon_resonator_labframe && myid == 1) {
+  transmon_resonator_system = config.getTransmonResonator();
+  transmon_resonator_system_labframe = fabs(rot_freq[id]) < 1e-12;
+  if (transmon_resonator_system && transmon_resonator_system_labframe && myid == 1) {
     // If transmon-resonator in lab frame, the evalControl function has been hardcoded to zero out the p-pulse: p(t) = 0.0. This is not going to give the right gradient, nor is this useful for optimization. It is only needed for validating the original control pulses. TODO: Remove or refactor. 
     if (myid == 0) logger.log("\n WARNING: Transmon-resonator system in lab frame. The control function is hardcoded to have zero p-pulse, which is not useful for optimization. This is only intended for validating original control pulses. \n");
   }
-  if (transmon_resonator) {
+  if (transmon_resonator_system) {
     charge_offset = config.getChargeOffset();
     Ec = 2.*M_PI * config.getEc();  // Charging energy
     Ej = 2.*M_PI * config.getEj();
@@ -157,7 +157,7 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
       }
 
       // If transmon-resonator, initiliize the imaginary parts alpha^2 = 0.0. Overwrite here
-      if (transmon_resonator) {
+      if (transmon_resonator_system) {
         assert(carrier_freq.size() == 1);
         int nparams = basisfunctions[iseg]->getNparams();
         int istart = int(nparams/2); // THIS PROBABLY ONLY WORKS IF ONE CARRIER FREQUENCY IS USED! 
@@ -290,7 +290,7 @@ int Oscillator::evalControl(const double t, double* Re_ptr, double* Im_ptr){
             sum_q += sin_omt * Blt1 + cos_omt * Blt2;
           }
         }
-        if (transmon_resonator && transmon_resonator_labframe && myid == 1) {
+        if (transmon_resonator_system && transmon_resonator_system_labframe && myid == 1) {
           // If transmon-resonator in lab frame hardcode p to zero. 
           sum_p = 0.0;
         }
@@ -385,7 +385,7 @@ double Oscillator::expectedEnergy(const Vec x) {
   else dimmat = (PetscInt) dim/2;
 
   // If this is a transmon-resonator system and the ID is 0 (such that this is a transmon in the charge basis), then compute the charging and josephson energy instead of the expected excitation number in the fock basis. 
-  if (transmon_resonator && myid == 0) {
+  if (transmon_resonator_system && myid == 0) {
     // charging energy: 4𝐸_𝐶 ∑_n (𝑛−𝑛_𝑔 )^2 |𝜓_𝑛 |^2  for Schroedinger, or 4𝐸_𝐶 ∑_𝑛(𝑛−𝑛_𝑔 )^2 𝜌_(𝑛,𝑛) for lindblad
     // Josephson energy: =− 𝐸_𝐽 ∑_𝑛 Re(𝜓_𝑛^∗ 𝜓_(𝑛+1)) for Schroedinger, or −𝐸_𝐽 ∑_𝑛 𝑅𝑒(𝜌_(𝑛,𝑛+1) ) for Lindblad
     double e_charging = 0.0;
@@ -557,7 +557,7 @@ void Oscillator::population(const Vec x, std::vector<double> &pop) {
 
   assert (pop.size() == nlevels);
 
-  if (transmon_resonator && myid == 0) {
+  if (transmon_resonator_system && myid == 0) {
     // Iterate over the eigenvectors 
     for (size_t i=0; i<transmon_eigenvectors.size(); i++) {
       double pop_i = 0.0;
