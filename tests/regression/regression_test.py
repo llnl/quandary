@@ -48,7 +48,7 @@ def is_gpu_mode(petsc_options: str) -> bool:
 
 
 def get_runtype(config_path: str) -> str:
-    """Read the runtype value from a quandary .cfg or .toml config file."""
+    """Read the runtype value from a quandary .toml config file."""
     with open(config_path, 'r') as f:
         for line in f:
             m = re.match(r'^\s*runtype\s*=\s*"?(\w+)"?', line)
@@ -62,7 +62,6 @@ def test_eval(test_case: Case, request):
     exact = request.config.getoption("--exact")
     mpi_exec = request.config.getoption("--mpi-exec")
     mpi_opt = request.config.getoption("--mpi-opt")
-    config_format = request.config.getoption("--config-format")
     petsc_options = request.config.getoption("--petsc-options")
     gpu_mode = is_gpu_mode(petsc_options)
 
@@ -71,11 +70,7 @@ def test_eval(test_case: Case, request):
     number_of_processes_list = test_case.number_of_processes
 
     simulation_dir = os.path.join(TEST_PATH, simulation_name)
-    config_file = os.path.join(simulation_dir, f"{simulation_name}.{config_format}")
-
-    # Verify config file exists
-    if not os.path.exists(config_file):
-        pytest.skip(f"Config file {config_file} not found for format '{config_format}'")
+    config_file = os.path.join(simulation_dir, f"{simulation_name}.toml")
 
     runtype = get_runtype(config_file)
     if gpu_mode and runtype == "optimization":
