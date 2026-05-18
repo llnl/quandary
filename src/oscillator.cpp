@@ -6,7 +6,7 @@
 
 Oscillator::Oscillator(){
   nlevels = 0;
-  Tfinal = 0;
+  total_time = 0;
   ground_freq = 0.0;
   control_zero_boundary_condition = true;
 }
@@ -19,9 +19,7 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   const std::vector<size_t>& nlevels_all_ = config.getNLevels();
   nlevels = nlevels_all_[id];
 
-  double dt = config.getDt();
-  size_t ntime = config.getNTime();
-  Tfinal = dt * ntime;
+  total_time = config.getTotalTime();
 
   const std::vector<double>& trans_freq = config.getTransitionFrequency();
   const std::vector<double>& rot_freq = config.getRotationFrequency();
@@ -69,7 +67,7 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   // for (auto controlparameterization : config.getControlParameterizations(id)) { 
   const auto& controlparameterization = config.getControlParameterizations(id);
   auto tstart = controlparameterization.tstart.value_or(0.0);
-  auto tstop  = controlparameterization.tstop.value_or(Tfinal);
+  auto tstop  = controlparameterization.tstop.value_or(total_time);
  
   switch (controlparameterization.type) {
     case ControlType::BSPLINE: {
@@ -233,12 +231,6 @@ void Oscillator::evalControlVariationDiff(Vec G, double var_reg_bar, int skip_to
 
 int Oscillator::evalControl(const double t, double* Re_ptr, double* Im_ptr){
 
-  // Sanity check 
-  if ( t > Tfinal ){
-    printf("ERROR: accessing spline outside of [0,T] at %f. Should never happen! Bug.\n", t);
-    exit(1);
-  }
-
   // Default: Non controllable oscillator. Will typically be overwritten below. 
   *Re_ptr = 0.0;
   *Im_ptr = 0.0;
@@ -246,10 +238,9 @@ int Oscillator::evalControl(const double t, double* Re_ptr, double* Im_ptr){
   /* Evaluate p(t) and q(t) using the parameters */
   if (params.size()>0) {
     // Iterate over control parameterizations. Only one will be used, see the break-statement. 
-    for (size_t bs = 0; bs < basisfunctions.size(); bs++){
-      if (basisfunctions[bs]->getTstart() <= t && 
-          basisfunctions[bs]->getTstop() >= t ) {
-
+    for (size_t bs = 0; bs < basisfunctions.size(); bs++){ 
+     if (basisfunctions[bs]->getTstart() - 1e-13 <= t && 
+          basisfunctions[bs]->getTstop() + 1e-13 >= t ) {
         /* Iterate over carrier frequencies */
         double sum_p = 0.0;
         double sum_q = 0.0;
@@ -286,8 +277,8 @@ int Oscillator::evalControl_diff(const double t, double* grad, const double pbar
 
     // Iterate over control parameterizations. Only one is active, see break statement.
     for (size_t bs = 0; bs < basisfunctions.size(); bs++){
-      if (basisfunctions[bs]->getTstart() <= t && 
-          basisfunctions[bs]->getTstop() >= t ) {
+      if (basisfunctions[bs]->getTstart() - 1e-13 <= t && 
+          basisfunctions[bs]->getTstop() + 1e-13 >= t ) {
         /* Iterate over carrier frequencies */
         for (size_t f=0; f < carrier_freq.size(); f++) {
 
@@ -317,12 +308,6 @@ int Oscillator::evalControl_diff(const double t, double* grad, const double pbar
 }
 
 int Oscillator::evalControl_Labframe(const double t, double* f){
-
-  // Sanity check 
-  if ( t > Tfinal ){
-    printf("ERROR: accessing spline outside of [0,T] at %f. Should never happen! Bug.\n", t);
-    exit(1);
-  }
 
   /* Evaluate the spline at time t  */
   *f = 0.0;
