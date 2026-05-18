@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778785437239,
+  "lastUpdate": 1779135786943,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -3035,6 +3035,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
             "value": 4124.85,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Stefanie Guenther",
+            "username": "steffi7574",
+            "email": "guenther5@llnl.gov"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "b5e9ef315b1bb1494ee56db364730551ab2d5f0b",
+          "message": "Merge pull request #126 from llnl/add-gpu-env-and-script\n\nAdd script and spack env for running on Tuo with GPUs",
+          "timestamp": "2026-05-18T19:15:18Z",
+          "url": "https://github.com/llnl/quandary/commit/b5e9ef315b1bb1494ee56db364730551ab2d5f0b"
+        },
+        "date": 1779135784672,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "value": 0.700513317482546,
+            "range": "0.20838698824755492",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "value": 85.19,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "value": 5.108386614127085,
+            "range": "0.033682667071130844",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "value": 4126.62,
             "unit": "MB"
           }
         ]
