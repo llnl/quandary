@@ -457,8 +457,8 @@ def setup_quandary(
 
 def _set_target(
     setup: Setup,
-    targetgate=None,
-    targetstate=None,
+    target_gate=None,
+    target_state=None,
     target_levels: Optional[Sequence[int]] = None,
     gate_rot_freq: Optional[Sequence[float]] = None,
 ) -> None:
@@ -468,19 +468,19 @@ def _set_target(
     gate/state data to files in the output directory, and sets
     ``setup.optim_target``.
     """
-    num_targets = sum([targetgate is not None, targetstate is not None, target_levels is not None])
+    num_targets = sum([target_gate is not None, target_state is not None, target_levels is not None])
     if num_targets > 1:
-        raise ValueError("Can only specify one of: targetgate, targetstate, target_levels")
+        raise ValueError("Can only specify one of: target_gate, target_state, target_levels")
     if num_targets == 0:
         return
 
     output_dir = _get_output_dir(setup)
     os.makedirs(output_dir, exist_ok=True)
 
-    if targetgate is not None:
+    if target_gate is not None:
         # Gate optimization: write gate to file
-        gate_array = np.array(targetgate, dtype=complex)
-        gate_file = os.path.join(output_dir, "targetgate.dat")
+        gate_array = np.array(target_gate, dtype=complex)
+        gate_file = os.path.join(output_dir, "target_gate.dat")
         gate_vec = np.concatenate((
             gate_array.real.ravel(order='F'),
             gate_array.imag.ravel(order='F')
@@ -495,10 +495,10 @@ def _set_target(
             target.gate_rot_freq = gate_rot_freq
         setup.optim_target = target
 
-    elif targetstate is not None:
+    elif target_state is not None:
         # State-to-state: write target state to file
-        target_array = np.array(targetstate, dtype=complex)
-        state_file = os.path.join(output_dir, "targetstate.dat")
+        target_array = np.array(target_state, dtype=complex)
+        state_file = os.path.join(output_dir, "target_state.dat")
         state_vec = np.concatenate((target_array.real.ravel(order='F'), target_array.imag.ravel(order='F')))
         np.savetxt(state_file, state_vec, fmt='%20.13e')
 
@@ -517,8 +517,8 @@ def _set_target(
 
 def _setup_optimization(
     setup: Setup,
-    targetgate=None,
-    targetstate=None,
+    target_gate=None,
+    target_state=None,
     target_levels: Optional[Sequence[int]] = None,
     gate_rot_freq: Optional[Sequence[float]] = None,
     pcof=None,
@@ -530,7 +530,7 @@ def _setup_optimization(
     setup.output_directory = resolve_output_dir(setup.output_directory)
     setup.runtype = RunType.OPTIMIZATION
 
-    _set_target(setup, targetgate=targetgate, targetstate=targetstate,
+    _set_target(setup, target_gate=target_gate, target_state=target_state,
                 target_levels=target_levels, gate_rot_freq=gate_rot_freq)
 
     output_dir = _get_output_dir(setup)

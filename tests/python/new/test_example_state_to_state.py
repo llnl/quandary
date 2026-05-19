@@ -58,7 +58,7 @@ def test_example_state_to_state(tmp_path, request):
     T = 50.0
     maxctrl_MHz = 4.0
     initialcondition = [1.0, 0.0]
-    targetstate = [1.0/np.sqrt(2), 1.0/np.sqrt(2)]
+    target_state = [1.0/np.sqrt(2), 1.0/np.sqrt(2)]
     n_osc = 1
     n_levels = 1
 
@@ -90,7 +90,7 @@ def test_example_state_to_state(tmp_path, request):
 
     results = optimize(
         setup,
-        targetstate=targetstate,
+        target_state=target_state,
         control_initialization_amplitude=init_amplitude,
         quiet=True,
     )

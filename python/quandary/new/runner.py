@@ -260,8 +260,8 @@ def _run_subprocess(
 
 def optimize(
     setup: Setup,
-    targetgate=None,
-    targetstate=None,
+    target_gate=None,
+    target_state=None,
     target_levels=None,
     gate_rot_freq=None,
     pcof=None,
@@ -283,9 +283,9 @@ def optimize(
     ----------
     setup : Setup
         Physics setup from setup_quandary().
-    targetgate : array-like, optional
+    target_gate : array-like, optional
         Target unitary gate.
-    targetstate : array-like, optional
+    target_state : array-like, optional
         Target state vector.
     target_levels : sequence of int, optional
         Target product state, e.g. [0, 0, 1].
@@ -323,8 +323,8 @@ def optimize(
     """
     configured = _setup_optimization(
         setup,
-        targetgate=targetgate,
-        targetstate=targetstate,
+        target_gate=target_gate,
+        target_state=target_state,
         target_levels=target_levels,
         gate_rot_freq=gate_rot_freq,
         pcof=pcof,
