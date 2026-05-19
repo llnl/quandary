@@ -1233,7 +1233,7 @@ void Config::finalize() {
     data.initial_condition.type = InitialConditionType::DIAGONAL;
   }
 
-  // For BASIS, ENSEMBLE, and DIAGONAL, or default to all oscillators IDs
+  // For BASIS, ENSEMBLE, and DIAGONAL, set the oscillator IDs or default to all oscillators
   if (data.initial_condition.type == InitialConditionType::BASIS || data.initial_condition.type == InitialConditionType::ENSEMBLE || data.initial_condition.type == InitialConditionType::DIAGONAL) {
     if (!data.initial_condition.subsystem.has_value()) {
       data.initial_condition.subsystem = std::vector<size_t>(data.nlevels.size());

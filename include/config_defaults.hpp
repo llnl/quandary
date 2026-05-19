@@ -49,17 +49,17 @@ const double OPTIM_TOL_FINAL_COST = 1e-8; ///< Default final time cost tolerance
 const double OPTIM_TOL_INFIDELITY = 1e-5; ///< Default infidelity tolerance
 const size_t OPTIM_MAXITER = 200; ///< Default maximum optimization iterations
 
-const double OPTIM_PENALTY_LEAKAGE = 0.0; ///< Default first integral penalty coefficient
+const double OPTIM_PENALTY_LEAKAGE = 0.1; ///< Default first integral penalty coefficient
 const double OPTIM_PENALTY_WEIGHTEDCOST = 0.0; ///< Default weighted cost penalty coefficient
 const double OPTIM_PENALTY_WEIGHTEDCOST_WIDTH = 0.5; ///< Default weighted cost penalty width
-const double OPTIM_PENALTY_DPDM = 0.0; ///< Default second derivative penalty coefficient
-const double OPTIM_PENALTY_ENERGY = 0.0; ///< Default energy penalty coefficient
+const double OPTIM_PENALTY_DPDM = 0.01; ///< Default second derivative penalty coefficient
+const double OPTIM_PENALTY_ENERGY = 0.1; ///< Default energy penalty coefficient
 const double OPTIM_PENALTY_VARIATION = 0.01; ///< Default amplitude variation penalty coefficient
 
 inline const std::string OUTPUT_DIRECTORY = "./data_out"; ///< Default output directory
 
 const size_t OUTPUT_TIMESTEP_STRIDE = 1; ///< Default output frequency
-const size_t OUTPUT_OPTIMIZATION_STRIDE = 10; ///< Default optimization monitoring frequency
+const size_t OUTPUT_OPTIMIZATION_STRIDE = 1; ///< Default optimization monitoring frequency
 
 const RunType RUNTYPE = RunType::SIMULATION; ///< Default run type
 const bool USEMATFREE = true; ///< Default matrix-free solver setting
