@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1779135786943,
+  "lastUpdate": 1779149144333,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -3079,6 +3079,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
             "value": 4126.62,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Tara Drwenski",
+            "username": "tdrwenski",
+            "email": "tdrwenski@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "52d372d3a1d85a7e78c79c66f10eecb8ed2fe731",
+          "message": "Merge pull request #130 from llnl/remove-cfg-config\n\nRemove deprecated cfg config",
+          "timestamp": "2026-05-18T22:10:59Z",
+          "url": "https://github.com/llnl/quandary/commit/52d372d3a1d85a7e78c79c66f10eecb8ed2fe731"
+        },
+        "date": 1779149142307,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "value": 0.704296946991235,
+            "range": "0.36759726846069374",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "value": 85.43,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "value": 5.187234411016107,
+            "range": "0.05216429786025078",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "value": 4120.95,
             "unit": "MB"
           }
         ]
