@@ -359,7 +359,7 @@ double OptimProblem::evalF(const Vec x) {
 
   /* evaluate the SNR^2 (this involves comunication of the resonator fields)*/
   double snr_sq = evalSNR();
-  printf("SNR^2 Integrated (non-scaled) = %1.14e\n", snr_sq);
+  printf("\n %d: SNR^2 Integrated (non-scaled) = %1.14e\n\n", mpirank_world, snr_sq);
 
   /* Sum up from initial conditions processors */
   double mypen_leak = obj_penal_leakage;
