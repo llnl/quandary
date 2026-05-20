@@ -154,7 +154,7 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
     }
 
     /* Evaluate resonator field value */
-    if (mastereq->getTransmonResonatorSystem()) {
+    if (mastereq->isTransmonResonatorSystem()) {
       appendResonatorFieldSample(x);
     }
 
@@ -200,7 +200,7 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
   }
 
   /* Add last time-step's Resonator field value */
-  if (mastereq->getTransmonResonatorSystem()) {
+  if (mastereq->isTransmonResonatorSystem()) {
     appendResonatorFieldSample(x);
   }
  
@@ -209,7 +209,7 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
     output->evalTrajectoryData(ntime, ntime*dt, x, mastereq);
     output->writeTrajectoryData();
 
-    if (mastereq->getTransmonResonatorSystem()) {
+    if (mastereq->isTransmonResonatorSystem()) {
       output->writeResonatorFieldTrajectory(resonator_field_re, resonator_field_im);
     }
   }
@@ -1136,7 +1136,7 @@ Vec PetscTS::solveODE(int initid, int iinit_local, Vec rho_t0){
   TSGetStepNumber(ts_run, &nsteps);
   if (writeTrajectoryDataFiles) {
     output->writeTrajectoryData();
-    if (mastereq->getTransmonResonatorSystem()) {
+    if (mastereq->isTransmonResonatorSystem()) {
       output->writeResonatorFieldTrajectory(resonator_field_re, resonator_field_im);
     }
   }
@@ -1312,7 +1312,7 @@ PetscErrorCode PetscTS::monitorTrajectory(TS ts, PetscInt step, PetscReal time, 
   }
 
   // Add to resonator field trajectory. 
-  if (self->mastereq->getTransmonResonatorSystem()){
+  if (self->mastereq->isTransmonResonatorSystem()){
     self->appendResonatorFieldSample(state);
   }
 

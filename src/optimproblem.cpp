@@ -185,28 +185,22 @@ OptimProblem::~OptimProblem() {
 double OptimProblem::evalSNR(){
 
   // Only relevant for resonator system
-  if (ninit != 2 || !timestepper->mastereq->getTransmonResonatorSystem()) 
+  if (ninit != 2 || !timestepper->mastereq->isTransmonResonatorSystem()) 
     return 0.0; 
 
-  // Communicate resonator field from the 2nd initial condition processors to the first initial condition processor
-  // Interpolate to s common time grid using that of the 0'th resonator field and corresponding times 
-  // Integrate |resonator_re_1 - resonator_re_0|^2 + |resonator_im_1 - resonator_im_0|^2 
+  // Communicate resonator field from the 1st initial condition processors to the zero's initial condition processor
+  // Interpolate the 1st resonator field to the time grid of the zero's field  
+  // Integrate the SNR^2: |resonator_re_1 - resonator_re_0|^2 + |resonator_im_1 - resonator_im_0|^2 
 
-
-  const int iinit0_global = 0;
-  const int iinit1_global = 1;
-  const int owner0 = iinit0_global / ninit_local;
+  const int iinit0_global = 0;   
+  const int iinit1_global = 1;   
+  const int owner0 = iinit0_global / ninit_local; 
   const int owner1 = iinit1_global / ninit_local;
   const int local0 = iinit0_global % ninit_local;
   const int local1 = iinit1_global % ninit_local;
 
-  std::vector<double> t0;
-  std::vector<double> re0;
-  std::vector<double> im0;
-  std::vector<double> t1;
-  std::vector<double> re1;
-  std::vector<double> im1;
-
+  std::vector<double> t0, re0, im0;
+  std::vector<double> t1, re1, im1;
   if (mpirank_init == owner0) {
     t0 = resonator_field_times[local0];
     re0 = resonator_field_re_local[local0];
@@ -217,12 +211,13 @@ double OptimProblem::evalSNR(){
     re1 = resonator_field_re_local[local1];
     im1 = resonator_field_im_local[local1];
   }
-
+  // Communicate the number of stored samples
   int n0 = static_cast<int>(t0.size());
   int n1 = static_cast<int>(t1.size());
   MPI_Bcast(&n0, 1, MPI_INT, owner0, comm_init);
   MPI_Bcast(&n1, 1, MPI_INT, owner1, comm_init);
 
+  // Ensure receive buffers are allocated on all ranks before broadcasting payloads.
   t0.resize(n0);
   re0.resize(n0);
   im0.resize(n0);
@@ -230,6 +225,7 @@ double OptimProblem::evalSNR(){
   re1.resize(n1);
   im1.resize(n1);
 
+  // Communicate the resonator field trajecotires and times
   MPI_Bcast(t0.data(), n0, MPI_DOUBLE, owner0, comm_init);
   MPI_Bcast(re0.data(), n0, MPI_DOUBLE, owner0, comm_init);
   MPI_Bcast(im0.data(), n0, MPI_DOUBLE, owner0, comm_init);
@@ -237,6 +233,9 @@ double OptimProblem::evalSNR(){
   MPI_Bcast(re1.data(), n1, MPI_DOUBLE, owner1, comm_init);
   MPI_Bcast(im1.data(), n1, MPI_DOUBLE, owner1, comm_init);
 
+  if (n0 < 2 || n1 < 2) return 0.0;
+
+  // Define a helper function to interpolate the resonator field onto different time points. Linear interpolation. Usage: interp_linear(t, y, x) returns the interpolated value at time x given the trajectory defined by time points t and values y. If x is outside of the range of t, the function returns the boundary value.
   auto interp_linear = [](const std::vector<double>& t, const std::vector<double>& y, double x) {
     if (x <= t.front()) return y.front();
     if (x >= t.back()) return y.back();
@@ -249,25 +248,30 @@ double OptimProblem::evalSNR(){
     return (1.0 - a) * y[i0] + a * y[i1];
   };
 
+  // Integrate the SNR^2 using the trapezoidal rule on the zero's time grid.
   double snr_sq = 0.0;
   for (int i = 0; i < n0 - 1; i++) {
+    // Get current and next time points
     const double ti = t0[i];
     const double tip1 = t0[i + 1];
     const double dt = tip1 - ti;
     if (dt <= 0.0) continue;
 
+    // Interpolate first fields at t_i and t_i+1 time points and evaluate the integrand |resonator_1 - resonator_0|^2 = (re1 - re0)^2 + (im1 - im0)^2, where re0 and im0 are already defined on the t0 grid, but re1 and im1 need to be interpolated from the t1 grid.
+    // t_i
     const double re1_i = interp_linear(t1, re1, ti);
     const double im1_i = interp_linear(t1, im1, ti);
     const double dre_i = re1_i - re0[i];
     const double dim_i = im1_i - im0[i];
     const double f_i = dre_i * dre_i + dim_i * dim_i;
-
+    // t_i+1
     const double re1_ip1 = interp_linear(t1, re1, tip1);
     const double im1_ip1 = interp_linear(t1, im1, tip1);
     const double dre_ip1 = re1_ip1 - re0[i + 1];
     const double dim_ip1 = im1_ip1 - im0[i + 1];
     const double f_ip1 = dre_ip1 * dre_ip1 + dim_ip1 * dim_ip1;
 
+    // Trapezoidal rule for SNR^2 integral
     snr_sq += 0.5 * (f_i + f_ip1) * dt;
   }
 
