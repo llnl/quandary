@@ -25,6 +25,7 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
   ninit_local = ninit / mpisize_init; 
   resonator_field_re_local.resize(ninit_local);
   resonator_field_im_local.resize(ninit_local);
+  resonator_field_times.resize(ninit_local);
 
   /*  If Schroedingers solver, allocate storage for the final states at time T for each initial condition. Schroedinger's solver does not store the time-trajectories during forward ODE solve, but instead recomputes the primal states during the adjoint solve. Therefore we need to store the terminal condition for the backwards primal solve. Be aware that the final states stored here will be overwritten during backwards computation!! */
   if (timestepper->mastereq->decoherence_type == DecoherenceType::NONE) {
@@ -163,14 +164,6 @@ OptimProblem::OptimProblem(const Config& config, TimeStepper* timestepper_, MPI_
   VecZeroEntries(xtmp);
 }
 
-void OptimProblem::storeResonatorFieldTrajectory(int iinit_local) {
-  if (iinit_local < 0 || iinit_local >= ninit_local) {
-    return;
-  }
-  resonator_field_re_local[iinit_local] = timestepper->getResonatorFieldRe();
-  resonator_field_im_local[iinit_local] = timestepper->getResonatorFieldIm();
-}
-
 OptimProblem::~OptimProblem() {
   delete [] mygrad;
   delete optim_target;
@@ -188,6 +181,99 @@ OptimProblem::~OptimProblem() {
 
   TaoDestroy(&tao);
 }
+
+double OptimProblem::evalSNR(){
+
+  // Only relevant for resonator system
+  if (ninit != 2 || !timestepper->mastereq->getTransmonResonatorSystem()) 
+    return 0.0; 
+
+  // Communicate resonator field from the 2nd initial condition processors to the first initial condition processor
+  // Interpolate to s common time grid using that of the 0'th resonator field and corresponding times 
+  // Integrate |resonator_re_1 - resonator_re_0|^2 + |resonator_im_1 - resonator_im_0|^2 
+
+
+  const int iinit0_global = 0;
+  const int iinit1_global = 1;
+  const int owner0 = iinit0_global / ninit_local;
+  const int owner1 = iinit1_global / ninit_local;
+  const int local0 = iinit0_global % ninit_local;
+  const int local1 = iinit1_global % ninit_local;
+
+  std::vector<double> t0;
+  std::vector<double> re0;
+  std::vector<double> im0;
+  std::vector<double> t1;
+  std::vector<double> re1;
+  std::vector<double> im1;
+
+  if (mpirank_init == owner0) {
+    t0 = resonator_field_times[local0];
+    re0 = resonator_field_re_local[local0];
+    im0 = resonator_field_im_local[local0];
+  }
+  if (mpirank_init == owner1) {
+    t1 = resonator_field_times[local1];
+    re1 = resonator_field_re_local[local1];
+    im1 = resonator_field_im_local[local1];
+  }
+
+  int n0 = static_cast<int>(t0.size());
+  int n1 = static_cast<int>(t1.size());
+  MPI_Bcast(&n0, 1, MPI_INT, owner0, comm_init);
+  MPI_Bcast(&n1, 1, MPI_INT, owner1, comm_init);
+
+  t0.resize(n0);
+  re0.resize(n0);
+  im0.resize(n0);
+  t1.resize(n1);
+  re1.resize(n1);
+  im1.resize(n1);
+
+  MPI_Bcast(t0.data(), n0, MPI_DOUBLE, owner0, comm_init);
+  MPI_Bcast(re0.data(), n0, MPI_DOUBLE, owner0, comm_init);
+  MPI_Bcast(im0.data(), n0, MPI_DOUBLE, owner0, comm_init);
+  MPI_Bcast(t1.data(), n1, MPI_DOUBLE, owner1, comm_init);
+  MPI_Bcast(re1.data(), n1, MPI_DOUBLE, owner1, comm_init);
+  MPI_Bcast(im1.data(), n1, MPI_DOUBLE, owner1, comm_init);
+
+  auto interp_linear = [](const std::vector<double>& t, const std::vector<double>& y, double x) {
+    if (x <= t.front()) return y.front();
+    if (x >= t.back()) return y.back();
+    auto it = std::upper_bound(t.begin(), t.end(), x);
+    const int i1 = static_cast<int>(it - t.begin());
+    const int i0 = i1 - 1;
+    const double dt = t[i1] - t[i0];
+    if (std::abs(dt) < 1e-16) return y[i0];
+    const double a = (x - t[i0]) / dt;
+    return (1.0 - a) * y[i0] + a * y[i1];
+  };
+
+  double snr_sq = 0.0;
+  for (int i = 0; i < n0 - 1; i++) {
+    const double ti = t0[i];
+    const double tip1 = t0[i + 1];
+    const double dt = tip1 - ti;
+    if (dt <= 0.0) continue;
+
+    const double re1_i = interp_linear(t1, re1, ti);
+    const double im1_i = interp_linear(t1, im1, ti);
+    const double dre_i = re1_i - re0[i];
+    const double dim_i = im1_i - im0[i];
+    const double f_i = dre_i * dre_i + dim_i * dim_i;
+
+    const double re1_ip1 = interp_linear(t1, re1, tip1);
+    const double im1_ip1 = interp_linear(t1, im1, tip1);
+    const double dre_ip1 = re1_ip1 - re0[i + 1];
+    const double dim_ip1 = im1_ip1 - im0[i + 1];
+    const double f_ip1 = dre_ip1 * dre_ip1 + dim_ip1 * dim_ip1;
+
+    snr_sq += 0.5 * (f_i + f_ip1) * dt;
+  }
+
+  return snr_sq;
+}
+
 
 
 
@@ -216,6 +302,7 @@ double OptimProblem::evalF(const Vec x) {
   for (int iinit = 0; iinit < ninit_local; iinit++) {
     resonator_field_re_local[iinit].clear();
     resonator_field_im_local[iinit].clear();
+    resonator_field_times[iinit].clear();
   }
 
   /*  Iterate over initial condition */
@@ -231,7 +318,11 @@ double OptimProblem::evalF(const Vec x) {
 
     /* Run forward with initial condition initid */
     Vec finalstate = timestepper->solveODE(initid, iinit, rho_t0);
-    storeResonatorFieldTrajectory(iinit);
+
+    /* Store the resonator field for for this initial condition (for later use in the SNR computation)*/
+    resonator_field_re_local[iinit] = timestepper->getResonatorFieldRe();
+    resonator_field_im_local[iinit] = timestepper->getResonatorFieldIm();
+    resonator_field_times[iinit] = output->getTrajectoryTimes();
 
     /* Add to leakage penalty term */
     obj_penal_leakage += obj_weights[iinit_global] * gamma_penalty_leakage * timestepper->getLeakageIntegral();
@@ -261,6 +352,10 @@ double OptimProblem::evalF(const Vec x) {
 
     // printf("%d, %d: iinit obj_iinit: %f * (%1.14e + i %1.14e, Overlap=%1.14e + i %1.14e\n", mpirank_world, mpirank_init, obj_weights[iinit], obj_iinit_re, obj_iinit_im, fidelity_iinit_re, fidelity_iinit_im);
   }
+
+  /* evaluate the SNR^2 (this involves comunication of the resonator fields)*/
+  double snr_sq = evalSNR();
+  printf("SNR^2 Integrated (non-scaled) = %1.14e\n", snr_sq);
 
   /* Sum up from initial conditions processors */
   double mypen_leak = obj_penal_leakage;
@@ -370,6 +465,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   for (int iinit = 0; iinit < ninit_local; iinit++) {
     resonator_field_re_local[iinit].clear();
     resonator_field_im_local[iinit].clear();
+    resonator_field_times[iinit].clear();
   }
 
   /*  Iterate over initial condition */
@@ -387,7 +483,11 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
 
     /* Run forward with initial condition rho_t0 */
     Vec finalstate = timestepper->solveODE(initid, iinit, rho_t0);
-    storeResonatorFieldTrajectory(iinit);
+
+    /* Store the resonator field for for this initial condition (for later use in the SNR computation)*/
+    resonator_field_re_local[iinit] = timestepper->getResonatorFieldRe();
+    resonator_field_im_local[iinit] = timestepper->getResonatorFieldIm();
+    resonator_field_times[iinit] = output->getTrajectoryTimes();
 
     /* Store the final state for the Schroedinger solver */
     if (timestepper->mastereq->decoherence_type == DecoherenceType::NONE) VecCopy(finalstate, store_finalstates[iinit]);

@@ -58,7 +58,7 @@ class TimeStepper{
     std::vector<double> resonator_field_re; ///< Real part trajectory of <I \otimes a>(t) for current forward solve
     std::vector<double> resonator_field_im; ///< Imaginary part trajectory of <I \otimes a>(t) for current forward solve
 
-    void appendResonatorFieldSample(double time, const Vec x);
+    void appendResonatorFieldSample(const Vec x);
     void evalResonatorField(const Vec x, double* field_re, double* field_im) const;
 
   public:

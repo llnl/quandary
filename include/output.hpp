@@ -70,6 +70,13 @@ class Output{
 
     ~Output();
 
+    /** 
+     * @brief Retrieve the trajectory times for the current initial condition.
+     *
+     * @return Vector of trajectory times
+     */
+    const std::vector<double>& getTrajectoryTimes() const { return trajectory_times; };
+
     /**
      * @brief Writes optimization progress to history file.
      *

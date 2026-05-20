@@ -155,7 +155,7 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
 
     /* Evaluate resonator field value */
     if (mastereq->getTransmonResonatorSystem()) {
-      appendResonatorFieldSample(tstart, x);
+      appendResonatorFieldSample(x);
     }
 
     /* Take one time step */
@@ -201,7 +201,7 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
 
   /* Add last time-step's Resonator field value */
   if (mastereq->getTransmonResonatorSystem()) {
-    appendResonatorFieldSample(ntime * dt, x);
+    appendResonatorFieldSample(x);
   }
  
   /* Write last time step and close files */
@@ -218,7 +218,7 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
   return x;
 }
 
-void TimeStepper::appendResonatorFieldSample(double time, const Vec x) {
+void TimeStepper::appendResonatorFieldSample(const Vec x) {
 
   assert(mastereq->getNOscillators() == 2);  // Only for transmon-resonator systems. 
 
@@ -1313,7 +1313,7 @@ PetscErrorCode PetscTS::monitorTrajectory(TS ts, PetscInt step, PetscReal time, 
 
   // Add to resonator field trajectory. 
   if (self->mastereq->getTransmonResonatorSystem()){
-    self->appendResonatorFieldSample(time, state);
+    self->appendResonatorFieldSample(state);
   }
 
   // evaluate trajectory output 
