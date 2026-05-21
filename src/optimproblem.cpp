@@ -184,9 +184,8 @@ OptimProblem::~OptimProblem() {
 
 double OptimProblem::evalSNR(){
 
-  // Only relevant for resonator system
-  if (ninit != 2 || !timestepper->mastereq->isTransmonResonatorSystem()) 
-    return 0.0; 
+  // Only if two initial states are given.
+  if (ninit != 2) return 0.0;
 
   // Communicate resonator field from the 1st initial condition processors to the zero's initial condition processor
   // Interpolate the 1st resonator field to the time grid of the zero's field  
@@ -357,10 +356,6 @@ double OptimProblem::evalF(const Vec x) {
     // printf("%d, %d: iinit obj_iinit: %f * (%1.14e + i %1.14e, Overlap=%1.14e + i %1.14e\n", mpirank_world, mpirank_init, obj_weights[iinit], obj_iinit_re, obj_iinit_im, fidelity_iinit_re, fidelity_iinit_im);
   }
 
-  /* evaluate the SNR^2 (this involves comunication of the resonator fields)*/
-  double snr_sq = evalSNR();
-  printf("\n %d: SNR^2 Integrated (non-scaled) = %1.14e\n\n", mpirank_world, snr_sq);
-
   /* Sum up from initial conditions processors */
   double mypen_leak = obj_penal_leakage;
   double mypen_wcost = obj_penal_weightedcost;
@@ -388,6 +383,13 @@ double OptimProblem::evalF(const Vec x) {
 
   /* Finalize the objective function */
   obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im);
+
+  /* evaluate the SNR^2 (this involves comunication of the resonator fields) */
+  if (timestepper->mastereq->isTransmonResonatorSystem()) { // Only relevant for resonator system
+    double snr_sq = evalSNR();
+    obj_cost = snr_sq;
+    // printf("\n %d: SNR^2 Integrated (non-scaled) = %1.14e\n\n", mpirank_world, snr_sq);
+  }
 
   /* Evaluate Tikhonov regularization term: gamma/2 * ||x-x0||^2*/
   double xnorm;
@@ -569,6 +571,13 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   /* Finalize the objective function Jtrace to get the infidelity. 
      If Schroedingers solver, need to take the absolute value */
   obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im);
+
+  /* evaluate the SNR^2 (this involves comunication of the resonator fields) */
+  if (timestepper->mastereq->isTransmonResonatorSystem()) { // Only relevant for resonator system
+    double snr_sq = evalSNR();
+    obj_cost = snr_sq;
+    // printf("\n %d: SNR^2 Integrated (non-scaled) = %1.14e\n\n", mpirank_world, snr_sq);
+  }
 
   /* Evaluate Tikhonov regularization term += gamma/2 * ||x||^2*/
   double xnorm;
