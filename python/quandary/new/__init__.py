@@ -143,4 +143,5 @@ __all__ = [
     "setup_quandary",
     "resolve_output_dir",
     "set_target",
+    "set_initial_condition",
 ]
