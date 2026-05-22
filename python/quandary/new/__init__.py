@@ -85,6 +85,7 @@ from .utils import (  # noqa: F401, E402
 from .setup_helpers import (  # noqa: F401, E402
     setup_quandary,
     resolve_output_dir,
+    set_target,
 )
 
 # Define public API
@@ -140,4 +141,5 @@ __all__ = [
     # Setup helpers
     "setup_quandary",
     "resolve_output_dir",
+    "set_target",
 ]

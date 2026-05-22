@@ -455,7 +455,7 @@ def setup_quandary(
     return setup
 
 
-def _set_target(
+def set_target(
     setup: Setup,
     target_gate=None,
     target_state=None,
@@ -530,7 +530,7 @@ def _setup_optimization(
     setup.output_directory = resolve_output_dir(setup.output_directory)
     setup.runtype = RunType.OPTIMIZATION
 
-    _set_target(setup, target_gate=target_gate, target_state=target_state,
+    set_target(setup, target_gate=target_gate, target_state=target_state,
                 target_levels=target_levels, gate_rot_freq=gate_rot_freq)
 
     output_dir = _get_output_dir(setup)
