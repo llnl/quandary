@@ -35,7 +35,9 @@ class TimeStepper{
     Vec x; ///< Auxiliary vector for forward time stepping
     Vec xadj; ///< Auxiliary vector needed for adjoint (backward) time stepping
     Vec xprimal; ///< Auxiliary vector for backward time stepping
-    std::vector<Vec> store_states; ///< Storage for primal states during forward evolution
+    bool storeFWD; ///< Flag for storing primal states during forward evaluation. 
+    std::vector<std::vector<Vec>> trajectory_states; ///< Storage for primal states during forward evolution, one trajectory for each local initial condition. Only filled if storeFWD=True.
+    std::vector<Vec> final_states; ///< Storage for final states for each local initial condition. Always filled after solveODE.
     std::vector<Vec> dpdm_states; ///< Storage for states needed for second-order derivative penalty
     int mpirank_world; ///< MPI rank in global communicator
     int mpisize_petsc; ///< MPI size in Petsc communicator
@@ -68,30 +70,30 @@ class TimeStepper{
     Output* output; ///< Pointer to output handler
 
   public: 
-    bool storeFWD; ///< Flag to store primal states during forward evaluation
 
     TimeStepper(); 
 
     /**
      * @brief Constructor for time stepper.
      *
+     * @param ninit_local Local number of initial conditions on this processor
      * @param mastereq_ Pointer to master equation solver
      * @param ntime_ Number of time steps
      * @param total_time_ Final evolution time
      * @param output_ Pointer to output handler
-     * @param storeFWD_ Flag to store forward states
+     * @param storeFWD_ Flag to determine whether to store initial condition trajectories
      */
-    TimeStepper(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_); 
+    TimeStepper(int ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_); 
 
     virtual ~TimeStepper(); 
 
     /**
-     * @brief Retrieves stored state at a specific time index.
+     * @brief Retrieves the final state for a specific local initial condition.
      *
-     * @param tindex Time step index
-     * @return Vec State vector at the specified time
+     * @param iinit_local Local index of the initial condition
+     * @return Vec Final state vector for the specified initial condition
      */
-    Vec getState(size_t tindex);
+    Vec getFinalState(size_t iinit_local){ return final_states[iinit_local]; }
 
     void setEvalLeakage(bool flag){ eval_leakage = flag; };
     void setEvalWeightedCost(bool flag, double width){ eval_weightedcost = flag; weightedcost_width = width; };
@@ -108,11 +110,12 @@ class TimeStepper{
      * 
      * This performs the time-stepping to propagate an initial condition to the final time.
      *
+     * @param iinit_local Local index of the initial condition trajectory
      * @param initid Initial condition identifier
      * @param rho_t0 Initial state vector
      * @return Vec Final state vector at time T
      */
-    Vec solveODE(int initid, Vec rho_t0);
+    Vec solveODE(int iinit_local, int initid, Vec rho_t0);
 
     /**
      * @brief Solves the adjoint ODE backward in time.
@@ -120,14 +123,14 @@ class TimeStepper{
      * This performs backward time-stepping to backpropagate an adjoint initial condition at 
      * final time (aka a terminal condtion) to time t=0, while accumulating the reduced gradient. 
      *
+     * @param iinit_local Local index of the initial condition trajectory for which the adjoint is being solved
      * @param rho_t0_bar Terminal condition for adjoint state
-     * @param finalstate Final state from forward evolution
      * @param Jbar_leakage Adjoint of leakage integral term
      * @param Jbar_weightedcost Adjoint of weighted cost integral term
      * @param Jbar_dpdm Adjoint of second-order derivative variation
      * @param Jbar_energy Adjoint of energy integral term
      */
-    void solveAdjointODE(Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy);
+    void solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy);
 
     /**
      * @brief Evaluates leakage into guard levels 
@@ -240,13 +243,14 @@ class ExplEuler : public TimeStepper {
     /**
      * @brief Constructor for explicit Euler scheme.
      *
+     * @param ninit_local Local number of initial conditions on this processor
      * @param mastereq_ Pointer to master equation solver
      * @param ntime_ Number of time steps
      * @param total_time_ Final evolution time
      * @param output_ Pointer to output handler
-     * @param storeFWD_ Flag to store forward states
+     * @param storeFWD_ Flag to determine whether to store initial condition trajectories
      */
-    ExplEuler(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_);
+    ExplEuler(int ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_);
 
     ~ExplEuler();
 
@@ -304,15 +308,16 @@ class ImplMidpoint : public TimeStepper {
     /**
      * @brief Constructor for implicit midpoint scheme.
      *
+     * @param ninit_local Local number of initial conditions on this processor
      * @param mastereq_ Pointer to master equation solver
      * @param ntime_ Number of time steps
      * @param total_time_ Final evolution time
      * @param linsolve_type_ Linear solver type (GMRES or NEUMANN)
      * @param linsolve_maxiter_ Maximum linear solver iterations
      * @param output_ Pointer to output handler
-     * @param storeFWD_ Flag to store forward states
+     * @param storeFWD_ Flag to determine whether to store initial condition trajectories
      */
-    ImplMidpoint(MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_);
+    ImplMidpoint(int ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_);
 
     ~ImplMidpoint();
 
@@ -370,15 +375,16 @@ class CompositionalImplMidpoint : public ImplMidpoint {
      * @brief Constructor for compositional implicit midpoint scheme.
      *
      * @param order_ Order of the compositional method
+     * @param ninit_local Local number of initial conditions on this processor
      * @param mastereq_ Pointer to master equation solver
      * @param ntime_ Number of time steps
      * @param total_time_ Final evolution time
      * @param linsolve_type_ Linear solver type
      * @param linsolve_maxiter_ Maximum linear solver iterations
      * @param output_ Pointer to output handler
-     * @param storeFWD_ Flag to store forward states
+     * @param storeFWD_ Flag to determine whether to store initial condition trajectories
      */
-    CompositionalImplMidpoint(int order_, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_);
+    CompositionalImplMidpoint(int order_, int ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_);
 
     ~CompositionalImplMidpoint();
 

@@ -158,25 +158,28 @@ int main(int argc,char **argv)
   int linsolve_maxiter = config.getLinearSolverMaxiter();
 
   /* My time stepper */
-  bool storeFWD = false;
+  // Store forward trajecotories only if gradient or optimization runtype, and if not Schroedinger solver (since Schroedinger solver recomputes the states)
+  bool storeFWD = false;  
   RunType runtype = config.getRuntype();
   if (mastereq->decoherence_type != DecoherenceType::NONE &&   
-     (runtype == RunType::GRADIENT || runtype == RunType::OPTIMIZATION) ) storeFWD = true;  // if NOT Schroedinger solver and running gradient optim: store forward states. Otherwise, they will be recomputed during gradient. 
-
+     (runtype == RunType::GRADIENT || runtype == RunType::OPTIMIZATION) ) {
+      storeFWD = true;  
+     }
   TimeStepperType timesteppertype = config.getTimestepperType();
   TimeStepper* mytimestepper = nullptr;
+  int ninit_local = ninit / mpisize_init; 
   switch (timesteppertype) {
     case TimeStepperType::IMR:
-      mytimestepper = new ImplMidpoint(mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
+      mytimestepper = new ImplMidpoint(ninit_local, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
       break;
     case TimeStepperType::IMR4:
-      mytimestepper = new CompositionalImplMidpoint(4, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
+      mytimestepper = new CompositionalImplMidpoint(4, ninit_local, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
       break;
     case TimeStepperType::IMR8:
-      mytimestepper = new CompositionalImplMidpoint(8, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
+      mytimestepper = new CompositionalImplMidpoint(8, ninit_local, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
       break;
     case TimeStepperType::EE:
-      mytimestepper = new ExplEuler(mastereq, ntime, total_time, output, storeFWD);
+      mytimestepper = new ExplEuler(ninit_local, mastereq, ntime, total_time, output, storeFWD);
       break;
     default:
       logger.exitWithError("Unknown timestepper type\n");

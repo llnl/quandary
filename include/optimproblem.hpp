@@ -51,7 +51,6 @@ class OptimProblem {
   int ninit_local; ///< Local number of initial conditions on this processor
   Vec rho_t0; ///< Storage for initial condition of the ODE
   Vec rho_t0_bar; ///< Storage for adjoint initial condition of the adjoint ODE (aka the terminal condition)
-  std::vector<Vec> store_finalstates; ///< Storage for final states for each initial condition
 
   OptimTarget* optim_target; ///< Pointer to the optimization target (gate or state)
 
