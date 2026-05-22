@@ -26,7 +26,7 @@ from ._structs import (
 )
 from .quantum_operators import hamiltonians, get_resonances
 from .time_estimation import estimate_timesteps
-from .utils import downsample_pulses
+from .utils import fit_bspline0, fit_bspline2nd
 
 logger = logging.getLogger(__name__)
 
@@ -628,6 +628,7 @@ def _setup_simulation(
     if initial_condition is not None:
         set_initial_condition(setup, initial_condition=initial_condition)
 
+    # If pt/qt are provide, fit pulses to bspline coefficients. 
     if pt0 is not None or qt0 is not None:
         if pcof is not None:
             raise ValueError("Cannot specify both pcof and pt0/qt0")
@@ -635,32 +636,51 @@ def _setup_simulation(
             pt0 = np.zeros_like(qt0)
         if qt0 is None:
             qt0 = np.zeros_like(pt0)
+        
+        # If control parameterization was not specified, choose Bspline 2nd order for better fitting quality.
+        existing_control_params = setup.control_parameterizations or []
+        if len(existing_control_params) == 0:
+            control_type = ControlType.BSPLINE
+        else:
+            control_type = existing_control_params[0].control_type
 
-        ntime = setup.ntime
-        dt = setup.dt
-        nsplines = max(2, ntime + 1)
-        spline_knot_spacing = dt
+        # Fit control parameters to either Bspline 0-th order or Bspline 2nd order. 
+        if control_type == ControlType.BSPLINE0:
+            nsplines = [max(2, setup.ntime + 1) for _ in range(len(setup.nessential))]
+            pcof = fit_bspline0(
+                pt0=pt0, qt0=qt0,
+                nsplines=nsplines[0],
+                spline_knot_spacing=setup.dt,
+                ntime=setup.ntime, 
+                dt=setup.dt,
+                nessential=setup.nessential,
+            )
+            # Zero out carrier frequencies (pulses already include carrier)
+            setup.carrier_frequencies = [[0.0] for _ in range(len(setup.nessential))]
+        elif control_type == ControlType.BSPLINE:
+            n_osc = len(setup.nessential)
+            if len(existing_control_params) == 0:
+                # Default to spline_knot_spacing of 3ns.
+                spline_knot_spacing = 3.0
+                computed_nspline = int(np.max([np.ceil(setup.ntime * setup.dt / spline_knot_spacing + 2), 5]))
+                nsplines = [computed_nspline for _ in range(n_osc)]
+            else:
+                nsplines = [param.nspline for param in existing_control_params]
+            pcof = fit_bspline2nd(0.0, 
+                                  setup.ntime*setup.dt, 
+                                  pt0, qt0, 
+                                  nsplines, 
+                                  carrier_frequencies=setup.carrier_frequencies,
+                                  inputs_in_mhz=True )
 
-        # Set control parameterization to piecewise constant (BSPLINE0)
+        # Set control parameterization
         control_params = []
-        for _ in range(len(setup.nessential)):
+        for i in range(len(setup.nessential)):
             param = ControlParameterizationSettings()
-            param.control_type = ControlType.BSPLINE0
-            param.nspline = nsplines
+            param.control_type = control_type
+            param.nspline = nsplines[i]
             control_params.append(param)
         setup.control_parameterizations = control_params
-
-        # Zero out carrier frequencies (pulses already include carrier)
-        setup.carrier_frequencies = [[0.0] for _ in range(len(setup.nessential))]
-
-        # Downsample time-domain pulses to B-spline coefficients
-        pcof = downsample_pulses(
-            pt0=pt0, qt0=qt0,
-            nsplines=nsplines,
-            spline_knot_spacing=spline_knot_spacing,
-            ntime=ntime, dt=dt,
-            nessential=setup.nessential,
-        )
 
     if pcof is not None and len(pcof) > 0:
         output_dir = _get_output_dir(setup)

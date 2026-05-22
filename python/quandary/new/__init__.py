@@ -78,7 +78,8 @@ from .visualization import (  # noqa: F401, E402
 from .utils import (  # noqa: F401, E402
     gate_infidelity,
     state_infidelity,
-    downsample_pulses,
+    fit_bspline0,
+    fit_bspline2nd,
 )
 
 # Setup helpers (factory/configuration functions)
@@ -138,7 +139,8 @@ __all__ = [
     # Utilities
     "gate_infidelity",
     "state_infidelity",
-    "downsample_pulses",
+    "fit_bspline0",
+    "fit_bspline2nd",
     # Setup helpers
     "setup_quandary",
     "resolve_output_dir",

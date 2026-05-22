@@ -366,7 +366,7 @@ def simulate(
         B-spline control coefficients.
     pt0 : sequence of ndarray, optional
         Real part of control pulses [MHz] per oscillator.
-        Auto-downsampled to B-splines. Must be paired with qt0.
+        Fitted to B-splines coefficients. Must be paired with qt0.
     qt0 : sequence of ndarray, optional
         Imaginary part of control pulses [MHz] per oscillator.
     initial_condition : sequence of complex or InitialConditionSettings, optional
