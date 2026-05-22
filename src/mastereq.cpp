@@ -167,7 +167,7 @@ MasterEq::MasterEq(const Config& config, Oscillator** oscil_vec_, bool quietmode
     RHSctx.control_Re.push_back(0.0);
     RHSctx.control_Im.push_back(0.0);
   }
-  RHSctx.assembled = false;
+  RHSctx.assembled = PETSC_FALSE;
 
   for (int iosc = 0; iosc < noscillators*(noscillators-1)/2; iosc++) RHSctx.Bd_coeffs.push_back(0.0);
   for (int iosc = 0; iosc < noscillators*(noscillators-1)/2; iosc++) RHSctx.Ad_coeffs.push_back(0.0);
@@ -681,7 +681,7 @@ int MasterEq::assemble_RHS(const double t){
 
   // Set the time
   RHSctx.time = t;
-  RHSctx.assembled = true;
+  RHSctx.assembled = PETSC_TRUE;
 
   // Evaluate and store the controls and transfer for each oscillator 
   for (int iosc = 0; iosc < noscillators; iosc++) {
@@ -729,8 +729,8 @@ void MasterEq::setControlAmplitudes(const Vec x) {
   }
   VecRestoreArrayRead(x, &ptr);
 
-  // Controls changed: RHS will need neew assembly. 
-  RHSctx.assembled = false;
+  // Controls changed: RHS will need new assembly. 
+  RHSctx.assembled = PETSC_FALSE;
 }
 
 /* Pass MatMult operations for the RHS action onto a vector to Petsc */
