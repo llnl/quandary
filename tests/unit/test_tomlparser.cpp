@@ -10,7 +10,7 @@ class TomlParserTest : public ::testing::Test {
 };
 
 TEST_F(TomlParserTest, ParseBasicSettings) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2]
@@ -29,7 +29,7 @@ TEST_F(TomlParserTest, ParseBasicSettings) {
 }
 
 TEST_F(TomlParserTest, ParseVectorSettings) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 3]
@@ -53,7 +53,7 @@ TEST_F(TomlParserTest, ParseVectorSettings) {
 }
 
 TEST_F(TomlParserTest, ParseJklSettingsAllToAll) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
@@ -75,7 +75,7 @@ TEST_F(TomlParserTest, ParseJklSettingsAllToAll) {
 }
 
 TEST_F(TomlParserTest, ParseJklSettingsOneCoupling) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
@@ -102,7 +102,7 @@ TEST_F(TomlParserTest, ParseJklSettingsOneCoupling) {
 }
 
 TEST_F(TomlParserTest, ParseJklSettingsPerPair) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
@@ -134,7 +134,7 @@ TEST_F(TomlParserTest, ParseJklSettingsPerPair) {
 }
 
 TEST_F(TomlParserTest, ParseCrosskerrSettingsAllToAll) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
@@ -156,7 +156,7 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsAllToAll) {
 }
 
 TEST_F(TomlParserTest, ParseCrosskerrSettingsOneCoupling) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
@@ -183,7 +183,7 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsOneCoupling) {
 }
 
 TEST_F(TomlParserTest, ParseCrosskerrSettingsPerPair) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2, 2, 2]
@@ -215,7 +215,7 @@ TEST_F(TomlParserTest, ParseCrosskerrSettingsPerPair) {
 }
 
 TEST_F(TomlParserTest, ParseOutputSettings_AllOscillators) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2]
@@ -238,7 +238,7 @@ TEST_F(TomlParserTest, ParseOutputSettings_AllOscillators) {
 }
 
 TEST_F(TomlParserTest, ParseStructSettings) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2]
@@ -263,7 +263,7 @@ TEST_F(TomlParserTest, ParseStructSettings) {
 }
 
 TEST_F(TomlParserTest, ApplyDefaults) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2]
@@ -283,7 +283,7 @@ TEST_F(TomlParserTest, ApplyDefaults) {
 
 
 TEST_F(TomlParserTest, Decoherence_Decay) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [3, 2]
@@ -303,7 +303,7 @@ TEST_F(TomlParserTest, Decoherence_Decay) {
 }
 
 TEST_F(TomlParserTest, Decoherence_Dephase) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [3, 2]
@@ -324,7 +324,7 @@ TEST_F(TomlParserTest, Decoherence_Dephase) {
 
 
 TEST_F(TomlParserTest, InitialCondition_FromFile) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2]
@@ -342,7 +342,7 @@ TEST_F(TomlParserTest, InitialCondition_FromFile) {
 }
 
 TEST_F(TomlParserTest, InitialCondition_ProductState) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [3, 2]
@@ -360,7 +360,7 @@ TEST_F(TomlParserTest, InitialCondition_ProductState) {
 }
 
 TEST_F(TomlParserTest, InitialCondition_Performance) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2]
@@ -377,7 +377,7 @@ TEST_F(TomlParserTest, InitialCondition_Performance) {
 }
 
 TEST_F(TomlParserTest, InitialCondition_Ensemble) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [3, 2]
@@ -396,7 +396,7 @@ TEST_F(TomlParserTest, InitialCondition_Ensemble) {
 }
 
 TEST_F(TomlParserTest, InitialCondition_ThreeStates) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [3]
@@ -414,7 +414,7 @@ TEST_F(TomlParserTest, InitialCondition_ThreeStates) {
 }
 
 TEST_F(TomlParserTest, InitialCondition_NPlusOne_SingleOscillator) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [3]
@@ -433,7 +433,7 @@ TEST_F(TomlParserTest, InitialCondition_NPlusOne_SingleOscillator) {
 }
 
 TEST_F(TomlParserTest, InitialCondition_NPlusOne_MultipleOscillators) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 3]
@@ -452,7 +452,7 @@ TEST_F(TomlParserTest, InitialCondition_NPlusOne_MultipleOscillators) {
 }
 
 TEST_F(TomlParserTest, InitialCondition_Diagonal_Schrodinger) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [3, 2]
@@ -473,7 +473,7 @@ TEST_F(TomlParserTest, InitialCondition_Diagonal_Schrodinger) {
 }
 
 TEST_F(TomlParserTest, InitialCondition_Basis_Schrodinger) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [3, 2]
@@ -494,7 +494,7 @@ TEST_F(TomlParserTest, InitialCondition_Basis_Schrodinger) {
 }
 
 TEST_F(TomlParserTest, InitialCondition_Basis_Lindblad) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [3, 2]
@@ -515,7 +515,7 @@ TEST_F(TomlParserTest, InitialCondition_Basis_Lindblad) {
 }
 
 TEST_F(TomlParserTest, ControlParameterizations_Spline0) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2]
@@ -538,7 +538,7 @@ TEST_F(TomlParserTest, ControlParameterizations_Spline0) {
 }
 
 TEST_F(TomlParserTest, ControlParameterizations_Spline) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2]
@@ -570,7 +570,7 @@ TEST_F(TomlParserTest, ControlParameterizations_Spline) {
 }
 
 TEST_F(TomlParserTest, ControlParameterizations_Defaults) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2, 2]
@@ -608,7 +608,7 @@ TEST_F(TomlParserTest, ControlParameterizations_Defaults) {
 }
 
 TEST_F(TomlParserTest, ControlParameterizations_AllOscillators) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2]
@@ -639,7 +639,7 @@ TEST_F(TomlParserTest, ControlParameterizations_AllOscillators) {
 }
 
 TEST_F(TomlParserTest, ControlInitialization_Defaults) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2, 2]
@@ -673,7 +673,7 @@ TEST_F(TomlParserTest, ControlInitialization_Defaults) {
 }
 
 TEST_F(TomlParserTest, ControlInitializationSettings) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2, 2, 2, 2]
@@ -730,7 +730,7 @@ TEST_F(TomlParserTest, ControlInitializationSettings) {
 }
 
 TEST_F(TomlParserTest, ControlInitialization_File) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2]
@@ -751,7 +751,7 @@ TEST_F(TomlParserTest, ControlInitialization_File) {
 }
 
 TEST_F(TomlParserTest, ControlInitialization_AllOscillators) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2]
@@ -778,7 +778,7 @@ TEST_F(TomlParserTest, ControlInitialization_AllOscillators) {
 }
 
 TEST_F(TomlParserTest, ControlInitialization_DefaultWithOverrides) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [3, 3, 3]
@@ -812,7 +812,7 @@ TEST_F(TomlParserTest, ControlInitialization_DefaultWithOverrides) {
 }
 
 TEST_F(TomlParserTest, ControlBounds) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2]
@@ -836,7 +836,7 @@ TEST_F(TomlParserTest, ControlBounds) {
 }
 
 TEST_F(TomlParserTest, ControlBounds_Defaults) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2]
@@ -856,7 +856,7 @@ TEST_F(TomlParserTest, ControlBounds_Defaults) {
 }
 
 TEST_F(TomlParserTest, ControlBounds_AllOscillators) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2]
@@ -879,7 +879,7 @@ TEST_F(TomlParserTest, ControlBounds_AllOscillators) {
 }
 
 TEST_F(TomlParserTest, CarrierFrequenciesDefaults) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2,2]
@@ -906,7 +906,7 @@ TEST_F(TomlParserTest, CarrierFrequenciesDefaults) {
 }
 
 TEST_F(TomlParserTest, CarrierFrequenciesPerSubsystem) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2,2]
@@ -935,7 +935,7 @@ TEST_F(TomlParserTest, CarrierFrequenciesPerSubsystem) {
 }
 
 TEST_F(TomlParserTest, CarrierFrequencies_AllOscillators) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2]
@@ -961,7 +961,7 @@ TEST_F(TomlParserTest, CarrierFrequencies_AllOscillators) {
   EXPECT_EQ(carrier_freq1[1], 2.0);
 }
 TEST_F(TomlParserTest, CarrierFrequencies_AllOscillatorsShorthand) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2]
@@ -989,7 +989,7 @@ TEST_F(TomlParserTest, CarrierFrequencies_AllOscillatorsShorthand) {
 
 TEST_F(TomlParserTest, CarrierFrequency_InvalidID) {
   ASSERT_DEATH({
-    Config config = Config::fromTomlString(
+    Config config = Config::fromString(
         R"(
           [system]
           nlevels = [2]
@@ -1009,7 +1009,7 @@ TEST_F(TomlParserTest, CarrierFrequency_InvalidID) {
 
 
 TEST_F(TomlParserTest, OptimTarget_GateType) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2,2,2]
@@ -1038,7 +1038,7 @@ TEST_F(TomlParserTest, OptimTarget_GateType) {
 }
 
 TEST_F(TomlParserTest, OptimTarget_GateRotFreq) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2,2]
@@ -1064,7 +1064,7 @@ TEST_F(TomlParserTest, OptimTarget_GateRotFreq) {
 }
 
 TEST_F(TomlParserTest, OptimTarget_GateFromFile) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2]
@@ -1086,7 +1086,7 @@ TEST_F(TomlParserTest, OptimTarget_GateFromFile) {
 }
 
 TEST_F(TomlParserTest, OptimTarget_ProductState) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [3, 3, 3]
@@ -1113,7 +1113,7 @@ TEST_F(TomlParserTest, OptimTarget_ProductState) {
 }
 
 TEST_F(TomlParserTest, OptimTarget_FromFile) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2]
@@ -1135,7 +1135,7 @@ TEST_F(TomlParserTest, OptimTarget_FromFile) {
 }
 
 TEST_F(TomlParserTest, OptimTarget_DefaultNone) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2]
@@ -1155,7 +1155,7 @@ TEST_F(TomlParserTest, OptimTarget_DefaultNone) {
 }
 
 TEST_F(TomlParserTest, OptimWeightsVectorNormalization) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 2]
@@ -1181,7 +1181,7 @@ TEST_F(TomlParserTest, OptimWeightsVectorNormalization) {
 TEST_F(TomlParserTest, OptimWeightsScalarNotAllowed) {
   // Single value format is no longer allowed - must use array notation
   EXPECT_DEATH(
-      Config::fromTomlString(
+      Config::fromString(
           R"(
             [system]
             nlevels = [2, 2]
@@ -1199,7 +1199,7 @@ TEST_F(TomlParserTest, OptimWeightsScalarNotAllowed) {
 }
 
 TEST_F(TomlParserTest, OptimWeightsDefault) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [4,3]
@@ -1280,7 +1280,7 @@ timestepper = "imr"
 rand_seed = 12345
 )";
 
-  Config config = Config::fromTomlString(input_toml, logger);
+  Config config = Config::fromString(input_toml, logger);
 
   // Test that printed config is valid TOML that can be parsed
   std::stringstream printed_output;
@@ -1289,12 +1289,12 @@ rand_seed = 12345
 
   // Verify output is valid TOML by parsing it
   ASSERT_NO_THROW({
-    Config::fromTomlString(output, logger);
+    Config::fromString(output, logger);
   });
 }
 
 TEST_F(TomlParserTest, Transfreq_ScalarValue) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 3, 4]
@@ -1313,7 +1313,7 @@ TEST_F(TomlParserTest, Transfreq_ScalarValue) {
 }
 
 TEST_F(TomlParserTest, Transfreq_ArrayValue) {
-  Config config = Config::fromTomlString(
+  Config config = Config::fromString(
       R"(
         [system]
         nlevels = [2, 3, 4]
@@ -1334,7 +1334,7 @@ TEST_F(TomlParserTest, Transfreq_ArrayValue) {
 TEST_F(TomlParserTest, Transfreq_WrongSizeError) {
   EXPECT_DEATH(
       {
-        Config config = Config::fromTomlString(
+        Config config = Config::fromString(
             R"(
               [system]
               nlevels = [2, 3, 4]
@@ -1353,7 +1353,7 @@ TEST_F(TomlParserTest, Transfreq_WrongSizeError) {
 TEST_F(TomlParserTest, CouplingSubsystem_HasLength_TooManyElements) {
   EXPECT_DEATH(
       {
-        Config config = Config::fromTomlString(
+        Config config = Config::fromString(
             R"(
               [system]
               nlevels = [2, 2, 2, 2]
@@ -1373,7 +1373,7 @@ TEST_F(TomlParserTest, CouplingSubsystem_HasLength_TooManyElements) {
 TEST_F(TomlParserTest, CouplingSubsystem_HasLength_TooFewElements) {
   EXPECT_DEATH(
       {
-        Config config = Config::fromTomlString(
+        Config config = Config::fromString(
             R"(
               [system]
               nlevels = [2, 2, 2, 2]
