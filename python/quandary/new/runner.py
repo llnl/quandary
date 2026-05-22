@@ -262,6 +262,7 @@ def optimize(
     setup: Setup,
     target=None,
     gate_rot_freq=None,
+    initial_condition=None,
     pcof=None,
     randomize_initial_control: bool = True,
     control_initialization_amplitude: Optional[float] = None,
@@ -285,6 +286,8 @@ def optimize(
         Optimization target. Either 2D (unitary gate) or 1D (state vector)
     gate_rot_freq : sequence of float, optional
         Gate rotation frequencies [GHz].
+    initial_condition : sequence of complex or InitialConditionSettings, optional
+        Either a state vector (arbitrary superposition), or direct struct specification (advanced). 
     pcof : array-like, optional
         B-spline coefficients for warm-start.
     randomize_initial_control : bool
@@ -319,6 +322,7 @@ def optimize(
         setup,
         target=target,
         gate_rot_freq=gate_rot_freq,
+        initial_condition=initial_condition,
         pcof=pcof,
         randomize_initial_control=randomize_initial_control,
         control_initialization_amplitude=control_initialization_amplitude,
@@ -341,6 +345,7 @@ def simulate(
     pcof=None,
     pt0=None,
     qt0=None,
+    initial_condition=None,
     dry_run: bool = False,
     max_n_procs: Optional[int] = None,
     quiet: bool = False,
@@ -364,6 +369,9 @@ def simulate(
         Auto-downsampled to B-splines. Must be paired with qt0.
     qt0 : sequence of ndarray, optional
         Imaginary part of control pulses [MHz] per oscillator.
+    initial_condition : sequence of complex or InitialConditionSettings, optional
+        Either a state vector (arbitrary superposition), or direct struct specification (advanced). 
+        Default: All basis states in the essential dimensions.
     dry_run : bool
         If True, validate and return Results with config populated but do not
         run. Use ``print(results.config)`` to inspect the full configuration.
@@ -386,7 +394,7 @@ def simulate(
     Results
         If dry_run=True, only results.config is populated.
     """
-    configured = _setup_simulation(setup, pcof=pcof, pt0=pt0, qt0=qt0)
+    configured = _setup_simulation(setup, pcof=pcof, pt0=pt0, qt0=qt0, initial_condition=initial_condition)
     if dry_run:
         return Results(config=Config(configured, quiet))
     return _run(

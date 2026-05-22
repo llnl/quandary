@@ -86,6 +86,7 @@ from .setup_helpers import (  # noqa: F401, E402
     setup_quandary,
     resolve_output_dir,
     set_target,
+    set_initial_condition,
 )
 
 # Define public API

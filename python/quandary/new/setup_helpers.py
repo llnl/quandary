@@ -149,9 +149,7 @@ def setup_quandary(
     control_zero_boundary_condition: Optional[bool] = None,
     hamiltonian_Hsys: Optional[np.ndarray] = None,
     hamiltonian_Hc: Optional[Sequence[np.ndarray]] = None,
-    initial_condition: Optional[InitialConditionSettings] = None,
-    initial_levels: Optional[Sequence[int]] = None,
-    initial_state: Optional[Sequence[complex]] = None,
+    initial_condition: Optional[Sequence[complex]] = None,
     output_directory: str = _DEFAULT_OUTPUT_DIR,
 ) -> Setup:
     """Create a Setup with physics parameters configured.
@@ -231,13 +229,9 @@ def setup_quandary(
     hamiltonian_Hc : sequence of ndarray, optional
         Custom control Hamiltonian matrices (complex), one per oscillator.
         Can be used with or without hamiltonian_Hsys.
-    initial_condition : InitialConditionSettings, optional
-        Direct struct specification (advanced). For convenience, prefer
-        initial_levels or initial_state.
-    initial_levels : sequence of int, optional
-        Product-state initial condition, e.g. [0, 0, 1] for |001>.
-    initial_state : sequence of complex, optional
-        Arbitrary superposition initial state. Written to file automatically.
+    initial_condition : sequence of complex or InitialConditionSettings, optional
+        Either a state vector (arbitrary superposition), or direct struct specification (advanced). 
+        Default: All basis states in the essential dimensions.
     output_directory : str
         Output directory for generated files (initial state, etc.).
         Default: "./data_out".
@@ -279,37 +273,6 @@ def setup_quandary(
 
     # Resolve output directory against QUANDARY_BASE_DATADIR if set
     output_directory = resolve_output_dir(output_directory)
-
-    # Handle initial condition (only one of initial_condition, initial_levels, initial_state)
-    num_init_specs = sum([initial_condition is not None, initial_levels is not None, initial_state is not None])
-    if num_init_specs > 1:
-        raise ValueError("Can only specify one of: initial_condition, initial_levels, initial_state")
-
-    if initial_levels is not None:
-        # Product state like |001>
-        if len(initial_levels) != nqubits:
-            raise ValueError(f"initial_levels must have length {nqubits}, got {len(initial_levels)}")
-        initial_condition = InitialConditionSettings()
-        initial_condition.condition_type = InitialConditionType.PRODUCT_STATE
-        initial_condition.levels = initial_levels
-    elif initial_state is not None:
-        # Arbitrary superposition, write to file
-        dim_ess = int(np.prod(nessential))
-        initial_state_array = np.array(initial_state, dtype=complex)
-        if len(initial_state_array) != dim_ess:
-            raise ValueError(f"initial_state must have length {dim_ess} (product of nessential), "
-                             f"got {len(initial_state_array)}")
-        os.makedirs(output_directory, exist_ok=True)
-        init_state_file = os.path.join(output_directory, "initial_state.dat")
-        state_vec = np.concatenate((initial_state_array.real, initial_state_array.imag))
-        np.savetxt(init_state_file, state_vec, fmt='%20.13e')
-        initial_condition = InitialConditionSettings()
-        initial_condition.condition_type = InitialConditionType.FROMFILE
-        initial_condition.filename = init_state_file
-    elif initial_condition is None:
-        # Default: BASIS
-        initial_condition = InitialConditionSettings()
-        initial_condition.condition_type = InitialConditionType.BASIS
 
     # Build Hamiltonians
     nlevels = [nessential[i] + nguard[i] for i in range(nqubits)]
@@ -451,14 +414,14 @@ def setup_quandary(
         setup.dephase_time = dephase_time
     if control_amplitude_bounds is not None:
         setup.control_amplitude_bounds = control_amplitude_bounds
-    if target is not None:
-        set_target(setup, target, gate_rot_freq=gate_rot_freq)
-
     setup.carrier_frequencies = carrier_frequency
-    setup.initial_condition = initial_condition
     setup.output_directory = output_directory
     if control_zero_boundary_condition is not None:
         setup.control_zero_boundary_condition = control_zero_boundary_condition
+
+    # Write target and initial conditions to file, if provided, and store in Setup.
+    set_target(setup, target, gate_rot_freq=gate_rot_freq)
+    set_initial_condition(setup, initial_condition=initial_condition)
 
     # Write custom Hamiltonian files and set paths on Setup
     if hamiltonian_Hsys is not None or hamiltonian_Hc is not None:
@@ -547,10 +510,44 @@ def set_target(
         optim_target.filename = state_file
         setup.optim_target = optim_target
 
+def set_initial_condition(
+    setup: Setup,
+    initial_condition = None,
+) -> None:
+    """Set the initial condition on a Setup (in-place).
+
+    The initial condition can be either as a state vector (arbitrary superposition) or as an InitialConditionSettings struct for advanced use cases. If it's a state vector, it is written to a file in the output directory and the struct is configured to load from that file. If it's already an InitialConditionSettings struct, it is used directly. If None, the C++ default is used. 
+    """
+    if initial_condition is None:
+        return  
+
+    if isinstance(initial_condition, InitialConditionSettings):
+        # Already an InitialConditionSettings struct, use it directly
+        setup.initial_condition = initial_condition
+
+    else:
+        # Initial condition is a state vector (arbitrary superposition). Check dimensions and write to file
+        dim_ess = int(np.prod(setup.nessential))
+        initial_state_array = np.array(initial_condition, dtype=complex)
+        if len(initial_state_array) != dim_ess:
+            raise ValueError(f"initial_condition state must have length {dim_ess} (product of nessential), "
+                             f"got {len(initial_state_array)}")
+        output_dir = _get_output_dir(setup)
+        os.makedirs(output_dir, exist_ok=True)
+
+        init_state_file = os.path.join(output_dir, "initial_state.dat")
+        state_vec = np.concatenate((initial_state_array.real, initial_state_array.imag))
+        np.savetxt(init_state_file, state_vec, fmt='%20.13e')
+        initial_condition = InitialConditionSettings()
+        initial_condition.condition_type = InitialConditionType.FROMFILE
+        initial_condition.filename = init_state_file
+        setup.initial_condition = initial_condition
+
 def _setup_optimization(
     setup: Setup,
     target: Optional[np.ndarray] = None,
     gate_rot_freq: Optional[Sequence[float]] = None,
+    initial_condition=None,
     pcof=None,
     randomize_initial_control: bool = False,
     control_initialization_amplitude: Optional[float] = None,
@@ -562,6 +559,8 @@ def _setup_optimization(
 
     if target is not None:
         set_target(setup, target, gate_rot_freq=gate_rot_freq)
+    if initial_condition is not None:
+        set_initial_condition(setup, initial_condition=initial_condition)
 
     output_dir = _get_output_dir(setup)
     os.makedirs(output_dir, exist_ok=True)
@@ -619,11 +618,15 @@ def _setup_simulation(
     pcof=None,
     pt0=None,
     qt0=None,
+    initial_condition=None,
 ) -> Setup:
     """Return a copy of setup configured for simulation."""
     setup = setup.copy()
     setup.output_directory = resolve_output_dir(setup.output_directory)
     setup.runtype = RunType.SIMULATION
+
+    if initial_condition is not None:
+        set_initial_condition(setup, initial_condition=initial_condition)
 
     if pt0 is not None or qt0 is not None:
         if pcof is not None:
