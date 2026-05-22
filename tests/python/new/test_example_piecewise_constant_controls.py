@@ -169,7 +169,7 @@ def test_example_piecewise_constant_controls(tmp_path, request):
 
     results = optimize(
         setup,
-        target_gate=unitary,
+        target=unitary,
         control_initialization_amplitude=init_amplitude,
         quiet=True,
     )

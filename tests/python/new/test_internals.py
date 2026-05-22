@@ -27,7 +27,7 @@ class TestDryRun:
         setup = _make_setup(str(tmp_path / "opt"))
         results = optimize(
             setup,
-            target_state=[0.0, 1.0],
+            target=[0.0, 1.0],
             dry_run=True,
             quiet=True,
         )
@@ -70,7 +70,7 @@ class TestDryRun:
 
         optimize(
             setup,
-            target_state=[0.0, 1.0],
+            target=[0.0, 1.0],
             dry_run=True,
             quiet=True,
         )
@@ -86,7 +86,7 @@ class TestDryRun:
         setup = _make_setup(custom_dir)
         results = optimize(
             setup,
-            target_state=[0.0, 1.0],
+            target=[0.0, 1.0],
             dry_run=True,
             quiet=True,
         )

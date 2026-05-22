@@ -377,7 +377,7 @@ def test_example_qft(tmp_path, request):
 
     results = optimize(
         setup,
-        target_gate=unitary,
+        target=unitary,
         quiet=True,
     )
 

@@ -158,7 +158,7 @@ def test_example_cnot_const_init_ctrl(tmp_path, request):
 
     results = optimize(
         setup,
-        target_gate=unitary,
+        target=unitary,
         randomize_initial_control=False,
         control_initialization_amplitude=init_amplitude,
         quiet=True,

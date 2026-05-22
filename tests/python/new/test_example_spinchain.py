@@ -1,7 +1,7 @@
 import os
 import pytest
 import numpy as np
-from quandary.new import setup_quandary, simulate
+from quandary.new import setup_quandary, simulate, InitialConditionSettings, InitialConditionType
 from utils import assert_results_equal
 
 # Mark all tests in this file as regression tests
@@ -162,11 +162,6 @@ def test_example_spinchain(tmp_path, request):
     U = np.zeros(N)
     J = J_amp * np.ones(N)
 
-    # Specify the initial state (domain wall |111...000>)
-    initstate = np.zeros(N, dtype=int)
-    for i in range(int(N/2)):
-        initstate[i] = 1
-
     # Set the simulation duration and step size
     T = 10.0
     dT = 0.01
@@ -176,6 +171,15 @@ def test_example_spinchain(tmp_path, request):
     n_osc = N
     n_levels = 1
 
+    # Specify the initial state (domain wall |111...000>)
+    initlevels = np.zeros(N, dtype=int)
+    for i in range(int(N/2)):
+        initlevels[i] = 1
+    initial_condition = InitialConditionSettings()
+    initial_condition.condition_type = InitialConditionType.PRODUCT_STATE
+    initial_condition.levels = initlevels
+
+
     setup = setup_quandary(
         nessential=[2]*N,
         nguard=[0]*N,
@@ -184,7 +188,7 @@ def test_example_spinchain(tmp_path, request):
         crosskerr_coupling=crosskerr,
         dipole_coupling=Jkl,
         carrier_frequency=[[0.0] for _ in range(N)],
-        initial_levels=[int(x) for x in initstate],
+        initial_condition=initial_condition,
         final_time=T,
         dt=dT,
         output_directory=datadir_path,

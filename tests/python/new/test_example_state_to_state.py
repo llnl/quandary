@@ -68,7 +68,7 @@ def test_example_state_to_state(tmp_path, request):
         transition_frequency=freq01,
         selfkerr=selfkerr,
         control_amplitude_bounds=[maxctrl_MHz/1000],
-        initial_state=initialcondition,
+        initial_condition=initialcondition,
         final_time=T,
         spline_knot_spacing=3.0,               # Old default: new default is 10 splines
         control_zero_boundary_condition=False,  # Old default: new default is True
@@ -90,7 +90,7 @@ def test_example_state_to_state(tmp_path, request):
 
     results = optimize(
         setup,
-        target_state=target_state,
+        target=target_state,
         control_initialization_amplitude=init_amplitude,
         quiet=True,
     )

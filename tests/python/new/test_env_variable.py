@@ -24,7 +24,7 @@ def run_optimize(datadir):
     setup.optim_maxiter = 1
     return optimize(
         setup,
-        target_state=[0.0, 1.0],
+        target=[0.0, 1.0],
         quiet=True,
     )
 
