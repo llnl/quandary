@@ -112,12 +112,11 @@ NB_MODULE(_quandary_impl, m) {
   nb::class_<OptimTargetSettings>(m, "OptimTargetSettings",
     "Settings for optimization target (gate or state).\n\n"
     "Configure what the optimization should achieve. For GATE targets, specify\n"
-    "gate_type or filename. For STATE targets, specify levels or filename.")
+    "gate_type or filename. For STATE target, specify filename.")
     .def(nb::init<>())
     .def_rw("target_type", &OptimTargetSettings::type, "(TargetType) Type of target (GATE or STATE)")
     .def_rw("gate_type", &OptimTargetSettings::gate_type, "(GateType | None) Predefined gate type (for GATE target)")
     .def_rw("gate_rot_freq", &OptimTargetSettings::gate_rot_freq, "(list[float] | None) Gate rotation frequencies [GHz] (for GATE target)")
-    .def_rw("levels", &OptimTargetSettings::levels, "(list[int] | None) Target level occupations (for STATE target)")
     .def_rw("filename", &OptimTargetSettings::filename, "(str | None) File path to custom gate or state")
     .def("__repr__", [](const OptimTargetSettings& s) { return Config::toString(s); });
 

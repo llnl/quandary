@@ -260,9 +260,7 @@ def _run_subprocess(
 
 def optimize(
     setup: Setup,
-    target_gate=None,
-    target_state=None,
-    target_levels=None,
+    target=None,
     gate_rot_freq=None,
     pcof=None,
     randomize_initial_control: bool = True,
@@ -283,12 +281,8 @@ def optimize(
     ----------
     setup : Setup
         Physics setup from setup_quandary().
-    target_gate : array-like, optional
-        Target unitary gate.
-    target_state : array-like, optional
-        Target state vector.
-    target_levels : sequence of int, optional
-        Target product state, e.g. [0, 0, 1].
+    target : array-like, optional 
+        Optimization target. Either 2D (unitary gate) or 1D (state vector)
     gate_rot_freq : sequence of float, optional
         Gate rotation frequencies [GHz].
     pcof : array-like, optional
@@ -323,9 +317,7 @@ def optimize(
     """
     configured = _setup_optimization(
         setup,
-        target_gate=target_gate,
-        target_state=target_state,
-        target_levels=target_levels,
+        target=target,
         gate_rot_freq=gate_rot_freq,
         pcof=pcof,
         randomize_initial_control=randomize_initial_control,

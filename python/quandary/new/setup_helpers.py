@@ -139,6 +139,8 @@ def setup_quandary(
     decay_time: Optional[Sequence[float]] = None,
     dephase_time: Optional[Sequence[float]] = None,
     carrier_frequency: Optional[Sequence[Sequence[float]]] = None,
+    target: Optional[Sequence[complex]] = None,
+    gate_rot_freq: Optional[Sequence[float]] = None,
     Pmin: int = 150,
     control_amplitude_bounds: Optional[Sequence[float]] = None,
     nspline: Optional[int] = None,
@@ -201,6 +203,10 @@ def setup_quandary(
         automatic eigenvalue-based computation (get_resonances) is skipped.
         Useful when the Hamiltonian has degenerate eigenvalues that cause
         the automatic computation to fail.
+    target : array-like, optional 
+        Target for optimization and fidelity computation. Either a 2D (unitary gate) or 1D (state vector)
+    gate_rot_freq : sequence of float, optional
+        Gate rotation frequencies [GHz] per qubit.
     Pmin : int
         Minimum time steps per period of the fastest oscillation (used for
         auto-computing ntime). Default: 150.
@@ -445,6 +451,8 @@ def setup_quandary(
         setup.dephase_time = dephase_time
     if control_amplitude_bounds is not None:
         setup.control_amplitude_bounds = control_amplitude_bounds
+    if target is not None:
+        set_target(setup, target, gate_rot_freq=gate_rot_freq)
 
     setup.carrier_frequencies = carrier_frequency
     setup.initial_condition = initial_condition
@@ -488,69 +496,60 @@ def setup_quandary(
 
 def set_target(
     setup: Setup,
-    target_gate=None,
-    target_state=None,
-    target_levels: Optional[Sequence[int]] = None,
+    target: np.ndarray,
     gate_rot_freq: Optional[Sequence[float]] = None,
 ) -> None:
     """Set the optimization target on a Setup (in-place).
 
-    Validates that at most one target type is specified, writes any
-    gate/state data to files in the output directory, and sets
-    ``setup.optim_target``.
+    The type is inferred from the dimensionality of ``target``: a 2-D array
+    is treated as a gate, a 1-D array as a state.  Writes the data to a file
+    in the output directory and sets ``setup.optim_target``.
     """
-    num_targets = sum([target_gate is not None, target_state is not None, target_levels is not None])
-    if num_targets > 1:
-        raise ValueError("Can only specify one of: target_gate, target_state, target_levels")
-    if num_targets == 0:
+    if target is None:
         return
+
+    target_array = np.asarray(target, dtype=complex)
+    dim_ess = int(np.prod(setup.nessential))
 
     output_dir = _get_output_dir(setup)
     os.makedirs(output_dir, exist_ok=True)
 
-    if target_gate is not None:
-        # Gate optimization: write gate to file
-        gate_array = np.array(target_gate, dtype=complex)
+    if target_array.ndim == 2:
+        # Gate optimization: verify dimensions and write gate to file
+        if target_array.shape != (dim_ess, dim_ess):
+            raise ValueError(f"Target gate must have shape ({dim_ess}, {dim_ess}), got {target_array.shape}")
         gate_file = os.path.join(output_dir, "target_gate.dat")
         gate_vec = np.concatenate((
-            gate_array.real.ravel(order='F'),
-            gate_array.imag.ravel(order='F')
+            target_array.real.ravel(order='F'),
+            target_array.imag.ravel(order='F')
         ))
         np.savetxt(gate_file, gate_vec, fmt='%20.13e')
 
-        target = OptimTargetSettings()
-        target.target_type = TargetType.GATE
-        target.gate_type = GateType.FILE
-        target.filename = gate_file
+        optim_target = OptimTargetSettings()
+        optim_target.target_type = TargetType.GATE
+        optim_target.gate_type = GateType.FILE
+        optim_target.filename = gate_file
         if gate_rot_freq is not None:
-            target.gate_rot_freq = gate_rot_freq
-        setup.optim_target = target
+            optim_target.gate_rot_freq = gate_rot_freq
+        setup.optim_target = optim_target
 
-    elif target_state is not None:
-        # State-to-state: write target state to file
-        target_array = np.array(target_state, dtype=complex)
+    else:
+        # State-to-state: verify dimensions andwrite target state to file
+        # dimension must match to nessential product
+        if target_array.shape != (dim_ess,):
+            raise ValueError(f"Target state must have shape ({dim_ess},), got {target_array.shape}")
         state_file = os.path.join(output_dir, "target_state.dat")
         state_vec = np.concatenate((target_array.real.ravel(order='F'), target_array.imag.ravel(order='F')))
         np.savetxt(state_file, state_vec, fmt='%20.13e')
 
-        target = OptimTargetSettings()
-        target.target_type = TargetType.STATE
-        target.filename = state_file
-        setup.optim_target = target
-
-    elif target_levels is not None:
-        # State-to-state: product state target like |001>
-        target = OptimTargetSettings()
-        target.target_type = TargetType.STATE
-        target.levels = target_levels
-        setup.optim_target = target
-
+        optim_target = OptimTargetSettings()
+        optim_target.target_type = TargetType.STATE
+        optim_target.filename = state_file
+        setup.optim_target = optim_target
 
 def _setup_optimization(
     setup: Setup,
-    target_gate=None,
-    target_state=None,
-    target_levels: Optional[Sequence[int]] = None,
+    target: Optional[np.ndarray] = None,
     gate_rot_freq: Optional[Sequence[float]] = None,
     pcof=None,
     randomize_initial_control: bool = False,
@@ -561,8 +560,8 @@ def _setup_optimization(
     setup.output_directory = resolve_output_dir(setup.output_directory)
     setup.runtype = RunType.OPTIMIZATION
 
-    set_target(setup, target_gate=target_gate, target_state=target_state,
-                target_levels=target_levels, gate_rot_freq=gate_rot_freq)
+    if target is not None:
+        set_target(setup, target, gate_rot_freq=gate_rot_freq)
 
     output_dir = _get_output_dir(setup)
     os.makedirs(output_dir, exist_ok=True)
