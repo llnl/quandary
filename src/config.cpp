@@ -561,9 +561,12 @@ Config::Config(const Setup& input, bool quiet_mode) : logger(MPILogger(quiet_mod
   data.dephase_time = validators::vectorField<double>(input.dephase_time, "dephase_time").hasLength(num_osc).valueOr(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
 
   if (!input.initial_condition.has_value()) {
-    throw validators::ValidationError("initial_condition", "field not found");
+    InitialConditionSettings default_init_cond;
+    default_init_cond.type = ConfigDefaults::INITIAL_CONDITION_TYPE;
+    data.initial_condition = default_init_cond;
+  } else {
+    data.initial_condition = input.initial_condition.value();
   }
-  data.initial_condition = input.initial_condition.value();
 
   // Inherently optional fields
   data.hamiltonian_file_Hsys = input.hamiltonian_file_Hsys;
