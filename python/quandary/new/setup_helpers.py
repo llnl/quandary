@@ -14,6 +14,7 @@ from .._quandary_impl import (
     TargetType,
     GateType,
     ControlInitializationType,
+    DecoherenceType,
     OutputType,
 )
 from ._structs import (
@@ -135,6 +136,8 @@ def setup_quandary(
     rotation_frequency: Optional[Sequence[float]] = None,
     crosskerr_coupling: Optional[Sequence[float]] = None,
     dipole_coupling: Optional[Sequence[float]] = None,
+    decay_time: Optional[Sequence[float]] = None,
+    dephase_time: Optional[Sequence[float]] = None,
     carrier_frequency: Optional[Sequence[Sequence[float]]] = None,
     Pmin: int = 150,
     control_amplitude_bounds: Optional[Sequence[float]] = None,
@@ -187,6 +190,12 @@ def setup_quandary(
     dipole_coupling : sequence of float, optional
         Dipole-dipole coupling strengths [GHz]. Format: [J01, J02, ..., J12, ...].
         Default: no coupling.
+    decay_time : sequence of float, optional
+        T1 relaxation times [ns] per qubit. 
+        Default: no decay.
+    dephase_time : sequence of float, optional
+        T2 dephasing times [ns] per qubit. 
+        Default: no dephasing.
     carrier_frequency : sequence of sequence of float, optional
         Carrier frequencies [GHz] per oscillator. When provided, the
         automatic eigenvalue-based computation (get_resonances) is skipped.
@@ -370,6 +379,22 @@ def setup_quandary(
             Hc_im=Hc_im,
             rotation_frequency=rotation_frequency,
         )
+    
+    # Set decoherence type if provided
+    decoherence_type = None 
+    if decay_time is not None or dephase_time is not None:
+        if decay_time is not None and len(decay_time) != nqubits:
+            raise ValueError(f"decay_time must have length {nqubits}, got {len(decay_time)}")
+        if dephase_time is not None and len(dephase_time) != nqubits:
+            raise ValueError(f"dephase_time must have length {nqubits}, got {len(dephase_time)}")
+        if decay_time is not None and dephase_time is not None:
+            decoherence_type = DecoherenceType.BOTH
+        elif decay_time is not None:
+            decoherence_type = DecoherenceType.DECAY
+            dephase_time = None
+        elif dephase_time is not None:
+            decoherence_type = DecoherenceType.DEPHASE
+            decay_time = None
 
     # Validate spline_order
     if spline_order is not None and spline_order not in (0, 2):
@@ -412,6 +437,12 @@ def setup_quandary(
         setup.crosskerr_coupling = crosskerr_coupling
     if len(dipole_coupling) > 0:
         setup.dipole_coupling = dipole_coupling
+    if decoherence_type is not None:
+        setup.decoherence_type = decoherence_type
+    if decay_time is not None:
+        setup.decay_time = decay_time
+    if dephase_time is not None:
+        setup.dephase_time = dephase_time
     if control_amplitude_bounds is not None:
         setup.control_amplitude_bounds = control_amplitude_bounds
 
