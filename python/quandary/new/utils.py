@@ -128,7 +128,17 @@ def fit_bspline0(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, ntime, dt
         return np.array([])
 
 
-def fit_bspline2nd(t0, T, p_data, q_data, nsplines, carrier_frequencies=None, inputs_in_mhz=True):
+def fit_bspline2nd(
+    t0,
+    T,
+    p_data,
+    q_data,
+    nsplines,
+    carrier_frequencies=None,
+    inputs_in_mhz=True,
+    residual_rtol=1e-3,
+    raise_on_bad_residual=True,
+):
     """
     Fit 2nd order Bspline to given pulses p(t) and q(t).
 
@@ -167,6 +177,12 @@ def fit_bspline2nd(t0, T, p_data, q_data, nsplines, carrier_frequencies=None, in
     inputs_in_mhz : bool, optional
         If True (default), p_data/q_data are interpreted as MHz and converted to
         internal units (rad/ns) before fitting.
+    residual_rtol : float, optional
+        Relative residual tolerance for the least-squares fit, measured as
+        ``||A x - y|| / ||y||``. Default is ``5e-2``.
+    raise_on_bad_residual : bool, optional
+        If True, raise ``RuntimeError`` when the residual exceeds
+        ``residual_rtol``. If False (default), emit a warning.
 
     """
 
@@ -241,6 +257,21 @@ def fit_bspline2nd(t0, T, p_data, q_data, nsplines, carrier_frequencies=None, in
             A[ntime:, a2_slice] = coswt[:, None] * B
 
         x, _, _, _ = np.linalg.lstsq(A, y, rcond=None)
+
+        # Check relative residual quality of the fit.
+        y_fit = A @ x
+        residual_norm = np.linalg.norm(y_fit - y)
+        y_norm = max(np.linalg.norm(y), np.finfo(float).eps)
+        rel_residual = residual_norm / y_norm
+        if rel_residual > residual_rtol:
+            msg = (
+                "fit_bspline2nd: poor least-squares fit quality "
+                f"(relative residual={rel_residual:.3e} > tolerance={residual_rtol:.3e})"
+            )
+            if raise_on_bad_residual:
+                raise RuntimeError(msg)
+            logger.warning(msg)
+
         return x
     # end helper function
 
