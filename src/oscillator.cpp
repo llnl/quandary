@@ -4,6 +4,8 @@
 #include "mpi_logger.hpp"
 #include <stdexcept>
 
+const double TOLERANCE = 1e-13; // Tolerance for avoiding numerical precision issues when comparing floating point numbers in evalControl.
+
 Oscillator::Oscillator(){
   nlevels = 0;
   total_time = 0;
@@ -239,8 +241,8 @@ int Oscillator::evalControl(const double t, double* Re_ptr, double* Im_ptr){
   if (params.size()>0) {
     // Iterate over control parameterizations. Only one will be used, see the break-statement. 
     for (size_t bs = 0; bs < basisfunctions.size(); bs++){ 
-     if (basisfunctions[bs]->getTstart() - 1e-13 <= t && 
-          basisfunctions[bs]->getTstop() + 1e-13 >= t ) {
+     if (basisfunctions[bs]->getTstart() - TOLERANCE <= t && 
+          basisfunctions[bs]->getTstop() + TOLERANCE >= t ) {
         /* Iterate over carrier frequencies */
         double sum_p = 0.0;
         double sum_q = 0.0;
@@ -277,8 +279,8 @@ int Oscillator::evalControl_diff(const double t, double* grad, const double pbar
 
     // Iterate over control parameterizations. Only one is active, see break statement.
     for (size_t bs = 0; bs < basisfunctions.size(); bs++){
-      if (basisfunctions[bs]->getTstart() - 1e-13 <= t && 
-          basisfunctions[bs]->getTstop() + 1e-13 >= t ) {
+      if (basisfunctions[bs]->getTstart() - TOLERANCE <= t && 
+          basisfunctions[bs]->getTstop() + TOLERANCE >= t ) {
         /* Iterate over carrier frequencies */
         for (size_t f=0; f < carrier_freq.size(); f++) {
 
