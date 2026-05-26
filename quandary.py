@@ -961,7 +961,6 @@ class Quandary:
         # Get the control pulses for each qubit
         pt = []
         qt = []
-        # ft = []
         for iosc in range(len(self.Ne)):
             # Read the control pulse file
             filename = os.path.join(datadir, f"control{iosc}.dat")
@@ -974,7 +973,6 @@ class Quandary:
             time = x[:,0]   # Time domain
             pt.append([x[n,1]*1e+3 for n in range(len(x[:,0]))])     # Rot frame p(t), MHz
             qt.append([x[n,2]*1e+3 for n in range(len(x[:,0]))])     # Rot frame q(t), MHz
-            # ft.append([x[n,3]*1e+3 for n in range(len(x[:,0]))])     # Lab frame f(t)
     
         return time, pt, qt, uT, expectedEnergy, population, pcof, infid_last, optim_hist
 
