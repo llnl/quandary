@@ -31,7 +31,10 @@ TimeStepper::TimeStepper(size_t /* ninit_local */, MasterEq* mastereq_, int ntim
   iupp = ilow + localsize_u;         
 
   /* Set the time-step size */
-  dt = total_time / ntime;
+  if (ntime > 0)
+    dt = total_time / ntime; 
+  else // for PETSC's adaptive timestepper, ntime and dt will be ignored, set dummy here. 
+    dt = 1.0; 
 
   /* Allocate storage of primal state */
   if (storeFWD) { 
