@@ -1,5 +1,6 @@
 #include "config.hpp"
 #include "config_defaults.hpp"
+#include "util.hpp"
 
 namespace {
 
@@ -616,7 +617,7 @@ Config::Config(const Setup& input, bool quiet_mode) : logger(MPILogger(quiet_mod
 
   data.optim_objective = input.optim_objective.value_or(ConfigDefaults::OPTIM_OBJECTIVE);
 
-  data.optim_weights = validators::vectorField<double>(input.optim_weights, "optim_weights").valueOr(std::vector<double>{ConfigDefaults::OPTIM_WEIGHT});
+  data.optim_weights = validators::vectorField<double>(input.optim_weights, "optim_weights").valueOr(std::vector<double>{});
 
   data.optim_tol_grad_abs = validators::field<double>(input.optim_tol_grad_abs, "optim_tol_grad_abs").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_ABS);
 
@@ -672,206 +673,14 @@ Config::Config(const Setup& input, bool quiet_mode) : logger(MPILogger(quiet_mod
   validate();
 }
 
-Config::Config(const ParsedConfigData& settings, bool quiet_mode) : logger(MPILogger(quiet_mode)) {
-
-  if (!settings.nlevels.has_value()) {
-    throw validators::ValidationError("nlevels cannot be empty");
-  }
-  data.nlevels = settings.nlevels.value();
-  size_t num_osc = data.nlevels.size();
-
-  data.nessential = settings.nessential.value_or(data.nlevels);
-  copyLast(data.nessential, num_osc);
-
-  if (!settings.ntime.has_value()) {
-    throw validators::ValidationError("ntime cannot be empty");
-  }
-  data.ntime = settings.ntime.value();
-  if (data.ntime <= 0) {
-    throw validators::ValidationError("ntime must be positive, got " + std::to_string(data.ntime));
-  }
-
-  if (!settings.dt.has_value()) {
-    throw validators::ValidationError("dt cannot be empty");
-  }
-  data.dt = settings.dt.value();
-  if (data.dt <= 0) {
-    throw validators::ValidationError("dt must be positive, got " + std::to_string(data.dt));
-  }
-
-  data.transition_frequency = settings.transfreq.value_or(std::vector<double>(num_osc, ConfigDefaults::TRANSITION_FREQUENCY));
-  copyLast(data.transition_frequency, num_osc);
-
-  data.selfkerr = settings.selfkerr.value_or(std::vector<double>(num_osc, ConfigDefaults::SELFKERR));
-  copyLast(data.selfkerr, num_osc);
-
-  size_t num_pairs_osc = (num_osc - 1) * num_osc / 2;
-  data.crosskerr_coupling = settings.crosskerr.value_or(std::vector<double>(num_pairs_osc, ConfigDefaults::CROSSKERR_COUPLING));
-  copyLast(data.crosskerr_coupling, num_pairs_osc);
-  data.crosskerr_coupling.resize(num_pairs_osc);  // Truncate if larger than expected
-
-  data.dipole_coupling = settings.Jkl.value_or(std::vector<double>(num_pairs_osc, ConfigDefaults::DIPOLE_COUPLING));
-  copyLast(data.dipole_coupling, num_pairs_osc);
-  data.dipole_coupling.resize(num_pairs_osc);  // Truncate if larger than expected
-
-  data.rotation_frequency = settings.rotfreq.value_or(std::vector<double>(num_osc, ConfigDefaults::ROTATION_FREQUENCY));
-  copyLast(data.rotation_frequency, num_osc);
-
-  data.hamiltonian_file_Hsys = settings.hamiltonian_file_Hsys;
-  data.hamiltonian_file_Hc = settings.hamiltonian_file_Hc;
-
-  data.decoherence_type = settings.decoherence_type.value_or(ConfigDefaults::DECOHERENCE_TYPE);
-
-  data.decay_time = settings.decay_time.value_or(std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
-  copyLast(data.decay_time, num_osc);
-
-  data.dephase_time = settings.dephase_time.value_or(std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
-  copyLast(data.dephase_time, num_osc);
-
-  if (!settings.initialcondition.has_value()) {
-    throw validators::ValidationError("initialcondition cannot be empty");
-  }
-  data.initial_condition.type = settings.initialcondition.value().type;
-  data.initial_condition.filename = settings.initialcondition.value().filename;
-  data.initial_condition.levels = settings.initialcondition.value().levels;
-  data.initial_condition.subsystem = settings.initialcondition.value().subsystem;
-
-  // Control and optimization parameters
-  data.control_zero_boundary_condition = settings.control_zero_boundary_condition.value_or(ConfigDefaults::CONTROL_ZERO_BOUNDARY_CONDITION);
-
-  data.control_parameterizations = parseControlParameterizationsCfg(settings.indexed_control_parameterizations);
-
-  // Control initialization
-  if (settings.indexed_control_init.has_value()) {
-    auto init_map = settings.indexed_control_init.value();
-    // First check for global file initialization and populate to all oscillators if present
-    if (init_map.find(0) != init_map.end() && init_map[0].filename.has_value()) {
-      data.control_initializations.resize(num_osc);
-      std::string control_initialization_file = init_map[0].filename.value();
-      for (size_t i = 0; i < num_osc; i++) {
-        data.control_initializations[i] = ControlInitializationSettings{ControlInitializationType::FILE, std::nullopt, std::nullopt, control_initialization_file};
-      }
-    } else {
-      data.control_initializations = parseControlInitializationsCfg(settings.indexed_control_init);
-    }
-  } else {
-    // Initialize with defaults when no control initialization is provided
-    data.control_initializations.resize(num_osc);
-    for (size_t i = 0; i < num_osc; i++) {
-      data.control_initializations[i] = ControlInitializationSettings{
-        ConfigDefaults::CONTROL_INIT_TYPE, ConfigDefaults::CONTROL_INIT_AMPLITUDE, std::nullopt, std::nullopt};
-    }
-  }
-
-  // Parse control_amplitude_bounds from CFG format (returns vector of vectors, but we need vector)
-  auto control_amplitude_bounds_cfg = parseOscillatorSettingsCfg<double>(settings.indexed_control_amplitude_bounds, data.control_parameterizations.size(), {ConfigDefaults::CONTROL_AMPLITUDE_BOUND});
-  data.control_amplitude_bounds.resize(control_amplitude_bounds_cfg.size());
-  for (size_t i = 0; i < control_amplitude_bounds_cfg.size(); ++i) {
-    data.control_amplitude_bounds[i] = control_amplitude_bounds_cfg[i].empty() ? ConfigDefaults::CONTROL_AMPLITUDE_BOUND : control_amplitude_bounds_cfg[i][0];
-  }
-
-  data.carrier_frequencies.resize(num_osc);
-  data.carrier_frequencies = parseOscillatorSettingsCfg<double>(settings.indexed_carrier_frequencies, num_osc, {ConfigDefaults::CARRIER_FREQ});
-
-  if (settings.optim_target.has_value()) {
-    data.optim_target = settings.optim_target.value();
-    data.optim_target.gate_rot_freq = settings.gate_rot_freq.value_or(std::vector<double>(num_osc, ConfigDefaults::GATE_ROT_FREQ));
-  } else {
-    // No optim_target specified, use default (no target)
-    OptimTargetSettings default_target;
-    data.optim_target = default_target;
-  }
-
-  data.optim_objective = settings.optim_objective.value_or(ConfigDefaults::OPTIM_OBJECTIVE);
-
-  data.optim_weights = settings.optim_weights.value_or(std::vector<double>{ConfigDefaults::OPTIM_WEIGHT});
-
-  data.optim_tol_grad_abs = settings.optim_tol_grad_abs.value_or(ConfigDefaults::OPTIM_TOL_GRAD_ABS);
-  data.optim_tol_grad_rel = settings.optim_tol_grad_rel.value_or(ConfigDefaults::OPTIM_TOL_GRAD_REL);
-  data.optim_tol_final_cost = settings.optim_tol_final_cost.value_or(ConfigDefaults::OPTIM_TOL_FINAL_COST);
-  data.optim_tol_infidelity = settings.optim_tol_infidelity.value_or(ConfigDefaults::OPTIM_TOL_INFIDELITY);
-  data.optim_maxiter = settings.optim_maxiter.value_or(ConfigDefaults::OPTIM_MAXITER);
-
-  data.optim_tikhonov_coeff = settings.optim_regul.value_or(ConfigDefaults::OPTIM_TIKHONOV_COEFF);
-  data.optim_tikhonov_use_x0 = settings.optim_regul_tik0.value_or(ConfigDefaults::OPTIM_TIKHONOV_USE_X0);
-  if (settings.optim_regul_interpolate.has_value()) {
-    // Handle deprecated optim_regul_interpolate logic
-    data.optim_tikhonov_use_x0 = settings.optim_regul_interpolate.value();
-    logger.log("# Warning: 'optim_regul_interpolate' is deprecated. Please use 'optim_regul_tik0' instead.\n");
-  }
-
-  data.optim_penalty_leakage = settings.optim_penalty.value_or(ConfigDefaults::OPTIM_PENALTY_LEAKAGE);
-  data.optim_penalty_weightedcost = settings.optim_penalty.value_or(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST);
-  data.optim_penalty_weightedcost_width = settings.optim_penalty_param.value_or(ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH);
-  data.optim_penalty_dpdm = settings.optim_penalty_dpdm.value_or(ConfigDefaults::OPTIM_PENALTY_DPDM);
-  data.optim_penalty_energy = settings.optim_penalty_energy.value_or(ConfigDefaults::OPTIM_PENALTY_ENERGY);
-  data.optim_penalty_variation = settings.optim_penalty_variation.value_or(ConfigDefaults::OPTIM_PENALTY_VARIATION);
-
-  // Output parameters
-  data.output_directory = settings.datadir.value_or(ConfigDefaults::OUTPUT_DIRECTORY);
-
-  // Convert old per-oscillator output to global output_observables (apply to all oscillators)
-  auto indexed_output_vec = parseOscillatorSettingsCfg<OutputType>(settings.indexed_output, num_osc);
-  data.output_observables.clear();
-  // Collect unique output types from all oscillators
-  std::set<OutputType> unique_types;
-  for (const auto& osc_output : indexed_output_vec) {
-    for (const auto& type : osc_output) {
-      unique_types.insert(type);
-    }
-  }
-  // Convert set to vector
-  data.output_observables.assign(unique_types.begin(), unique_types.end());
-
-  data.output_timestep_stride = settings.output_timestep_stride.value_or(ConfigDefaults::OUTPUT_TIMESTEP_STRIDE);
-  data.output_optimization_stride = settings.output_optimization_stride.value_or(ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE);
-  data.runtype = settings.runtype.value_or(ConfigDefaults::RUNTYPE);
-  data.usematfree = settings.usematfree.value_or(ConfigDefaults::USEMATFREE);
-  data.linearsolver_type = settings.linearsolver_type.value_or(ConfigDefaults::LINEARSOLVER_TYPE);
-  data.linearsolver_maxiter = settings.linearsolver_maxiter.value_or(ConfigDefaults::LINEARSOLVER_MAXITER);
-  data.timestepper_type = settings.timestepper_type.value_or(ConfigDefaults::TIMESTEPPER_TYPE);
-  setRandSeed(settings.rand_seed.value_or(ConfigDefaults::RAND_SEED));
-
-  // Finalize interdependent settings, then validate
-  finalize();
-  validate();
-}
-
 Config Config::fromFile(const std::string& filename, bool quiet_mode) {
-  if (hasSuffix(filename, ".toml")) {
-    return Config::fromToml(filename, quiet_mode);
-  } else {
-    // TODO cfg: delete this when .cfg format is removed.
-    MPILogger logger = MPILogger(quiet_mode);
-    logger.log(
-        "# Warning: Config file does not have .toml extension. "
-        "The deprecated .cfg format will be removed in future versions.\n");
-    return Config::fromCfg(filename, quiet_mode);
-  }
-}
-
-Config Config::fromToml(const std::string& filename, bool quiet_mode) {
   toml::table toml = toml::parse_file(filename);
   return Config(toml, quiet_mode);
 }
 
-Config Config::fromTomlString(const std::string& toml_content, bool quiet_mode) {
+Config Config::fromString(const std::string& toml_content, bool quiet_mode) {
   toml::table toml = toml::parse(toml_content);
   return Config(toml, quiet_mode);
-}
-
-Config Config::fromCfg(const std::string& filename, bool quiet_mode) {
-  MPILogger logger = MPILogger(quiet_mode);
-  CfgParser parser(logger);
-  ParsedConfigData settings = parser.parseFile(filename);
-  return Config(settings, quiet_mode);
-}
-
-Config Config::fromCfgString(const std::string& cfg_content, bool quiet_mode) {
-  MPILogger logger = MPILogger(quiet_mode);
-  CfgParser parser(logger);
-  ParsedConfigData settings = parser.parseString(cfg_content);
-  return Config(settings, quiet_mode);
 }
 
 namespace {
@@ -1260,10 +1069,9 @@ void Config::finalize() {
   }
 
   // Scale optimization weights such that they sum up to one
-  // If a single value was provided, replicate it for all initial conditions
-  if (data.optim_weights.size() == 1) {
-    // TODO remove this when removing cfg format
-    copyLast(data.optim_weights, n_initial_conditions);
+  // If unspecified, default to uniform weights across initial conditions
+  if (data.optim_weights.empty()) {
+    data.optim_weights.assign(n_initial_conditions, ConfigDefaults::OPTIM_WEIGHT);
   } else if (data.optim_weights.size() != n_initial_conditions) {
     throw validators::ValidationError("optim_weights vector has length " + std::to_string(data.optim_weights.size()) + " but must have length " + std::to_string(n_initial_conditions) + " (number of initial conditions)");
   }
@@ -1489,82 +1297,4 @@ void Config::setRandSeed(int rand_seed_) {
     std::random_device rd;
     data.rand_seed = rd(); // random non-reproducable seed
   }
-}
-
-// CFG parsing helpers
-// TODO cfg: delete these when .cfg format is removed.
-
-template <typename T>
-std::vector<std::vector<T>> Config::parseOscillatorSettingsCfg(
-    const std::optional<std::map<int, std::vector<T>>>& indexed, size_t num_entries,
-    const std::vector<T>& default_values) const {
-  // Start with all defaults
-  std::vector<std::vector<T>> result(num_entries, default_values);
-
-  // Overwrite with specified values
-  if (indexed.has_value()) {
-    for (const auto& [idx, vals] : *indexed) {
-      if (idx >= 0 && static_cast<size_t>(idx) < num_entries) {
-        result[idx] = vals;
-      }
-    }
-  }
-  return result;
-}
-
-std::vector<ControlParameterizationSettings> Config::parseControlParameterizationsCfg(const std::optional<std::map<int, ControlParameterizationData>>& parameterizations_map) const {
-  // Use default-initialized struct (defaults provided in struct definition)
-  ControlParameterizationSettings default_parameterization;
-
-  // Populate default if paramterization is not specified
-  if (!parameterizations_map.has_value()) {
-    return std::vector<ControlParameterizationSettings>(data.nlevels.size(), default_parameterization);
-  }
-
-  // Otherwise, parse specified parameterizations for each oscillator
-  auto parsed_parameterizations = std::vector<ControlParameterizationSettings>(data.nlevels.size(), default_parameterization);
-  for (size_t i = 0; i < parsed_parameterizations.size(); i++) {
-    if (parameterizations_map.value().find(static_cast<int>(i)) != parameterizations_map.value().end()) {
-
-      // auto parameterization = parseControlParameterizationCfg(parameterizations_map.value().at(i));
-      auto oscil_config = parameterizations_map.value().at(static_cast<int>(i));
-      const auto& params = oscil_config.parameters;
-
-      // Create and store the parameterization
-      ControlParameterizationSettings parameterization;
-      parameterization.type = oscil_config.control_type;
-      if (oscil_config.control_type == ControlType::BSPLINE || oscil_config.control_type == ControlType::BSPLINE0) {
-        assert(params.size() >= 1); // nspline is required, should be validated in CfgParser
-        parameterization.nspline = static_cast<size_t>(params[0]);
-        parameterization.tstart = params.size() > 1 ? std::optional<double>(params[1]) : std::nullopt;
-        parameterization.tstop = params.size() > 2 ? std::optional<double>(params[2]) : std::nullopt;
-      } else if (oscil_config.control_type == ControlType::BSPLINEAMP) {
-        assert(params.size() >= 2); // nspline and scaling are required, should be validated in CfgParser
-        parameterization.nspline = static_cast<size_t>(params[0]);
-        parameterization.scaling = static_cast<double>(params[1]);
-        parameterization.tstart = params.size() > 2 ? std::optional<double>(params[2]) : std::nullopt;
-        parameterization.tstop = params.size() > 3 ? std::optional<double>(params[3]) : std::nullopt;
-      }
-      parsed_parameterizations[i] = parameterization;
-    }
-  }
-  return parsed_parameterizations;
-}
-
-
-std::vector<ControlInitializationSettings> Config::parseControlInitializationsCfg(const std::optional<std::map<int, ControlInitializationSettings>>& init_configs) const {
-
-  ControlInitializationSettings default_init;
-
-  std::vector<ControlInitializationSettings> control_initializations(data.nlevels.size(), default_init);
-
-  if (init_configs.has_value()) {
-    for (size_t i = 0; i < data.nlevels.size(); i++) {
-      if (init_configs->find(static_cast<int>(i)) != init_configs->end()) {
-        control_initializations[i] = init_configs->at(static_cast<int>(i));
-      }
-    }
-  }
-
-  return control_initializations;
 }

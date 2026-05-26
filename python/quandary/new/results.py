@@ -88,7 +88,7 @@ def get_results(config: Config) -> Results:
 
     Examples
     --------
-    >>> config = Config.from_toml("data_out/config_log.toml", quiet=True)
+    >>> config = Config.from_file("data_out/config_log.toml", quiet=True)
     >>> results = get_results(config)
     >>> print(f"Infidelity: {results.infidelity}")
     """

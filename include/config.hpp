@@ -15,7 +15,6 @@
 #include <limits>
 #include <random>
 #include <type_traits>
-#include "cfgparser.hpp"
 #include "defs.hpp"
 #include "mpi_logger.hpp"
 #include "config_defaults.hpp"
@@ -126,7 +125,7 @@ using Setup = ConfigFieldsT<std::optional>;
  *
  * Contains validated, typed configuration parameters. All fields have been
  * validated with defaults set. Handles parsing from TOML configuration files
- * and deprecated CFG format, as well as printing log of used configuration.
+ * and printing log of used configuration.
  * This class is immutable after construction.
  *
  * @note Error handling: Use exceptions (std::runtime_error, std::invalid_argument)
@@ -194,46 +193,21 @@ class Config {
    */
   Config(const toml::table& table, bool quiet_mode = false);
 
-  /**
-   * @brief Constructs a Config from legacy .cfg format (deprecated).
-   * @todo Delete this when .cfg format is removed.
-   */
-  Config(const ParsedConfigData& settings, bool quiet_mode = false);
-
   ~Config() = default;
 
   /**
-   * @brief Load a Config from a file, auto-detecting TOML or legacy .cfg format.
+   * @brief Load a Config from a TOML file.
    * @param filename Path to the configuration file
    * @param quiet_mode Whether to suppress logging output
    */
   static Config fromFile(const std::string& filename, bool quiet_mode = false);
 
   /**
-   * @brief Load a Config from a TOML file.
-   * @param toml_filename Path to the TOML configuration file
-   * @param quiet_mode Whether to suppress logging output
-   */
-  static Config fromToml(const std::string& toml_filename, bool quiet_mode = false);
-
-  /**
    * @brief Load a Config from a TOML-formatted string.
    * @param toml_content String containing TOML configuration
    * @param quiet_mode Whether to suppress logging output
    */
-  static Config fromTomlString(const std::string& toml_content, bool quiet_mode = false);
-
-  /**
-   * @brief Load a Config from a legacy .cfg file (deprecated).
-   * @todo Delete this when .cfg format is removed.
-   */
-  static Config fromCfg(const std::string& cfg_filename, bool quiet_mode = false);
-
-  /**
-   * @brief Load a Config from a legacy .cfg-formatted string (deprecated).
-   * @todo Delete this when .cfg format is removed.
-   */
-  static Config fromCfgString(const std::string& cfg_content, bool quiet_mode = false);
+  static Config fromString(const std::string& toml_content, bool quiet_mode = false);
 
   /**
    * @brief Serialize the validated configuration to TOML format.
@@ -331,12 +305,4 @@ class Config {
   size_t computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, DecoherenceType decoherence_type) const;
 
   void setRandSeed(int rand_seed_);
-
-  // TODO cfg: delete these when .cfg format is removed.
-  template <typename T>
-  std::vector<std::vector<T>> parseOscillatorSettingsCfg(const std::optional<std::map<int, std::vector<T>>>& indexed, size_t num_entries, const std::vector<T>& default_values = {}) const;
-
-  std::vector<ControlParameterizationSettings> parseControlParameterizationsCfg(const std::optional<std::map<int, ControlParameterizationData>>& parameterizations_map) const;
-
-  std::vector<ControlInitializationSettings> parseControlInitializationsCfg(const std::optional<std::map<int, ControlInitializationSettings>>& init_configs) const;
 };

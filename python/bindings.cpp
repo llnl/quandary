@@ -221,8 +221,8 @@ NB_MODULE(_quandary_impl, m) {
     "Instances are immutable after construction. All properties are read-only.\n\n"
     "Create from Setup, TOML file, or TOML string:\n"
     "    config = Config(setup)\n"
-    "    config = Config.from_toml('simulation.toml')\n"
-    "    config = Config.from_toml_string(toml_content)")
+    "    config = Config.from_file('simulation.toml')\n"
+    "    config = Config.from_string(toml_content)")
     .def(nb::init<const Setup&, bool>(),
       nb::arg("input"), nb::arg("quiet") = false,
       "Create a validated Config from Setup")
@@ -231,11 +231,8 @@ NB_MODULE(_quandary_impl, m) {
       "Copy constructor - creates a copy of another Config")
     .def_static("from_file", &Config::fromFile,
       nb::arg("filename"), nb::arg("quiet") = false,
-      "Load and validate a Config from a file (auto-detects TOML or .cfg format)")
-    .def_static("from_toml", &Config::fromToml,
-      nb::arg("toml_filename"), nb::arg("quiet") = false,
       "Load and validate a Config from a TOML file")
-    .def_static("from_toml_string", &Config::fromTomlString,
+    .def_static("from_string", &Config::fromString,
       nb::arg("toml_content"), nb::arg("quiet") = false,
       "Load and validate a Config from a TOML string")
     // System configuration

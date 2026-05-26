@@ -300,11 +300,6 @@ then
         mpi_exe="${mpi_exe} ${mpi_extra_flags}"
     fi
 
-    # TODO cfg: remove this later
-    timed_message "Run regression tests with deprecated cfg config (excluding python tests which are run below)"
-    cd tests/regression && pytest -v -s --mpi-exec="${mpi_exe}" --config-format=cfg --petsc-options="${petsc_test_options}" .
-    cd ${project_dir}
-
     timed_message "Run regression tests"
     pytest -v -s -m "not performance" --mpi-exec="${mpi_exe}" --petsc-options="${petsc_test_options}"
 
