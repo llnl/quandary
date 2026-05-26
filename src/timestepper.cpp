@@ -945,7 +945,7 @@ PetscTS::~PetscTS() {
 
 Vec PetscTS::solveODE(int initid, int iinit_local, Vec rho_t0){
   // Grab the timestepper for this initial condit
-  const int iinit = iinit_local;;
+  const int iinit = iinit_local;
   TS ts_run = getTSForInit(iinit_local);
   Vec q_run = q_pool[iinit];
 
