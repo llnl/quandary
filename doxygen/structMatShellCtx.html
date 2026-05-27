@@ -92,14 +92,21 @@ Collaboration diagram for MatShellCtx:</div>
 <div class="dyncontent">
 <div class="center"><img src="structMatShellCtx__coll__graph.png" border="0" usemap="#aMatShellCtx_coll__map" alt="Collaboration graph"/></div>
 <map name="aMatShellCtx_coll__map" id="aMatShellCtx_coll__map">
-<area shape="rect" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="5,93,107,119"/>
-<area shape="rect" href="classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="14,5,98,31"/>
-<area shape="poly" title=" " alt="" coords="59,45,59,93,53,93,53,45"/>
+<area shape="rect" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="11,93,112,119"/>
+<area shape="rect" href="classMasterEq.html" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="32,181,115,207"/>
+<area shape="poly" title=" " alt="" coords="24,128,10,142,8,149,10,156,22,169,38,179,35,184,19,173,6,159,3,149,5,139,20,124"/>
+<area shape="poly" title=" " alt="" coords="67,168,60,119,66,118,72,167"/>
+<area shape="rect" href="classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="69,5,153,31"/>
+<area shape="poly" title=" " alt="" coords="89,42,78,56,70,75,66,94,60,93,65,74,74,53,85,39"/>
+<area shape="poly" title=" " alt="" coords="136,40,143,53,154,67,166,82,168,94,166,110,142,159,129,173,112,184,109,179,125,169,138,156,161,108,163,94,161,84,150,71,139,56,131,42"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
+<tr class="memitem:a00c757eecf89c05407fbf38ca6c9f96d" id="r_a00c757eecf89c05407fbf38ca6c9f96d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classMasterEq.html">MasterEq</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMatShellCtx.html#a00c757eecf89c05407fbf38ca6c9f96d">mastereq</a></td></tr>
+<tr class="memdesc:a00c757eecf89c05407fbf38ca6c9f96d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Owning <a class="el" href="classMasterEq.html" title="Implementation of the real-valued right-hand-side (RHS) system matrix of the quantum dynamical equati...">MasterEq</a> instance for callback dispatch.  <br /></td></tr>
+<tr class="separator:a00c757eecf89c05407fbf38ca6c9f96d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a99b166bb3aac8fa812438349afafcc8a" id="r_a99b166bb3aac8fa812438349afafcc8a"><td class="memItemLeft" align="right" valign="top">PetscInt&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMatShellCtx.html#a99b166bb3aac8fa812438349afafcc8a">dim</a></td></tr>
 <tr class="memdesc:a99b166bb3aac8fa812438349afafcc8a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Dimension of full vectorized system: N^2 if Lindblad, N if Schroedinger.  <br /></td></tr>
 <tr class="separator:a99b166bb3aac8fa812438349afafcc8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -165,6 +172,8 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a7444246ae4834351b67ceee29481287c" id="r_a7444246ae4834351b67ceee29481287c"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMatShellCtx.html#a7444246ae4834351b67ceee29481287c">time</a></td></tr>
 <tr class="memdesc:a7444246ae4834351b67ceee29481287c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Current time.  <br /></td></tr>
 <tr class="separator:a7444246ae4834351b67ceee29481287c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adfe6edab988b564cfb8f2cf125f7dba0" id="r_adfe6edab988b564cfb8f2cf125f7dba0"><td class="memItemLeft" align="right" valign="top">PetscBool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMatShellCtx.html#adfe6edab988b564cfb8f2cf125f7dba0">assembled</a></td></tr>
+<tr class="separator:adfe6edab988b564cfb8f2cf125f7dba0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Matrix shell context containing data needed for applying the right-hand-side (RHS) system matrix to a vector. </p>
@@ -259,6 +268,20 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Flags for T1 decay and T2 dephasing. </p>
+
+</div>
+</div>
+<a id="adfe6edab988b564cfb8f2cf125f7dba0" name="adfe6edab988b564cfb8f2cf125f7dba0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adfe6edab988b564cfb8f2cf125f7dba0">&#9670;&#160;</a></span>assembled</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">PetscBool MatShellCtx::assembled</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
 
 </div>
 </div>
@@ -479,6 +502,22 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Dipole-dipole coupling strength. </p>
+
+</div>
+</div>
+<a id="a00c757eecf89c05407fbf38ca6c9f96d" name="a00c757eecf89c05407fbf38ca6c9f96d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a00c757eecf89c05407fbf38ca6c9f96d">&#9670;&#160;</a></span>mastereq</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classMasterEq.html">MasterEq</a>* MatShellCtx::mastereq</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Owning <a class="el" href="classMasterEq.html" title="Implementation of the real-valued right-hand-side (RHS) system matrix of the quantum dynamical equati...">MasterEq</a> instance for callback dispatch. </p>
 
 </div>
 </div>

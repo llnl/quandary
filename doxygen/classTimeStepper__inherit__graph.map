@@ -1,9 +1,11 @@
 <map id="TimeStepper" name="TimeStepper">
-<area shape="rect" id="Node000001" title="Base class for time integration schemes to evolve the quantum dynamics." alt="" coords="54,5,159,31"/>
+<area shape="rect" id="Node000001" title="Base class for time integration schemes to evolve the quantum dynamics." alt="" coords="114,5,219,31"/>
 <area shape="rect" id="Node000002" href="$classExplEuler.html" title="Explicit Euler time integration scheme." alt="" coords="5,79,88,104"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="90,43,58,80,54,77,86,40"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="137,40,68,81,65,76,134,35"/>
 <area shape="rect" id="Node000003" href="$classImplMidpoint.html" title="Implicit midpoint rule time integration scheme." alt="" coords="113,79,221,104"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="127,40,159,77,155,80,123,43"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="169,44,169,79,164,79,164,44"/>
+<area shape="rect" id="Node000005" href="$classPetscTS.html" title="Petsc&#39;s adaptive timestepper." alt="" coords="245,79,318,104"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="198,35,264,76,261,81,195,40"/>
 <area shape="rect" id="Node000004" href="$classCompositionalImplMidpoint.html" title="Compositional implicit midpoint rule for higher&#45;order accuracy." alt="" coords="65,152,268,177"/>
 <area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="169,118,169,152,164,152,164,118"/>
 </map>

@@ -94,11 +94,13 @@ Inheritance diagram for TimeStepper:</div>
 <div class="dyncontent">
 <div class="center"><img src="classTimeStepper__inherit__graph.png" border="0" usemap="#aTimeStepper_inherit__map" alt="Inheritance graph"/></div>
 <map name="aTimeStepper_inherit__map" id="aTimeStepper_inherit__map">
-<area shape="rect" title="Base class for time integration schemes to evolve the quantum dynamics." alt="" coords="54,5,159,31"/>
+<area shape="rect" title="Base class for time integration schemes to evolve the quantum dynamics." alt="" coords="114,5,219,31"/>
 <area shape="rect" href="classExplEuler.html" title="Explicit Euler time integration scheme." alt="" coords="5,79,88,104"/>
-<area shape="poly" title=" " alt="" coords="90,43,58,80,54,77,86,40"/>
+<area shape="poly" title=" " alt="" coords="137,40,68,81,65,76,134,35"/>
 <area shape="rect" href="classImplMidpoint.html" title="Implicit midpoint rule time integration scheme." alt="" coords="113,79,221,104"/>
-<area shape="poly" title=" " alt="" coords="127,40,159,77,155,80,123,43"/>
+<area shape="poly" title=" " alt="" coords="169,44,169,79,164,79,164,44"/>
+<area shape="rect" href="classPetscTS.html" title="Petsc&#39;s adaptive timestepper." alt="" coords="245,79,318,104"/>
+<area shape="poly" title=" " alt="" coords="198,35,264,76,261,81,195,40"/>
 <area shape="rect" href="classCompositionalImplMidpoint.html" title="Compositional implicit midpoint rule for higher&#45;order accuracy." alt="" coords="65,152,268,177"/>
 <area shape="poly" title=" " alt="" coords="169,118,169,152,164,152,164,118"/>
 </map>
@@ -108,22 +110,23 @@ Collaboration diagram for TimeStepper:</div>
 <div class="dyncontent">
 <div class="center"><img src="classTimeStepper__coll__graph.png" border="0" usemap="#aTimeStepper_coll__map" alt="Collaboration graph"/></div>
 <map name="aTimeStepper_coll__map" id="aTimeStepper_coll__map">
-<area shape="rect" title="Base class for time integration schemes to evolve the quantum dynamics." alt="" coords="219,269,324,295"/>
-<area shape="rect" href="classMasterEq.html" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="118,181,201,207"/>
-<area shape="poly" title=" " alt="" coords="176,216,201,243,242,267,240,272,198,247,172,220"/>
-<area shape="rect" href="classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="5,5,89,31"/>
-<area shape="poly" title=" " alt="" coords="40,45,33,81,34,100,40,117,57,138,78,156,124,179,121,184,75,160,53,142,36,120,29,101,28,81,35,44"/>
-<area shape="rect" href="structMatShellCtx.html" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="115,93,217,119"/>
-<area shape="poly" title=" " alt="" coords="76,37,151,91,148,95,73,41"/>
-<area shape="poly" title=" " alt="" coords="167,133,163,181,158,181,161,132"/>
-<area shape="rect" href="classOptimTarget.html" title="Optimization target specification for quantum control." alt="" coords="225,181,328,207"/>
-<area shape="poly" title=" " alt="" coords="276,221,275,231,274,269,269,269,270,231,271,220"/>
-<area shape="rect" href="classGate.html" title="Base class for quantum gate operations." alt="" coords="249,93,302,119"/>
-<area shape="poly" title=" " alt="" coords="278,133,279,181,274,181,273,133"/>
-<area shape="rect" href="structInitialConditionSettings.html" title="Settings for initial conditions. Required, no defaults." alt="" coords="327,93,501,119"/>
-<area shape="poly" title=" " alt="" coords="394,130,355,160,307,184,305,179,353,155,391,126"/>
-<area shape="rect" href="classOutput.html" title="Output management for quantum control simulations and optimization." alt="" coords="358,181,425,207"/>
-<area shape="poly" title=" " alt="" coords="384,221,364,247,342,262,319,272,317,267,340,257,360,243,379,218"/>
+<area shape="rect" title="Base class for time integration schemes to evolve the quantum dynamics." alt="" coords="281,181,386,207"/>
+<area shape="rect" href="classMasterEq.html" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="100,93,183,119"/>
+<area shape="poly" title=" " alt="" coords="181,122,308,179,306,184,179,127"/>
+<area shape="rect" href="structMatShellCtx.html" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="5,181,107,207"/>
+<area shape="poly" title=" " alt="" coords="131,133,111,159,79,183,76,179,107,155,127,129"/>
+<area shape="rect" href="classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="35,5,119,31"/>
+<area shape="poly" title=" " alt="" coords="96,40,135,91,130,94,92,43"/>
+<area shape="poly" title=" " alt="" coords="58,42,39,66,25,94,23,118,29,141,49,180,45,182,24,143,18,118,20,93,35,63,54,39"/>
+<area shape="poly" title=" " alt="" coords="49,168,50,154,55,141,75,123,99,112,101,117,78,128,60,144,55,155,54,168"/>
+<area shape="rect" href="classOptimTarget.html" title="Optimization target specification for quantum control." alt="" coords="282,93,385,119"/>
+<area shape="poly" title=" " alt="" coords="336,133,336,181,331,181,331,133"/>
+<area shape="rect" href="classGate.html" title="Base class for quantum gate operations." alt="" coords="200,5,253,31"/>
+<area shape="poly" title=" " alt="" coords="244,40,270,67,308,91,305,95,266,71,240,43"/>
+<area shape="rect" href="structInitialConditionSettings.html" title="Settings for initial conditions. Required, no defaults." alt="" coords="278,5,453,31"/>
+<area shape="poly" title=" " alt="" coords="359,45,340,94,335,92,354,43"/>
+<area shape="rect" href="classOutput.html" title="Output management for quantum control simulations and optimization." alt="" coords="420,93,487,119"/>
+<area shape="poly" title=" " alt="" coords="446,133,426,159,404,174,381,184,379,179,402,169,422,155,441,130"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
@@ -131,9 +134,9 @@ Collaboration diagram for TimeStepper:</div>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a88c17d2b22882ca947e83c25e903be1d" id="r_a88c17d2b22882ca947e83c25e903be1d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a88c17d2b22882ca947e83c25e903be1d">TimeStepper</a> ()</td></tr>
 <tr class="separator:a88c17d2b22882ca947e83c25e903be1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a29d1e7d86ea1d20606bc1c6b24a49a8c" id="r_a29d1e7d86ea1d20606bc1c6b24a49a8c"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a29d1e7d86ea1d20606bc1c6b24a49a8c">TimeStepper</a> (<a class="el" href="classMasterEq.html">MasterEq</a> *mastereq_, int ntime_, double total_time_, <a class="el" href="classOutput.html">Output</a> *output_, bool storeFWD_)</td></tr>
-<tr class="memdesc:a29d1e7d86ea1d20606bc1c6b24a49a8c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor for time stepper.  <br /></td></tr>
-<tr class="separator:a29d1e7d86ea1d20606bc1c6b24a49a8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0bcee079728ff3db7f425f3cc81f67e7" id="r_a0bcee079728ff3db7f425f3cc81f67e7"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a0bcee079728ff3db7f425f3cc81f67e7">TimeStepper</a> (size_t ninit_local, <a class="el" href="classMasterEq.html">MasterEq</a> *mastereq_, int ntime_, double total_time_, <a class="el" href="classOutput.html">Output</a> *output_, bool storeFWD_)</td></tr>
+<tr class="memdesc:a0bcee079728ff3db7f425f3cc81f67e7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor for time stepper.  <br /></td></tr>
+<tr class="separator:a0bcee079728ff3db7f425f3cc81f67e7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2d80eb58c811581ef79a0b3749fb5825" id="r_a2d80eb58c811581ef79a0b3749fb5825"><td class="memItemLeft" align="right" valign="top">virtual&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a2d80eb58c811581ef79a0b3749fb5825">~TimeStepper</a> ()</td></tr>
 <tr class="separator:a2d80eb58c811581ef79a0b3749fb5825"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afdf523a5e2230eec37e27f4a9e590796" id="r_afdf523a5e2230eec37e27f4a9e590796"><td class="memItemLeft" align="right" valign="top">Vec&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#afdf523a5e2230eec37e27f4a9e590796">getState</a> (size_t tindex)</td></tr>
@@ -155,12 +158,15 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a3e4006d9f66b31b39faa0050d2f27ea7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a33e06e155a957a310005c47b356a0d7b" id="r_a33e06e155a957a310005c47b356a0d7b"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a33e06e155a957a310005c47b356a0d7b">getDPDMIntegral</a> ()</td></tr>
 <tr class="separator:a33e06e155a957a310005c47b356a0d7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae2be974cc2dd652299ba12a36ffece58" id="r_ae2be974cc2dd652299ba12a36ffece58"><td class="memItemLeft" align="right" valign="top">Vec&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#ae2be974cc2dd652299ba12a36ffece58">solveODE</a> (int initid, Vec rho_t0)</td></tr>
-<tr class="memdesc:ae2be974cc2dd652299ba12a36ffece58"><td class="mdescLeft">&#160;</td><td class="mdescRight">Solves the ODE forward in time.  <br /></td></tr>
-<tr class="separator:ae2be974cc2dd652299ba12a36ffece58"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a383990435f66ab846631c632b9a0cc97" id="r_a383990435f66ab846631c632b9a0cc97"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a383990435f66ab846631c632b9a0cc97">solveAdjointODE</a> (Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy)</td></tr>
-<tr class="memdesc:a383990435f66ab846631c632b9a0cc97"><td class="mdescLeft">&#160;</td><td class="mdescRight">Solves the adjoint ODE backward in time.  <br /></td></tr>
-<tr class="separator:a383990435f66ab846631c632b9a0cc97"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a406d8b398fed468a496f1f08776df817" id="r_a406d8b398fed468a496f1f08776df817"><td class="memItemLeft" align="right" valign="top">virtual double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a406d8b398fed468a496f1f08776df817">getMinTimestepSize</a> () const</td></tr>
+<tr class="memdesc:a406d8b398fed468a496f1f08776df817"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the smallest timestep size used during timestepping.  <br /></td></tr>
+<tr class="separator:a406d8b398fed468a496f1f08776df817"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3bbf95bae24b17885c061cbc10a23ace" id="r_a3bbf95bae24b17885c061cbc10a23ace"><td class="memItemLeft" align="right" valign="top">virtual Vec&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a3bbf95bae24b17885c061cbc10a23ace">solveODE</a> (int initid, int iinit_local, Vec rho_t0)</td></tr>
+<tr class="memdesc:a3bbf95bae24b17885c061cbc10a23ace"><td class="mdescLeft">&#160;</td><td class="mdescRight">Solves the ODE forward in time.  <br /></td></tr>
+<tr class="separator:a3bbf95bae24b17885c061cbc10a23ace"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afa7b01103483ed0a8abd45b1da446142" id="r_afa7b01103483ed0a8abd45b1da446142"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#afa7b01103483ed0a8abd45b1da446142">solveAdjointODE</a> (int iinit_local, Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy)</td></tr>
+<tr class="memdesc:afa7b01103483ed0a8abd45b1da446142"><td class="mdescLeft">&#160;</td><td class="mdescRight">Solves the adjoint ODE backward in time.  <br /></td></tr>
+<tr class="separator:afa7b01103483ed0a8abd45b1da446142"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a35fc3f22411d4e8068206ddd8300b431" id="r_a35fc3f22411d4e8068206ddd8300b431"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a35fc3f22411d4e8068206ddd8300b431">evalLeakage</a> (const Vec <a class="el" href="classTimeStepper.html#a7b47c0f5ce67d8f4a04c77c2c96bd93c">x</a>)</td></tr>
 <tr class="memdesc:a35fc3f22411d4e8068206ddd8300b431"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates leakage into guard levels.  <br /></td></tr>
 <tr class="separator:a35fc3f22411d4e8068206ddd8300b431"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -289,8 +295,8 @@ Protected Attributes</h2></td></tr>
 <div class="textblock"><p>Base class for time integration schemes to evolve the quantum dynamics. </p>
 <p>This abstract class provides the interface for time-stepping methods used to integrate the quantum evolution equations (Lindblad master equation or Schroedinger equation). It supports both forward and adjoint time integration, handles output of evolution data, and evaluates penalty integral terms.</p>
 <p>Main functionality:</p><ul>
-<li><a class="el" href="classTimeStepper.html#ae2be974cc2dd652299ba12a36ffece58">solveODE</a> propagates an initial state at time t0 to the final time T, while writing evolution data to files and adding to integral penalty terms, if needed.</li>
-<li><a class="el" href="classTimeStepper.html#a383990435f66ab846631c632b9a0cc97">solveAdjointODE</a> propagates a terminal (adjoint) condition through the time domain backwards in time from T to 0, while updating the reduced gradient along the way.</li>
+<li><a class="el" href="classTimeStepper.html#a3bbf95bae24b17885c061cbc10a23ace">solveODE</a> propagates an initial state at time t0 to the final time T, while writing evolution data to files and adding to integral penalty terms, if needed.</li>
+<li><a class="el" href="classTimeStepper.html#afa7b01103483ed0a8abd45b1da446142">solveAdjointODE</a> propagates a terminal (adjoint) condition through the time domain backwards in time from T to 0, while updating the reduced gradient along the way.</li>
 </ul>
 <p>This class contains references to:</p><ul>
 <li><a class="el" href="classMasterEq.html">MasterEq</a> for evaluating and applying the right-hand-side system matrix of the real-valued, vectorized differential equation to a state vector at each time-step</li>
@@ -315,8 +321,8 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a29d1e7d86ea1d20606bc1c6b24a49a8c" name="a29d1e7d86ea1d20606bc1c6b24a49a8c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a29d1e7d86ea1d20606bc1c6b24a49a8c">&#9670;&#160;</a></span>TimeStepper() <span class="overload">[2/2]</span></h2>
+<a id="a0bcee079728ff3db7f425f3cc81f67e7" name="a0bcee079728ff3db7f425f3cc81f67e7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0bcee079728ff3db7f425f3cc81f67e7">&#9670;&#160;</a></span>TimeStepper() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -324,6 +330,12 @@ Protected Attributes</h2></td></tr>
         <tr>
           <td class="memname">TimeStepper::TimeStepper </td>
           <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>ninit_local</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype"><a class="el" href="classMasterEq.html">MasterEq</a> *&#160;</td>
           <td class="paramname"><em>mastereq_</em>, </td>
         </tr>
@@ -362,6 +374,7 @@ Protected Attributes</h2></td></tr>
 <p>Constructor for time stepper. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
+    <tr><td class="paramname">ninit_local</td><td>Number of initial conditions assigned to this processor </td></tr>
     <tr><td class="paramname">mastereq_</td><td>Pointer to master equation solver </td></tr>
     <tr><td class="paramname">ntime_</td><td>Number of time steps </td></tr>
     <tr><td class="paramname">total_time_</td><td>Final evolution time </td></tr>
@@ -791,7 +804,7 @@ Protected Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p>Reimplemented in <a class="el" href="classExplEuler.html#a5e41f719217a8d4b1b71c48ce3b2663f">ExplEuler</a>, <a class="el" href="classImplMidpoint.html#a9a8cc0c2876fc03c151dca7a2fd04846">ImplMidpoint</a>, and <a class="el" href="classCompositionalImplMidpoint.html#abd01c6fbee03fe29d75a9356e9979419">CompositionalImplMidpoint</a>.</p>
+<p>Reimplemented in <a class="el" href="classExplEuler.html#a5e41f719217a8d4b1b71c48ce3b2663f">ExplEuler</a>, <a class="el" href="classImplMidpoint.html#a9a8cc0c2876fc03c151dca7a2fd04846">ImplMidpoint</a>, <a class="el" href="classCompositionalImplMidpoint.html#abd01c6fbee03fe29d75a9356e9979419">CompositionalImplMidpoint</a>, and <a class="el" href="classPetscTS.html#aabef4da8e23b18a422a57970e51e765b">PetscTS</a>.</p>
 
 </div>
 </div>
@@ -846,7 +859,7 @@ Protected Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p>Implemented in <a class="el" href="classExplEuler.html#aa0eaac3cc901b02aa6e7a3f6105c9e71">ExplEuler</a>, <a class="el" href="classImplMidpoint.html#a28749cf0676ac6094fe147691404ba77">ImplMidpoint</a>, and <a class="el" href="classCompositionalImplMidpoint.html#a9ddba7725c23285f47ac42c1fb63cd78">CompositionalImplMidpoint</a>.</p>
+<p>Implemented in <a class="el" href="classExplEuler.html#aa0eaac3cc901b02aa6e7a3f6105c9e71">ExplEuler</a>, <a class="el" href="classImplMidpoint.html#a28749cf0676ac6094fe147691404ba77">ImplMidpoint</a>, <a class="el" href="classCompositionalImplMidpoint.html#a9ddba7725c23285f47ac42c1fb63cd78">CompositionalImplMidpoint</a>, and <a class="el" href="classPetscTS.html#ae06a97fec4a04c9f80ffb6eda5940fe2">PetscTS</a>.</p>
 
 </div>
 </div>
@@ -922,6 +935,37 @@ Protected Attributes</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
+
+</div>
+</div>
+<a id="a406d8b398fed468a496f1f08776df817" name="a406d8b398fed468a496f1f08776df817"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a406d8b398fed468a496f1f08776df817">&#9670;&#160;</a></span>getMinTimestepSize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual double TimeStepper::getMinTimestepSize </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Get the smallest timestep size used during timestepping. </p>
+<p>For adaptive timestepping methods, returns the minimum timestep size chosen. For fixed timestep methods, returns the regular timestep size (dt).</p>
+<dl class="section return"><dt>Returns</dt><dd>double Smallest timestep size </dd></dl>
+
+<p>Reimplemented in <a class="el" href="classPetscTS.html#a608489bc59f3eb47e3022685937bbc16">PetscTS</a>.</p>
 
 </div>
 </div>
@@ -1091,15 +1135,24 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a383990435f66ab846631c632b9a0cc97" name="a383990435f66ab846631c632b9a0cc97"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a383990435f66ab846631c632b9a0cc97">&#9670;&#160;</a></span>solveAdjointODE()</h2>
+<a id="afa7b01103483ed0a8abd45b1da446142" name="afa7b01103483ed0a8abd45b1da446142"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afa7b01103483ed0a8abd45b1da446142">&#9670;&#160;</a></span>solveAdjointODE()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">void TimeStepper::solveAdjointODE </td>
           <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>iinit_local</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">Vec&#160;</td>
           <td class="paramname"><em>rho_t0_bar</em>, </td>
         </tr>
@@ -1139,12 +1192,18 @@ Protected Attributes</h2></td></tr>
           <td></td><td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Solves the adjoint ODE backward in time. </p>
 <p>This performs backward time-stepping to backpropagate an adjoint initial condition at final time (aka a terminal condtion) to time t=0, while accumulating the reduced gradient.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
+    <tr><td class="paramname">iinit_local</td><td>Local index of initial condition for this processor </td></tr>
     <tr><td class="paramname">rho_t0_bar</td><td>Terminal condition for adjoint state </td></tr>
     <tr><td class="paramname">finalstate</td><td>Final state from forward evolution </td></tr>
     <tr><td class="paramname">Jbar_leakage</td><td>Adjoint of leakage integral term </td></tr>
@@ -1155,19 +1214,30 @@ Protected Attributes</h2></td></tr>
   </dd>
 </dl>
 
+<p>Reimplemented in <a class="el" href="classPetscTS.html#a405350f8bc3547780b97ae20148ae227">PetscTS</a>.</p>
+
 </div>
 </div>
-<a id="ae2be974cc2dd652299ba12a36ffece58" name="ae2be974cc2dd652299ba12a36ffece58"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae2be974cc2dd652299ba12a36ffece58">&#9670;&#160;</a></span>solveODE()</h2>
+<a id="a3bbf95bae24b17885c061cbc10a23ace" name="a3bbf95bae24b17885c061cbc10a23ace"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3bbf95bae24b17885c061cbc10a23ace">&#9670;&#160;</a></span>solveODE()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">Vec TimeStepper::solveODE </td>
           <td>(</td>
           <td class="paramtype">int&#160;</td>
           <td class="paramname"><em>initid</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>iinit_local</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -1181,6 +1251,11 @@ Protected Attributes</h2></td></tr>
           <td></td><td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Solves the ODE forward in time. </p>
@@ -1188,11 +1263,14 @@ Protected Attributes</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">initid</td><td>Initial condition identifier </td></tr>
+    <tr><td class="paramname">iinit_local</td><td>Local index of initial condition for this processor </td></tr>
     <tr><td class="paramname">rho_t0</td><td>Initial state vector </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Vec Final state vector at time T </dd></dl>
+
+<p>Reimplemented in <a class="el" href="classPetscTS.html#a5db4cca118a0966180c20aa0b1da0c5d">PetscTS</a>.</p>
 
 </div>
 </div>

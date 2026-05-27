@@ -19,11 +19,12 @@ var searchData=
   ['_7eoptimtarget_16',['~OptimTarget',['../classOptimTarget.html#acabdfafb394a6fba453729cad1d04435',1,'OptimTarget']]],
   ['_7eoscillator_17',['~Oscillator',['../classOscillator.html#a2ad7e67cb42d0a44d430675ffc084c5b',1,'Oscillator']]],
   ['_7eoutput_18',['~Output',['../classOutput.html#a61d0840daf98bea49e4dc471f235eeab',1,'Output']]],
-  ['_7eqft_19',['~QFT',['../classQFT.html#aaed490bef8453cbed98a1bd04993facf',1,'QFT']]],
-  ['_7eswap_20',['~SWAP',['../classSWAP.html#a4b02f6c62d39b9485349b6c813d557db',1,'SWAP']]],
-  ['_7eswap_5f0q_21',['~SWAP_0Q',['../classSWAP__0Q.html#ac9d006e6e7fe1aab045fb32e2dc1415c',1,'SWAP_0Q']]],
-  ['_7etimestepper_22',['~TimeStepper',['../classTimeStepper.html#a2d80eb58c811581ef79a0b3749fb5825',1,'TimeStepper']]],
-  ['_7exgate_23',['~XGate',['../classXGate.html#aba4ee512f73d9d921e182a29d172b15d',1,'XGate']]],
-  ['_7eygate_24',['~YGate',['../classYGate.html#af79bd61478ffcd69baa4357aaf15a7d0',1,'YGate']]],
-  ['_7ezgate_25',['~ZGate',['../classZGate.html#a7e80bdc22cbf45bf857558cc4b6a56d4',1,'ZGate']]]
+  ['_7epetscts_19',['~PetscTS',['../classPetscTS.html#a664c41b56b2186e1da015b071400163a',1,'PetscTS']]],
+  ['_7eqft_20',['~QFT',['../classQFT.html#aaed490bef8453cbed98a1bd04993facf',1,'QFT']]],
+  ['_7eswap_21',['~SWAP',['../classSWAP.html#a4b02f6c62d39b9485349b6c813d557db',1,'SWAP']]],
+  ['_7eswap_5f0q_22',['~SWAP_0Q',['../classSWAP__0Q.html#ac9d006e6e7fe1aab045fb32e2dc1415c',1,'SWAP_0Q']]],
+  ['_7etimestepper_23',['~TimeStepper',['../classTimeStepper.html#a2d80eb58c811581ef79a0b3749fb5825',1,'TimeStepper']]],
+  ['_7exgate_24',['~XGate',['../classXGate.html#aba4ee512f73d9d921e182a29d172b15d',1,'XGate']]],
+  ['_7eygate_25',['~YGate',['../classYGate.html#af79bd61478ffcd69baa4357aaf15a7d0',1,'YGate']]],
+  ['_7ezgate_26',['~ZGate',['../classZGate.html#a7e80bdc22cbf45bf857558cc4b6a56d4',1,'ZGate']]]
 ];

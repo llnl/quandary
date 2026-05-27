@@ -6,5 +6,6 @@ var searchData=
   ['mastereq_3',['mastereq',['../classMasterEq.html#a24841be28d3b2ba8fec73988b07d16a5',1,'MasterEq::MasterEq()'],['../classMasterEq.html#a078f16d2a316270cd96c228fdb0260ed',1,'MasterEq::MasterEq(const Config &amp;config, Oscillator **oscil_vec_, bool quietmode=false)']]],
   ['matisantisymmetric_4',['matisantisymmetric',['../util_8cpp.html#ac12f926582575a819bb448c70c8059ed',1,'MatIsAntiSymmetric(Mat A, PetscReal tol, PetscBool *flag):&#160;util.cpp'],['../util_8hpp.html#ac12f926582575a819bb448c70c8059ed',1,'MatIsAntiSymmetric(Mat A, PetscReal tol, PetscBool *flag):&#160;util.cpp']]],
   ['minlength_5',['minLength',['../classvalidators_1_1VectorValidator.html#a5b60db26f612017906d0c56d5133b9ca',1,'validators::VectorValidator']]],
-  ['mpilogger_6',['MPILogger',['../classMPILogger.html#adc7579eb7f2162c313819245e47f40d9',1,'MPILogger']]]
+  ['monitortrajectory_6',['monitorTrajectory',['../classPetscTS.html#adac4918eae17ecdbcf383d7a8ec229e4',1,'PetscTS']]],
+  ['mpilogger_7',['MPILogger',['../classMPILogger.html#adc7579eb7f2162c313819245e47f40d9',1,'MPILogger']]]
 ];

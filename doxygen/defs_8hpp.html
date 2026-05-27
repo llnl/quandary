@@ -263,10 +263,14 @@ Enumerations</h2></td></tr>
  }</td></tr>
 <tr class="memdesc:ab39932e2bb697b90570645caa8db9fab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Types of control initializations.  <a href="defs_8hpp.html#ab39932e2bb697b90570645caa8db9fab">More...</a><br /></td></tr>
 <tr class="separator:ab39932e2bb697b90570645caa8db9fab"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab8793c9117a2093d80e47ae2c77b94cc" id="r_ab8793c9117a2093d80e47ae2c77b94cc"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cc">TimeStepperType</a> { <a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca674bc7351b4ecd7b8663cf2ec67de59d">IMR</a>
+<tr class="memitem:ab8793c9117a2093d80e47ae2c77b94cc" id="r_ab8793c9117a2093d80e47ae2c77b94cc"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cc">TimeStepperType</a> { <br />
+&#160;&#160;<a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca674bc7351b4ecd7b8663cf2ec67de59d">IMR</a>
 , <a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca3b946d73ceabc7fcb1b495fd90c69342">IMR4</a>
 , <a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94ccaba199b3d06622112ab8537e1e147d4d6">IMR8</a>
 , <a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94ccaa57b8491d1d8fc1014dd54bcf83b130a">EE</a>
+, <br />
+&#160;&#160;<a class="el" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca617b0f30189fe020f2c5c4a5b33b46af">PETSCTS</a>
+<br />
  }</td></tr>
 <tr class="memdesc:ab8793c9117a2093d80e47ae2c77b94cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Types of time-stepping methods for evolving quantum states.  <a href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cc">More...</a><br /></td></tr>
 <tr class="separator:ab8793c9117a2093d80e47ae2c77b94cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -757,6 +761,8 @@ Variables</h2></td></tr>
 </td></tr>
 <tr><td class="fieldname"><a id="ab8793c9117a2093d80e47ae2c77b94ccaa57b8491d1d8fc1014dd54bcf83b130a" name="ab8793c9117a2093d80e47ae2c77b94ccaa57b8491d1d8fc1014dd54bcf83b130a"></a>EE&#160;</td><td class="fielddoc"><p>Explicit Euler (1st order) </p>
 </td></tr>
+<tr><td class="fieldname"><a id="ab8793c9117a2093d80e47ae2c77b94cca617b0f30189fe020f2c5c4a5b33b46af" name="ab8793c9117a2093d80e47ae2c77b94cca617b0f30189fe020f2c5c4a5b33b46af"></a>PETSCTS&#160;</td><td class="fielddoc"><p>PETSc's TS time-stepping solvers. </p>
+</td></tr>
 </table>
 
 </div>
@@ -1033,9 +1039,11 @@ Variables</h2></td></tr>
 <div class="line">    {<span class="stringliteral">&quot;imr&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca674bc7351b4ecd7b8663cf2ec67de59d">TimeStepperType::IMR</a>},</div>
 <div class="line">    {<span class="stringliteral">&quot;imr4&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca3b946d73ceabc7fcb1b495fd90c69342">TimeStepperType::IMR4</a>},</div>
 <div class="line">    {<span class="stringliteral">&quot;imr8&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94ccaba199b3d06622112ab8537e1e147d4d6">TimeStepperType::IMR8</a>},</div>
-<div class="line">    {<span class="stringliteral">&quot;ee&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94ccaa57b8491d1d8fc1014dd54bcf83b130a">TimeStepperType::EE</a>}</div>
+<div class="line">    {<span class="stringliteral">&quot;ee&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94ccaa57b8491d1d8fc1014dd54bcf83b130a">TimeStepperType::EE</a>},</div>
+<div class="line">    {<span class="stringliteral">&quot;petscts&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca617b0f30189fe020f2c5c4a5b33b46af">TimeStepperType::PETSCTS</a>}</div>
 <div class="line">}</div>
 <div class="ttc" id="adefs_8hpp_html_ab8793c9117a2093d80e47ae2c77b94cca3b946d73ceabc7fcb1b495fd90c69342"><div class="ttname"><a href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca3b946d73ceabc7fcb1b495fd90c69342">TimeStepperType::IMR4</a></div><div class="ttdeci">@ IMR4</div><div class="ttdoc">Implicit Midpoint Rule with 4th order extrapolation.</div></div>
+<div class="ttc" id="adefs_8hpp_html_ab8793c9117a2093d80e47ae2c77b94cca617b0f30189fe020f2c5c4a5b33b46af"><div class="ttname"><a href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca617b0f30189fe020f2c5c4a5b33b46af">TimeStepperType::PETSCTS</a></div><div class="ttdeci">@ PETSCTS</div><div class="ttdoc">PETSc's TS time-stepping solvers.</div></div>
 <div class="ttc" id="adefs_8hpp_html_ab8793c9117a2093d80e47ae2c77b94cca674bc7351b4ecd7b8663cf2ec67de59d"><div class="ttname"><a href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca674bc7351b4ecd7b8663cf2ec67de59d">TimeStepperType::IMR</a></div><div class="ttdeci">@ IMR</div><div class="ttdoc">Implicit Midpoint Rule (2nd order)</div></div>
 <div class="ttc" id="adefs_8hpp_html_ab8793c9117a2093d80e47ae2c77b94ccaa57b8491d1d8fc1014dd54bcf83b130a"><div class="ttname"><a href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94ccaa57b8491d1d8fc1014dd54bcf83b130a">TimeStepperType::EE</a></div><div class="ttdeci">@ EE</div><div class="ttdoc">Explicit Euler (1st order)</div></div>
 <div class="ttc" id="adefs_8hpp_html_ab8793c9117a2093d80e47ae2c77b94ccaba199b3d06622112ab8537e1e147d4d6"><div class="ttname"><a href="defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94ccaba199b3d06622112ab8537e1e147d4d6">TimeStepperType::IMR8</a></div><div class="ttdeci">@ IMR8</div><div class="ttdoc">Implicit Midpoint Rule with 8th order extrapolation.</div></div>

@@ -94,12 +94,13 @@ Collaboration diagram for MasterEq:</div>
 <div class="dyncontent">
 <div class="center"><img src="classMasterEq__coll__graph.png" border="0" usemap="#aMasterEq_coll__map" alt="Collaboration graph"/></div>
 <map name="aMasterEq_coll__map" id="aMasterEq_coll__map">
-<area shape="rect" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="6,181,89,207"/>
-<area shape="rect" href="classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="5,5,89,31"/>
-<area shape="poly" title=" " alt="" coords="45,45,41,80,41,119,48,181,43,181,35,119,36,79,40,44"/>
-<area shape="rect" href="structMatShellCtx.html" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="115,93,217,119"/>
-<area shape="poly" title=" " alt="" coords="76,37,151,91,148,95,73,41"/>
-<area shape="poly" title=" " alt="" coords="140,129,65,183,62,179,137,125"/>
+<area shape="rect" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="31,93,114,119"/>
+<area shape="rect" href="structMatShellCtx.html" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="39,181,140,207"/>
+<area shape="poly" title=" " alt="" coords="27,127,10,141,8,148,11,156,24,169,41,179,38,184,20,174,6,159,3,148,6,138,24,123"/>
+<area shape="rect" href="classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="76,5,160,31"/>
+<area shape="poly" title=" " alt="" coords="91,41,80,56,75,75,74,93,69,93,69,74,75,53,87,38"/>
+<area shape="poly" title=" " alt="" coords="139,41,145,53,154,68,164,84,163,111,143,159,131,173,117,183,114,179,128,169,138,156,158,110,159,86,150,71,141,56,134,43"/>
+<area shape="poly" title=" " alt="" coords="82,168,72,119,77,118,87,167"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
@@ -139,6 +140,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a114fff980e3a46ceeb53bbd7167c416f" id="r_a114fff980e3a46ceeb53bbd7167c416f"><td class="memItemLeft" align="right" valign="top">Mat&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classMasterEq.html#a114fff980e3a46ceeb53bbd7167c416f">getRHS</a> ()</td></tr>
 <tr class="memdesc:a114fff980e3a46ceeb53bbd7167c416f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the right-hand-side system matrix.  <br /></td></tr>
 <tr class="separator:a114fff980e3a46ceeb53bbd7167c416f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa313595945f94dec663bc5df68f9a200" id="r_aa313595945f94dec663bc5df68f9a200"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structMatShellCtx.html">MatShellCtx</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classMasterEq.html#aa313595945f94dec663bc5df68f9a200">getRHSctx</a> ()</td></tr>
+<tr class="separator:aa313595945f94dec663bc5df68f9a200"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afd3d3d8301ab8e3d23a59601f1dd0665" id="r_afd3d3d8301ab8e3d23a59601f1dd0665"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classMasterEq.html#afd3d3d8301ab8e3d23a59601f1dd0665">compute_dRHS_dParams</a> (const double t, const Vec x, const Vec x_bar, const double alpha, Vec grad)</td></tr>
 <tr class="memdesc:afd3d3d8301ab8e3d23a59601f1dd0665"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes gradient of RHS with respect to control parameters.  <br /></td></tr>
 <tr class="separator:afd3d3d8301ab8e3d23a59601f1dd0665"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -624,6 +627,23 @@ Protected Attributes</h2></td></tr>
 
 <p>Retrieves the right-hand-side system matrix. </p>
 <dl class="section return"><dt>Returns</dt><dd>Mat PETSc matrix shell object representing the RHS. </dd></dl>
+
+</div>
+</div>
+<a id="aa313595945f94dec663bc5df68f9a200" name="aa313595945f94dec663bc5df68f9a200"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa313595945f94dec663bc5df68f9a200">&#9670;&#160;</a></span>getRHSctx()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="structMatShellCtx.html">MatShellCtx</a> * MasterEq::getRHSctx </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
 
 </div>
 </div>

@@ -102,9 +102,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ae7ee27309c475a7ba3b5be8f61c369ac" id="r_ae7ee27309c475a7ba3b5be8f61c369ac"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOutput.html#ae7ee27309c475a7ba3b5be8f61c369ac">writeOptimFile</a> (int optim_iter, double objective, double gnorm, double stepsize, double Favg, double cost, double tikh_regul, double penalty_leakage, double penalty_dpdm, double penalty_energy, double penalty_variation, double penalty_weightedcost)</td></tr>
 <tr class="memdesc:ae7ee27309c475a7ba3b5be8f61c369ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes optimization progress to history file.  <br /></td></tr>
 <tr class="separator:ae7ee27309c475a7ba3b5be8f61c369ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adb389d2f0d8788d8821441cfaf3ce42d" id="r_adb389d2f0d8788d8821441cfaf3ce42d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOutput.html#adb389d2f0d8788d8821441cfaf3ce42d">writeControls</a> (Vec params, <a class="el" href="classMasterEq.html">MasterEq</a> *mastereq, int ntime, double dt)</td></tr>
-<tr class="memdesc:adb389d2f0d8788d8821441cfaf3ce42d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes current control pulses per oscillator and control parameters.  <br /></td></tr>
-<tr class="separator:adb389d2f0d8788d8821441cfaf3ce42d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aac6b4d1bd1fdb4593d154b57a7ba422a" id="r_aac6b4d1bd1fdb4593d154b57a7ba422a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOutput.html#aac6b4d1bd1fdb4593d154b57a7ba422a">writeControlParams</a> (Vec params)</td></tr>
+<tr class="memdesc:aac6b4d1bd1fdb4593d154b57a7ba422a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes current control parameters to file.  <br /></td></tr>
+<tr class="separator:aac6b4d1bd1fdb4593d154b57a7ba422a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a314aeda5153e27c03e944f47bb37078c" id="r_a314aeda5153e27c03e944f47bb37078c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOutput.html#a314aeda5153e27c03e944f47bb37078c">writeControls</a> (Vec params, <a class="el" href="classMasterEq.html">MasterEq</a> *mastereq, double total_time, double dt, double min_dt=-1.0)</td></tr>
+<tr class="memdesc:a314aeda5153e27c03e944f47bb37078c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes current control pulses to file.  <br /></td></tr>
+<tr class="separator:a314aeda5153e27c03e944f47bb37078c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1e6e2376a24daecfea404ed6a156ca16" id="r_a1e6e2376a24daecfea404ed6a156ca16"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOutput.html#a1e6e2376a24daecfea404ed6a156ca16">writeGradient</a> (Vec grad)</td></tr>
 <tr class="memdesc:a1e6e2376a24daecfea404ed6a156ca16"><td class="mdescLeft">&#160;</td><td class="mdescRight">Writes gradient vector for debugging adjoint calculations.  <br /></td></tr>
 <tr class="separator:a1e6e2376a24daecfea404ed6a156ca16"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -338,8 +341,34 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="adb389d2f0d8788d8821441cfaf3ce42d" name="adb389d2f0d8788d8821441cfaf3ce42d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adb389d2f0d8788d8821441cfaf3ce42d">&#9670;&#160;</a></span>writeControls()</h2>
+<a id="aac6b4d1bd1fdb4593d154b57a7ba422a" name="aac6b4d1bd1fdb4593d154b57a7ba422a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aac6b4d1bd1fdb4593d154b57a7ba422a">&#9670;&#160;</a></span>writeControlParams()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Output::writeControlParams </td>
+          <td>(</td>
+          <td class="paramtype">Vec&#160;</td>
+          <td class="paramname"><em>params</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Writes current control parameters to file. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">params</td><td>Current parameter vector </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a314aeda5153e27c03e944f47bb37078c" name="a314aeda5153e27c03e944f47bb37078c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a314aeda5153e27c03e944f47bb37078c">&#9670;&#160;</a></span>writeControls()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -359,14 +388,20 @@ Protected Attributes</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>ntime</em>, </td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>total_time</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>dt</em>&#160;</td>
+          <td class="paramname"><em>dt</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>min_dt</em> = <code>-1.0</code>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -376,14 +411,14 @@ Protected Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Writes current control pulses per oscillator and control parameters. </p>
-<p>Called every output_optimization_stride optimization iterations. Control pulses are written to <code>&lt;output_dir&gt;/control&lt;ioscillator&gt;.dat</code> Control parameters are written to <code>&lt;output_dir&gt;/params.dat</code></p>
+<p>Writes current control pulses to file. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">params</td><td>Current parameter vector </td></tr>
     <tr><td class="paramname">mastereq</td><td>Pointer to master equation solver </td></tr>
-    <tr><td class="paramname">ntime</td><td>Total number of time steps </td></tr>
+    <tr><td class="paramname">total_time</td><td>Total evolution time </td></tr>
     <tr><td class="paramname">dt</td><td>Time step size </td></tr>
+    <tr><td class="paramname">min_dt</td><td>Smallest timestep size chosen during adaptive timestepping (default: equal to dt) </td></tr>
   </table>
   </dd>
 </dl>

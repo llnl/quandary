@@ -1,18 +1,22 @@
 var searchData=
 [
   ['decay_5ftime_0',['decay_time',['../namespaceConfigDefaults.html#a323e859d8bd6dca48799b4412f11dcf6',1,'ConfigDefaults::DECAY_TIME'],['../classOscillator.html#a7b117df6829da2cd619e776a6cd5cf55',1,'Oscillator::decay_time']]],
-  ['decoherence_5ftype_1',['decoherence_type',['../classGate.html#a22acd031004046831fa7653cc15b56f6',1,'Gate::decoherence_type'],['../namespaceConfigDefaults.html#a78f6581fd1067c52025780973f629d01',1,'ConfigDefaults::DECOHERENCE_TYPE'],['../classOscillator.html#acf042ce146512c799311edc08e9b3ce3',1,'Oscillator::decoherence_type'],['../classOptimTarget.html#af86a16f0d6ea14ce375aee2726c56ee6',1,'OptimTarget::decoherence_type'],['../classMasterEq.html#a0f2026cf3a57e1286f92561275cfa393',1,'MasterEq::decoherence_type'],['../structMatShellCtx.html#ac9cf0946c9d43762c88be1e9e1f39ebe',1,'MatShellCtx::decoherence_type'],['../classHamiltonianFileReader.html#a165acc86f2ace3815f8ed52e4b8e6146',1,'HamiltonianFileReader::decoherence_type']]],
+  ['decoherence_5ftype_1',['decoherence_type',['../classGate.html#a22acd031004046831fa7653cc15b56f6',1,'Gate::decoherence_type'],['../namespaceConfigDefaults.html#a78f6581fd1067c52025780973f629d01',1,'ConfigDefaults::DECOHERENCE_TYPE'],['../classOscillator.html#acf042ce146512c799311edc08e9b3ce3',1,'Oscillator::decoherence_type'],['../classMasterEq.html#a0f2026cf3a57e1286f92561275cfa393',1,'MasterEq::decoherence_type'],['../classHamiltonianFileReader.html#a165acc86f2ace3815f8ed52e4b8e6146',1,'HamiltonianFileReader::decoherence_type'],['../classOptimTarget.html#af86a16f0d6ea14ce375aee2726c56ee6',1,'OptimTarget::decoherence_type'],['../structMatShellCtx.html#ac9cf0946c9d43762c88be1e9e1f39ebe',1,'MatShellCtx::decoherence_type']]],
   ['decoherence_5ftype_5fmap_2',['DECOHERENCE_TYPE_MAP',['../defs_8hpp.html#ab646421a1ab4b96a0f1aea7bc3101331',1,'defs.hpp']]],
   ['dephase_5ftime_3',['dephase_time',['../classOscillator.html#a8f5b23b7b1c158f086e724fe7627135b',1,'Oscillator::dephase_time'],['../namespaceConfigDefaults.html#aa3a4ff5e5498856330427bad256cde56',1,'ConfigDefaults::DEPHASE_TIME']]],
   ['detuning_5ffreq_4',['detuning_freq',['../classOscillator.html#ad4e43e2f5fd49b692bc916a9a93c0a08',1,'Oscillator']]],
   ['dim_5',['dim',['../structMatShellCtx.html#a99b166bb3aac8fa812438349afafcc8a',1,'MatShellCtx::dim'],['../classMasterEq.html#ad7615921804c8c1dfda8295c9b83f805',1,'MasterEq::dim'],['../classOptimTarget.html#ab1d22a530ba62865fb25f1a990e12455',1,'OptimTarget::dim']]],
-  ['dim_5fess_6',['dim_ess',['../classGate.html#a7abd54c1002cd19f44e61021e7978183',1,'Gate::dim_ess'],['../classMasterEq.html#ae1e8bccc92eb5e68c476b8940f2a69bb',1,'MasterEq::dim_ess'],['../classOptimTarget.html#a2065f6575b1e93f9a992271673ff7a6c',1,'OptimTarget::dim_ess']]],
+  ['dim_5fess_6',['dim_ess',['../classMasterEq.html#ae1e8bccc92eb5e68c476b8940f2a69bb',1,'MasterEq::dim_ess'],['../classOptimTarget.html#a2065f6575b1e93f9a992271673ff7a6c',1,'OptimTarget::dim_ess'],['../classGate.html#a7abd54c1002cd19f44e61021e7978183',1,'Gate::dim_ess']]],
   ['dim_5fpostosc_7',['dim_postOsc',['../classOscillator.html#a57c296eced6d8ac99c431f627f486e41',1,'Oscillator']]],
   ['dim_5fpreosc_8',['dim_preOsc',['../classOscillator.html#a7493e094d1e3eb2580ea9d10315b6076',1,'Oscillator']]],
-  ['dim_5frho_9',['dim_rho',['../classOptimTarget.html#ad28c5ca2c232911d3808bf8a4612eb93',1,'OptimTarget::dim_rho'],['../classMasterEq.html#a339bf57d2a07ca69cfc3bda69c5b2408',1,'MasterEq::dim_rho'],['../classHamiltonianFileReader.html#abe61d859330adb09f5c1a5976d6ca09b',1,'HamiltonianFileReader::dim_rho'],['../classGate.html#a454d63c85821d33e9941ba8eccf47996',1,'Gate::dim_rho']]],
-  ['dipole_5fcoupling_10',['DIPOLE_COUPLING',['../namespaceConfigDefaults.html#a2a8e76d50726272ffe8892361e92f042',1,'ConfigDefaults']]],
-  ['dpdm_5fintegral_11',['dpdm_integral',['../classTimeStepper.html#a57b386fdb6f8eb841df7e0a831aec079',1,'TimeStepper']]],
-  ['dpdm_5fstates_12',['dpdm_states',['../classTimeStepper.html#a33769128e30e615ac6527991392554e1',1,'TimeStepper']]],
-  ['dt_13',['dt',['../classTimeStepper.html#ad261faaaa2066bfaa7ca7d9af834e61e',1,'TimeStepper']]],
-  ['dtknot_14',['dtknot',['../classBSpline2nd.html#a4521f6f50bc1001b7911d03c5130721d',1,'BSpline2nd::dtknot'],['../classBSpline2ndAmplitude.html#ac076d8f50877b4bd6e6e8ca4e5057500',1,'BSpline2ndAmplitude::dtknot'],['../classBSpline0.html#a98ae1e5b0046d603ca7951ecbab61583',1,'BSpline0::dtknot']]]
+  ['dim_5frho_9',['dim_rho',['../classHamiltonianFileReader.html#abe61d859330adb09f5c1a5976d6ca09b',1,'HamiltonianFileReader::dim_rho'],['../classOptimTarget.html#ad28c5ca2c232911d3808bf8a4612eb93',1,'OptimTarget::dim_rho'],['../classMasterEq.html#a339bf57d2a07ca69cfc3bda69c5b2408',1,'MasterEq::dim_rho'],['../classGate.html#a454d63c85821d33e9941ba8eccf47996',1,'Gate::dim_rho']]],
+  ['dintegralcostdp_10',['dIntegralCostdP',['../classPetscTS.html#aa9cd16442a390fd946ccca56dce4efee',1,'PetscTS']]],
+  ['dintegralcostdy_11',['dIntegralCostdY',['../classPetscTS.html#a532cd0b14c5671ec8ee2d738b8ed67f5',1,'PetscTS']]],
+  ['dipole_5fcoupling_12',['DIPOLE_COUPLING',['../namespaceConfigDefaults.html#a2a8e76d50726272ffe8892361e92f042',1,'ConfigDefaults']]],
+  ['dpdm_5fintegral_13',['dpdm_integral',['../classTimeStepper.html#a57b386fdb6f8eb841df7e0a831aec079',1,'TimeStepper']]],
+  ['dpdm_5fstates_14',['dpdm_states',['../classTimeStepper.html#a33769128e30e615ac6527991392554e1',1,'TimeStepper']]],
+  ['drhsdp_15',['dRHSdp',['../classPetscTS.html#a19a36172b1f1f422ac6d9c746f15617a',1,'PetscTS']]],
+  ['drhsdp_5ftime_16',['dRHSdp_time',['../classPetscTS.html#ae698394d2142aa1e98d3f708b92196a5',1,'PetscTS']]],
+  ['dt_17',['dt',['../classTimeStepper.html#ad261faaaa2066bfaa7ca7d9af834e61e',1,'TimeStepper']]],
+  ['dtknot_18',['dtknot',['../classBSpline2nd.html#a4521f6f50bc1001b7911d03c5130721d',1,'BSpline2nd::dtknot'],['../classBSpline2ndAmplitude.html#ac076d8f50877b4bd6e6e8ca4e5057500',1,'BSpline2ndAmplitude::dtknot'],['../classBSpline0.html#a98ae1e5b0046d603ca7951ecbab61583',1,'BSpline0::dtknot']]]
 ];
