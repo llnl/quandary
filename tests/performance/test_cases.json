@@ -7,6 +7,13 @@
         "repetitions": 200
     },
     {
+        "simulation_name": "nlevels_32_32_32_32_simulation",
+        "number_of_processes": [
+            32
+        ],
+        "repetitions": 5
+    },
+    {
         "simulation_name": "nlevels_4_4_4_4_gradient_schroed",
         "number_of_processes": [
             8
@@ -19,12 +26,5 @@
             4
         ],
         "repetitions": 100
-    },
-    {
-        "simulation_name": "nlevels_32_32_32_32",
-        "number_of_processes": [
-            32
-        ],
-        "repetitions": 5
     }
 ]
