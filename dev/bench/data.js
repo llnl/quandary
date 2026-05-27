@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1779149144333,
+  "lastUpdate": 1779923851032,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -3123,6 +3123,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
             "value": 4120.95,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Stefanie Guenther",
+            "username": "steffi7574",
+            "email": "guenther5@llnl.gov"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "91c33abcb1e328b140aaed1c33d706163cfec7a1",
+          "message": "Merge pull request #128 from llnl/add_petsc_timestepper_clean\n\nAdd adaptive timestepping scheme using Petsc's TS framework",
+          "timestamp": "2026-05-27T22:16:11Z",
+          "url": "https://github.com/llnl/quandary/commit/91c33abcb1e328b140aaed1c33d706163cfec7a1"
+        },
+        "date": 1779923848339,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "value": 0.710909431334585,
+            "range": "0.6559353140811006",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "value": 85.09,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "value": 5.157950506079942,
+            "range": "0.04721245455974907",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "value": 4124.8,
             "unit": "MB"
           }
         ]
