@@ -238,19 +238,19 @@ class Quandary:
             self._ninit = self._ninit**2
         
         # Estimate the number of required time steps
-        if self.dT < 0:
-            if self.timestepper == "petscts":
-                self.dT = 1.0 # Dummy. Petsc will adapt the timesteps size during forward simulation. 
-            if self.standardmodel==True: # set up the standard Hamiltonian first
-                Ntot = [sum(x) for x in zip(self.Ne, self.Ng)]
-                self.Hsys, self.Hc_re, self.Hc_im = hamiltonians(N=Ntot, freq01=self.freq01, selfkerr=self.selfkerr, crosskerr=self.crosskerr, Jkl=self.Jkl, rotfreq=self.rotfreq, verbose=self.verbose)
-            self.nsteps = estimate_timesteps(T=self.T, Hsys=self.Hsys, Hc_re=self.Hc_re, Hc_im=self.Hc_im, maxctrl_MHz=self.maxctrl_MHz, Pmin=self.Pmin)
-            self.dT = self.T/self.nsteps
-        else:
-            self.nsteps = int(np.ceil(self.T / self.dT))
-            # self.T = self.nsteps*self.dT
+        if self.timestepper != "petscts": # Petsc timestepper does not use dT or nsteps
+            if self.dT < 0:
+                if self.standardmodel==True: # set up the standard Hamiltonian first
+                    Ntot = [sum(x) for x in zip(self.Ne, self.Ng)]
+                    self.Hsys, self.Hc_re, self.Hc_im = hamiltonians(N=Ntot, freq01=self.freq01, selfkerr=self.selfkerr, crosskerr=self.crosskerr, Jkl=self.Jkl, rotfreq=self.rotfreq, verbose=self.verbose)
+                self.nsteps = estimate_timesteps(T=self.T, Hsys=self.Hsys, Hc_re=self.Hc_re, Hc_im=self.Hc_im, maxctrl_MHz=self.maxctrl_MHz, Pmin=self.Pmin)
+                self.dT = self.T/self.nsteps
+            else:
+                self.nsteps = int(np.ceil(self.T / self.dT))
+                self.T = self.nsteps*self.dT
+
         if self.verbose:
-            print("Final time: ",self.T,"ns, Number of timesteps: ", self.nsteps,", dt=", self.T/self.nsteps, "ns")
+            print("Final time: ",self.T,"ns.")
             print("Maximum control amplitudes: ", self.maxctrl_MHz, "MHz")
 
         # Get number of splines right
@@ -260,7 +260,7 @@ class Quandary:
             else: 
                 self.nsplines = int(np.max([np.ceil(self.T/self.spline_knot_spacing+ 2), minspline]))
 
-            self.spline_knot_spacing = self.T / (self.nsplines-1) if self.spline_order == 0 else self.nsteps*self.dT / (self.nsplines-2)
+            self.spline_knot_spacing = self.T / (self.nsplines-1) if self.spline_order == 0 else self.T / (self.nsplines-2)
         else:
             self.spline_knot_spacing= self.T/(self.nsplines-1) if self.spline_order == 0 else self.T/(self.nsplines - 2)
 
