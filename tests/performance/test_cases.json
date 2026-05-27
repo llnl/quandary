@@ -1,10 +1,24 @@
 [
     {
-        "simulation_name": "nlevels_4_4_4_4",
+        "simulation_name": "nlevels_4_4_4_4_simulation",
         "number_of_processes": [
             2
         ],
         "repetitions": 200
+    },
+    {
+        "simulation_name": "nlevels_4_4_4_4_gradient_schroed",
+        "number_of_processes": [
+            8
+        ],
+        "repetitions": 100
+    },
+    {
+        "simulation_name": "nlevels_2_2_gradient_lindblad",
+        "number_of_processes": [
+            4
+        ],
+        "repetitions": 100
     },
     {
         "simulation_name": "nlevels_32_32_32_32",
