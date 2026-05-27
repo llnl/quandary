@@ -158,7 +158,7 @@ int main(int argc,char **argv)
   int linsolve_maxiter = config.getLinearSolverMaxiter();
 
   /* My time stepper */
-  // Store forward trajecotories only if gradient or optimization runtype, and if not Schroedinger solver (since Schroedinger solver recomputes the states)
+  // Store forward trajectories only if gradient or optimization runtype, and if not Schroedinger solver (since Schroedinger solver recomputes the states)
   bool storeFWD = false;  
   RunType runtype = config.getRuntype();
   if (mastereq->decoherence_type != DecoherenceType::NONE &&   
