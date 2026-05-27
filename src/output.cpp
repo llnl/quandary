@@ -123,24 +123,23 @@ void Output::writeGradient(Vec grad){
   }
 }
 
-void Output::writeControls(Vec params, MasterEq* mastereq, int ntime, double dt){
+void Output::writeControlParams(Vec params){
 
-  /* Write controls every <outfreq> iterations */
   if ( mpirank_world == 0 ) { 
 
+    /* Open params.dat file */
     char filename[255];
-    PetscInt ndesign;
-    VecGetSize(params, &ndesign);
-
-    /* Print current parameters to file */
-    FILE *file, *file_c;
     snprintf(filename, 254, "%s/params.dat", output_dir.c_str());
+    FILE *file;
     file = fopen(filename, "w");
     if (file == nullptr) {
       printf("ERROR: Could not open file %s\n", filename);
       exit(1);
     }
 
+    // Write parameters to file
+    PetscInt ndesign;
+    VecGetSize(params, &ndesign);
     const PetscScalar* params_ptr;
     VecGetArrayRead(params, &params_ptr);
     for (int i=0; i<ndesign; i++){
@@ -149,35 +148,45 @@ void Output::writeControls(Vec params, MasterEq* mastereq, int ntime, double dt)
     fclose(file);
     VecRestoreArrayRead(params, &params_ptr);
     if (!quietmode) printf("File written: %s\n", filename);
-
-    /* Print control to file for each oscillator */
-    mastereq->setControlAmplitudes(params);
-    for (size_t ioscil = 0; ioscil < mastereq->getNOscillators(); ioscil++) {
-      snprintf(filename, 254, "%s/control%zu.dat", output_dir.c_str(), ioscil);
-      file_c = fopen(filename, "w");
-      if (file_c == nullptr) {
-        printf("ERROR: Could not open file %s\n", filename);
-        exit(1);
-      }
-      fprintf(file_c, "#\"time\"         \"p(t) (rotating)\"          \"q(t) (rotating)\"         \"f(t) (labframe)\"\n");
-
-      /* Write every <num> timestep to file */
-      for (int i=0; i<=ntime; i+=output_timestep_stride) {
-        double time = i*dt; 
-
-        double ReI, ImI, LabI;
-        mastereq->getOscillator(ioscil)->evalControl(time, &ReI, &ImI);
-        mastereq->getOscillator(ioscil)->evalControl_Labframe(time, &LabI);
-        // Write control drives
-        fprintf(file_c, "% 1.8f   % 1.14e   % 1.14e   % 1.14e \n", time, ReI/(2.0*M_PI), ImI/(2.0*M_PI), LabI/(2.0*M_PI));
-     } // end of time loop 
-
-      fclose(file_c);
-      if (!quietmode) printf("File written: %s\n", filename);
-    } // end of oscillator loop
   }
 }
 
+void Output::writeControls(Vec params, MasterEq* mastereq, double total_time, double dt, double min_dt){
+
+  if (mpirank_world != 0) return; // Only write on one rank
+
+  // Use the smallest timestep for sampling controls, or fall back to dt if min_dt not provided
+  double dt_sample = (min_dt > 0.0) ? min_dt : dt;
+
+  /* Print control to file for each oscillator */
+  char filename[255];
+  FILE *file_c;
+  mastereq->setControlAmplitudes(params);
+  for (size_t ioscil = 0; ioscil < mastereq->getNOscillators(); ioscil++) {
+    snprintf(filename, 254, "%s/control%zu.dat", output_dir.c_str(), ioscil);
+    file_c = fopen(filename, "w");
+    if (file_c == nullptr) {
+      printf("ERROR: Could not open file %s\n", filename);
+      exit(1);
+    }
+    fprintf(file_c, "#\"time\"         \"p(t) (rotating)\"          \"q(t) (rotating)\"         \"f(t) (labframe)\"\n");
+
+    /* Write every <num> timestep to file */
+    int ntime = static_cast<int>(total_time/dt_sample);
+    for (int i=0; i<=ntime; i+=output_timestep_stride) {
+      double time = i*dt_sample; 
+
+      double ReI, ImI, LabI;
+      mastereq->getOscillator(ioscil)->evalControl(time, &ReI, &ImI);
+      mastereq->getOscillator(ioscil)->evalControl_Labframe(time, &LabI);
+      // Write control drives
+      fprintf(file_c, "% 1.8f   % 1.14e   % 1.14e   % 1.14e \n", time, ReI/(2.0*M_PI), ImI/(2.0*M_PI), LabI/(2.0*M_PI));
+   } // end of time loop 
+
+    fclose(file_c);
+    if (!quietmode) printf("File written: %s\n", filename);
+  } // end of oscillator loop
+}
 
 void Output::openTrajectoryDataFiles(std::string prefix, int initid){
   char filename[255];

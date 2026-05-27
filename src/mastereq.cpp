@@ -141,6 +141,7 @@ MasterEq::MasterEq(const Config& config, Oscillator** oscil_vec_, bool quietmode
   ISCreateStride(PETSC_COMM_WORLD, localsize_u, ilow*2+localsize_u, 1, &isv);
 
   /* Allocate MatShell context for applying RHS */
+  RHSctx.mastereq = this;
   RHSctx.dim = dim;
   RHSctx.isu = &isu;
   RHSctx.isv = &isv;
@@ -166,6 +167,7 @@ MasterEq::MasterEq(const Config& config, Oscillator** oscil_vec_, bool quietmode
     RHSctx.control_Re.push_back(0.0);
     RHSctx.control_Im.push_back(0.0);
   }
+  RHSctx.assembled = PETSC_FALSE;
 
   for (int iosc = 0; iosc < noscillators*(noscillators-1)/2; iosc++) RHSctx.Bd_coeffs.push_back(0.0);
   for (int iosc = 0; iosc < noscillators*(noscillators-1)/2; iosc++) RHSctx.Ad_coeffs.push_back(0.0);
@@ -679,6 +681,7 @@ int MasterEq::assemble_RHS(const double t){
 
   // Set the time
   RHSctx.time = t;
+  RHSctx.assembled = PETSC_TRUE;
 
   // Evaluate and store the controls and transfer for each oscillator 
   for (int iosc = 0; iosc < noscillators; iosc++) {
@@ -698,6 +701,7 @@ int MasterEq::assemble_RHS(const double t){
 }
 
 Mat MasterEq::getRHS() { return RHS; }
+MatShellCtx* MasterEq::getRHSctx() { return &RHSctx; }
 
 // Gradient of RHS wrt parameters: grad += alpha * x^T * (d RHS / d params)^T * xbar 
 void MasterEq::compute_dRHS_dParams(const double t, const Vec x, const Vec xbar, const double alpha, Vec grad) {
@@ -724,6 +728,9 @@ void MasterEq::setControlAmplitudes(const Vec x) {
     shift += getOscillator(ioscil)->getNParams();
   }
   VecRestoreArrayRead(x, &ptr);
+
+  // Controls changed: RHS will need new assembly. 
+  RHSctx.assembled = PETSC_FALSE;
 }
 
 /* Pass MatMult operations for the RHS action onto a vector to Petsc */

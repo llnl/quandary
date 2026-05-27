@@ -215,7 +215,7 @@ double OptimProblem::evalF(const Vec x) {
     optim_target->prepareTargetState(rho_t0);
 
     /* Run forward with initial condition initid */
-    Vec finalstate = timestepper->solveODE(initid, rho_t0);
+    Vec finalstate = timestepper->solveODE(initid, iinit, rho_t0);
 
     /* Add to leakage penalty term */
     obj_penal_leakage += obj_weights[iinit] * gamma_penalty_leakage * timestepper->getLeakageIntegral();
@@ -364,7 +364,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
     // if (mpirank_optim == 0) printf("%d: %d FWD. ", mpirank_init, initid);
 
     /* Run forward with initial condition rho_t0 */
-    Vec finalstate = timestepper->solveODE(initid, rho_t0);
+    Vec finalstate = timestepper->solveODE(initid, iinit, rho_t0);
 
     /* Store the final state for the Schroedinger solver */
     if (timestepper->mastereq->decoherence_type == DecoherenceType::NONE) VecCopy(finalstate, store_finalstates[iinit]);
@@ -407,7 +407,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
       optim_target->evalJ_diff(finalstate, rho_t0_bar, obj_weights[iinit]*obj_cost_re_bar, obj_weights[iinit]*obj_cost_im_bar);
 
       /* Derivative of time-stepping */
-      timestepper->solveAdjointODE(rho_t0_bar, finalstate, obj_weights[iinit] * gamma_penalty_leakage, obj_weights[iinit]*gamma_penalty_weightedcost, obj_weights[iinit]*gamma_penalty_dpdm, obj_weights[iinit]*gamma_penalty_energy);
+      timestepper->solveAdjointODE(iinit, rho_t0_bar, finalstate, obj_weights[iinit] * gamma_penalty_leakage, obj_weights[iinit]*gamma_penalty_weightedcost, obj_weights[iinit]*gamma_penalty_dpdm, obj_weights[iinit]*gamma_penalty_energy);
 
       /* Add to optimizers's gradient */
       VecAXPY(G, 1.0, timestepper->redgrad);
@@ -484,7 +484,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
       optim_target->evalJ_diff(store_finalstates[iinit], rho_t0_bar, obj_weights[iinit]*obj_cost_re_bar, obj_weights[iinit]*obj_cost_im_bar);
 
       /* Derivative of time-stepping */
-      timestepper->solveAdjointODE(rho_t0_bar, store_finalstates[iinit], obj_weights[iinit] * gamma_penalty_leakage, obj_weights[iinit]*gamma_penalty_weightedcost, obj_weights[iinit]*gamma_penalty_dpdm, obj_weights[iinit]*gamma_penalty_energy);
+      timestepper->solveAdjointODE(iinit, rho_t0_bar, store_finalstates[iinit], obj_weights[iinit] * gamma_penalty_leakage, obj_weights[iinit]*gamma_penalty_weightedcost, obj_weights[iinit]*gamma_penalty_dpdm, obj_weights[iinit]*gamma_penalty_energy);
 
       /* Add to optimizers's gradient */
       VecAXPY(G, 1.0, timestepper->redgrad);
@@ -534,10 +534,6 @@ void OptimProblem::getStartingPoint(Vec xinit){
 
   /* Pass to oscillator */
   timestepper->mastereq->setControlAmplitudes(xinit);
-  
-  /* Write initial control functions to file */
-  output->writeControls(xinit, timestepper->mastereq, timestepper->ntime, timestepper->dt);
-
 }
 
 
@@ -610,8 +606,6 @@ PetscErrorCode TaoMonitor(Tao tao,void*ptr){
 
   /* Last iteration: Print solution, controls and trajectory data to files */
   if (lastIter) {
-    ctx->output->writeControls(params, ctx->timestepper->mastereq, ctx->timestepper->ntime, ctx->timestepper->dt);
-
     // do one last forward evaluation while writing trajectory files
     ctx->timestepper->writeTrajectoryDataFiles = true;
     ctx->evalF(params); 
