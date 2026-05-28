@@ -374,7 +374,7 @@ class CompositionalImplMidpoint : public ImplMidpoint {
      * @param mastereq_ Pointer to master equation solver
      * @param output_ Pointer to output handler
      * @param ninit_local Number of initial conditions local to this processor
-     * @param order Order of the compositional method
+     * @param order_ Order of the compositional method
      */
     CompositionalImplMidpoint(const Config& config, MasterEq* mastereq_, Output* output_, int ninit_local, int order_);
 

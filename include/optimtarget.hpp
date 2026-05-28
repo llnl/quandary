@@ -11,9 +11,7 @@
  * preparation and the evaluation of the final-time objective function measure.
  * 
  * Main functionality: 
- *    - @ref prepareInitialState prepares and returns the states at time t=0, depending on what the optimization 
- *       target is
- *    - @ref prepareTargetState prepares and stores the corresponding target state for this initial state
+ *    - @ref prepareInitialAndTargetState prepares the internal initial and target state 
  *    - @ref evalJ for computing the final-time objective function measure
  * 
  * This class contains references to:
@@ -60,12 +58,6 @@ class OptimTarget{
     ~OptimTarget();
 
     Vec getInitialState() { return initialstate; };
-
-    /**
-     * @brief Retrieves the objective function type.
-     *
-     * @return ObjectiveType Type of objective function
-     */
     ObjectiveType getObjectiveType(){ return objective_type; };
 
     /**
@@ -79,7 +71,6 @@ class OptimTarget{
      * @param ninit Total number of initial conditions
      * @param nlevels Number of levels per oscillator
      * @param nessential Number of essential levels per oscillator
-     * @param rho0 Vector to store the initial condition
      * @return int Identifier for this initial condition (element number in matrix vectorization)
      */
     int prepareInitialAndTargetState(const int iinit, const int ninit, const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential);
