@@ -6,57 +6,60 @@ TimeStepper::TimeStepper() {
   ntime = 0;
   total_time = 0.0;
   dt = 0.0;
-  storeFWD = false;
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
   MPI_Comm_rank(PETSC_COMM_WORLD, &mpirank_petsc);
   MPI_Comm_size(PETSC_COMM_WORLD, &mpisize_petsc);
   writeTrajectoryDataFiles = false;
 }
 
-TimeStepper::TimeStepper(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper() {
+TimeStepper::TimeStepper(const Config& config, MasterEq* mastereq_, Output* output_, int ninit_local) : TimeStepper() {
   mastereq = mastereq_;
-  ntime = ntime_;
-  total_time = total_time_;
   output = output_;
-  storeFWD = storeFWD_;
+  ntime = config.getNTime();
+  total_time = config.getTotalTime();
+  dt = config.getDt();
+
+  /* Determine which integral penalties are to be evaluated */
+  eval_energy = config.getOptimPenaltyEnergy() > 1e-13;
+  eval_dpdm = config.getOptimPenaltyDpdm() > 1e-13;
+  eval_weightedcost = config.getOptimPenaltyWeightedCost() > 1e-13;
+  weightedcost_width = config.getOptimPenaltyWeightedCostWidth();
   eval_leakage = false;
-  eval_energy = false;
-  eval_dpdm = false;
-  eval_weightedcost = false;
-  weightedcost_width = 0.0;
+  if (config.getOptimPenaltyLeakage() > 1e-13) {
+    for (size_t i=0; i<mastereq->getNOscillators(); i++){
+      if (mastereq->nessential[i] < mastereq->nlevels[i]) eval_leakage = true;
+    }
+  }
 
   // Set local sizes of subvectors u,v in state x=[u,v]
   localsize_u = mastereq->getDim() / mpisize_petsc; 
   ilow = mpirank_petsc * localsize_u;
   iupp = ilow + localsize_u;         
 
-  /* Set the time-step size */
-  if (ntime > 0)
-    dt = total_time / ntime; 
-  else // for PETSC's adaptive timestepper, ntime and dt will be ignored, set dummy here. 
-    dt = 1.0; 
-
-  /* Allocate storage of primal state trajectories, one trajectory for each local initial condition */
-  // TODO: NO NEED TO STORE IF PETSC TIMESTEPPER IS USED! BETTER: PASS THE CONFIG INSTEAD. 
-  if (storeFWD) {
-    trajectory_states.resize(ninit_local);
-    for (size_t iinit = 0; iinit < ninit_local; iinit++) {
-      trajectory_states[iinit].resize(ntime);  // excluding final time 
-      for (int n = 0; n <ntime; n++) {
-        Vec state;
-        VecCreate(PETSC_COMM_WORLD, &state);
-        PetscInt globalsize = 2 * mastereq->getDim();  // 2 for real and imaginary part
-        PetscInt localsize = globalsize / mpisize_petsc;  // Local vector per processor
-        VecSetSizes(state,localsize,globalsize);
-        VecSetFromOptions(state);
-        trajectory_states[iinit][n] = state;
+  /* If this is a gradient or optimization run, allocate storage of primal state trajectories, one trajectory for each local initial condition */
+  if (config.getRuntype() == RunType::OPTIMIZATION || config.getRuntype() == RunType::GRADIENT) {
+    // The Petsc Timestepper uses its internal storage
+    // If Schroedinger solver, then states are recomputed during backpropagation 
+    if (config.getTimestepperType() != TimeStepperType::PETSCTS && config.getDecoherenceType() != DecoherenceType::NONE) {
+      trajectory_states.resize(ninit_local);
+      for (int iinit = 0; iinit < ninit_local; iinit++) {
+        trajectory_states[iinit].resize(ntime);  // excluding final time 
+        for (int n = 0; n <ntime; n++) {
+          Vec state;
+          VecCreate(PETSC_COMM_WORLD, &state);
+          PetscInt globalsize = 2 * mastereq->getDim();  // 2 for real and imaginary part
+          PetscInt localsize = globalsize / mpisize_petsc;  // Local vector per processor
+          VecSetSizes(state,localsize,globalsize);
+          VecSetFromOptions(state);
+          trajectory_states[iinit][n] = state;
+        }
       }
     }
   }
 
   /* Allocate storage for final states for each local initial condition */
   final_states.resize(ninit_local);
-  for (size_t iinit = 0; iinit < ninit_local; iinit++) {
+  for (int iinit = 0; iinit < ninit_local; iinit++) {
     Vec state;
     VecCreate(PETSC_COMM_WORLD, &state);
     PetscInt globalsize = 2 * mastereq->getDim();  // 2 for real and imaginary part
@@ -115,7 +118,6 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
   /* Set initial condition  */
   VecCopy(rho_t0, x);
 
-
   /* Store initial state for dpdm integral term */
   if (eval_dpdm){
     for (int i = 0; i < 2; i++) {
@@ -142,7 +144,7 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
     double tstop  = (n+1) * dt;
 
     /* store and write current state. */
-    if (storeFWD) VecCopy(x, trajectory_states[iinit_local][n]);
+    if (trajectory_states.size() > 0) VecCopy(x, trajectory_states[iinit_local][n]);
     if (writeTrajectoryDataFiles) {
       output->writeTrajectoryDataFiles(n, tstart, x, mastereq);
     }
@@ -162,7 +164,6 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
       // Update storage of primal states. Should build a history of 3 states.
       VecCopy(x, dpdm_states[(n+1)%2]);
     }
-
     /* Add to energy integral term */
     if (eval_energy) energy_integral += evalEnergy(tstop);
 
@@ -247,7 +248,7 @@ void TimeStepper::solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_l
     if (eval_leakage) evalLeakage_diff(xprimal, xadj, Jbar_leakage/ntime);
 
     /* Get the state at n-1. If Schroedinger solver, recompute it by taking a step backwards with the forward solver, otherwise get it from storage. */
-    if (storeFWD) VecCopy(trajectory_states[iinit_local][n-1], xprimal);
+    if (trajectory_states.size() > 0) VecCopy(trajectory_states[iinit_local][n-1], xprimal);
     else evolveFWD(tstop, tstart, xprimal);
 
     /* Take one time step backwards for the adjoint */
@@ -501,7 +502,8 @@ void TimeStepper::evalEnergy_diff(double time, double Jbar, Vec redgrad){
 
 void TimeStepper::evolveBWD(const double /*tstart*/, const double /*tstop*/, const Vec /*x_stop*/, Vec /*x_adj*/, Vec /*grad*/, bool /*compute_gradient*/){}
 
-ExplEuler::ExplEuler(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper(ninit_local, mastereq_, ntime_, total_time_, output_, storeFWD_) {
+ExplEuler::ExplEuler(const Config& config, MasterEq* mastereq_, Output* output_, int ninit_local) : TimeStepper(config, mastereq_, output_, ninit_local) {
+
   MatCreateVecs(mastereq->getRHS(), &stage, NULL);
   VecZeroEntries(stage);
 }
@@ -539,7 +541,7 @@ void ExplEuler::evolveBWD(const double tstop,const  double tstart,const  Vec x, 
 
 }
 
-ImplMidpoint::ImplMidpoint(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_) : TimeStepper(ninit_local, mastereq_, ntime_, total_time_, output_, storeFWD_) {
+ImplMidpoint::ImplMidpoint(const Config& config, MasterEq* mastereq_, Output* output_, int ninit_local) : TimeStepper(config, mastereq_, output_, ninit_local) {
 
   /* Create and reset the intermediate vectors */
   MatCreateVecs(mastereq->getRHS(), &stage, NULL);
@@ -550,8 +552,8 @@ ImplMidpoint::ImplMidpoint(size_t ninit_local, MasterEq* mastereq_, int ntime_, 
   VecZeroEntries(stage_adj);
   VecZeroEntries(rhs);
   VecZeroEntries(rhs_adj);
-  linsolve_type = linsolve_type_;
-  linsolve_maxiter = linsolve_maxiter_;
+  linsolve_type = config.getLinearSolverType();
+  linsolve_maxiter = config.getLinearSolverMaxiter();
   linsolve_reltol = 1.e-20;
   linsolve_abstol = 1.e-10;
   linsolve_iterstaken_avg = 0;
@@ -748,7 +750,7 @@ int ImplMidpoint::NeumannSolve(Mat A, Vec b, Vec y, double alpha, bool transpose
 
 
 
-CompositionalImplMidpoint::CompositionalImplMidpoint(size_t ninit_local, int order_, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_): ImplMidpoint(ninit_local, mastereq_, ntime_, total_time_, linsolve_type_, linsolve_maxiter_, output_, storeFWD_) {
+CompositionalImplMidpoint::CompositionalImplMidpoint(const Config& config, MasterEq* mastereq_, Output* output_, int ninit_local, int order_): ImplMidpoint(config, mastereq_, output_, ninit_local) {
 
   order = order_;
 
@@ -845,11 +847,10 @@ void CompositionalImplMidpoint::evolveBWD(const double tstop, const double tstar
   assert(fabs(tcurr - tstart) < 1e-12);
 }
 
-PetscTS::PetscTS(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_) : TimeStepper(ninit_local, mastereq_, ntime_, total_time_, output_, storeFWD_) {
+PetscTS::PetscTS(const Config& config, MasterEq* mastereq_, Output* output_, int ninit_local) : TimeStepper(config, mastereq_, output_, ninit_local) {
 
-  ninit_pool = ninit_local; 
-  ts_pool.resize(ninit_pool, nullptr);
-  q_pool.resize(ninit_pool, nullptr);
+  ts_pool.resize(ninit_local, nullptr);
+  q_pool.resize(ninit_local, nullptr);
 
   // Prepare a shared dRHSdp MatShell used by all TS objects.
   PetscInt nstate_global, nparam_global;
@@ -902,7 +903,7 @@ PetscTS::PetscTS(size_t ninit_local, MasterEq* mastereq_, int ntime_, double tot
     TSSetFromOptions(tsi);
 
     // Enable in-memory trajectory storage for adjoint solves.
-    if (storeFWD_) {
+    if (config.getRuntype() == RunType::OPTIMIZATION || config.getRuntype() == RunType::GRADIENT) {
       TSSetSaveTrajectory(tsi);
       TSTrajectory tj;
       TSGetTrajectory(tsi, &tj);
@@ -911,7 +912,7 @@ PetscTS::PetscTS(size_t ninit_local, MasterEq* mastereq_, int ntime_, double tot
   };
 
   // Create a TS object for each initial condition. 
-  for (int i = 0; i < ninit_pool; i++) {
+  for (int i = 0; i < ninit_local; i++) {
     TSCreate(PETSC_COMM_SELF, &ts_pool[i]);
     configureTS(ts_pool[i]);
 
@@ -958,7 +959,7 @@ PetscTS::~PetscTS() {
 Vec PetscTS::solveODE(int initid, int iinit_local, Vec rho_t0){
   // Grab the timestepper for this initial condit
   const int iinit = iinit_local;
-  TS ts_run = getTSForInit(iinit_local);
+  TS ts_run = ts_pool[iinit_local];
   Vec q_run = q_pool[iinit];
 
   // Clear adjoint from previous calls on this TS.
@@ -1012,7 +1013,7 @@ Vec PetscTS::solveODE(int initid, int iinit_local, Vec rho_t0){
 }
 
 void PetscTS::solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) {
-  TS ts_run = getTSForInit(iinit_local);
+  TS ts_run = ts_pool[iinit_local];
   (void)Jbar_dpdm;
 
   // Scaling.

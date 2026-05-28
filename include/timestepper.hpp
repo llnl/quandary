@@ -35,8 +35,7 @@ class TimeStepper{
     Vec x; ///< Auxiliary vector for forward time stepping
     Vec xadj; ///< Auxiliary vector needed for adjoint (backward) time stepping
     Vec xprimal; ///< Auxiliary vector for backward time stepping
-    bool storeFWD; ///< Flag for storing primal states during forward evaluation. 
-    std::vector<std::vector<Vec>> trajectory_states; ///< Storage for primal states during forward evolution, one trajectory for each local initial condition. Only filled if storeFWD=True.
+    std::vector<std::vector<Vec>> trajectory_states; ///< Storage for primal states during forward evolution, one trajectory for each local initial condition..
     std::vector<Vec> final_states; ///< Storage for final states for each local initial condition. Always filled after solveODE.
     std::vector<Vec> dpdm_states; ///< Storage for states needed for second-order derivative penalty
     int mpirank_world; ///< MPI rank in global communicator
@@ -50,42 +49,45 @@ class TimeStepper{
     bool eval_energy; ///< Flag to compute energy integral term
     bool eval_dpdm; ///< Flag to compute second-order derivative integral term
     bool eval_weightedcost; ///< Flag to compute weighted cost integral term
-
     double leakage_integral; ///< Sums the integral over leakage 
     double energy_integral; ///< Sums the energy term
     double dpdm_integral; ///< Sums second-order derivative variation value
     double weightedcost_integral; ///< Sums the integral over weighted cost function
     double weightedcost_width; ///< Width parameter for weighted cost function
 
-  public:
-    MasterEq* mastereq; ///< Pointer to master equation solver
     int ntime; ///< Number of time steps
     double total_time; ///< Final evolution time
     double dt; ///< Time step size
     bool writeTrajectoryDataFiles;  ///< Flag to determine whether or not trajectory data will be written to files during forward simulation */
 
     Vec redgrad; ///< Reduced gradient vector for optimization
-
     OptimTarget* optim_target; ///< Pointer to optimization target specification
     Output* output; ///< Pointer to output handler
+    MasterEq* mastereq; ///< Pointer to master equation solver
 
   public: 
-
     TimeStepper(); 
 
     /**
      * @brief Constructor for time stepper.
      *
-     * @param ninit_local Number of initial conditions assigned to this processor
+     * @param config Configuration parameters from input file
      * @param mastereq_ Pointer to master equation solver
-     * @param ntime_ Number of time steps
-     * @param total_time_ Final evolution time
      * @param output_ Pointer to output handler
-     * @param storeFWD_ Flag to determine whether to store trajectories during forward solve for each (local) initial condition
+     * @param ninit_local Number of initial conditions local to this processor
      */
-    TimeStepper(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_); 
+    TimeStepper(const Config& config, MasterEq* mastereq_, Output* output_, int ninit_local); 
 
     virtual ~TimeStepper(); 
+
+    double getLeakageIntegral(){ return leakage_integral; };
+    double getWeightedCostIntegral(){ return weightedcost_integral; };
+    double getEnergyIntegral(){ return energy_integral; };
+    double getDPDMIntegral(){ return dpdm_integral; };
+    Vec getReducedGradient(){ return redgrad; };
+    void setWriteTrajectoryDataFiles(bool write){ writeTrajectoryDataFiles = write; };
+
+    void setOptimTarget(OptimTarget* optim_target_){ optim_target = optim_target_; };
 
     /**
      * @brief Retrieves the final state for a specific local initial condition.
@@ -94,16 +96,6 @@ class TimeStepper{
      * @return Vec Final state vector for the specified initial condition
      */
     Vec getFinalState(size_t iinit_local){ return final_states[iinit_local]; }
-
-    void setEvalLeakage(bool flag){ eval_leakage = flag; };
-    void setEvalWeightedCost(bool flag, double width){ eval_weightedcost = flag; weightedcost_width = width; };
-    void setEvalDPDM(bool flag){ eval_dpdm = flag; };
-    void setEvalEnergy(bool flag){ eval_energy = flag; };
-
-    double getLeakageIntegral(){ return leakage_integral; };
-    double getWeightedCostIntegral(){ return weightedcost_integral; };
-    double getEnergyIntegral(){ return energy_integral; };
-    double getDPDMIntegral(){ return dpdm_integral; };
 
     /**
      * @brief Get the smallest timestep size used during timestepping.
@@ -253,14 +245,12 @@ class ExplEuler : public TimeStepper {
     /**
      * @brief Constructor for explicit Euler scheme.
      *
-     * @param ninit_local Number of initial conditions assigned to this processor
+     * @param config Configuration parameters from input file
      * @param mastereq_ Pointer to master equation solver
-     * @param ntime_ Number of time steps
-     * @param total_time_ Final evolution time
      * @param output_ Pointer to output handler
-     * @param storeFWD_ Flag to determine whether to store trajectories during forward solve for each (local) initial condition
+     * @param ninit_local Number of initial conditions local to this processor
      */
-    ExplEuler(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_);
+    ExplEuler(const Config& config, MasterEq* mastereq_, Output* output_, int ninit_local);
 
     ~ExplEuler();
 
@@ -318,16 +308,12 @@ class ImplMidpoint : public TimeStepper {
     /**
      * @brief Constructor for implicit midpoint scheme.
      *
-     * @param ninit_local Number of initial conditions assigned to this processor
+     * @param config Configuration parameters from input file
      * @param mastereq_ Pointer to master equation solver
-     * @param ntime_ Number of time steps
-     * @param total_time_ Final evolution time
-     * @param linsolve_type_ Linear solver type (GMRES or NEUMANN)
-     * @param linsolve_maxiter_ Maximum linear solver iterations
      * @param output_ Pointer to output handler
-     * @param storeFWD_ Flag to determine whether to store trajectories during forward solve for each (local) initial condition
+     * @param ninit_local Number of initial conditions local to this processor
      */
-    ImplMidpoint(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_);
+    ImplMidpoint(const Config& config, MasterEq* mastereq_, Output* output_, int ninit_local);
 
     ~ImplMidpoint();
 
@@ -384,18 +370,13 @@ class CompositionalImplMidpoint : public ImplMidpoint {
     /**
      * @brief Constructor for compositional implicit midpoint scheme.
      *
-     * @param ninit_local Number of initial conditions assigned to this processor
-     * @param ninit_local Local number of initial conditions on this processor
-     * @param order_ Order of the compositional method
+     * @param config Configuration parameters from input file
      * @param mastereq_ Pointer to master equation solver
-     * @param ntime_ Number of time steps
-     * @param total_time_ Final evolution time
-     * @param linsolve_type_ Linear solver type
-     * @param linsolve_maxiter_ Maximum linear solver iterations
      * @param output_ Pointer to output handler
-     * @param storeFWD_ Flag to determine whether to store initial condition trajectories
+     * @param ninit_local Number of initial conditions local to this processor
+     * @param order Order of the compositional method
      */
-    CompositionalImplMidpoint(size_t ninit_local, int order_, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_);
+    CompositionalImplMidpoint(const Config& config, MasterEq* mastereq_, Output* output_, int ninit_local, int order_);
 
     ~CompositionalImplMidpoint();
 
@@ -429,7 +410,6 @@ class PetscTS : public TimeStepper {
   protected:
     TS ts;      ///< Backward-compatible alias to ts_pool[0].
     std::vector<TS> ts_pool; ///< One PETSc TS per initial condition.
-    int ninit_pool; ///< Number of TS instances in ts_pool.
     std::vector<Vec> q_pool; ///< One quadrature state vector per TS/initial condition.
     Vec redgrad_ts; ///< TS-internal gradient vector with PETSc communicator-compatible layout.
 
@@ -442,26 +422,16 @@ class PetscTS : public TimeStepper {
     double adj_scale_energy; ///< Per-solve scaling for energy integral adjoint contribution.
     double min_timestep_size; ///< Smallest timestep size chosen during adaptive timestepping
 
-    TS getTSForInit(int iinit_local) const {
-      if (iinit_local < 0 || iinit_local >= ninit_pool) {
-        return ts_pool[0];
-      }
-      return ts_pool[iinit_local];
-    }
-
-
   public:
     /**
      * @brief Constructor for PetscTS.
      *
-     * @param ninit_local Number of initial conditions assigned to this processor
+     * @param config Configuration parameters from input file
      * @param mastereq_ Pointer to master equation solver
-     * @param ntime_ Number of time steps, will be ignored since PetscTS uses adaptive time-stepping
-     * @param total_time_ Final evolution time
      * @param output_ Pointer to output handler
-     * @param storeFWD_ Flag to store forward states
+     * @param ninit_local Number of initial conditions local to this processor
      */
-    PetscTS(size_t ninit_local, MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_);
+    PetscTS(const Config& config, MasterEq* mastereq_, Output* output_, int ninit_local);
     ~PetscTS();
 
     /**

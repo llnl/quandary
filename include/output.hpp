@@ -44,7 +44,6 @@ class Output{
 
   public:
     std::string output_dir; ///< Directory path for output data files
-    int output_optimization_stride; ///< Write output files every N optimization iterations
 
   public:
     Output();

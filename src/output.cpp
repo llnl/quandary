@@ -11,18 +11,15 @@ Output::Output(){
 }
 
 Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bool quietmode_) : Output() {
+  quietmode = quietmode_;
+  noscillators = config.getNumOsc();
+  output_timestep_stride = config.getOutputTimestepStride();
 
   /* Get communicator ranks */
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
   MPI_Comm_rank(comm_petsc, &mpirank_petsc);
   MPI_Comm_size(comm_petsc, &mpisize_petsc);
   MPI_Comm_rank(comm_init, &mpirank_init);
-
-  /* Reduced output */
-  quietmode = quietmode_;
-
-  /* Store number of oscillators */
-  noscillators = config.getNumOsc();
 
   /* Create Data directory */
   output_dir = config.getOutputDirectory();
@@ -32,8 +29,6 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
   MPI_Barrier(MPI_COMM_WORLD);
 
   /* Prepare output for optimizer */
-  output_optimization_stride = config.getOutputOptimizationStride();
-  output_timestep_stride = config.getOutputTimestepStride();
   if (mpirank_world == 0) {
     char filename[255];
     snprintf(filename, 254, "%s/optim_history.dat", output_dir.c_str());

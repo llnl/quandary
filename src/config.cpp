@@ -674,6 +674,8 @@ void Config::finalize() {
   if (timestepper_type == TimeStepperType::PETSCTS) {
     if (ntime > 0 || dt > 0) {
       logger.log("# Warning: PETSCTS timestepper is adaptive and ignores configuration input for ntime and dt.\n");
+      ntime = 0;
+      dt = 0.0;
     }
   } else { // any timestepper other than PETSCTS
       if (ntime > 0 && dt > 0) { // if both are provided, check consistency with total_time. 
