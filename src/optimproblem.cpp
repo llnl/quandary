@@ -196,7 +196,7 @@ double OptimProblem::evalF(const Vec x) {
     optim_target->prepareTargetState(rho_t0);
 
     /* Run forward with initial condition initid */
-    Vec finalstate = timestepper->solveODE(iinit, initid, rho_t0);
+    Vec finalstate = timestepper->solveODE(initid, iinit, rho_t0);
 
     /* Add to leakage penalty term */
     obj_penal_leakage += obj_weights[iinit] * gamma_penalty_leakage * timestepper->getLeakageIntegral();
@@ -345,7 +345,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
     // if (mpirank_optim == 0) printf("%d: %d FWD. ", mpirank_init, initid);
 
     /* Run forward with initial condition rho_t0 */
-    Vec finalstate = timestepper->solveODE(iinit, initid, rho_t0);
+    Vec finalstate = timestepper->solveODE(initid, iinit, rho_t0);
 
     /* Add to leakage penalty term */
     obj_penal_leakage += obj_weights[iinit] * gamma_penalty_leakage * timestepper->getLeakageIntegral();
@@ -489,10 +489,6 @@ void OptimProblem::getStartingPoint(Vec xinit){
 
   /* Pass to oscillator */
   timestepper->mastereq->setControlAmplitudes(xinit);
-  
-  /* Write initial control functions to file */
-  output->writeControls(xinit, timestepper->mastereq, timestepper->ntime, timestepper->dt);
-
 }
 
 
@@ -565,8 +561,6 @@ PetscErrorCode TaoMonitor(Tao tao,void*ptr){
 
   /* Last iteration: Print solution, controls and trajectory data to files */
   if (lastIter) {
-    ctx->output->writeControls(params, ctx->timestepper->mastereq, ctx->timestepper->ntime, ctx->timestepper->dt);
-
     // do one last forward evaluation while writing trajectory files
     ctx->timestepper->writeTrajectoryDataFiles = true;
     ctx->evalF(params); 

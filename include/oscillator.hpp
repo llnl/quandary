@@ -47,7 +47,7 @@ class Oscillator {
     double dephase_time; ///< Characteristic time for T2 dephasing operations
 
     std::vector<double> params; ///< Control parameters for this oscillator
-    double Tfinal; ///< Final evolution time
+    double total_time; ///< Final evolution time
     std::vector<ControlBasis *> basisfunctions; ///< Basis functions for control parameterization foreach time parameterization. Note: Currently only one parameterization is supported!
     std::vector<double> carrier_freq; ///< Frequencies of the carrier waves
 
