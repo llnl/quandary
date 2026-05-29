@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1779927352110,
+  "lastUpdate": 1780087245236,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -3233,6 +3233,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_2_2_gradient_lindblad_nproc_4] - Memory",
             "value": 176.68,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Stefanie Guenther",
+            "username": "steffi7574",
+            "email": "guenther5@llnl.gov"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "f63e678acc28801ac6731265a764472c6db490f7",
+          "message": "Merge pull request #131 from llnl/store_primal_states\n\nStore forward trajectories for each local initial condition.",
+          "timestamp": "2026-05-29T19:48:54Z",
+          "url": "https://github.com/llnl/quandary/commit/f63e678acc28801ac6731265a764472c6db490f7"
+        },
+        "date": 1780087242994,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
+            "value": 0.6768003065008088,
+            "range": "0.3163245521486317",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
+            "value": 85.1,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
+            "value": 5.0646494579996215,
+            "range": "0.44980982070186387",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
+            "value": 4118.52,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_gradient_schroed_nproc_8] - Time",
+            "value": 1.4451010659977328,
+            "range": "0.3908945917248743",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_gradient_schroed_nproc_8] - Memory",
+            "value": 311.91,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_2_2_gradient_lindblad_nproc_4] - Time",
+            "value": 0.9199679415032733,
+            "range": "0.4198661731491379",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_2_2_gradient_lindblad_nproc_4] - Memory",
+            "value": 175.77,
             "unit": "MB"
           }
         ]
