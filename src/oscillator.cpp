@@ -4,6 +4,8 @@
 #include "mpi_logger.hpp"
 #include <stdexcept>
 
+const double TOLERANCE = 1e-13; // Tolerance for avoiding numerical precision issues when comparing floating point numbers in evalControl.
+
 Oscillator::Oscillator(){
   nlevels = 0;
   total_time = 0;
@@ -253,12 +255,6 @@ void Oscillator::evalControlVariationDiff(Vec G, double var_reg_bar, int skip_to
 
 int Oscillator::evalControl(const double t, double* Re_ptr, double* Im_ptr){
 
-  // // Sanity check 
-  // if ( t > total_time ){
-  //   printf("ERROR: accessing spline outside of [0,T] at %f. Should never happen! Bug.\n", t);
-  //   exit(1);
-  // }
-
   // Default: Non controllable oscillator. Will typically be overwritten below. 
   *Re_ptr = 0.0;
   *Im_ptr = 0.0;
@@ -266,10 +262,9 @@ int Oscillator::evalControl(const double t, double* Re_ptr, double* Im_ptr){
   /* Evaluate p(t) and q(t) using the parameters */
   if (params.size()>0) {
     // Iterate over control parameterizations. Only one will be used, see the break-statement. 
-    for (size_t bs = 0; bs < basisfunctions.size(); bs++){
-      if (basisfunctions[bs]->getTstart() <= t && 
-          basisfunctions[bs]->getTstop() >= t ) {
-
+    for (size_t bs = 0; bs < basisfunctions.size(); bs++){ 
+     if (basisfunctions[bs]->getTstart() - TOLERANCE <= t && 
+          basisfunctions[bs]->getTstop() + TOLERANCE >= t ) {
         /* Iterate over carrier frequencies */
         double sum_p = 0.0;
         double sum_q = 0.0;
@@ -310,8 +305,8 @@ int Oscillator::evalControl_diff(const double t, double* grad, const double pbar
 
     // Iterate over control parameterizations. Only one is active, see break statement.
     for (size_t bs = 0; bs < basisfunctions.size(); bs++){
-      if (basisfunctions[bs]->getTstart() <= t && 
-          basisfunctions[bs]->getTstop() >= t ) {
+      if (basisfunctions[bs]->getTstart() - TOLERANCE <= t && 
+          basisfunctions[bs]->getTstop() + TOLERANCE >= t ) {
         /* Iterate over carrier frequencies */
         for (size_t f=0; f < carrier_freq.size(); f++) {
 
@@ -341,12 +336,6 @@ int Oscillator::evalControl_diff(const double t, double* grad, const double pbar
 }
 
 int Oscillator::evalControl_Labframe(const double t, double* f){
-
-  // Sanity check 
-  if ( t > total_time ){
-    printf("ERROR: accessing spline outside of [0,T] at %f. Should never happen! Bug.\n", t);
-    exit(1);
-  }
 
   /* Evaluate the spline at time t  */
   *f = 0.0;

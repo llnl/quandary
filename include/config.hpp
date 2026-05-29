@@ -135,7 +135,6 @@ class Config {
   size_t getNEssential(size_t i_osc) const { return nessential[i_osc]; }
   size_t getNTime() const { return ntime; }
   double getDt() const { return dt; }
-  // double getTotalTime() const { return ntime * dt; }
   double getTotalTime() const { return total_time; }
 
   const std::vector<double>& getTransitionFrequency() const { return transition_frequency; }

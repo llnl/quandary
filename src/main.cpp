@@ -159,39 +159,24 @@ int main(int argc,char **argv)
   Output* output = new Output(config, comm_petsc, comm_init, quietmode);
 
   /* --- Initialize the time-stepper --- */
-  LinearSolverType linsolvetype = config.getLinearSolverType();
-  int linsolve_maxiter = config.getLinearSolverMaxiter();
-
-  // Store forward trajectory for gradient and optimization, except if Schroedinger solver is used with non-petsc Timestepper.
-  bool storeFWD = false;
-  RunType runtype = config.getRuntype();
-  if (runtype == RunType::GRADIENT || runtype == RunType::OPTIMIZATION) {
-    storeFWD = true;  
-    if (config.getTimestepperType() != TimeStepperType::PETSCTS && config.getDecoherenceType() == DecoherenceType::NONE) {
-      storeFWD=false;
-    }
-  }
-
   TimeStepperType timesteppertype = config.getTimestepperType();
-  TimeStepper* mytimestepper = nullptr;
-  size_t ntime = config.getNTime();
-  double total_time = config.getTotalTime();
+  TimeStepper* timestepper = nullptr;
   int ninit_local = ninit / mpisize_init; 
   switch (timesteppertype) {
     case TimeStepperType::IMR:
-      mytimestepper = new ImplMidpoint(ninit_local, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
+      timestepper = new ImplMidpoint(config, mastereq, output, ninit_local);
       break;
     case TimeStepperType::IMR4:
-      mytimestepper = new CompositionalImplMidpoint(ninit_local, 4, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
+      timestepper = new CompositionalImplMidpoint(config, mastereq, output, ninit_local, 4);
       break;
     case TimeStepperType::IMR8:
-      mytimestepper = new CompositionalImplMidpoint(ninit_local, 8, mastereq, ntime, total_time, linsolvetype, linsolve_maxiter, output, storeFWD);
+      timestepper = new CompositionalImplMidpoint(config, mastereq, output, ninit_local, 8);
       break;
     case TimeStepperType::EE:
-      mytimestepper = new ExplEuler(ninit_local, mastereq, ntime, total_time, output, storeFWD);
+      timestepper = new ExplEuler(config, mastereq, output, ninit_local);
       break;
     case TimeStepperType::PETSCTS:
-      mytimestepper = new PetscTS(ninit_local, mastereq, ntime, total_time, output, storeFWD);
+      timestepper = new PetscTS(config, mastereq, output, ninit_local);
       break;
     default:
       logger.exitWithError("Unknown timestepper type\n");
@@ -219,10 +204,13 @@ int main(int argc,char **argv)
     std::cout << std::endl;
   }
 
-
-
   /* --- Initialize optimization --- */
-  OptimProblem* optimctx = new OptimProblem(config, mytimestepper, comm_init, comm_optim, output, quietmode);
+  // Create optimization target
+  OptimTarget* optim_target = new OptimTarget(config, mastereq, quietmode);
+  timestepper->setOptimTarget(optim_target); // Pass pointer to optimization target to timestepper for objective function evaluation.
+
+  // Create optimization problem context 
+  OptimProblem* optimctx = new OptimProblem(config, optim_target, timestepper, mastereq, comm_init, comm_optim, output, quietmode);
 
   /* Set upt solution and gradient vector */
   Vec xinit;
@@ -253,45 +241,72 @@ int main(int argc,char **argv)
   double objective;
   double gnorm = 0.0;
   /* --- Solve primal --- */
-  if (runtype == RunType::SIMULATION) {
+  if (config.getRuntype() == RunType::SIMULATION) {
     optimctx->getStartingPoint(xinit);
     VecCopy(xinit, optimctx->xinit); // Store the initial guess
+    output->writeControlParams(xinit); // Write params to file
+
     if (mpirank_world == 0 && !quietmode) printf("\nStarting primal solver... \n");
-    optimctx->timestepper->writeTrajectoryDataFiles = true;
+    timestepper->setWriteTrajectoryDataFiles(true);
     objective = optimctx->evalF(xinit);
     if (mpirank_world == 0 && !quietmode) printf("\nTotal objective = %1.14e, \n", objective);
     optimctx->getSolution(&opt);
+
+    // Write control pulses to file
+    output->writeControls(xinit, mastereq, config.getTotalTime(), config.getDt(), timestepper->getMinTimestepSize()); // Write the control pulses 
   } 
   
   /* --- Solve adjoint --- */
-  if (runtype == RunType::GRADIENT) {
+  if (config.getRuntype() == RunType::GRADIENT) {
     optimctx->getStartingPoint(xinit);
     VecCopy(xinit, optimctx->xinit); // Store the initial guess
+    output->writeControlParams(xinit); // Write params to file
+
     if (mpirank_world == 0 && !quietmode) printf("\nStarting adjoint solver...\n");
-    optimctx->timestepper->writeTrajectoryDataFiles = true;
+    timestepper->setWriteTrajectoryDataFiles(true);
     optimctx->evalGradF(xinit, grad);
     VecNorm(grad, NORM_2, &gnorm);
     // VecView(grad, PETSC_VIEWER_STDOUT_WORLD);
     if (mpirank_world == 0 && !quietmode) {
       printf("\nGradient norm: %1.14e\n", gnorm);
     }
-    optimctx->output->writeGradient(grad);
+    output->writeGradient(grad);
+
+    // Write control pulses to file
+    output->writeControls(xinit, mastereq, config.getTotalTime(), config.getDt(), timestepper->getMinTimestepSize()); // Write the control pulses 
   }
 
   /* --- Solve the optimization  --- */
-  if (runtype == RunType::OPTIMIZATION) {
+  if (config.getRuntype() == RunType::OPTIMIZATION) {
     /* Set initial starting point */
     optimctx->getStartingPoint(xinit);
     VecCopy(xinit, optimctx->xinit); // Store the initial guess
+    output->writeControlParams(xinit); // Write params to file
+
     if (mpirank_world == 0 && !quietmode) printf("\nStarting Optimization solver ... \n");
-    optimctx->timestepper->writeTrajectoryDataFiles = false;
+    timestepper->setWriteTrajectoryDataFiles(false);
     optimctx->solve(xinit);
     optimctx->getSolution(&opt);
+
+    // Write control and parameters to file. 
+    output->writeControlParams(opt);
+    output->writeControls(opt, mastereq, config.getTotalTime(), config.getDt(), timestepper->getMinTimestepSize());
+
+
+  }
+
+  /* Only evaluate and write control pulses (no propagation) */
+  if (config.getRuntype() == RunType::EVALCONTROLS) {
+    std::vector<double> pt, qt;
+    if (mpirank_world == 0 && !quietmode) printf("\nEvaluating current controls ... \n");
+    optimctx->getStartingPoint(xinit);
+    output->writeControlParams(xinit); // Write params to file
+    output->writeControls(xinit, mastereq, config.getTotalTime(), config.getDt(), timestepper->getMinTimestepSize()); // Write the control pulses 
   }
 
   /* Output */
-  if (runtype != RunType::OPTIMIZATION) {
-    optimctx->output->writeOptimFile(0, optimctx->getObjective(), gnorm, 0.0, optimctx->getFidelity(), optimctx->getCostT(), optimctx->getRegul(), optimctx->getPenaltyLeakage(), optimctx->getPenaltyDpDm(), optimctx->getPenaltyEnergy(), optimctx->getPenaltyVariation(), optimctx->getPenaltyWeightedCost());
+  if (config.getRuntype() != RunType::OPTIMIZATION) {
+    output->writeOptimFile(0, optimctx->getObjective(), gnorm, 0.0, optimctx->getFidelity(), optimctx->getCostT(), optimctx->getRegul(), optimctx->getPenaltyLeakage(), optimctx->getPenaltyDpDm(), optimctx->getPenaltyEnergy(), optimctx->getPenaltyVariation(), optimctx->getPenaltyWeightedCost());
   }
 
   /* --- Finalize --- */
@@ -350,6 +365,7 @@ int main(int argc,char **argv)
   double obj_pert1, obj_pert2;
 
   optimctx->getStartingPoint(xinit);
+  output->writeControlParams(xinit); // Write params to file
 
   /* --- Solve primal --- */
   if (mpirank_world == 0) printf("\nRunning optimizer eval_f... ");
@@ -412,6 +428,7 @@ int main(int argc,char **argv)
     printf("#########################\n\n");
   }
   optimctx->getStartingPoint(xinit);
+  output->writeControlParams(xinit); // Write params to file
 
   /* Figure out which parameters are hitting bounds */
   double bound_tol = 1e-3;
@@ -591,8 +608,9 @@ int main(int argc,char **argv)
   }
   delete [] oscil_vec;
   delete mastereq;
-  delete mytimestepper;
+  delete timestepper;
   delete optimctx;
+  delete optim_target;
   delete output;
 
   VecDestroy(&xinit);

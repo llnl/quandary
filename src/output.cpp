@@ -8,22 +8,18 @@ Output::Output(){
   mpirank_init  = -1;
   output_timestep_stride = 0;
   quietmode = false;
-  trajectory_initid = -1;
 }
 
 Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bool quietmode_) : Output() {
+  quietmode = quietmode_;
+  noscillators = config.getNumOsc();
+  output_timestep_stride = config.getOutputTimestepStride();
 
   /* Get communicator ranks */
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
   MPI_Comm_rank(comm_petsc, &mpirank_petsc);
   MPI_Comm_size(comm_petsc, &mpisize_petsc);
   MPI_Comm_rank(comm_init, &mpirank_init);
-
-  /* Reduced output */
-  quietmode = quietmode_;
-
-  /* Store number of oscillators */
-  noscillators = config.getNumOsc();
 
   /* Create Data directory */
   output_dir = config.getOutputDirectory();
@@ -33,8 +29,6 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
   MPI_Barrier(MPI_COMM_WORLD);
 
   /* Prepare output for optimizer */
-  output_optimization_stride = config.getOutputOptimizationStride();
-  output_timestep_stride = config.getOutputTimestepStride();
   if (mpirank_world == 0) {
     char filename[255];
     snprintf(filename, 254, "%s/optim_history.dat", output_dir.c_str());
@@ -46,7 +40,15 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
     fprintf(optimfile, "#\"iter\"    \"Objective\"           \"||Pr(grad)||\"           \"LS step\"           \"F_avg\"           \"Terminal cost\"         \"Tikhonov-regul\"        \"Penalty-term\"          \"State variation\"        \"Energy-term\"           \"Control variation\"\n");
   } 
 
+  /* Reset flags and data file pointers */
+  ufile = NULL;
+  vfile = NULL;
+  for (size_t i=0; i< noscillators; i++) expectedfile.push_back (NULL);
+  for (size_t i=0; i< noscillators; i++) populationfile.push_back (NULL);
+
   /* Check which output should be written to files (applies them to all oscillators) */
+  expectedfile_comp=NULL;
+  populationfile_comp=NULL;
   writeFullState = false;
   writeExpectedEnergy_comp = false;
   writePopulation_comp = false;
@@ -72,9 +74,6 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
         break;
     }
   }
-
-  // Flag for writing control trajectory. Currently always true.
-  writeControls = true;
 }
 
 
@@ -107,6 +106,7 @@ void Output::writeGradient(Vec grad){
       printf("ERROR: Could not open file %s\n", filename);
       exit(1);
     }
+
     const PetscScalar* grad_ptr;
     VecGetArrayRead(grad, &grad_ptr);
     for (int i=0; i<ngrad; i++){
@@ -120,21 +120,21 @@ void Output::writeGradient(Vec grad){
 
 void Output::writeControlParams(Vec params){
 
-  /* Write control parameters */
   if ( mpirank_world == 0 ) { 
 
+    /* Open params.dat file */
     char filename[255];
-    PetscInt ndesign;
-    VecGetSize(params, &ndesign);
-
-    /* Print current parameters to file */
-    FILE *file;
     snprintf(filename, 254, "%s/params.dat", output_dir.c_str());
+    FILE *file;
     file = fopen(filename, "w");
     if (file == nullptr) {
       printf("ERROR: Could not open file %s\n", filename);
       exit(1);
     }
+
+    // Write parameters to file
+    PetscInt ndesign;
+    VecGetSize(params, &ndesign);
     const PetscScalar* params_ptr;
     VecGetArrayRead(params, &params_ptr);
     for (int i=0; i<ndesign; i++){
@@ -142,72 +142,156 @@ void Output::writeControlParams(Vec params){
     }
     fclose(file);
     VecRestoreArrayRead(params, &params_ptr);
-    // if (!quietmode) printf("File written: %s\n", filename);
+    if (!quietmode) printf("File written: %s\n", filename);
   }
 }
 
+void Output::writeControls(Vec params, MasterEq* mastereq, double total_time, double dt, double min_dt){
 
-void Output::resetTrajectoryData(int initid){
-  trajectory_initid = initid;
+  if (mpirank_world != 0) return; // Only write on one rank
 
-  // Reset all trajectory buffers
-  trajectory_times.clear();
-  controls_Re_buffer.clear();
-  controls_Im_buffer.clear();
-  expected_energy_buffer.clear();
-  expected_energy_comp_buffer.clear();
-  population_buffer.clear();
-  population_comp_buffer.clear();
-  fullstate_re_buffer.clear();
-  fullstate_im_buffer.clear();
+  // Use the smallest timestep for sampling controls, or fall back to dt if min_dt not provided
+  double dt_sample = (min_dt > 0.0) ? min_dt : dt;
+
+  /* Print control to file for each oscillator */
+  char filename[255];
+  FILE *file_c;
+  mastereq->setControlAmplitudes(params);
+  for (size_t ioscil = 0; ioscil < mastereq->getNOscillators(); ioscil++) {
+    snprintf(filename, 254, "%s/control%zu.dat", output_dir.c_str(), ioscil);
+    file_c = fopen(filename, "w");
+    if (file_c == nullptr) {
+      printf("ERROR: Could not open file %s\n", filename);
+      exit(1);
+    }
+    fprintf(file_c, "#\"time\"         \"p(t) (rotating)\"          \"q(t) (rotating)\"         \"f(t) (labframe)\"\n");
+
+    /* Write every <num> timestep to file */
+    int ntime = static_cast<int>(total_time/dt_sample);
+    for (int i=0; i<=ntime; i+=output_timestep_stride) {
+      double time = i*dt_sample; 
+
+      double ReI, ImI, LabI;
+      mastereq->getOscillator(ioscil)->evalControl(time, &ReI, &ImI);
+      mastereq->getOscillator(ioscil)->evalControl_Labframe(time, &LabI);
+      // Write control drives
+      fprintf(file_c, "% 1.8f   % 1.14e   % 1.14e   % 1.14e \n", time, ReI/(2.0*M_PI), ImI/(2.0*M_PI), LabI/(2.0*M_PI));
+   } // end of time loop 
+
+    fclose(file_c);
+    if (!quietmode) printf("File written: %s\n", filename);
+  } // end of oscillator loop
 }
 
-void Output::evalTrajectoryData(int timestep, double time, const Vec state, MasterEq* mastereq){
+void Output::openTrajectoryDataFiles(std::string prefix, int initid){
+  char filename[255];
 
-  if (output_timestep_stride <= 0 ) {
-    return;
+  // On the first petsc rank, open required files and print header information
+  if (mpirank_petsc == 0) {
+
+    // Open files for expected energy per oscillator  
+    if (writeExpectedEnergy) {
+      for (size_t i=0; i<noscillators; i++) { 
+        snprintf(filename, 254, "%s/expected%zu.iinit%04d.dat", output_dir.c_str(), i, initid);
+        expectedfile[i] = fopen(filename, "w");
+        if (expectedfile[i] == nullptr) {
+          printf("ERROR: Could not open file %s\n", filename);
+          exit(1);
+        }
+        fprintf(expectedfile[i], "#\"time\"      \"expected energy level\"\n");
+      }
+    }
+    // Open file for expected energy of the full composite system
+    if (writeExpectedEnergy_comp) {
+      snprintf(filename, 254, "%s/expected_composite.iinit%04d.dat", output_dir.c_str(), initid);
+      expectedfile_comp = fopen(filename, "w");
+      if (expectedfile_comp == nullptr) {
+        printf("ERROR: Could not open file %s\n", filename);
+        exit(1);
+      }
+      fprintf(expectedfile_comp, "#\"time\"      \"expected energy level\"\n");
+    }
+    // Open files for populations per oscillator
+    if (writePopulation) {
+      for (size_t i=0; i<noscillators; i++) { 
+        snprintf(filename, 254, "%s/population%zu.iinit%04d.dat", output_dir.c_str(), i, initid);
+        populationfile[i] = fopen(filename, "w");
+        if (populationfile[i] == nullptr) {
+          printf("ERROR: Could not open file %s\n", filename);
+          exit(1);
+        }
+        fprintf(populationfile[i], "#\"time\"      \"diagonal of the density matrix\"\n");
+      }
+    }
+    // Open file for population for full composite system 
+    if (writePopulation_comp) {
+      snprintf(filename, 254, "%s/population_composite.iinit%04d.dat", output_dir.c_str(), initid);
+      populationfile_comp = fopen(filename, "w");
+      if (populationfile_comp == nullptr) {
+        printf("ERROR: Could not open file %s\n", filename);
+        exit(1);
+      }
+      fprintf(populationfile_comp, "#\"time\"      \"population\"\n");
+    }
+    // Open file for full vectorized state 
+    if (writeFullState) {
+      snprintf(filename, 254, "%s/%s_Re.iinit%04d.dat", output_dir.c_str(), prefix.c_str(), initid);
+      ufile = fopen(filename, "w");
+      if (ufile == nullptr) {
+        printf("ERROR: Could not open file %s\n", filename);
+        exit(1);
+      }
+      snprintf(filename, 254, "%s/%s_Im.iinit%04d.dat", output_dir.c_str(), prefix.c_str(), initid);
+      vfile = fopen(filename, "w"); 
+      if (vfile == nullptr) {
+        printf("ERROR: Could not open file %s\n", filename);
+        exit(1);
+      }
+    }
   }
+}
+
+void Output::writeTrajectoryDataFiles(int timestep, double time, const Vec state, MasterEq* mastereq){
 
   /* Write output only every <num> time-steps */
   if (timestep % output_timestep_stride == 0) {
 
-    if (mpirank_petsc == 0) {
-      trajectory_times.push_back(time);
-    }
-
-    /* Grab controls from the master equation  */
-    if (writeControls) {
-      controls_Re_buffer.push_back(mastereq->getRHSctx()->control_Re);
-      controls_Im_buffer.push_back(mastereq->getRHSctx()->control_Im);
-    }
-
-    /* Compute expected energy level */
+    /* Write expected energy levels to file */
     if (writeExpectedEnergy) {
-      std::vector<double> vals(noscillators, 0.0);
-      for (size_t iosc = 0; iosc < noscillators; iosc++) {
-        vals[iosc] = mastereq->getOscillator(iosc)->expectedEnergy(state);
+      for (size_t iosc = 0; iosc < expectedfile.size(); iosc++) {
+        double expected = mastereq->getOscillator(iosc)->expectedEnergy(state);
+        if (mpirank_petsc==0) fprintf(expectedfile[iosc], "%.8f %1.14e\n", time, expected);
       }
-      if (mpirank_petsc == 0) expected_energy_buffer.push_back(vals);
     }
     if (writeExpectedEnergy_comp) {
       double expected_comp = mastereq->expectedEnergy(state);
-      if (mpirank_petsc == 0) expected_energy_comp_buffer.push_back(expected_comp);
+      if (mpirank_petsc==0) fprintf(expectedfile_comp, "%.8f %1.14e\n", time, expected_comp);
     }
 
     /* Write population to file */
     if (writePopulation) {
-      std::vector<std::vector<double>> vals(noscillators);
-      for (size_t iosc = 0; iosc < noscillators; iosc++) {
-        // std::vector<double> pop (mastereq->getOscillator(iosc)->getNLevels(), 0.0);
-        vals[iosc].resize(mastereq->getOscillator(iosc)->getNLevels(), 0.0);
-        mastereq->getOscillator(iosc)->population(state, vals[iosc]);
+      for (size_t iosc = 0; iosc < populationfile.size(); iosc++) {
+        std::vector<double> pop (mastereq->getOscillator(iosc)->getNLevels(), 0.0);
+        mastereq->getOscillator(iosc)->population(state, pop);
+        if (mpirank_petsc == 0) {
+          fprintf(populationfile[iosc], "%.8f ", time);
+          for (size_t i = 0; i<pop.size(); i++) {
+            fprintf(populationfile[iosc], " %1.14e", pop[i]);
+          }
+          fprintf(populationfile[iosc], "\n");
+        }
       }
-      if (mpirank_petsc == 0) population_buffer.push_back(vals);
     }
     if (writePopulation_comp) {
       std::vector<double> population_comp; 
       mastereq->population(state, population_comp);
-      if (mpirank_petsc == 0) population_comp_buffer.push_back(population_comp);
+      if (mpirank_petsc == 0) {
+        fprintf(populationfile_comp, "%.8f  ", time);
+        for (size_t i=0; i<population_comp.size(); i++){
+          fprintf(populationfile_comp, "%1.14e  ", population_comp[i]);
+        }
+        fprintf(populationfile_comp, "\n");
+      }
     }
 
     /* Write full state to file. Currently not available if Petsc-parallel */
@@ -220,16 +304,16 @@ void Output::evalTrajectoryData(int timestep, double time, const Vec state, Mast
 
       /* On first petsc rank, write full state vector to file */
       if (mpirank_petsc == 0) {
+        fprintf(ufile,  "%.8f  ", time);
+        fprintf(vfile,  "%.8f  ", time);
         const PetscScalar *x;
         VecGetArrayRead(state, &x);
-        std::vector<double> re(mastereq->getDim());
-        std::vector<double> im(mastereq->getDim());
         for (int i=0; i<mastereq->getDim(); i++) {
-          re[i] = x[i];
-          im[i] = x[i + mastereq->getDim()];
+          fprintf(ufile, "%1.10e  ", x[i]);  
+          fprintf(vfile, "%1.10e  ", x[i + mastereq->getDim()]);  
         }
-        fullstate_re_buffer.push_back(std::move(re));
-        fullstate_im_buffer.push_back(std::move(im));
+        fprintf(ufile, "\n");
+        fprintf(vfile, "\n");
         VecRestoreArrayRead(state, &x);
       }
       /* Destroy scatter context and vector */
@@ -239,129 +323,36 @@ void Output::evalTrajectoryData(int timestep, double time, const Vec state, Mast
   }
 }
 
-void Output::writeTrajectoryData(){
-  char filename[255];
+void Output::closeTrajectoryDataFiles(){
 
-  if (mpirank_petsc == 0) {
-    size_t ntimepoints = trajectory_times.size();
-
-    if (writeControls) {
-      if (mpirank_world == 0) {// Only one proc write controls
-        for (size_t iosc = 0; iosc < noscillators; iosc++) {
-          snprintf(filename, 254, "%s/control%zu.dat", output_dir.c_str(), iosc);
-          FILE* controlfile = fopen(filename, "w");
-          if (controlfile == nullptr) {
-            printf("ERROR: Could not open file %s\n", filename);
-            exit(1);
-          }
-          fprintf(controlfile, "#\"time\"         \"p(t) (rotating)\"          \"q(t) (rotating)\"\n");
-          for (size_t s = 0; s < ntimepoints && s < controls_Re_buffer.size() && s < controls_Im_buffer.size(); s++) {
-            fprintf(controlfile, "% 1.8f   % 1.14e   % 1.14e \n", trajectory_times[s], controls_Re_buffer[s][iosc]/(2.0*M_PI), controls_Im_buffer[s][iosc]/(2.0*M_PI));
-          }
-          fclose(controlfile);
-        }
-      }
+  /* Close output data files */
+  if (ufile != NULL) {
+    fclose(ufile);
+    ufile = NULL;
+  }
+  if (vfile != NULL) {
+    fclose(vfile);
+    vfile = NULL;
     }
-
-    if (writeExpectedEnergy) {
-      for (size_t i=0; i<noscillators; i++) {
-        snprintf(filename, 254, "%s/expected%zu.iinit%04d.dat", output_dir.c_str(), i, trajectory_initid);
-        FILE* expectedfile = fopen(filename, "w");
-        if (expectedfile == nullptr) {
-          printf("ERROR: Could not open file %s\n", filename);
-          exit(1);
-        }
-        fprintf(expectedfile, "#\"time\"      \"expected energy level\"\n");
-        for (size_t s = 0; s < ntimepoints; s++) {
-          fprintf(expectedfile, "%.8f %1.14e\n", trajectory_times[s], expected_energy_buffer[s][i]);
-        }
-        fclose(expectedfile);
-      }
-    }
-
-    if (writeExpectedEnergy_comp) {
-      snprintf(filename, 254, "%s/expected_composite.iinit%04d.dat", output_dir.c_str(), trajectory_initid);
-      FILE* expectedfile_comp = fopen(filename, "w");
-      if (expectedfile_comp == nullptr) {
-        printf("ERROR: Could not open file %s\n", filename);
-        exit(1);
-      }
-      fprintf(expectedfile_comp, "#\"time\"      \"expected energy level\"\n");
-      for (size_t s = 0; s < ntimepoints; s++) {
-        fprintf(expectedfile_comp, "%.8f %1.14e\n", trajectory_times[s], expected_energy_comp_buffer[s]);
-      }
-      fclose(expectedfile_comp);
-    }
-
-    if (writePopulation) {
-      for (size_t i=0; i<noscillators; i++) {
-        snprintf(filename, 254, "%s/population%zu.iinit%04d.dat", output_dir.c_str(), i, trajectory_initid);
-        FILE* populationfile = fopen(filename, "w");
-        if (populationfile == nullptr) {
-          printf("ERROR: Could not open file %s\n", filename);
-          exit(1);
-        }
-        fprintf(populationfile, "#\"time\"      \"diagonal of the density matrix\"\n");
-        for (size_t s = 0; s < ntimepoints; s++) {
-          fprintf(populationfile, "%.8f ", trajectory_times[s]);
-          for (size_t j = 0; j < population_buffer[s][i].size(); j++) {
-            fprintf(populationfile, " %1.14e", population_buffer[s][i][j]);
-          }
-          fprintf(populationfile, "\n");
-        }
-        fclose(populationfile);
-      }
-    }
-
-    if (writePopulation_comp) {
-      snprintf(filename, 254, "%s/population_composite.iinit%04d.dat", output_dir.c_str(), trajectory_initid);
-      FILE* populationfile_comp = fopen(filename, "w");
-      if (populationfile_comp == nullptr) {
-        printf("ERROR: Could not open file %s\n", filename);
-        exit(1);
-      }
-      fprintf(populationfile_comp, "#\"time\"      \"population\"\n");
-      for (size_t s = 0; s < ntimepoints && s < population_comp_buffer.size(); s++) {
-        fprintf(populationfile_comp, "%.8f  ", trajectory_times[s]);
-        for (size_t i=0; i<population_comp_buffer[s].size(); i++){
-          fprintf(populationfile_comp, "%1.14e  ", population_comp_buffer[s][i]);
-        }
-        fprintf(populationfile_comp, "\n");
-      }
-      fclose(populationfile_comp);
-    }
-
-    if (writeFullState && mpisize_petsc == 1) {
-      snprintf(filename, 254, "%s/rho_Re.iinit%04d.dat", output_dir.c_str(), trajectory_initid);
-      FILE* ufile = fopen(filename, "w");
-      if (ufile == nullptr) {
-        printf("ERROR: Could not open file %s\n", filename);
-        exit(1);
-      }
-      snprintf(filename, 254, "%s/rho_Im.iinit%04d.dat", output_dir.c_str(), trajectory_initid);
-      FILE* vfile = fopen(filename, "w");
-      if (vfile == nullptr) {
-        printf("ERROR: Could not open file %s\n", filename);
-        exit(1);
-      }
-      for (size_t s = 0; s < ntimepoints && s < fullstate_re_buffer.size() && s < fullstate_im_buffer.size(); s++) {
-        fprintf(ufile,  "%.8f  ", trajectory_times[s]);
-        fprintf(vfile,  "%.8f  ", trajectory_times[s]);
-        for (size_t i=0; i<fullstate_re_buffer[s].size(); i++) {
-          fprintf(ufile, "%1.10e  ", fullstate_re_buffer[s][i]);  
-          fprintf(vfile, "%1.10e  ", fullstate_im_buffer[s][i]);  
-        }
-        fprintf(ufile, "\n");
-        fprintf(vfile, "\n");
-      }
-      fclose(ufile);
-      fclose(vfile);
+  for (size_t i=0; i< expectedfile.size(); i++) {
+    if (expectedfile[i] != NULL) {
+      fclose(expectedfile[i]);
+      expectedfile[i] = NULL;
     }
   }
+  if (expectedfile_comp != NULL) fclose(expectedfile_comp);
+  expectedfile_comp = NULL;
+  for (size_t i=0; i< populationfile.size(); i++) {
+    if (populationfile[i] != NULL) {
+      fclose(populationfile[i]);
+      populationfile[i] = NULL;
+    }
+  }
+  if (populationfile_comp != NULL) fclose(populationfile_comp);
+  populationfile_comp = NULL;
 }
 
-
-void Output::writeResonatorFieldTrajectory(const std::vector<double>& resonator_field_re, const std::vector<double>& resonator_field_im) const {
+void Output::writeResonatorFieldTrajectory(const std::vector<double>& resonator_field_re, const std::vector<double>& resonator_field_im, const std::vector<double>& resonator_field_times, int initid) const {
   if (mpirank_petsc != 0) {
     return;
   }
@@ -371,12 +362,12 @@ void Output::writeResonatorFieldTrajectory(const std::vector<double>& resonator_
     exit(1);
   }
 
-  if (trajectory_times.empty() || resonator_field_re.empty() || resonator_field_im.empty()) {
+  if (resonator_field_times.empty() || resonator_field_re.empty() || resonator_field_im.empty()) {
     return;
   }
 
   char filename[255];
-  snprintf(filename, 254, "%s/resonator_field.iinit%04d.dat", output_dir.c_str(), trajectory_initid);
+  snprintf(filename, 254, "%s/resonator_field.iinit%04d.dat", output_dir.c_str(), initid);
   FILE* file = fopen(filename, "w");
   if (file == nullptr) {
     printf("ERROR: Could not open file %s\n", filename);
@@ -384,10 +375,9 @@ void Output::writeResonatorFieldTrajectory(const std::vector<double>& resonator_
   }
   fprintf(file, "#\"time\"      \"Re(<I\\otimes a> rho)\"      \"Im(<I\\otimes a> rho)\"\n");
 
-  const size_t nsamples = std::min(trajectory_times.size(), std::min(resonator_field_re.size(), resonator_field_im.size()));
+  const size_t nsamples = std::min(resonator_field_times.size(), std::min(resonator_field_re.size(), resonator_field_im.size()));
   for (size_t s = 0; s < nsamples; ++s) {
-    fprintf(file, "%.8f %1.14e %1.14e\n", trajectory_times[s], resonator_field_re[s], resonator_field_im[s]);
+    fprintf(file, "%.8f %1.14e %1.14e\n", resonator_field_times[s], resonator_field_re[s], resonator_field_im[s]);
   }
   fclose(file);
-}
-
+} 

@@ -137,6 +137,17 @@
         ]
     },
     {
+        "simulation_name": "xgate_petscts",
+        "files_to_compare": [
+            "optim_history.dat",
+            "expected*.dat",
+            "grad.dat"
+        ],
+        "number_of_processes": [
+            2
+        ]
+    },
+    {
         "simulation_name": "state-to-state_spline0",
         "files_to_compare": [
             "optim_history.dat",

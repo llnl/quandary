@@ -33,27 +33,18 @@ class Output{
   bool writeExpectedEnergy_comp; ///< Flag to determine if evolution of expected energy of the full composite system should be written to file
   bool writePopulation; ///< Flag to determine if the evolution of the energy level occupations per oscillator should be written to files
   bool writePopulation_comp; ///< Flag to determine if the evolution of the energy level occupations of the full composite system should be written to file
-  bool writeControls; ///< Flag to determine if the control pulses should be written to file.
-
-  // Trajectory output buffers (written at end of simulation)
-  int trajectory_initid; ///< Initial condition identifier for buffered trajectory output
-  std::vector<double> trajectory_times; ///< Stored output times
-  std::vector<std::vector<double>> controls_Re_buffer; ///< [timepoint][oscillator] Control pulse values for each oscillator at each buffered time point
-  std::vector<std::vector<double>> controls_Im_buffer; ///< [timepoint][oscillator] Control pulse values for each oscillator at each buffered time point
-  std::vector<std::vector<double>> expected_energy_buffer; ///< [timepoint][oscillator]
-  std::vector<double> expected_energy_comp_buffer; ///< [timepoint]
-  std::vector<std::vector<std::vector<double>>> population_buffer; ///< [timepoint][oscillator][level]
-  std::vector<std::vector<double>> population_comp_buffer; ///< [timepoint][level]
-  std::vector<std::vector<double>> fullstate_re_buffer; ///< [timepoint][state index]
-  std::vector<std::vector<double>> fullstate_im_buffer; ///< [timepoint][state index]
-  // size_t trajectory_timepoint_count; ///< Number of buffered trajectory samples
+  FILE *ufile; ///< File for writing real part of fullstate evolution
+  FILE *vfile; ///< File for writing imaginary part of fullstate evolution
+  std::vector<FILE *>expectedfile; ///< Files for expected energy evolution per oscillator
+  std::vector<FILE *>populationfile; ///< Files for population evolution per oscillator
+  FILE *expectedfile_comp; ///< File for expected energy evolution of the full composite system
+  FILE *populationfile_comp; ///< File for population evolution of the full composite system
 
   // VecScatter scat; ///< PETSc's scatter context for state communication across cores
   // Vec xseq; ///< Sequential vector for I/O operations
 
   public:
     std::string output_dir; ///< Directory path for output data files
-    int output_optimization_stride; ///< Write output files every N optimization iterations
 
   public:
     Output();
@@ -69,13 +60,6 @@ class Output{
     Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bool quietmode=false);
 
     ~Output();
-
-    /** 
-     * @brief Retrieve the trajectory times for the current initial condition.
-     *
-     * @return Vector of trajectory times
-     */
-    const std::vector<double>& getTrajectoryTimes() const { return trajectory_times; };
 
     /**
      * @brief Writes optimization progress to history file.
@@ -99,6 +83,24 @@ class Output{
     void writeOptimFile(int optim_iter, double objective, double gnorm, double stepsize, double Favg, double cost, double tikh_regul,  double penalty_leakage, double penalty_dpdm, double penalty_energy, double penalty_variation, double penalty_weightedcost);
 
     /**
+     * @brief Writes current control parameters to file.
+     *
+     * @param params Current parameter vector
+     */
+    void writeControlParams(Vec params);
+
+    /**
+     * @brief Writes current control pulses to file.
+     * 
+     * @param params Current parameter vector
+     * @param mastereq Pointer to master equation solver
+     * @param total_time Total evolution time 
+     * @param dt Time step size 
+     * @param min_dt Smallest timestep size chosen during adaptive timestepping (default: equal to dt)
+     */
+    void writeControls(Vec params, MasterEq* mastereq, double total_time, double dt, double min_dt = -1.0);
+
+    /**
      * @brief Writes gradient vector for debugging adjoint calculations.
      * 
      * Gradient is written to `<output_dir>/grad.dat`
@@ -108,41 +110,42 @@ class Output{
     void writeGradient(Vec grad);
 
     /**
-     * @brief Prepares buffers to store time evolution output. Called before time-stepping begins.
+     * @brief Opens data files for time evolution output for one oscillator.
      *
+     * Prepares files for writing full state, expected energy, and population evolution data. Called before timestepping starts. 
+     *
+     * @param prefix Filename prefix for output files
      * @param initid Initial condition identifier
-     * @param mastereq Pointer to master equation solver
      */
-    void resetTrajectoryData(int initid);
+    void openTrajectoryDataFiles(std::string prefix, int initid);
 
     /**
-     * @brief Computes time evolution output and stores it in internal buffers.
+     * @brief Writes time evolution data to files.
      *
-     * Outputs state vector, expected energies, and populations at current time step. Called at each time step.
+     * Outputs state vector, expected energies, and populations at current time step. Called at each time step 
      *
      * @param timestep Current time step number
      * @param time Current time value
      * @param state Current state vector
      * @param mastereq Pointer to master equation solver
      */
-    void evalTrajectoryData(int timestep, double time, const Vec state, MasterEq* mastereq);
+    void writeTrajectoryDataFiles(int timestep, double time, const Vec state, MasterEq* mastereq);
 
     /**
-     * @brief Writes time evolution data from internal buffers to files. Called after time-stepping.
+     * @brief Closes open time evolution data files.
+     *
+     * Properly closes and flushes all output files after time-stepping completion.
      */
-    void writeTrajectoryData();
+    void closeTrajectoryDataFiles();
 
     /** 
      * @brief Write resonator field trajectories
      * 
      * @param std::vector<double> resonator_field_re Trajectory of real part of resonator field <I \otimes a>(t) 
      * @param std::vector<double> resonator_field_im Trajectory of imaginary part of resonator field <I \otimes a>(t) 
+     * @param std::vector<double> resonator_field_times Trajectory of time points corresponding to resonator field samples
+     * @param initid Initial condition identifier
      */
-    // void writeResonatorFieldTrajectories() const;
-    void writeResonatorFieldTrajectory(const std::vector<double>& resonator_field_re, const std::vector<double>& resonator_field_im) const;
+    void writeResonatorFieldTrajectory(const std::vector<double>& resonator_field_re, const std::vector<double>& resonator_field_im, const std::vector<double>& resonator_field_times, int initid) const;
 
-    /**
-     * @brief Writes control parameters to file. 
-     */
-    void writeControlParams(Vec params);
 };
