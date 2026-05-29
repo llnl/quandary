@@ -78,7 +78,6 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
-<a href="#pub-attribs">Public Attributes</a> &#124;
 <a href="#pro-attribs">Protected Attributes</a> &#124;
 <a href="classTimeStepper-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">TimeStepper Class Reference<span class="mlabels"><span class="mlabel">abstract</span></span></div></div>
@@ -110,23 +109,23 @@ Collaboration diagram for TimeStepper:</div>
 <div class="dyncontent">
 <div class="center"><img src="classTimeStepper__coll__graph.png" border="0" usemap="#aTimeStepper_coll__map" alt="Collaboration graph"/></div>
 <map name="aTimeStepper_coll__map" id="aTimeStepper_coll__map">
-<area shape="rect" title="Base class for time integration schemes to evolve the quantum dynamics." alt="" coords="281,181,386,207"/>
-<area shape="rect" href="classMasterEq.html" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="100,93,183,119"/>
-<area shape="poly" title=" " alt="" coords="181,122,308,179,306,184,179,127"/>
-<area shape="rect" href="structMatShellCtx.html" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="5,181,107,207"/>
-<area shape="poly" title=" " alt="" coords="131,133,111,159,79,183,76,179,107,155,127,129"/>
-<area shape="rect" href="classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="35,5,119,31"/>
-<area shape="poly" title=" " alt="" coords="96,40,135,91,130,94,92,43"/>
-<area shape="poly" title=" " alt="" coords="58,42,39,66,25,94,23,118,29,141,49,180,45,182,24,143,18,118,20,93,35,63,54,39"/>
-<area shape="poly" title=" " alt="" coords="49,168,50,154,55,141,75,123,99,112,101,117,78,128,60,144,55,155,54,168"/>
-<area shape="rect" href="classOptimTarget.html" title="Optimization target specification for quantum control." alt="" coords="282,93,385,119"/>
-<area shape="poly" title=" " alt="" coords="336,133,336,181,331,181,331,133"/>
-<area shape="rect" href="classGate.html" title="Base class for quantum gate operations." alt="" coords="200,5,253,31"/>
-<area shape="poly" title=" " alt="" coords="244,40,270,67,308,91,305,95,266,71,240,43"/>
-<area shape="rect" href="structInitialConditionSettings.html" title="Settings for initial conditions. Required, no defaults." alt="" coords="278,5,453,31"/>
-<area shape="poly" title=" " alt="" coords="359,45,340,94,335,92,354,43"/>
-<area shape="rect" href="classOutput.html" title="Output management for quantum control simulations and optimization." alt="" coords="420,93,487,119"/>
-<area shape="poly" title=" " alt="" coords="446,133,426,159,404,174,381,184,379,179,402,169,422,155,441,130"/>
+<area shape="rect" title="Base class for time integration schemes to evolve the quantum dynamics." alt="" coords="169,181,274,207"/>
+<area shape="rect" href="classOptimTarget.html" title="Optimization target specification for quantum control." alt="" coords="50,93,153,119"/>
+<area shape="poly" title=" " alt="" coords="112,130,129,155,149,169,171,179,169,184,146,174,125,159,107,133"/>
+<area shape="rect" href="classGate.html" title="Base class for quantum gate operations." alt="" coords="5,5,59,31"/>
+<area shape="poly" title=" " alt="" coords="49,40,70,68,92,91,88,95,66,71,45,43"/>
+<area shape="rect" href="structInitialConditionSettings.html" title="Settings for initial conditions. Required, no defaults." alt="" coords="83,5,258,31"/>
+<area shape="poly" title=" " alt="" coords="161,44,143,71,118,95,115,91,139,68,157,41"/>
+<area shape="rect" href="classOutput.html" title="Output management for quantum control simulations and optimization." alt="" coords="188,93,255,119"/>
+<area shape="poly" title=" " alt="" coords="224,133,224,181,219,181,219,133"/>
+<area shape="rect" href="classMasterEq.html" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="395,93,477,119"/>
+<area shape="poly" title=" " alt="" coords="382,124,318,145,242,184,239,179,316,140,380,119"/>
+<area shape="rect" href="structMatShellCtx.html" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="443,181,544,207"/>
+<area shape="poly" title=" " alt="" coords="405,128,393,142,392,149,394,156,416,174,444,185,442,190,413,179,390,159,386,149,388,140,401,125"/>
+<area shape="rect" href="classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="470,5,554,31"/>
+<area shape="poly" title=" " alt="" coords="495,43,449,95,445,91,491,39"/>
+<area shape="poly" title=" " alt="" coords="540,39,549,54,549,69,547,115,543,135,533,159,511,183,507,180,528,156,538,134,542,115,544,69,544,55,535,42"/>
+<area shape="poly" title=" " alt="" coords="478,171,462,144,444,120,448,117,466,141,483,168"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
@@ -134,22 +133,11 @@ Collaboration diagram for TimeStepper:</div>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a88c17d2b22882ca947e83c25e903be1d" id="r_a88c17d2b22882ca947e83c25e903be1d"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a88c17d2b22882ca947e83c25e903be1d">TimeStepper</a> ()</td></tr>
 <tr class="separator:a88c17d2b22882ca947e83c25e903be1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0bcee079728ff3db7f425f3cc81f67e7" id="r_a0bcee079728ff3db7f425f3cc81f67e7"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a0bcee079728ff3db7f425f3cc81f67e7">TimeStepper</a> (size_t ninit_local, <a class="el" href="classMasterEq.html">MasterEq</a> *mastereq_, int ntime_, double total_time_, <a class="el" href="classOutput.html">Output</a> *output_, bool storeFWD_)</td></tr>
-<tr class="memdesc:a0bcee079728ff3db7f425f3cc81f67e7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor for time stepper.  <br /></td></tr>
-<tr class="separator:a0bcee079728ff3db7f425f3cc81f67e7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa3beef2bd2e7aa4824bf7f2ab1ee8c1f" id="r_aa3beef2bd2e7aa4824bf7f2ab1ee8c1f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#aa3beef2bd2e7aa4824bf7f2ab1ee8c1f">TimeStepper</a> (const <a class="el" href="classConfig.html">Config</a> &amp;config, <a class="el" href="classMasterEq.html">MasterEq</a> *mastereq_, <a class="el" href="classOutput.html">Output</a> *output_, int ninit_local)</td></tr>
+<tr class="memdesc:aa3beef2bd2e7aa4824bf7f2ab1ee8c1f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor for time stepper.  <br /></td></tr>
+<tr class="separator:aa3beef2bd2e7aa4824bf7f2ab1ee8c1f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2d80eb58c811581ef79a0b3749fb5825" id="r_a2d80eb58c811581ef79a0b3749fb5825"><td class="memItemLeft" align="right" valign="top">virtual&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a2d80eb58c811581ef79a0b3749fb5825">~TimeStepper</a> ()</td></tr>
 <tr class="separator:a2d80eb58c811581ef79a0b3749fb5825"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afdf523a5e2230eec37e27f4a9e590796" id="r_afdf523a5e2230eec37e27f4a9e590796"><td class="memItemLeft" align="right" valign="top">Vec&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#afdf523a5e2230eec37e27f4a9e590796">getState</a> (size_t tindex)</td></tr>
-<tr class="memdesc:afdf523a5e2230eec37e27f4a9e590796"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves stored state at a specific time index.  <br /></td></tr>
-<tr class="separator:afdf523a5e2230eec37e27f4a9e590796"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9fc3872d5d0185924326261b5fce948e" id="r_a9fc3872d5d0185924326261b5fce948e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a9fc3872d5d0185924326261b5fce948e">setEvalLeakage</a> (bool flag)</td></tr>
-<tr class="separator:a9fc3872d5d0185924326261b5fce948e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3591ba25db19eb751f6b12c14115a6d7" id="r_a3591ba25db19eb751f6b12c14115a6d7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a3591ba25db19eb751f6b12c14115a6d7">setEvalWeightedCost</a> (bool flag, double width)</td></tr>
-<tr class="separator:a3591ba25db19eb751f6b12c14115a6d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a95750967adb5aba62a078c5807806bc5" id="r_a95750967adb5aba62a078c5807806bc5"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a95750967adb5aba62a078c5807806bc5">setEvalDPDM</a> (bool flag)</td></tr>
-<tr class="separator:a95750967adb5aba62a078c5807806bc5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa6df7f02de1a822a07911ee3f783ce8a" id="r_aa6df7f02de1a822a07911ee3f783ce8a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#aa6df7f02de1a822a07911ee3f783ce8a">setEvalEnergy</a> (bool flag)</td></tr>
-<tr class="separator:aa6df7f02de1a822a07911ee3f783ce8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abfef40eac3cb9bd5789e824a3bd6e15c" id="r_abfef40eac3cb9bd5789e824a3bd6e15c"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#abfef40eac3cb9bd5789e824a3bd6e15c">getLeakageIntegral</a> ()</td></tr>
 <tr class="separator:abfef40eac3cb9bd5789e824a3bd6e15c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aefc0fa9c9ed6e704664aa2b8c6d86bdf" id="r_aefc0fa9c9ed6e704664aa2b8c6d86bdf"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#aefc0fa9c9ed6e704664aa2b8c6d86bdf">getWeightedCostIntegral</a> ()</td></tr>
@@ -158,15 +146,24 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a3e4006d9f66b31b39faa0050d2f27ea7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a33e06e155a957a310005c47b356a0d7b" id="r_a33e06e155a957a310005c47b356a0d7b"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a33e06e155a957a310005c47b356a0d7b">getDPDMIntegral</a> ()</td></tr>
 <tr class="separator:a33e06e155a957a310005c47b356a0d7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad5adb0f34c37323cf9a249f4bc97c4a1" id="r_ad5adb0f34c37323cf9a249f4bc97c4a1"><td class="memItemLeft" align="right" valign="top">Vec&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#ad5adb0f34c37323cf9a249f4bc97c4a1">getReducedGradient</a> ()</td></tr>
+<tr class="separator:ad5adb0f34c37323cf9a249f4bc97c4a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af69b29d3f7c6e76acff3c270a290f70b" id="r_af69b29d3f7c6e76acff3c270a290f70b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#af69b29d3f7c6e76acff3c270a290f70b">setWriteTrajectoryDataFiles</a> (bool write)</td></tr>
+<tr class="separator:af69b29d3f7c6e76acff3c270a290f70b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a13ea59a8c36180318cc408990eabe3ca" id="r_a13ea59a8c36180318cc408990eabe3ca"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a13ea59a8c36180318cc408990eabe3ca">setOptimTarget</a> (<a class="el" href="classOptimTarget.html">OptimTarget</a> *optim_target_)</td></tr>
+<tr class="separator:a13ea59a8c36180318cc408990eabe3ca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa8fd613df6e7e8608bd014082ae3f8cd" id="r_aa8fd613df6e7e8608bd014082ae3f8cd"><td class="memItemLeft" align="right" valign="top">Vec&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#aa8fd613df6e7e8608bd014082ae3f8cd">getFinalState</a> (size_t iinit_local)</td></tr>
+<tr class="memdesc:aa8fd613df6e7e8608bd014082ae3f8cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the final state for a specific local initial condition.  <br /></td></tr>
+<tr class="separator:aa8fd613df6e7e8608bd014082ae3f8cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a406d8b398fed468a496f1f08776df817" id="r_a406d8b398fed468a496f1f08776df817"><td class="memItemLeft" align="right" valign="top">virtual double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a406d8b398fed468a496f1f08776df817">getMinTimestepSize</a> () const</td></tr>
 <tr class="memdesc:a406d8b398fed468a496f1f08776df817"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the smallest timestep size used during timestepping.  <br /></td></tr>
 <tr class="separator:a406d8b398fed468a496f1f08776df817"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3bbf95bae24b17885c061cbc10a23ace" id="r_a3bbf95bae24b17885c061cbc10a23ace"><td class="memItemLeft" align="right" valign="top">virtual Vec&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a3bbf95bae24b17885c061cbc10a23ace">solveODE</a> (int initid, int iinit_local, Vec rho_t0)</td></tr>
 <tr class="memdesc:a3bbf95bae24b17885c061cbc10a23ace"><td class="mdescLeft">&#160;</td><td class="mdescRight">Solves the ODE forward in time.  <br /></td></tr>
 <tr class="separator:a3bbf95bae24b17885c061cbc10a23ace"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afa7b01103483ed0a8abd45b1da446142" id="r_afa7b01103483ed0a8abd45b1da446142"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#afa7b01103483ed0a8abd45b1da446142">solveAdjointODE</a> (int iinit_local, Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy)</td></tr>
-<tr class="memdesc:afa7b01103483ed0a8abd45b1da446142"><td class="mdescLeft">&#160;</td><td class="mdescRight">Solves the adjoint ODE backward in time.  <br /></td></tr>
-<tr class="separator:afa7b01103483ed0a8abd45b1da446142"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aba02813817d8c8b9cdf9eae298539a45" id="r_aba02813817d8c8b9cdf9eae298539a45"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#aba02813817d8c8b9cdf9eae298539a45">solveAdjointODE</a> (int iinit_local, Vec rho_t0_bar, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy)</td></tr>
+<tr class="memdesc:aba02813817d8c8b9cdf9eae298539a45"><td class="mdescLeft">&#160;</td><td class="mdescRight">Solves the adjoint ODE backward in time.  <br /></td></tr>
+<tr class="separator:aba02813817d8c8b9cdf9eae298539a45"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a35fc3f22411d4e8068206ddd8300b431" id="r_a35fc3f22411d4e8068206ddd8300b431"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a35fc3f22411d4e8068206ddd8300b431">evalLeakage</a> (const Vec <a class="el" href="classTimeStepper.html#a7b47c0f5ce67d8f4a04c77c2c96bd93c">x</a>)</td></tr>
 <tr class="memdesc:a35fc3f22411d4e8068206ddd8300b431"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates leakage into guard levels.  <br /></td></tr>
 <tr class="separator:a35fc3f22411d4e8068206ddd8300b431"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -198,36 +195,6 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a7893cfa005fac0830ea331cbbe6b0dde"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evolves adjoint state backward by one time-step and updates reduced gradient.  <br /></td></tr>
 <tr class="separator:a7893cfa005fac0830ea331cbbe6b0dde"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
-Public Attributes</h2></td></tr>
-<tr class="memitem:a19a5d08c76bf1580122ec82665c2f7ef" id="r_a19a5d08c76bf1580122ec82665c2f7ef"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classMasterEq.html">MasterEq</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a19a5d08c76bf1580122ec82665c2f7ef">mastereq</a></td></tr>
-<tr class="memdesc:a19a5d08c76bf1580122ec82665c2f7ef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer to master equation solver.  <br /></td></tr>
-<tr class="separator:a19a5d08c76bf1580122ec82665c2f7ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1e462962525e2b0960c8d5ac813d3873" id="r_a1e462962525e2b0960c8d5ac813d3873"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a1e462962525e2b0960c8d5ac813d3873">ntime</a></td></tr>
-<tr class="memdesc:a1e462962525e2b0960c8d5ac813d3873"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of time steps.  <br /></td></tr>
-<tr class="separator:a1e462962525e2b0960c8d5ac813d3873"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4094b333f65e347f95c78aea0effe544" id="r_a4094b333f65e347f95c78aea0effe544"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a4094b333f65e347f95c78aea0effe544">total_time</a></td></tr>
-<tr class="memdesc:a4094b333f65e347f95c78aea0effe544"><td class="mdescLeft">&#160;</td><td class="mdescRight">Final evolution time.  <br /></td></tr>
-<tr class="separator:a4094b333f65e347f95c78aea0effe544"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad261faaaa2066bfaa7ca7d9af834e61e" id="r_ad261faaaa2066bfaa7ca7d9af834e61e"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#ad261faaaa2066bfaa7ca7d9af834e61e">dt</a></td></tr>
-<tr class="memdesc:ad261faaaa2066bfaa7ca7d9af834e61e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Time step size.  <br /></td></tr>
-<tr class="separator:ad261faaaa2066bfaa7ca7d9af834e61e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a244bd51adcaa255411718fb1ecee9cf3" id="r_a244bd51adcaa255411718fb1ecee9cf3"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a244bd51adcaa255411718fb1ecee9cf3">writeTrajectoryDataFiles</a></td></tr>
-<tr class="memdesc:a244bd51adcaa255411718fb1ecee9cf3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flag to determine whether or not trajectory data will be written to files during forward simulation *&zwj;/.  <br /></td></tr>
-<tr class="separator:a244bd51adcaa255411718fb1ecee9cf3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a117e801337dbe849388f274d4dec83d0" id="r_a117e801337dbe849388f274d4dec83d0"><td class="memItemLeft" align="right" valign="top">Vec&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a117e801337dbe849388f274d4dec83d0">redgrad</a></td></tr>
-<tr class="memdesc:a117e801337dbe849388f274d4dec83d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reduced gradient vector for optimization.  <br /></td></tr>
-<tr class="separator:a117e801337dbe849388f274d4dec83d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a46de3914a9b905cc78a0bc3539e9aca5" id="r_a46de3914a9b905cc78a0bc3539e9aca5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classOptimTarget.html">OptimTarget</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a46de3914a9b905cc78a0bc3539e9aca5">optim_target</a></td></tr>
-<tr class="memdesc:a46de3914a9b905cc78a0bc3539e9aca5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer to optimization target specification.  <br /></td></tr>
-<tr class="separator:a46de3914a9b905cc78a0bc3539e9aca5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4b4076027ab970589a3b91b247423043" id="r_a4b4076027ab970589a3b91b247423043"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classOutput.html">Output</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a4b4076027ab970589a3b91b247423043">output</a></td></tr>
-<tr class="memdesc:a4b4076027ab970589a3b91b247423043"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer to output handler.  <br /></td></tr>
-<tr class="separator:a4b4076027ab970589a3b91b247423043"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae82adcec57a6945822726d1643f44102" id="r_ae82adcec57a6945822726d1643f44102"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#ae82adcec57a6945822726d1643f44102">storeFWD</a></td></tr>
-<tr class="memdesc:ae82adcec57a6945822726d1643f44102"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flag to store primal states during forward evaluation.  <br /></td></tr>
-<tr class="separator:ae82adcec57a6945822726d1643f44102"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-attribs" name="pro-attribs"></a>
 Protected Attributes</h2></td></tr>
 <tr class="memitem:a7b47c0f5ce67d8f4a04c77c2c96bd93c" id="r_a7b47c0f5ce67d8f4a04c77c2c96bd93c"><td class="memItemLeft" align="right" valign="top">Vec&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a7b47c0f5ce67d8f4a04c77c2c96bd93c">x</a></td></tr>
@@ -239,9 +206,12 @@ Protected Attributes</h2></td></tr>
 <tr class="memitem:a315f2a8c9cde21580392172781cb1758" id="r_a315f2a8c9cde21580392172781cb1758"><td class="memItemLeft" align="right" valign="top">Vec&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a315f2a8c9cde21580392172781cb1758">xprimal</a></td></tr>
 <tr class="memdesc:a315f2a8c9cde21580392172781cb1758"><td class="mdescLeft">&#160;</td><td class="mdescRight">Auxiliary vector for backward time stepping.  <br /></td></tr>
 <tr class="separator:a315f2a8c9cde21580392172781cb1758"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aead1a9a5a59b8d541e95c7b66cb51bd9" id="r_aead1a9a5a59b8d541e95c7b66cb51bd9"><td class="memItemLeft" align="right" valign="top">std::vector&lt; Vec &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#aead1a9a5a59b8d541e95c7b66cb51bd9">store_states</a></td></tr>
-<tr class="memdesc:aead1a9a5a59b8d541e95c7b66cb51bd9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Storage for primal states during forward evolution.  <br /></td></tr>
-<tr class="separator:aead1a9a5a59b8d541e95c7b66cb51bd9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7076abc204a5c4574ce835d6530be56a" id="r_a7076abc204a5c4574ce835d6530be56a"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::vector&lt; Vec &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a7076abc204a5c4574ce835d6530be56a">trajectory_states</a></td></tr>
+<tr class="memdesc:a7076abc204a5c4574ce835d6530be56a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Storage for primal states during forward evolution, one trajectory for each local initial condition..  <br /></td></tr>
+<tr class="separator:a7076abc204a5c4574ce835d6530be56a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aeb46fb35e59797302bf6952c54b71340" id="r_aeb46fb35e59797302bf6952c54b71340"><td class="memItemLeft" align="right" valign="top">std::vector&lt; Vec &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#aeb46fb35e59797302bf6952c54b71340">final_states</a></td></tr>
+<tr class="memdesc:aeb46fb35e59797302bf6952c54b71340"><td class="mdescLeft">&#160;</td><td class="mdescRight">Storage for final states for each local initial condition. Always filled after solveODE.  <br /></td></tr>
+<tr class="separator:aeb46fb35e59797302bf6952c54b71340"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a33769128e30e615ac6527991392554e1" id="r_a33769128e30e615ac6527991392554e1"><td class="memItemLeft" align="right" valign="top">std::vector&lt; Vec &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a33769128e30e615ac6527991392554e1">dpdm_states</a></td></tr>
 <tr class="memdesc:a33769128e30e615ac6527991392554e1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Storage for states needed for second-order derivative penalty.  <br /></td></tr>
 <tr class="separator:a33769128e30e615ac6527991392554e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -290,13 +260,37 @@ Protected Attributes</h2></td></tr>
 <tr class="memitem:aa36baa9e720ac80f0cb0890a4ed67b56" id="r_aa36baa9e720ac80f0cb0890a4ed67b56"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#aa36baa9e720ac80f0cb0890a4ed67b56">weightedcost_width</a></td></tr>
 <tr class="memdesc:aa36baa9e720ac80f0cb0890a4ed67b56"><td class="mdescLeft">&#160;</td><td class="mdescRight">Width parameter for weighted cost function.  <br /></td></tr>
 <tr class="separator:aa36baa9e720ac80f0cb0890a4ed67b56"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1e462962525e2b0960c8d5ac813d3873" id="r_a1e462962525e2b0960c8d5ac813d3873"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a1e462962525e2b0960c8d5ac813d3873">ntime</a></td></tr>
+<tr class="memdesc:a1e462962525e2b0960c8d5ac813d3873"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of time steps.  <br /></td></tr>
+<tr class="separator:a1e462962525e2b0960c8d5ac813d3873"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4094b333f65e347f95c78aea0effe544" id="r_a4094b333f65e347f95c78aea0effe544"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a4094b333f65e347f95c78aea0effe544">total_time</a></td></tr>
+<tr class="memdesc:a4094b333f65e347f95c78aea0effe544"><td class="mdescLeft">&#160;</td><td class="mdescRight">Final evolution time.  <br /></td></tr>
+<tr class="separator:a4094b333f65e347f95c78aea0effe544"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad261faaaa2066bfaa7ca7d9af834e61e" id="r_ad261faaaa2066bfaa7ca7d9af834e61e"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#ad261faaaa2066bfaa7ca7d9af834e61e">dt</a></td></tr>
+<tr class="memdesc:ad261faaaa2066bfaa7ca7d9af834e61e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Time step size.  <br /></td></tr>
+<tr class="separator:ad261faaaa2066bfaa7ca7d9af834e61e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a244bd51adcaa255411718fb1ecee9cf3" id="r_a244bd51adcaa255411718fb1ecee9cf3"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a244bd51adcaa255411718fb1ecee9cf3">writeTrajectoryDataFiles</a></td></tr>
+<tr class="memdesc:a244bd51adcaa255411718fb1ecee9cf3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flag to determine whether or not trajectory data will be written to files during forward simulation *&zwj;/.  <br /></td></tr>
+<tr class="separator:a244bd51adcaa255411718fb1ecee9cf3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a117e801337dbe849388f274d4dec83d0" id="r_a117e801337dbe849388f274d4dec83d0"><td class="memItemLeft" align="right" valign="top">Vec&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a117e801337dbe849388f274d4dec83d0">redgrad</a></td></tr>
+<tr class="memdesc:a117e801337dbe849388f274d4dec83d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reduced gradient vector for optimization.  <br /></td></tr>
+<tr class="separator:a117e801337dbe849388f274d4dec83d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a46de3914a9b905cc78a0bc3539e9aca5" id="r_a46de3914a9b905cc78a0bc3539e9aca5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classOptimTarget.html">OptimTarget</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a46de3914a9b905cc78a0bc3539e9aca5">optim_target</a></td></tr>
+<tr class="memdesc:a46de3914a9b905cc78a0bc3539e9aca5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer to optimization target specification.  <br /></td></tr>
+<tr class="separator:a46de3914a9b905cc78a0bc3539e9aca5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4b4076027ab970589a3b91b247423043" id="r_a4b4076027ab970589a3b91b247423043"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classOutput.html">Output</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a4b4076027ab970589a3b91b247423043">output</a></td></tr>
+<tr class="memdesc:a4b4076027ab970589a3b91b247423043"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer to output handler.  <br /></td></tr>
+<tr class="separator:a4b4076027ab970589a3b91b247423043"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a19a5d08c76bf1580122ec82665c2f7ef" id="r_a19a5d08c76bf1580122ec82665c2f7ef"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classMasterEq.html">MasterEq</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classTimeStepper.html#a19a5d08c76bf1580122ec82665c2f7ef">mastereq</a></td></tr>
+<tr class="memdesc:a19a5d08c76bf1580122ec82665c2f7ef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer to master equation solver.  <br /></td></tr>
+<tr class="separator:a19a5d08c76bf1580122ec82665c2f7ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Base class for time integration schemes to evolve the quantum dynamics. </p>
 <p>This abstract class provides the interface for time-stepping methods used to integrate the quantum evolution equations (Lindblad master equation or Schroedinger equation). It supports both forward and adjoint time integration, handles output of evolution data, and evaluates penalty integral terms.</p>
 <p>Main functionality:</p><ul>
 <li><a class="el" href="classTimeStepper.html#a3bbf95bae24b17885c061cbc10a23ace">solveODE</a> propagates an initial state at time t0 to the final time T, while writing evolution data to files and adding to integral penalty terms, if needed.</li>
-<li><a class="el" href="classTimeStepper.html#afa7b01103483ed0a8abd45b1da446142">solveAdjointODE</a> propagates a terminal (adjoint) condition through the time domain backwards in time from T to 0, while updating the reduced gradient along the way.</li>
+<li><a class="el" href="classTimeStepper.html#aba02813817d8c8b9cdf9eae298539a45">solveAdjointODE</a> propagates a terminal (adjoint) condition through the time domain backwards in time from T to 0, while updating the reduced gradient along the way.</li>
 </ul>
 <p>This class contains references to:</p><ul>
 <li><a class="el" href="classMasterEq.html">MasterEq</a> for evaluating and applying the right-hand-side system matrix of the real-valued, vectorized differential equation to a state vector at each time-step</li>
@@ -321,8 +315,8 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a0bcee079728ff3db7f425f3cc81f67e7" name="a0bcee079728ff3db7f425f3cc81f67e7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0bcee079728ff3db7f425f3cc81f67e7">&#9670;&#160;</a></span>TimeStepper() <span class="overload">[2/2]</span></h2>
+<a id="aa3beef2bd2e7aa4824bf7f2ab1ee8c1f" name="aa3beef2bd2e7aa4824bf7f2ab1ee8c1f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa3beef2bd2e7aa4824bf7f2ab1ee8c1f">&#9670;&#160;</a></span>TimeStepper() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -330,8 +324,8 @@ Protected Attributes</h2></td></tr>
         <tr>
           <td class="memname">TimeStepper::TimeStepper </td>
           <td>(</td>
-          <td class="paramtype">size_t&#160;</td>
-          <td class="paramname"><em>ninit_local</em>, </td>
+          <td class="paramtype">const <a class="el" href="classConfig.html">Config</a> &amp;&#160;</td>
+          <td class="paramname"><em>config</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -342,26 +336,14 @@ Protected Attributes</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>ntime_</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>total_time_</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
           <td class="paramtype"><a class="el" href="classOutput.html">Output</a> *&#160;</td>
           <td class="paramname"><em>output_</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>storeFWD_</em>&#160;</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>ninit_local</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -374,12 +356,10 @@ Protected Attributes</h2></td></tr>
 <p>Constructor for time stepper. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">ninit_local</td><td>Number of initial conditions assigned to this processor </td></tr>
+    <tr><td class="paramname">config</td><td>Configuration parameters from input file </td></tr>
     <tr><td class="paramname">mastereq_</td><td>Pointer to master equation solver </td></tr>
-    <tr><td class="paramname">ntime_</td><td>Number of time steps </td></tr>
-    <tr><td class="paramname">total_time_</td><td>Final evolution time </td></tr>
     <tr><td class="paramname">output_</td><td>Pointer to output handler </td></tr>
-    <tr><td class="paramname">storeFWD_</td><td>Flag to store forward states </td></tr>
+    <tr><td class="paramname">ninit_local</td><td>Number of initial conditions local to this processor </td></tr>
   </table>
   </dd>
 </dl>
@@ -913,6 +893,41 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="aa8fd613df6e7e8608bd014082ae3f8cd" name="aa8fd613df6e7e8608bd014082ae3f8cd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa8fd613df6e7e8608bd014082ae3f8cd">&#9670;&#160;</a></span>getFinalState()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">Vec TimeStepper::getFinalState </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>iinit_local</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Retrieves the final state for a specific local initial condition. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">iinit_local</td><td>Local index of the initial condition </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Vec Final state vector for the specified initial condition </dd></dl>
+
+</div>
+</div>
 <a id="abfef40eac3cb9bd5789e824a3bd6e15c" name="abfef40eac3cb9bd5789e824a3bd6e15c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#abfef40eac3cb9bd5789e824a3bd6e15c">&#9670;&#160;</a></span>getLeakageIntegral()</h2>
 
@@ -969,30 +984,28 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="afdf523a5e2230eec37e27f4a9e590796" name="afdf523a5e2230eec37e27f4a9e590796"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afdf523a5e2230eec37e27f4a9e590796">&#9670;&#160;</a></span>getState()</h2>
+<a id="ad5adb0f34c37323cf9a249f4bc97c4a1" name="ad5adb0f34c37323cf9a249f4bc97c4a1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad5adb0f34c37323cf9a249f4bc97c4a1">&#9670;&#160;</a></span>getReducedGradient()</h2>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">Vec TimeStepper::getState </td>
+          <td class="memname">Vec TimeStepper::getReducedGradient </td>
           <td>(</td>
-          <td class="paramtype">size_t&#160;</td>
-          <td class="paramname"><em>tindex</em></td><td>)</td>
+          <td class="paramname"></td><td>)</td>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
-
-<p>Retrieves stored state at a specific time index. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">tindex</td><td>Time step index </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>Vec State vector at the specified time </dd></dl>
 
 </div>
 </div>
@@ -1021,8 +1034,8 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a95750967adb5aba62a078c5807806bc5" name="a95750967adb5aba62a078c5807806bc5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a95750967adb5aba62a078c5807806bc5">&#9670;&#160;</a></span>setEvalDPDM()</h2>
+<a id="a13ea59a8c36180318cc408990eabe3ca" name="a13ea59a8c36180318cc408990eabe3ca"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a13ea59a8c36180318cc408990eabe3ca">&#9670;&#160;</a></span>setOptimTarget()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1031,10 +1044,10 @@ Protected Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void TimeStepper::setEvalDPDM </td>
+          <td class="memname">void TimeStepper::setOptimTarget </td>
           <td>(</td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>flag</em></td><td>)</td>
+          <td class="paramtype"><a class="el" href="classOptimTarget.html">OptimTarget</a> *&#160;</td>
+          <td class="paramname"><em>optim_target_</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -1047,8 +1060,8 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="aa6df7f02de1a822a07911ee3f783ce8a" name="aa6df7f02de1a822a07911ee3f783ce8a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa6df7f02de1a822a07911ee3f783ce8a">&#9670;&#160;</a></span>setEvalEnergy()</h2>
+<a id="af69b29d3f7c6e76acff3c270a290f70b" name="af69b29d3f7c6e76acff3c270a290f70b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af69b29d3f7c6e76acff3c270a290f70b">&#9670;&#160;</a></span>setWriteTrajectoryDataFiles()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1057,10 +1070,10 @@ Protected Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void TimeStepper::setEvalEnergy </td>
+          <td class="memname">void TimeStepper::setWriteTrajectoryDataFiles </td>
           <td>(</td>
           <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>flag</em></td><td>)</td>
+          <td class="paramname"><em>write</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -1073,70 +1086,8 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a9fc3872d5d0185924326261b5fce948e" name="a9fc3872d5d0185924326261b5fce948e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9fc3872d5d0185924326261b5fce948e">&#9670;&#160;</a></span>setEvalLeakage()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void TimeStepper::setEvalLeakage </td>
-          <td>(</td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>flag</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="a3591ba25db19eb751f6b12c14115a6d7" name="a3591ba25db19eb751f6b12c14115a6d7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3591ba25db19eb751f6b12c14115a6d7">&#9670;&#160;</a></span>setEvalWeightedCost()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void TimeStepper::setEvalWeightedCost </td>
-          <td>(</td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>flag</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>width</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-</div>
-</div>
-<a id="afa7b01103483ed0a8abd45b1da446142" name="afa7b01103483ed0a8abd45b1da446142"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afa7b01103483ed0a8abd45b1da446142">&#9670;&#160;</a></span>solveAdjointODE()</h2>
+<a id="aba02813817d8c8b9cdf9eae298539a45" name="aba02813817d8c8b9cdf9eae298539a45"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aba02813817d8c8b9cdf9eae298539a45">&#9670;&#160;</a></span>solveAdjointODE()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1155,12 +1106,6 @@ Protected Attributes</h2></td></tr>
           <td></td>
           <td class="paramtype">Vec&#160;</td>
           <td class="paramname"><em>rho_t0_bar</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">Vec&#160;</td>
-          <td class="paramname"><em>finalstate</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -1205,7 +1150,6 @@ Protected Attributes</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">iinit_local</td><td>Local index of initial condition for this processor </td></tr>
     <tr><td class="paramname">rho_t0_bar</td><td>Terminal condition for adjoint state </td></tr>
-    <tr><td class="paramname">finalstate</td><td>Final state from forward evolution </td></tr>
     <tr><td class="paramname">Jbar_leakage</td><td>Adjoint of leakage integral term </td></tr>
     <tr><td class="paramname">Jbar_weightedcost</td><td>Adjoint of weighted cost integral term </td></tr>
     <tr><td class="paramname">Jbar_dpdm</td><td>Adjoint of second-order derivative variation </td></tr>
@@ -1214,7 +1158,7 @@ Protected Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p>Reimplemented in <a class="el" href="classPetscTS.html#a405350f8bc3547780b97ae20148ae227">PetscTS</a>.</p>
+<p>Reimplemented in <a class="el" href="classPetscTS.html#a0b7d1fa5754a8409528ac89682b586aa">PetscTS</a>.</p>
 
 </div>
 </div>
@@ -1328,11 +1272,19 @@ Protected Attributes</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">double TimeStepper::dt</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Time step size. </p>
@@ -1459,6 +1411,30 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="aeb46fb35e59797302bf6952c54b71340" name="aeb46fb35e59797302bf6952c54b71340"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aeb46fb35e59797302bf6952c54b71340">&#9670;&#160;</a></span>final_states</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;Vec&gt; TimeStepper::final_states</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Storage for final states for each local initial condition. Always filled after solveODE. </p>
+
+</div>
+</div>
 <a id="a83f9f48fa49f9cbb63e0e4200601b87c" name="a83f9f48fa49f9cbb63e0e4200601b87c"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a83f9f48fa49f9cbb63e0e4200601b87c">&#9670;&#160;</a></span>ilow</h2>
 
@@ -1560,11 +1536,19 @@ Protected Attributes</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="classMasterEq.html">MasterEq</a>* TimeStepper::mastereq</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Pointer to master equation solver. </p>
@@ -1648,11 +1632,19 @@ Protected Attributes</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">int TimeStepper::ntime</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Number of time steps. </p>
@@ -1664,11 +1656,19 @@ Protected Attributes</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="classOptimTarget.html">OptimTarget</a>* TimeStepper::optim_target</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Pointer to optimization target specification. </p>
@@ -1680,11 +1680,19 @@ Protected Attributes</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname"><a class="el" href="classOutput.html">Output</a>* TimeStepper::output</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Pointer to output handler. </p>
@@ -1696,28 +1704,12 @@ Protected Attributes</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">Vec TimeStepper::redgrad</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Reduced gradient vector for optimization. </p>
-
-</div>
-</div>
-<a id="aead1a9a5a59b8d541e95c7b66cb51bd9" name="aead1a9a5a59b8d541e95c7b66cb51bd9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aead1a9a5a59b8d541e95c7b66cb51bd9">&#9670;&#160;</a></span>store_states</h2>
-
-<div class="memitem">
-<div class="memproto">
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">std::vector&lt;Vec&gt; TimeStepper::store_states</td>
+          <td class="memname">Vec TimeStepper::redgrad</td>
         </tr>
       </table>
   </td>
@@ -1727,23 +1719,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Storage for primal states during forward evolution. </p>
-
-</div>
-</div>
-<a id="ae82adcec57a6945822726d1643f44102" name="ae82adcec57a6945822726d1643f44102"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae82adcec57a6945822726d1643f44102">&#9670;&#160;</a></span>storeFWD</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool TimeStepper::storeFWD</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Flag to store primal states during forward evaluation. </p>
+<p>Reduced gradient vector for optimization. </p>
 
 </div>
 </div>
@@ -1752,14 +1728,46 @@ Protected Attributes</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">double TimeStepper::total_time</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Final evolution time. </p>
+
+</div>
+</div>
+<a id="a7076abc204a5c4574ce835d6530be56a" name="a7076abc204a5c4574ce835d6530be56a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7076abc204a5c4574ce835d6530be56a">&#9670;&#160;</a></span>trajectory_states</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;std::vector&lt;Vec&gt; &gt; TimeStepper::trajectory_states</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Storage for primal states during forward evolution, one trajectory for each local initial condition.. </p>
 
 </div>
 </div>
@@ -1816,11 +1824,19 @@ Protected Attributes</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">bool TimeStepper::writeTrajectoryDataFiles</td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
 
 <p>Flag to determine whether or not trajectory data will be written to files during forward simulation *&zwj;/. </p>

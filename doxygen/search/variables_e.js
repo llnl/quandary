@@ -34,7 +34,7 @@ var searchData=
   ['output_5fdir_31',['output_dir',['../classOutput.html#a2b007d3a46722fdcb1909b95615d43da',1,'Output']]],
   ['output_5fdirectory_32',['OUTPUT_DIRECTORY',['../namespaceConfigDefaults.html#a7df126de2b0a5f48e228f4d7b5942ff3',1,'ConfigDefaults']]],
   ['output_5fobservables_33',['output_observables',['../classOutput.html#af98ea37a3876f44ed0091a5ef89c1ee8',1,'Output']]],
-  ['output_5foptimization_5fstride_34',['output_optimization_stride',['../namespaceConfigDefaults.html#a1d85d312ca8ffbd9e03456940dab3e5c',1,'ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE'],['../classOutput.html#a4c619cba64bcf539a238949b4cc0bfb1',1,'Output::output_optimization_stride']]],
+  ['output_5foptimization_5fstride_34',['output_optimization_stride',['../namespaceConfigDefaults.html#a1d85d312ca8ffbd9e03456940dab3e5c',1,'ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE'],['../classOptimProblem.html#a284dcf87166f281bc7bfc2a78a282ac5',1,'OptimProblem::output_optimization_stride']]],
   ['output_5ftimestep_5fstride_35',['output_timestep_stride',['../classOutput.html#af63e8bf2be744334ca01cd69c9251e73',1,'Output::output_timestep_stride'],['../namespaceConfigDefaults.html#a34bc27abdb32e03bba40570756e2c1ee',1,'ConfigDefaults::OUTPUT_TIMESTEP_STRIDE']]],
   ['output_5ftype_5fmap_36',['OUTPUT_TYPE_MAP',['../defs_8hpp.html#a32c57c3719db0508480382f63dfa61bf',1,'defs.hpp']]]
 ];

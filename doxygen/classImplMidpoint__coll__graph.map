@@ -1,21 +1,21 @@
 <map id="ImplMidpoint" name="ImplMidpoint">
-<area shape="rect" id="Node000001" title="Implicit midpoint rule time integration scheme." alt="" coords="279,256,387,281"/>
-<area shape="rect" id="Node000002" href="$classTimeStepper.html" title="Base class for time integration schemes to evolve the quantum dynamics." alt="" coords="281,181,386,207"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="336,221,336,256,331,256,331,221"/>
-<area shape="rect" id="Node000003" href="$classMasterEq.html" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="100,93,183,119"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="181,122,308,179,306,184,179,127"/>
-<area shape="rect" id="Node000005" href="$structMatShellCtx.html" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="5,181,107,207"/>
-<area shape="poly" id="edge5_Node000005_Node000003" title=" " alt="" coords="131,133,111,159,79,183,76,179,107,155,127,129"/>
-<area shape="rect" id="Node000004" href="$classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="35,5,119,31"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="96,40,135,91,130,94,92,43"/>
-<area shape="poly" id="edge6_Node000005_Node000004" title=" " alt="" coords="58,42,39,66,25,94,23,118,29,141,49,180,45,182,24,143,18,118,20,93,35,63,54,39"/>
-<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="49,168,50,154,55,141,75,123,99,112,101,117,78,128,60,144,55,155,54,168"/>
-<area shape="rect" id="Node000006" href="$classOptimTarget.html" title="Optimization target specification for quantum control." alt="" coords="282,93,385,119"/>
-<area shape="poly" id="edge7_Node000002_Node000006" title=" " alt="" coords="336,133,336,181,331,181,331,133"/>
-<area shape="rect" id="Node000007" href="$classGate.html" title="Base class for quantum gate operations." alt="" coords="200,5,253,31"/>
-<area shape="poly" id="edge8_Node000006_Node000007" title=" " alt="" coords="244,40,270,67,308,91,305,95,266,71,240,43"/>
-<area shape="rect" id="Node000008" href="$structInitialConditionSettings.html" title="Settings for initial conditions. Required, no defaults." alt="" coords="278,5,453,31"/>
-<area shape="poly" id="edge9_Node000006_Node000008" title=" " alt="" coords="359,45,340,94,335,92,354,43"/>
-<area shape="rect" id="Node000009" href="$classOutput.html" title="Output management for quantum control simulations and optimization." alt="" coords="420,93,487,119"/>
-<area shape="poly" id="edge10_Node000002_Node000009" title=" " alt="" coords="446,133,426,159,404,174,381,184,379,179,402,169,422,155,441,130"/>
+<area shape="rect" id="Node000001" title="Implicit midpoint rule time integration scheme." alt="" coords="167,256,275,281"/>
+<area shape="rect" id="Node000002" href="$classTimeStepper.html" title="Base class for time integration schemes to evolve the quantum dynamics." alt="" coords="169,181,274,207"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="224,221,224,256,219,256,219,221"/>
+<area shape="rect" id="Node000003" href="$classOptimTarget.html" title="Optimization target specification for quantum control." alt="" coords="50,93,153,119"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="112,130,129,155,149,169,171,179,169,184,146,174,125,159,107,133"/>
+<area shape="rect" id="Node000004" href="$classGate.html" title="Base class for quantum gate operations." alt="" coords="5,5,59,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="49,40,70,68,92,91,88,95,66,71,45,43"/>
+<area shape="rect" id="Node000005" href="$structInitialConditionSettings.html" title="Settings for initial conditions. Required, no defaults." alt="" coords="83,5,258,31"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="161,44,143,71,118,95,115,91,139,68,157,41"/>
+<area shape="rect" id="Node000006" href="$classOutput.html" title="Output management for quantum control simulations and optimization." alt="" coords="188,93,255,119"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="224,133,224,181,219,181,219,133"/>
+<area shape="rect" id="Node000007" href="$classMasterEq.html" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="395,93,477,119"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="382,124,318,145,242,184,239,179,316,140,380,119"/>
+<area shape="rect" id="Node000009" href="$structMatShellCtx.html" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="443,181,544,207"/>
+<area shape="poly" id="edge9_Node000009_Node000007" title=" " alt="" coords="405,128,393,142,392,149,394,156,416,174,444,185,442,190,413,179,390,159,386,149,388,140,401,125"/>
+<area shape="rect" id="Node000008" href="$classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="470,5,554,31"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="495,43,449,95,445,91,491,39"/>
+<area shape="poly" id="edge10_Node000009_Node000008" title=" " alt="" coords="540,39,549,54,549,69,547,115,543,135,533,159,511,183,507,180,528,156,538,134,542,115,544,69,544,55,535,42"/>
+<area shape="poly" id="edge8_Node000007_Node000009" title=" " alt="" coords="478,171,462,144,444,120,448,117,466,141,483,168"/>
 </map>

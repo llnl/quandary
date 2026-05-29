@@ -1,7 +1,7 @@
 var searchData=
 [
   ['ikron_0',['ikron',['../util_8cpp.html#a4c711ee9f82fa1fa0a0608bc523e1d1a',1,'Ikron(const Mat A, const int dimI, const double alpha, Mat *Out, InsertMode insert_mode):&#160;util.cpp'],['../util_8hpp.html#a4c711ee9f82fa1fa0a0608bc523e1d1a',1,'Ikron(const Mat A, const int dimI, const double alpha, Mat *Out, InsertMode insert_mode):&#160;util.cpp']]],
-  ['implmidpoint_1',['ImplMidpoint',['../classImplMidpoint.html#a2c2e3c7862abaf56d54bb4b375af3a84',1,'ImplMidpoint']]],
+  ['implmidpoint_1',['ImplMidpoint',['../classImplMidpoint.html#a740165fd3fb6f4856d7f4c0b84f605f7',1,'ImplMidpoint']]],
   ['initsparsematsolver_2',['initSparseMatSolver',['../classMasterEq.html#aad34fc836f709483b81b724d8ec9f94c',1,'MasterEq']]],
   ['inittargetgate_3',['inittargetgate',['../gate_8cpp.html#a9576805aa6ef444cd2e4d097212c8fe8',1,'initTargetGate(GateType target_gate, const std::string &amp;file, const std::vector&lt; size_t &gt; &amp;nlevels, const std::vector&lt; size_t &gt; &amp;nessential, double total_time, DecoherenceType decoherence_type, const std::vector&lt; double &gt; &amp;gate_rot_freq, bool quietmode):&#160;gate.cpp'],['../gate_8hpp.html#a9576805aa6ef444cd2e4d097212c8fe8',1,'initTargetGate(GateType target_gate, const std::string &amp;file, const std::vector&lt; size_t &gt; &amp;nlevels, const std::vector&lt; size_t &gt; &amp;nessential, double total_time, DecoherenceType decoherence_type, const std::vector&lt; double &gt; &amp;gate_rot_freq, bool quietmode):&#160;gate.cpp']]],
   ['integralcosts_4',['IntegralCosts',['../classPetscTS.html#ab0552b28d5408c37233e34ea15b4bf77',1,'PetscTS']]],

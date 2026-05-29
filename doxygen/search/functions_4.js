@@ -26,5 +26,5 @@ var searchData=
   ['exitwitherror_23',['exitWithError',['../classMPILogger.html#a9e98ee13b8061273b5d89c70f9c5118a',1,'MPILogger']]],
   ['expectedenergy_24',['expectedenergy',['../classMasterEq.html#aae5fbd62a0766d20ec823a001da6f570',1,'MasterEq::expectedEnergy()'],['../classOscillator.html#a3382fadf8efb599c9757e6f273084237',1,'Oscillator::expectedEnergy(const Vec x)']]],
   ['expectedenergy_5fdiff_25',['expectedEnergy_diff',['../classOscillator.html#ae8eb7f99ab26c7cd015ed4691775dca5',1,'Oscillator']]],
-  ['expleuler_26',['ExplEuler',['../classExplEuler.html#aa6eba19130d7a533989703d83b35f8c7',1,'ExplEuler']]]
+  ['expleuler_26',['ExplEuler',['../classExplEuler.html#a5943ad4bf6b88a413679a7dbd22c20f0',1,'ExplEuler']]]
 ];

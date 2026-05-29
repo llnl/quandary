@@ -43,6 +43,6 @@ var searchData=
   ['expectedenergy_5fdiff_40',['expectedEnergy_diff',['../classOscillator.html#ae8eb7f99ab26c7cd015ed4691775dca5',1,'Oscillator']]],
   ['expectedfile_41',['expectedfile',['../classOutput.html#a3a3c6af574caaefa8717eb13bf63a351',1,'Output']]],
   ['expectedfile_5fcomp_42',['expectedfile_comp',['../classOutput.html#a149ffb06b4b3ac5576b40b80a7810485',1,'Output']]],
-  ['expleuler_43',['expleuler',['../classExplEuler.html',1,'ExplEuler'],['../classExplEuler.html#aa6eba19130d7a533989703d83b35f8c7',1,'ExplEuler::ExplEuler()']]],
+  ['expleuler_43',['expleuler',['../classExplEuler.html',1,'ExplEuler'],['../classExplEuler.html#a5943ad4bf6b88a413679a7dbd22c20f0',1,'ExplEuler::ExplEuler()']]],
   ['extraction_20methods_44',['extraction methods',['../classvalidators_1_1Validator.html#autotoc_md4',1,'Extraction Methods'],['../classvalidators_1_1VectorValidator.html#autotoc_md6',1,'Extraction Methods']]]
 ];
