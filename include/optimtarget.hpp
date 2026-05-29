@@ -11,9 +11,7 @@
  * preparation and the evaluation of the final-time objective function measure.
  * 
  * Main functionality: 
- *    - @ref prepareInitialState prepares and returns the states at time t=0, depending on what the optimization 
- *       target is
- *    - @ref prepareTargetState prepares and stores the corresponding target state for this initial state
+ *    - @ref prepareInitialAndTargetState prepares the internal initial and target state 
  *    - @ref evalJ for computing the final-time objective function measure
  * 
  * This class contains references to:
@@ -33,6 +31,7 @@ class OptimTarget{
     double purity_rho0; ///< Purity of initial state Tr(rho(0)^2)
     PetscInt purestateID; ///< For product state preparation: integer m for preparing the target state \f$ e_m e_m^{\dagger}\f$
     Vec targetstate; ///< Storage for the target state vector (NULL for product states, \f$V\rho V^\dagger\f$ for gates, density matrix from file)
+    Vec initialstate; ///< Storing the initial state vector. 
     InitialConditionSettings initcond; ///< Initial conditions
     DecoherenceType decoherence_type; ///< Type of Lindblad decoherence operators, or NONE for Schroedinger solver
     int mpisize_petsc; ///< Size of PETSc communicator
@@ -52,44 +51,29 @@ class OptimTarget{
      *
      * @param config Configuration parameters
      * @param mastereq Pointer to master equation solver
-     * @param total_time Total evolution time
-     * @param rho_t0 Initial state vector
      * @param quietmode_ Flag for quiet operation
      */
-    OptimTarget(const Config& config, MasterEq* mastereq, double total_time, Vec rho_t0, bool quietmode_);
+    OptimTarget(const Config& config, MasterEq* mastereq, bool quietmode_);
 
     ~OptimTarget();
 
-    /**
-     * @brief Retrieves the objective function type.
-     *
-     * @return ObjectiveType Type of objective function
-     */
+    Vec getInitialState() { return initialstate; };
     ObjectiveType getObjectiveType(){ return objective_type; };
 
     /**
-     * @brief Prepares the initial condition state.
+     * @brief Prepares the initial condition state and target state
+     * 
+     * The initial state was either stored during construction, or will be prepared here. 
+     * For gate optimization, the target state is prepared by applying the target gate \f$V \rho V^{\dagger}\f$ to the initial state. 
+     * Also stores the purity of \f$rho\f$ needed for scaling the Hilbert-Schmidt overlap in the trace objective function.
      *
      * @param iinit Index in processor range [rank * ninit_local .. (rank+1) * ninit_local - 1]
      * @param ninit Total number of initial conditions
      * @param nlevels Number of levels per oscillator
      * @param nessential Number of essential levels per oscillator
-     * @param rho0 Vector to store the initial condition
      * @return int Identifier for this initial condition (element number in matrix vectorization)
      */
-    int prepareInitialState(const int iinit, const int ninit, const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential,  Vec rho0);
-
-    /**
-     * @brief Prepares the target state for gate optimization.
-     *
-     * For gate optimization, computes the rotated target state \f$V \rho V^{\dagger}\f$
-     * for a given initial state \f$\rho\f$ and stores it locally as a class member. 
-     * Also stores the purity of \f$rho\f$ needed for scaling the Hilbert-Schmidt 
-     * overlap in the trace objective function.
-     *
-     * @param rho Initial state vector
-     */
-    void prepareTargetState(const Vec rho);
+    int prepareInitialAndTargetState(const int iinit, const int ninit, const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential);
 
     /**
      * @brief Evaluates the final-time objective function measure \f$J(\rho(T))\f$.
