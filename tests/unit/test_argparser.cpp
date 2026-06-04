@@ -41,17 +41,17 @@ TEST_F(ArgParserTest, ParsesQuietAndQuotedPetscOptions) {
 TEST_F(ArgParserTest, UnquotedPetscOptionsExitWithError) {
   EXPECT_EXIT(parse({"quandary", config, "--petsc-options", "-vec_type",
                      "kokkos", "-mat_type", "aijkokkos"}),
-              ::testing::ExitedWithCode(1), "");
+              ::testing::ExitedWithCode(1), "Unrecognized argument");
 }
 
 TEST_F(ArgParserTest, UnknownFlagExitsWithError) {
   EXPECT_EXIT(parse({"quandary", config, "--bogus"}),
-              ::testing::ExitedWithCode(1), "");
+              ::testing::ExitedWithCode(1), "Unrecognized argument");
 }
 
 TEST_F(ArgParserTest, PetscOptionsMissingValueExitsWithError) {
   EXPECT_EXIT(parse({"quandary", config, "--petsc-options"}),
-              ::testing::ExitedWithCode(1), "");
+              ::testing::ExitedWithCode(1), "requires a quoted argument");
 }
 
 // --help and --version must work in any position (exit 0), not be treated as

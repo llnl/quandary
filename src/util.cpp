@@ -53,8 +53,8 @@ ParsedArgs parseArguments(int argc, char** argv) {
   // Validate config file exists and is readable
   std::ifstream test_file(args.config_filename);
   if (!test_file.good()) {
-    printf("\nERROR: Cannot open config file '%s'\n", args.config_filename.c_str());
-    printf("Please check that the file exists and is readable.\n\n");
+    fprintf(stderr, "\nERROR: Cannot open config file '%s'\n", args.config_filename.c_str());
+    fprintf(stderr, "Please check that the file exists and is readable.\n\n");
     exit(1);
   }
   test_file.close();
@@ -70,8 +70,8 @@ ParsedArgs parseArguments(int argc, char** argv) {
       if (i + 1 < argc) {
         petsc_options = argv[++i];
       } else {
-        printf("\nERROR: --petsc-options requires a quoted argument, e.g.\n");
-        printf("    --petsc-options \"-log_view -tao_view\"\n\n");
+        fprintf(stderr, "\nERROR: --petsc-options requires a quoted argument, e.g.\n");
+        fprintf(stderr, "    --petsc-options \"-log_view -tao_view\"\n\n");
         exit(1);
       }
     } else {
@@ -85,12 +85,12 @@ ParsedArgs parseArguments(int argc, char** argv) {
   // which leaves every token after the first as an unrecognized argument
   // (and passes a value-less option to PETSc).
   if (!unrecognized.empty()) {
-    printf("\nERROR: Unrecognized argument(s):");
-    for (const auto& arg : unrecognized) printf(" %s", arg.c_str());
-    printf("\n");
-    printf("Hint: pass ALL PETSc/SLEPc options together inside quotes, e.g.\n");
-    printf("    --petsc-options \"-vec_type kokkos -mat_type aijkokkos -log_view\"\n");
-    printf("Run 'quandary --help' for usage.\n\n");
+    fprintf(stderr, "\nERROR: Unrecognized argument(s):");
+    for (const auto& arg : unrecognized) fprintf(stderr, " %s", arg.c_str());
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Hint: pass ALL PETSc/SLEPc options together inside quotes, e.g.\n");
+    fprintf(stderr, "    --petsc-options \"-vec_type kokkos -mat_type aijkokkos -log_view\"\n");
+    fprintf(stderr, "Run 'quandary --help' for usage.\n\n");
     exit(1);
   }
 
