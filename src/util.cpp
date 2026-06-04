@@ -79,11 +79,7 @@ ParsedArgs parseArguments(int argc, char** argv) {
     }
   }
 
-  // Reject unknown arguments rather than silently ignoring them. A common
-  // mistake is forgetting the quotes around PETSc options, e.g.
-  //   --petsc-options -vec_type kokkos -mat_type aijkokkos
-  // which leaves every token after the first as an unrecognized argument
-  // (and passes a value-less option to PETSc).
+  // Reject unknown arguments rather than silently ignoring them
   if (!unrecognized.empty()) {
     fprintf(stderr, "\nERROR: Unrecognized argument(s):");
     for (const auto& arg : unrecognized) fprintf(stderr, " %s", arg.c_str());

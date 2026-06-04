@@ -35,9 +35,8 @@ TEST_F(ArgParserTest, ParsesQuietAndQuotedPetscOptions) {
   EXPECT_EQ(args.petsc_tokens[1], "-tao_view");
 }
 
-// Forgetting the quotes leaves the value-tokens as unrecognized arguments
-// (the original crash: PETSc received a value-less -vec_type). This must
-// error out rather than silently dropping them.
+// Forgetting the quotes leaves the value-tokens as unrecognized arguments,
+// which must error out rather than being silently dropped.
 TEST_F(ArgParserTest, UnquotedPetscOptionsExitWithError) {
   EXPECT_EXIT(parse({"quandary", config, "--petsc-options", "-vec_type",
                      "kokkos", "-mat_type", "aijkokkos"}),
