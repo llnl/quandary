@@ -29,13 +29,22 @@ void printHelp() {
 ParsedArgs parseArguments(int argc, char** argv) {
   ParsedArgs args;
 
-  if (argc < 2 || std::string(argv[1]) == "--help") {
-    printHelp();
-    exit(0);
+  // Handle --help / --version anywhere on the command line, before any other
+  // validation, so they work regardless of position or config-file validity.
+  for (int i=1; i<argc; i++) {
+    std::string arg = argv[i];
+    if (arg == "--help") {
+      printHelp();
+      exit(0);
+    }
+    if (arg == "--version") {
+      printf("Quandary %s %s\n", QUANDARY_FULL_VERSION_STRING, QUANDARY_GIT_SHA);
+      exit(0);
+    }
   }
 
-  if (std::string(argv[1]) == "--version") {
-    printf("Quandary %s %s\n", QUANDARY_FULL_VERSION_STRING, QUANDARY_GIT_SHA);
+  if (argc < 2) {
+    printHelp();
     exit(0);
   }
 
@@ -52,13 +61,37 @@ ParsedArgs parseArguments(int argc, char** argv) {
 
   // Parse quiet mode and PETSc options flags
   std::string petsc_options;
+  std::vector<std::string> unrecognized;
   for (int i=2; i<argc; i++) {
     std::string arg = argv[i];
     if (arg == "--quiet") {
       args.quietmode = true;
-    } else if (arg == "--petsc-options" && i + 1 < argc) {
-      petsc_options = argv[++i];
+    } else if (arg == "--petsc-options") {
+      if (i + 1 < argc) {
+        petsc_options = argv[++i];
+      } else {
+        printf("\nERROR: --petsc-options requires a quoted argument, e.g.\n");
+        printf("    --petsc-options \"-log_view -tao_view\"\n\n");
+        exit(1);
+      }
+    } else {
+      unrecognized.push_back(arg);
     }
+  }
+
+  // Reject unknown arguments rather than silently ignoring them. A common
+  // mistake is forgetting the quotes around PETSc options, e.g.
+  //   --petsc-options -vec_type kokkos -mat_type aijkokkos
+  // which leaves every token after the first as an unrecognized argument
+  // (and passes a value-less option to PETSc).
+  if (!unrecognized.empty()) {
+    printf("\nERROR: Unrecognized argument(s):");
+    for (const auto& arg : unrecognized) printf(" %s", arg.c_str());
+    printf("\n");
+    printf("Hint: pass ALL PETSc/SLEPc options together inside quotes, e.g.\n");
+    printf("    --petsc-options \"-vec_type kokkos -mat_type aijkokkos -log_view\"\n");
+    printf("Run 'quandary --help' for usage.\n\n");
+    exit(1);
   }
 
   // Build PETSc argc/argv
