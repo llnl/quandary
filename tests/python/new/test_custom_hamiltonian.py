@@ -21,7 +21,7 @@ NTIME = 100
 
 @pytest.fixture
 def standard_setup(tmp_path):
-    """Create a setup using the standard model (no custom Hamiltonian)."""
+    """Create a config_input using the standard model (no custom Hamiltonian)."""
     return setup_quandary(
         nessential=NESSENTIAL,
         transition_frequency=TRANSITION_FREQUENCY,

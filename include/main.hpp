@@ -9,7 +9,7 @@
  * and runs the simulation, optimization, or gradient evaluation based on
  * the config settings.
  *
- * @param config The loaded configuration
+ * @param config The loaded validated configuration
  * @param quietmode If true, suppress most console output
  * @param argc Argument count for MPI_Init (0 for defaults)
  * @param argv Argument vector for MPI_Init (nullptr for defaults)

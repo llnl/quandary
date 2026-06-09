@@ -22,7 +22,7 @@ from mpi4py import MPI
 import numpy as np
 
 from .. import _quandary_impl
-from .._quandary_impl import Config, Setup, RunType, ControlType, ControlInitializationType
+from .._quandary_impl import Config, ConfigInput, RunType, ControlType, ControlInitializationType
 from .results import get_results as _get_results, Results
 from .setup_helpers import set_target, set_initial_condition, resolve_output_dir, _get_output_dir
 from .utils import fit_bspline0, fit_bspline2nd
@@ -91,7 +91,7 @@ def _compute_optimal_core_distribution(maxcores: int, ninit: int) -> int:
     return ncores
 
 def _configure_run(
-    setup: Setup,
+    config_input: ConfigInput,
     runtype: RunType,
     target: Optional[np.ndarray] = None,
     gate_rot_freq: Optional[Sequence[float]] = None,
@@ -101,20 +101,20 @@ def _configure_run(
     qt0=None,
     control_randomize: bool = True,
     control_amplitude: Optional[float] = None,
-) -> Setup:
-    """Return a copy of setup configured for the specified run type."""
+) -> ConfigInput:
+    """Return a copy of config_input configured for the specified run type."""
     
-    setup = setup.copy()
-    setup.output_directory = resolve_output_dir(setup.output_directory)
-    setup.runtype = runtype
+    config_input = config_input.copy()
+    config_input.output_directory = resolve_output_dir(config_input.output_directory)
+    config_input.runtype = runtype
 
     if target is not None:
-        set_target(setup, target, gate_rot_freq=gate_rot_freq)
+        set_target(config_input, target, gate_rot_freq=gate_rot_freq)
     if initial_condition is not None:
-        set_initial_condition(setup, initial_condition=initial_condition)
+        set_initial_condition(config_input, initial_condition=initial_condition)
 
     # Set up control initialization.
-    # Priority: pt/qt > pcof > explicit amplitude > existing setup.control_initializations > default from C++ code.
+    # Priority: pt/qt > pcof > explicit amplitude > existing config_input.control_initializations > default from C++ code.
 
     # If pt/qt are provide, fit pulses to bspline coefficients. 
     if pt0 is not None or qt0 is not None:
@@ -126,7 +126,7 @@ def _configure_run(
             qt0 = np.zeros_like(pt0)
         
         # If control parameterization was not specified, choose Bspline 2nd order for better fitting quality.
-        existing_control_params = setup.control_parameterizations or []
+        existing_control_params = config_input.control_parameterizations or []
         if len(existing_control_params) == 0:
             control_type = ControlType.BSPLINE
         else:
@@ -134,56 +134,56 @@ def _configure_run(
 
         # Fit control parameters to either Bspline 0-th order or Bspline 2nd order. 
         if control_type == ControlType.BSPLINE0:
-            nsplines = [max(2, setup.ntime + 1) for _ in range(len(setup.nessential))]
+            nsplines = [max(2, config_input.ntime + 1) for _ in range(len(config_input.nessential))]
             pcof = fit_bspline0(
                 pt0=pt0, qt0=qt0,
                 nsplines=nsplines[0],
-                spline_knot_spacing=setup.dt,
-                ntime=setup.ntime, 
-                dt=setup.dt,
-                nessential=setup.nessential,
+                spline_knot_spacing=config_input.dt,
+                ntime=config_input.ntime, 
+                dt=config_input.dt,
+                nessential=config_input.nessential,
             )
             # Zero out carrier frequencies (pulses already include carrier)
-            setup.carrier_frequencies = [[0.0] for _ in range(len(setup.nessential))]
+            config_input.carrier_frequencies = [[0.0] for _ in range(len(config_input.nessential))]
         elif control_type == ControlType.BSPLINE:
-            n_osc = len(setup.nessential)
+            n_osc = len(config_input.nessential)
             if len(existing_control_params) == 0:
                 # Default to spline_knot_spacing of 3ns.
                 spline_knot_spacing = 3.0
-                computed_nspline = int(np.max([np.ceil(setup.ntime * setup.dt / spline_knot_spacing + 2), 5]))
+                computed_nspline = int(np.max([np.ceil(config_input.ntime * config_input.dt / spline_knot_spacing + 2), 5]))
                 nsplines = [computed_nspline for _ in range(n_osc)]
             else:
                 nsplines = [param.nspline for param in existing_control_params]
             pcof = fit_bspline2nd(0.0, 
-                                  setup.ntime*setup.dt, 
+                                  config_input.ntime*config_input.dt, 
                                   pt0, qt0, 
                                   nsplines, 
-                                  carrier_frequencies=setup.carrier_frequencies,
+                                  carrier_frequencies=config_input.carrier_frequencies,
                                   inputs_in_mhz=True )
 
         # Set control parameterization
         control_params = []
-        for i in range(len(setup.nessential)):
+        for i in range(len(config_input.nessential)):
             param = ControlParameterizationSettings()
             param.control_type = control_type
             param.nspline = nsplines[i]
             control_params.append(param)
-        setup.control_parameterizations = control_params
+        config_input.control_parameterizations = control_params
 
     # If pcof is provided (either user input or set above by fitting splines to pt/qt), write coefficients to file and set control initialization to load from that file.
     if pcof is not None and len(pcof) > 0:
-        output_dir = _get_output_dir(setup)
+        output_dir = _get_output_dir(config_input)
         os.makedirs(output_dir, exist_ok=True)
         pcof_file = os.path.join(output_dir, "pcof_init.dat")
         np.savetxt(pcof_file, pcof, fmt='%20.13e')
 
         control_inits = []
-        for _ in range(len(setup.nessential)):
+        for _ in range(len(config_input.nessential)):
             init = ControlInitializationSettings()
             init.init_type = ControlInitializationType.FILE
             init.filename = pcof_file
             control_inits.append(init)
-        setup.control_initializations = control_inits
+        config_input.control_initializations = control_inits
 
     elif control_amplitude is not None:
         # Explicit amplitude — create uniform per-oscillator inits
@@ -192,18 +192,18 @@ def _configure_run(
             ControlInitializationType.RANDOM if control_randomize
             else ControlInitializationType.CONSTANT
         )
-        for _ in range(len(setup.nessential)):
+        for _ in range(len(config_input.nessential)):
             init = ControlInitializationSettings()
             init.init_type = init_type
             init.amplitude = control_amplitude
             control_inits.append(init)
 
-        setup.control_initializations = control_inits
+        config_input.control_initializations = control_inits
 
-    return setup
+    return config_input
 
 def _run(
-    setup: Setup,
+    config_input: ConfigInput,
     max_n_procs: Optional[int] = None,
     quiet: bool = False,
     mpi_exec: str = "mpirun",
@@ -213,7 +213,7 @@ def _run(
 ) -> Results:
     """Run a Quandary simulation or optimization.
 
-    This function validates the setup, runs the simulation/optimization,
+    This function validates the config_input, runs the simulation/optimization,
     and returns results with the validated configuration attached.
 
     If max_n_procs is specified and not already in an MPI context, spawns a subprocess
@@ -223,8 +223,8 @@ def _run(
 
     Parameters
     ----------
-    setup : Setup
-        A Setup object.
+    config_input : ConfigInput
+        A ConfigInput object.
     max_n_procs : int, optional
         Max number of MPI processes to use. If specified and not in MPI
         context, spawns subprocess. The actual number of cores will be
@@ -266,7 +266,7 @@ def _run(
         if max_n_procs is None:
             max_n_procs = 4  # Default to 4 processes if not specified
         return _run_subprocess(
-            setup=setup,
+            config_input=config_input,
             max_n_procs=max_n_procs,
             quiet=quiet,
             mpi_exec=mpi_exec,
@@ -282,16 +282,16 @@ def _run(
         )
 
     logger.info(f"Running directly in existing MPI context with {size} processes")
-    return _run_directly(setup, quiet)
+    return _run_directly(config_input, quiet)
 
 
-def _run_directly(setup: Setup, quiet: bool = False) -> Results:
+def _run_directly(config_input: ConfigInput, quiet: bool = False) -> Results:
     """Internal: Run Quandary directly without spawning subprocess.
 
     This is used when max_n_procs is not specified, or when already in an MPI context.
     """
     # Validate configuration
-    validated_config = Config(setup, quiet)
+    validated_config = Config(config_input, quiet)
     logger.debug("Configuration:\n%s", validated_config)
 
     # Run simulation/optimization
@@ -307,7 +307,7 @@ def _run_directly(setup: Setup, quiet: bool = False) -> Results:
 
 
 def _run_subprocess(
-    setup: Setup,
+    config_input: ConfigInput,
     max_n_procs: int,
     quiet: bool = False,
     mpi_exec: str = "mpirun",
@@ -324,7 +324,7 @@ def _run_subprocess(
     initial conditions for efficient parallelization.
     """
     # Validate configuration
-    validated_config = Config(setup, quiet)
+    validated_config = Config(config_input, quiet)
     logger.debug("Configuration:\n%s", validated_config)
 
     # Compute optimal core distribution based on number of initial conditions
@@ -373,7 +373,7 @@ def _run_subprocess(
 
 
 def optimize(
-    setup: Setup,
+    config_input: ConfigInput,
     pcof=None,
     pt0=None,
     qt0=None,
@@ -392,14 +392,14 @@ def optimize(
 ) -> Results:
     """Run an optimization.
 
-    Copies the setup internally; the original is not modified.
+    Copies the config_input internally; the original is not modified.
 
     Parameters
     ----------
-    setup : Setup
-        Physics setup from setup_quandary().
+    config_input : ConfigInput
+        Physics config_input from setup_quandary().
     pcof : array-like, optional
-        For Warm-start: Initial B-spline coefficients. Setup must contain the same spline parameterization and carrier frequencies.
+        For Warm-start: Initial B-spline coefficients. ConfigInput must contain the same spline parameterization and carrier frequencies.
     pt0 : sequence of ndarray, optional
         For warm-start: Real part of control pulses [MHz] per oscillator.
         Will be fitted to B-splines coefficients. Must be paired with qt0.
@@ -409,7 +409,7 @@ def optimize(
         Initialize controls randomly. Default: True.
     control_amplitude : float, optional
         Initial control amplitude [GHz]. When omitted, uses
-        setup.control_initializations if set, otherwise defaults from C++ code (zero controls)
+        config_input.control_initializations if set, otherwise defaults from C++ code (zero controls)
     initial_condition : sequence of complex or InitialConditionSettings, optional
         Either a state vector (arbitrary superposition), or direct struct specification (advanced). 
         Default: All basis states in the essential dimensions.
@@ -438,7 +438,7 @@ def optimize(
     Results
         If dry_run=True, only results.config is populated.
     """
-    configured = _configure_run(setup,
+    configured = _configure_run(config_input,
         runtype = RunType.OPTIMIZATION,
         pcof=pcof,
         pt0=pt0,
@@ -463,7 +463,7 @@ def optimize(
 
 
 def simulate(
-    setup: Setup,
+    config_input: ConfigInput,
     pcof=None,
     pt0=None,
     qt0=None,
@@ -482,12 +482,12 @@ def simulate(
 ) -> Results:
     """Run a simulation.
 
-    Copies the setup internally; the original is not modified.
+    Copies the config_input internally; the original is not modified.
 
     Parameters
     ----------
-    setup : Setup
-        Physics setup from setup_quandary().
+    config_input : ConfigInput
+        Physics config_input from setup_quandary().
     pcof : array-like, optional
         B-spline control coefficients.
     pt0 : sequence of ndarray, optional
@@ -499,7 +499,7 @@ def simulate(
         Initialize controls randomly. Default: True.
     control_amplitude : float, optional
         Initial control amplitude [GHz]. When omitted, uses
-        setup.control_initializations if set, otherwise defaults from C++ code (zero controls)
+        config_input.control_initializations if set, otherwise defaults from C++ code (zero controls)
     initial_condition : sequence of complex or InitialConditionSettings, optional
         Either a state vector (arbitrary superposition), or direct struct specification (advanced). 
         Default: All basis states in the essential dimensions.
@@ -528,7 +528,7 @@ def simulate(
     Results
         If dry_run=True, only results.config is populated.
     """
-    configured = _configure_run(setup, 
+    configured = _configure_run(config_input, 
         runtype=RunType.SIMULATION, 
         pcof=pcof, 
         pt0=pt0, 
@@ -553,7 +553,7 @@ def simulate(
 
 
 def evaluate_controls(
-    setup: Setup,
+    config_input: ConfigInput,
     pcof=None,
     pt0=None,
     qt0=None,
@@ -568,12 +568,12 @@ def evaluate_controls(
 ) -> Results:
     """Evaluate control pulses at a specific sample rate.
 
-    Copies the setup internally; the original is not modified.
+    Copies the config_input internally; the original is not modified.
 
     Parameters
     ----------
-    setup : Setup
-        Physics setup from setup_quandary().
+    config_input : ConfigInput
+        Physics config_input from setup_quandary().
     pcof : array-like
         B-spline control coefficients.
     pt0 : sequence of ndarray, optional
@@ -610,8 +610,8 @@ def evaluate_controls(
     if pcof is None and (pt0 is None or qt0 is None):
         raise ValueError("Must provide either pcof or both pt0 and qt0 to evaluate control pulses.")
 
-    # Configure the run with provided setup
-    configured = _configure_run(setup, 
+    # Configure the run with provided config_input
+    configured = _configure_run(config_input, 
         pcof=pcof, 
         pt0=pt0, 
         qt0=qt0,

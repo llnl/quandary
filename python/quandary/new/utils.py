@@ -405,14 +405,14 @@ def estimate_timesteps(*, final_time=1.0, Hsys=None, Hc_re=None, Hc_im=None, con
     return ntime
 
 
-def timestep_richardson_est(setup, pcof, tol=1e-8, order=2, **kwargs):
+def timestep_richardson_est(config_input, pcof, tol=1e-8, order=2, **kwargs):
     """Decrease timestep size until Richardson error estimate meets threshold.
 
     Parameters
     ----------
-    setup : Setup
-        Quandary setup configuration. A copy is made internally; the caller's
-        setup is not modified.
+    config_input : ConfigInput
+        Quandary configuration input. A copy is made internally; the caller's
+        config_input is not modified.
     pcof : array-like
         B-spline control coefficients to evaluate at each refinement level.
     tol : float
@@ -436,10 +436,10 @@ def timestep_richardson_est(setup, pcof, tol=1e-8, order=2, **kwargs):
     # Factor by which ntime is multiplied (dt halved) each step
     m = 2
 
-    setup = setup.copy()
+    config_input = config_input.copy()
     kwargs.setdefault("quiet", True)
 
-    results = simulate(setup, pcof=pcof, **kwargs)
+    results = simulate(config_input, pcof=pcof, **kwargs)
     Jcurr = results.infidelity
     uT = results.uT.copy()
 
@@ -447,11 +447,11 @@ def timestep_richardson_est(setup, pcof, tol=1e-8, order=2, **kwargs):
     errs_u = []
     dts = []
     for i in range(10):
-        dt_org = setup.dt
-        setup.ntime = setup.ntime * m
-        setup.dt = setup.dt / m
+        dt_org = config_input.dt
+        config_input.ntime = config_input.ntime * m
+        config_input.dt = config_input.dt / m
 
-        results = simulate(setup, pcof=pcof, **kwargs)
+        results = simulate(config_input, pcof=pcof, **kwargs)
 
         err_J = np.abs(Jcurr - results.infidelity) / (m**order - 1.0)
         err_u = np.linalg.norm(np.subtract(uT, results.uT)) / (m**order - 1.0)
@@ -462,7 +462,7 @@ def timestep_richardson_est(setup, pcof, tol=1e-8, order=2, **kwargs):
         logger.info(f"  i={i}, dt={dt_org:.6f}: err_J={err_J:.3e}, err_u={err_u:.3e}")
 
         if err_J < tol:
-            logger.info(f"  Tolerance reached: ntime={setup.ntime}, dt={setup.dt:.6f}")
+            logger.info(f"  Tolerance reached: ntime={config_input.ntime}, dt={config_input.dt:.6f}")
             break
 
         Jcurr = results.infidelity

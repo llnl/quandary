@@ -1,4 +1,4 @@
-"""Helper functions to create and configure Setup objects for simulation and optimization."""
+"""Helper functions to create and configure ConfigInput objects for simulation and optimization."""
 
 import logging
 import os
@@ -16,7 +16,7 @@ from .._quandary_impl import (
     OutputType,
 )
 from ._structs import (
-    Setup,
+    ConfigInput,
     InitialConditionSettings,
     OptimTargetSettings,
     ControlParameterizationSettings,
@@ -63,9 +63,9 @@ def resolve_output_dir(datadir: str) -> str:
     return os.path.normpath(datadir)
 
 
-def _get_output_dir(setup):
-    """Get output directory from setup, falling back to default."""
-    return setup.output_directory or _DEFAULT_OUTPUT_DIR
+def _get_output_dir(config_input):
+    """Get output directory from config_input, falling back to default."""
+    return config_input.output_directory or _DEFAULT_OUTPUT_DIR
 
 
 def _write_hamiltonian_files(output_directory, Hsys=None, Hc=None):
@@ -147,8 +147,8 @@ def setup_quandary(
     hamiltonian_Hc: Optional[Sequence[np.ndarray]] = None,
     initial_condition: Optional[Sequence[complex]] = None,
     output_directory: str = _DEFAULT_OUTPUT_DIR,
-) -> Setup:
-    """Create a Setup with physics parameters configured.
+) -> ConfigInput:
+    """Create a ConfigInput with physics parameters configured.
 
     Automatically computes Hamiltonians, timesteps, and carrier frequencies.
 
@@ -234,8 +234,8 @@ def setup_quandary(
 
     Returns
     -------
-    Setup
-        Setup with physics parameters configured (no runtype set).
+    ConfigInput
+        ConfigInput with physics parameters configured (no runtype set).
 
     Examples
     --------
@@ -389,37 +389,37 @@ def setup_quandary(
     if nspline is not None:
         logger.info(f"  B-spline basis functions: {nspline}")
 
-    # Create Setup with common fields
-    setup = Setup()
-    setup.nlevels = nlevels
-    setup.nessential = nessential
-    setup.ntime = ntime
-    setup.dt = dt
-    setup.transition_frequency = transition_frequency
-    setup.rotation_frequency = rotation_frequency
-    setup.selfkerr = selfkerr
+    # Create ConfigInput with common fields
+    config_input = ConfigInput()
+    config_input.nlevels = nlevels
+    config_input.nessential = nessential
+    config_input.ntime = ntime
+    config_input.dt = dt
+    config_input.transition_frequency = transition_frequency
+    config_input.rotation_frequency = rotation_frequency
+    config_input.selfkerr = selfkerr
     if len(crosskerr_coupling) > 0:
-        setup.crosskerr_coupling = crosskerr_coupling
+        config_input.crosskerr_coupling = crosskerr_coupling
     if len(dipole_coupling) > 0:
-        setup.dipole_coupling = dipole_coupling
+        config_input.dipole_coupling = dipole_coupling
     if decoherence_type is not None:
-        setup.decoherence_type = decoherence_type
+        config_input.decoherence_type = decoherence_type
     if decay_time is not None:
-        setup.decay_time = decay_time
+        config_input.decay_time = decay_time
     if dephase_time is not None:
-        setup.dephase_time = dephase_time
+        config_input.dephase_time = dephase_time
     if control_amplitude_bound is not None:
-        setup.control_amplitude_bound = control_amplitude_bound
-    setup.carrier_frequencies = carrier_frequency
-    setup.output_directory = output_directory
+        config_input.control_amplitude_bound = control_amplitude_bound
+    config_input.carrier_frequencies = carrier_frequency
+    config_input.output_directory = output_directory
     if control_zero_boundary_condition is not None:
-        setup.control_zero_boundary_condition = control_zero_boundary_condition
+        config_input.control_zero_boundary_condition = control_zero_boundary_condition
 
-    # Write target and initial conditions to file, if provided, and store in Setup.
-    set_target(setup, target, gate_rot_freq=gate_rot_freq)
-    set_initial_condition(setup, initial_condition=initial_condition)
+    # Write target and initial conditions to file, if provided, and store in ConfigInput.
+    set_target(config_input, target, gate_rot_freq=gate_rot_freq)
+    set_initial_condition(config_input, initial_condition=initial_condition)
 
-    # Write custom Hamiltonian files and set paths on Setup
+    # Write custom Hamiltonian files and set paths on ConfigInput
     if hamiltonian_Hsys is not None or hamiltonian_Hc is not None:
         hsys_path, hc_path = _write_hamiltonian_files(
             output_directory,
@@ -427,9 +427,9 @@ def setup_quandary(
             Hc=hamiltonian_Hc,
         )
         if hsys_path is not None:
-            setup.hamiltonian_file_Hsys = hsys_path
+            config_input.hamiltonian_file_Hsys = hsys_path
         if hc_path is not None:
-            setup.hamiltonian_file_Hc = hc_path
+            config_input.hamiltonian_file_Hc = hc_path
 
     # Set control parameterizations if nspline or spline_order was specified
     if nspline is not None or spline_order is not None:
@@ -442,35 +442,35 @@ def setup_quandary(
             if nspline is not None:
                 param.nspline = nspline
             control_params.append(param)
-        setup.control_parameterizations = control_params
+        config_input.control_parameterizations = control_params
         # Order 0 uses zero carrier frequencies by default
         if order == 0:
-            setup.carrier_frequencies = [[0.0] for _ in range(nqubits)]
+            config_input.carrier_frequencies = [[0.0] for _ in range(nqubits)]
 
     # Set default output observables
-    setup.output_observables = [OutputType.POPULATION, OutputType.EXPECTED_ENERGY, OutputType.FULLSTATE]
+    config_input.output_observables = [OutputType.POPULATION, OutputType.EXPECTED_ENERGY, OutputType.FULLSTATE]
 
-    return setup
+    return config_input
 
 
 def set_target(
-    setup: Setup,
+    config_input: ConfigInput,
     target: np.ndarray,
     gate_rot_freq: Optional[Sequence[float]] = None,
 ) -> None:
-    """Set the optimization target on a Setup (in-place).
+    """Set the optimization target on a ConfigInput (in-place).
 
     The type is inferred from the dimensionality of ``target``: a 2-D array
     is treated as a gate, a 1-D array as a state.  Writes the data to a file
-    in the output directory and sets ``setup.optim_target``.
+    in the output directory and sets ``config_input.optim_target``.
     """
     if target is None:
         return
 
     target_array = np.asarray(target, dtype=complex)
-    dim_ess = int(np.prod(setup.nessential))
+    dim_ess = int(np.prod(config_input.nessential))
 
-    output_dir = _get_output_dir(setup)
+    output_dir = _get_output_dir(config_input)
     os.makedirs(output_dir, exist_ok=True)
 
     if target_array.ndim == 2:
@@ -490,7 +490,7 @@ def set_target(
         optim_target.filename = gate_file
         if gate_rot_freq is not None:
             optim_target.gate_rot_freq = gate_rot_freq
-        setup.optim_target = optim_target
+        config_input.optim_target = optim_target
 
     else:
         # State-to-state: verify dimensions andwrite target state to file
@@ -504,13 +504,13 @@ def set_target(
         optim_target = OptimTargetSettings()
         optim_target.target_type = TargetType.STATE
         optim_target.filename = state_file
-        setup.optim_target = optim_target
+        config_input.optim_target = optim_target
 
 def set_initial_condition(
-    setup: Setup,
+    config_input: ConfigInput,
     initial_condition = None,
 ) -> None:
-    """Set the initial condition on a Setup (in-place).
+    """Set the initial condition on a ConfigInput (in-place).
 
     The initial condition can be either as a state vector (arbitrary superposition) or as an InitialConditionSettings struct for advanced use cases. If it's a state vector, it is written to a file in the output directory and the struct is configured to load from that file. If it's already an InitialConditionSettings struct, it is used directly. If None, the C++ default is used. 
     """
@@ -519,16 +519,16 @@ def set_initial_condition(
 
     if isinstance(initial_condition, InitialConditionSettings):
         # Already an InitialConditionSettings struct, use it directly
-        setup.initial_condition = initial_condition
+        config_input.initial_condition = initial_condition
 
     else:
         # Initial condition is a state vector (arbitrary superposition). Check dimensions and write to file
-        dim_ess = int(np.prod(setup.nessential))
+        dim_ess = int(np.prod(config_input.nessential))
         initial_state_array = np.array(initial_condition, dtype=complex)
         if len(initial_state_array) != dim_ess:
             raise ValueError(f"initial_condition state must have length {dim_ess} (product of nessential), "
                              f"got {len(initial_state_array)}")
-        output_dir = _get_output_dir(setup)
+        output_dir = _get_output_dir(config_input)
         os.makedirs(output_dir, exist_ok=True)
 
         init_state_file = os.path.join(output_dir, "initial_state.dat")
@@ -537,4 +537,4 @@ def set_initial_condition(
         initial_condition = InitialConditionSettings()
         initial_condition.condition_type = InitialConditionType.FROMFILE
         initial_condition.filename = init_state_file
-        setup.initial_condition = initial_condition
+        config_input.initial_condition = initial_condition

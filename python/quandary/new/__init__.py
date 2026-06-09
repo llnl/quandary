@@ -34,8 +34,8 @@ from .._quandary_impl import (
     OutputType,
 )
 
-# Python subclass of Setup with __repr__ and improved TypeError messages
-from ._structs import Setup
+# Python subclass of ConfigInput with __repr__ and improved TypeError messages
+from ._structs import ConfigInput
 
 from ._structs import (
     InitialConditionSettings,
@@ -91,7 +91,7 @@ __all__ = [
     # Exceptions
     "ValidationError",
     # Configuration classes and types
-    "Setup",
+    "ConfigInput",
     "Config",
     "run_from_file",
     # Enums

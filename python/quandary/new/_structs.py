@@ -4,7 +4,7 @@ Each class in this module wraps a C++ configuration struct and adds:
 
 - **Numpy conversion**: numpy arrays, integers, and floats are automatically
   converted to Python builtins before being passed to the C++ layer, so
-  ``setup.nlevels = np.array([2, 3])`` works seamlessly.
+  ``config.nlevels = np.array([2, 3])`` works seamlessly.
 - **Improved error messages**: ``TypeError`` messages include the field name,
   the rejected value, and a hint when a negative integer is assigned to an
   unsigned field.
@@ -15,7 +15,7 @@ type information and allowed values.
 
 import numpy as np
 
-from .._quandary_impl import Setup as _CppSetup
+from .._quandary_impl import ConfigInput as _CppConfigInput
 from .._quandary_impl import (
     InitialConditionSettings as _CppInitialConditionSettings,
     OptimTargetSettings as _CppOptimTargetSettings,
@@ -114,8 +114,8 @@ class ControlInitializationSettings(_CppControlInitializationSettings):
     __setattr__ = _numpy_setattr("ControlInitializationSettings")
 
 
-class Setup(_CppSetup):
-    __doc__ = _CppSetup.__doc__
-    __setattr__ = _numpy_setattr("Setup")
+class ConfigInput(_CppConfigInput):
+    __doc__ = _CppConfigInput.__doc__
+    __setattr__ = _numpy_setattr("ConfigInput")
 
-    __repr__ = _make_repr(_CppSetup)
+    __repr__ = _make_repr(_CppConfigInput)

@@ -317,7 +317,7 @@ def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=None, 
     Hc_re = [Amat[q] + Amat[q].T for q in range(nqubits)]
     Hc_im = [Amat[q] - Amat[q].T for q in range(nqubits)]
 
-    logger.info(f"*** {nqubits} coupled quantum systems setup ***")
+    logger.info(f"*** {nqubits} coupled quantum systems ***")
     logger.info(f"System Hamiltonian frequencies [GHz]: f01 = {transition_frequency}, "
                 f"rot. freq = {rotation_frequency}")
     logger.info(f"Selfkerr= {selfkerr}")
