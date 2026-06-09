@@ -1,0 +1,16 @@
+Repo:
+  dest_org: quantum1
+
+  dest_name: quandary
+
+  check_name: gitlab-ci
+
+  check_types: [pipeline, child-pipelines]
+
+  delete_closed: true
+
+  sync_drafts: true
+
+  sync_drafts_msg: true
+
+  create_mr: false
