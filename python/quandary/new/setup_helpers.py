@@ -22,8 +22,7 @@ from ._structs import (
     ControlParameterizationSettings,
 )
 from .quantum_operators import hamiltonians, get_resonances
-from .time_estimation import estimate_timesteps
-from .utils import fit_bspline0, fit_bspline2nd
+from .utils import fit_bspline0, fit_bspline2nd, estimate_timesteps
 
 logger = logging.getLogger(__name__)
 

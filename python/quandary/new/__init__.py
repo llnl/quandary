@@ -60,12 +60,6 @@ from .quantum_operators import (  # noqa: F401, E402
     get_resonances,
 )
 
-# Time estimation utilities
-from .time_estimation import (  # noqa: F401, E402
-    estimate_timesteps,
-    timestep_richardson_est,
-)
-
 # Visualization utilities
 from .visualization import (  # noqa: F401, E402
     plot_pulse,
@@ -78,6 +72,8 @@ from .visualization import (  # noqa: F401, E402
 from .utils import (  # noqa: F401, E402
     gate_infidelity,
     state_infidelity,
+    estimate_timesteps,
+    timestep_richardson_est,
     fit_bspline0,
     fit_bspline2nd,
 )
