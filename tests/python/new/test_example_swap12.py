@@ -161,7 +161,7 @@ def test_example_swap12(tmp_path, request):
     results = optimize(
         setup,
         target=unitary,
-        control_initialization_amplitude=init_amplitude,
+        control_amplitude=init_amplitude,
         quiet=True,
     )
 

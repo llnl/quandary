@@ -91,7 +91,7 @@ def test_example_state_to_state(tmp_path, request):
     results = optimize(
         setup,
         target=target_state,
-        control_initialization_amplitude=init_amplitude,
+        control_amplitude=init_amplitude,
         quiet=True,
     )
 

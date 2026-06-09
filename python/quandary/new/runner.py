@@ -99,8 +99,8 @@ def _configure_run(
     pcof=None,
     pt0=None,
     qt0=None,
-    randomize_initial_control: bool = True,
-    control_initialization_amplitude: Optional[float] = None,
+    control_randomize: bool = True,
+    control_amplitude: Optional[float] = None,
 ) -> Setup:
     """Return a copy of setup configured for the specified run type."""
     
@@ -185,17 +185,17 @@ def _configure_run(
             control_inits.append(init)
         setup.control_initializations = control_inits
 
-    elif control_initialization_amplitude is not None:
+    elif control_amplitude is not None:
         # Explicit amplitude — create uniform per-oscillator inits
         control_inits = []
         init_type = (
-            ControlInitializationType.RANDOM if randomize_initial_control
+            ControlInitializationType.RANDOM if control_randomize
             else ControlInitializationType.CONSTANT
         )
         for _ in range(len(setup.nessential)):
             init = ControlInitializationSettings()
             init.init_type = init_type
-            init.amplitude = control_initialization_amplitude
+            init.amplitude = control_amplitude
             control_inits.append(init)
 
         setup.control_initializations = control_inits
@@ -377,8 +377,8 @@ def optimize(
     pcof=None,
     pt0=None,
     qt0=None,
-    randomize_initial_control: bool = True,
-    control_initialization_amplitude: Optional[float] = None,
+    control_randomize: bool = True,
+    control_amplitude: Optional[float] = None,
     initial_condition=None,
     target=None,
     gate_rot_freq=None,
@@ -405,9 +405,9 @@ def optimize(
         Will be fitted to B-splines coefficients. Must be paired with qt0.
     qt0 : sequence of ndarray, optional
         For warm-start: Imaginary part of control pulses [MHz] per oscillator.
-    randomize_initial_control : bool
+    control_randomize : bool
         Initialize controls randomly. Default: True.
-    control_initialization_amplitude : float, optional
+    control_amplitude : float, optional
         Initial control amplitude [GHz]. When omitted, uses
         setup.control_initializations if set, otherwise defaults from C++ code (zero controls)
     initial_condition : sequence of complex or InitialConditionSettings, optional
@@ -446,8 +446,8 @@ def optimize(
         target=target,
         gate_rot_freq=gate_rot_freq,
         initial_condition=initial_condition,
-        randomize_initial_control=randomize_initial_control,
-        control_initialization_amplitude=control_initialization_amplitude,
+        control_randomize=control_randomize,
+        control_amplitude=control_amplitude,
     )
     if dry_run:
         return Results(config=Config(configured, quiet))
@@ -467,8 +467,8 @@ def simulate(
     pcof=None,
     pt0=None,
     qt0=None,
-    randomize_initial_control: bool = True,
-    control_initialization_amplitude: Optional[float] = None,
+    control_randomize: bool = True,
+    control_amplitude: Optional[float] = None,
     initial_condition=None,
     target=None,
     gate_rot_freq=None,
@@ -495,9 +495,9 @@ def simulate(
         Fitted to B-splines coefficients. Must be paired with qt0.
     qt0 : sequence of ndarray, optional
         Imaginary part of control pulses [MHz] per oscillator.
-    randomize_initial_control : bool
+    control_randomize : bool
         Initialize controls randomly. Default: True.
-    control_initialization_amplitude : float, optional
+    control_amplitude : float, optional
         Initial control amplitude [GHz]. When omitted, uses
         setup.control_initializations if set, otherwise defaults from C++ code (zero controls)
     initial_condition : sequence of complex or InitialConditionSettings, optional
@@ -536,8 +536,8 @@ def simulate(
         target=target, 
         gate_rot_freq=gate_rot_freq,
         initial_condition=initial_condition, 
-        randomize_initial_control=randomize_initial_control, 
-        control_initialization_amplitude=control_initialization_amplitude, 
+        control_randomize=control_randomize, 
+        control_amplitude=control_amplitude, 
     )
     if dry_run:
         return Results(config=Config(configured, quiet))
