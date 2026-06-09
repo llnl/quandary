@@ -24,24 +24,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.1084863928547566,
             "unit": "seconds",
             "range": "0.2827051171029343"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 90.49,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 19.470187945800717,
             "unit": "seconds",
             "range": "0.1816349483983423"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 5039.05,
             "unit": "MB"
           }
@@ -68,24 +68,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.0806918966300874,
             "unit": "seconds",
             "range": "0.14390332632612238"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 90.44,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 19.573205866399803,
             "unit": "seconds",
             "range": "0.0773973100264002"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 5039.89,
             "unit": "MB"
           }
@@ -112,24 +112,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.2243254836807318,
             "unit": "seconds",
             "range": "0.2855656481640038"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 90.52,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 19.701801151200197,
             "unit": "seconds",
             "range": "0.24164525478795115"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 5039.85,
             "unit": "MB"
           }
@@ -156,24 +156,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.1079652067855932,
             "unit": "seconds",
             "range": "0.16225299098452994"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 90.46,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 19.66506723459461,
             "unit": "seconds",
             "range": "0.1432359375271047"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 5037.9,
             "unit": "MB"
           }
@@ -200,24 +200,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.1444151806450464,
             "unit": "seconds",
             "range": "0.28802335240935584"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 90.42,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 19.867803638400073,
             "unit": "seconds",
             "range": "0.8015886276080502"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 5038.78,
             "unit": "MB"
           }
@@ -244,24 +244,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.0813445633850642,
             "unit": "seconds",
             "range": "0.06570152928126277"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 90.41,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 19.658503726392517,
             "unit": "seconds",
             "range": "0.26487108809700893"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 5040.88,
             "unit": "MB"
           }
@@ -288,24 +288,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.0851843096807716,
             "unit": "seconds",
             "range": "0.08239314218227001"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 90.46,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 19.34639899857575,
             "unit": "seconds",
             "range": "0.2687158199385436"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 5038.31,
             "unit": "MB"
           }
@@ -332,24 +332,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.1473350109785678,
             "unit": "seconds",
             "range": "0.32751198988211916"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 90.58,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 19.542425581195857,
             "unit": "seconds",
             "range": "0.814245662778022"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 5039.89,
             "unit": "MB"
           }
@@ -376,24 +376,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.1549151487310882,
             "unit": "seconds",
             "range": "0.27076212737940636"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 90.5,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 19.748091931804083,
             "unit": "seconds",
             "range": "0.31674199687190874"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 5036.84,
             "unit": "MB"
           }
@@ -420,24 +420,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.1812538718880388,
             "unit": "seconds",
             "range": "0.2801760760886532"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 90.61,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 19.572411097981966,
             "unit": "seconds",
             "range": "0.0678608321158382"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 5041.7,
             "unit": "MB"
           }
@@ -464,24 +464,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.4127878152689664,
             "unit": "seconds",
             "range": "0.49306778786226413"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 90.57,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 19.92804097663611,
             "unit": "seconds",
             "range": "0.7031679130402988"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 5058,
             "unit": "MB"
           }
@@ -508,24 +508,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.14404978124192,
             "unit": "seconds",
             "range": "0.3314085440468515"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 90.59,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 19.516990185785108,
             "unit": "seconds",
             "range": "0.028203816540124337"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 5054.71,
             "unit": "MB"
           }
@@ -552,24 +552,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.0673215225106105,
             "unit": "seconds",
             "range": "0.22129508617207058"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 90.52,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 19.391295114997774,
             "unit": "seconds",
             "range": "0.40018865479928906"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 5058.96,
             "unit": "MB"
           }
@@ -596,24 +596,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.0397948829922825,
             "unit": "seconds",
             "range": "0.2635918532730867"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 89.04,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 15.055802155984566,
             "unit": "seconds",
             "range": "0.12977033372803856"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4396.52,
             "unit": "MB"
           }
@@ -640,24 +640,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.0683745314599946,
             "unit": "seconds",
             "range": "0.3358923161584662"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 89.08,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 15.521295112092048,
             "unit": "seconds",
             "range": "0.32303665245846863"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4393.97,
             "unit": "MB"
           }
@@ -684,24 +684,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.0444687475683168,
             "unit": "seconds",
             "range": "0.27100138612120195"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 89.01,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 15.292023426154628,
             "unit": "seconds",
             "range": "0.13981222284260053"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4393.5,
             "unit": "MB"
           }
@@ -728,24 +728,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.0370572624997294,
             "unit": "seconds",
             "range": "0.19088532645769035"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 88.84,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 15.327549139998155,
             "unit": "seconds",
             "range": "0.03564252246132128"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4393.42,
             "unit": "MB"
           }
@@ -772,24 +772,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.0321371290010575,
             "unit": "seconds",
             "range": "0.22560047551930348"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 88.93,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 15.370089299001847,
             "unit": "seconds",
             "range": "0.03481370685259169"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4392.97,
             "unit": "MB"
           }
@@ -816,24 +816,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 1.0120532119999552,
             "unit": "seconds",
             "range": "0.19228990205179283"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 88.86,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 15.212458272999356,
             "unit": "seconds",
             "range": "0.10014038527290214"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4390.86,
             "unit": "MB"
           }
@@ -860,24 +860,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.9975584235216957,
             "unit": "seconds",
             "range": "0.2889184539813559"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 85.88,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 15.290909696021117,
             "unit": "seconds",
             "range": "0.19724851000322557"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4361.66,
             "unit": "MB"
           }
@@ -904,24 +904,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.9812853910261765,
             "unit": "seconds",
             "range": "0.3876979505546049"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 85.97,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 15.281957446946763,
             "unit": "seconds",
             "range": "0.5283522028005105"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4366.36,
             "unit": "MB"
           }
@@ -948,24 +948,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.9928182819858193,
             "unit": "seconds",
             "range": "0.3365738311296385"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 85.95,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 15.231006296118721,
             "unit": "seconds",
             "range": "0.17413491354152683"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4362.5,
             "unit": "MB"
           }
@@ -992,24 +992,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7294120454462245,
             "unit": "seconds",
             "range": "0.203665943877743"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 85.93,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 9.242814552038908,
             "unit": "seconds",
             "range": "0.13009465040776017"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4221.54,
             "unit": "MB"
           }
@@ -1036,24 +1036,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7344474499113858,
             "unit": "seconds",
             "range": "0.3467403308458125"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 85.78,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 9.306950623635203,
             "unit": "seconds",
             "range": "0.09639120584184843"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4222.29,
             "unit": "MB"
           }
@@ -1080,24 +1080,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7313742048572749,
             "unit": "seconds",
             "range": "0.24517638631492633"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 85.84,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 9.159907268360257,
             "unit": "seconds",
             "range": "0.37385922467106464"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4218.29,
             "unit": "MB"
           }
@@ -1124,24 +1124,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7823266775812954,
             "unit": "seconds",
             "range": "0.380216104278327"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 85.92,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 9.248127500060946,
             "unit": "seconds",
             "range": "0.13891813590182364"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4218.88,
             "unit": "MB"
           }
@@ -1168,24 +1168,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7241069637238979,
             "unit": "seconds",
             "range": "0.047991734925145975"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 85.84,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 9.211598691064864,
             "unit": "seconds",
             "range": "0.013379337944133282"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4223.33,
             "unit": "MB"
           }
@@ -1212,24 +1212,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7510104309767485,
             "unit": "seconds",
             "range": "0.05215134706291422"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 85.83,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 9.341559431981295,
             "unit": "seconds",
             "range": "0.03450679066656553"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4219.21,
             "unit": "MB"
           }
@@ -1256,24 +1256,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7273674565367401,
             "unit": "seconds",
             "range": "0.3835431598455397"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 85.91,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 9.270472630858421,
             "unit": "seconds",
             "range": "0.16134447293495427"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4220.59,
             "unit": "MB"
           }
@@ -1300,24 +1300,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7710025750566274,
             "unit": "seconds",
             "range": "0.668695707789697"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.75,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 7.386604275088757,
             "unit": "seconds",
             "range": "1.2009457242146258"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4265.71,
             "unit": "MB"
           }
@@ -1344,24 +1344,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.764829680499588,
             "unit": "seconds",
             "range": "0.6324653594581883"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.75,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.277122672000587,
             "unit": "seconds",
             "range": "0.07921635883641058"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4263.68,
             "unit": "MB"
           }
@@ -1388,24 +1388,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7556250016205013,
             "range": "0.47516711946087575",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.88,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.396109561203048,
             "range": "0.08991582502303776",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4264.09,
             "unit": "MB"
           }
@@ -1432,24 +1432,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7538893385208212,
             "range": "0.3635644026886531",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.85,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.317284491960891,
             "range": "0.039232271520184527",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4264.38,
             "unit": "MB"
           }
@@ -1476,24 +1476,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7509896379779093,
             "range": "0.38743394539339526",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.87,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.39035944303032,
             "range": "0.8304824199524852",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4264.56,
             "unit": "MB"
           }
@@ -1520,24 +1520,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7593362145125866,
             "range": "0.5510583224111993",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.75,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.339113406953402,
             "range": "0.12514363809277465",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4266.16,
             "unit": "MB"
           }
@@ -1564,24 +1564,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.767802852999921,
             "range": "0.6074407776406587",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.7,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.2797233990004315,
             "range": "0.12810158706813665",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4264.36,
             "unit": "MB"
           }
@@ -1608,24 +1608,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.739891906000139,
             "range": "0.2532592646763107",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.84,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.311412045999532,
             "range": "0.22756718145955124",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4262.81,
             "unit": "MB"
           }
@@ -1652,24 +1652,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7516139994841069,
             "range": "0.31729942364431446",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.88,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.401575268013403,
             "range": "0.07667149463782905",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4266.42,
             "unit": "MB"
           }
@@ -1696,24 +1696,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.750223491457291,
             "range": "0.1916323684245868",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.84,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.375961302081123,
             "range": "0.7723165804468421",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4263.61,
             "unit": "MB"
           }
@@ -1740,24 +1740,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7683871451299638,
             "range": "0.3568524509091665",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.82,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.304845311911777,
             "range": "0.175107098845318",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4265.31,
             "unit": "MB"
           }
@@ -1784,24 +1784,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.767291554948315,
             "range": "0.34503431371236504",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.71,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.327775028999895,
             "range": "0.7134382760584129",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4263.4,
             "unit": "MB"
           }
@@ -1828,24 +1828,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7572061731480062,
             "range": "0.24356127146155146",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.71,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.321204585954547,
             "range": "0.15846197219784336",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4265.1,
             "unit": "MB"
           }
@@ -1872,24 +1872,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7553776858840138,
             "range": "0.30876685187404435",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.84,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.345115140080452,
             "range": "0.10799426484519507",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4265.86,
             "unit": "MB"
           }
@@ -1916,24 +1916,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7457882950038766,
             "range": "0.4047554081540984",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.74,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.315393762997701,
             "range": "0.8590314485224767",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4264.8,
             "unit": "MB"
           }
@@ -1960,24 +1960,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7507524254979216,
             "range": "0.22228186276668777",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.72,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.3344565110019175,
             "range": "0.19776719985869418",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4261.84,
             "unit": "MB"
           }
@@ -2004,24 +2004,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7613258549827151,
             "range": "0.49954260749303386",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.75,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.309874934959225,
             "range": "0.06137017558875131",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4267.45,
             "unit": "MB"
           }
@@ -2048,24 +2048,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7514715464785695,
             "range": "0.22253860488093047",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.82,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.3669692350085825,
             "range": "0.11003293262961436",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4264.84,
             "unit": "MB"
           }
@@ -2092,24 +2092,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7492583194980398,
             "range": "0.32977576922649676",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.74,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.340182583997375,
             "range": "0.10914738333366243",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4260.88,
             "unit": "MB"
           }
@@ -2136,24 +2136,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7633258959976956,
             "range": "0.20180979186565337",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.71,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.253891335974913,
             "range": "0.07993733080909517",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4261.94,
             "unit": "MB"
           }
@@ -2180,24 +2180,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.754552184836939,
             "range": "0.1604821983085154",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.69,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.243459861725569,
             "range": "0.029764067656555777",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4262.38,
             "unit": "MB"
           }
@@ -2224,24 +2224,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.769419935066253,
             "range": "0.14782719480476925",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 99.08,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.473831309936941,
             "range": "0.09263098417496651",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4509.91,
             "unit": "MB"
           }
@@ -2268,24 +2268,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7664524865103886,
             "range": "0.0432308098811429",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 98.8,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.376291815016884,
             "range": "0.0787076460738543",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4511.55,
             "unit": "MB"
           }
@@ -2312,24 +2312,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.8034947919659317,
             "range": "0.2353955186073876",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 99.14,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.392780174035579,
             "range": "0.12985340690541228",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4511.27,
             "unit": "MB"
           }
@@ -2356,24 +2356,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.757079935981892,
             "range": "0.2751877603297216",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 86.94,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.369135521992575,
             "range": "0.5385414843545178",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4313.77,
             "unit": "MB"
           }
@@ -2400,24 +2400,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7583364709280431,
             "range": "0.19192230562757437",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.74,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.42940926598385,
             "range": "0.08356331623116013",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4340.13,
             "unit": "MB"
           }
@@ -2444,24 +2444,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7637731009745039,
             "range": "0.3074549017795371",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.69,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.34659487393219,
             "range": "0.23453198601056668",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4342.63,
             "unit": "MB"
           }
@@ -2488,24 +2488,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7566746699158102,
             "range": "0.4317950895038886",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.74,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.489785942016169,
             "range": "0.8336945153205556",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4344.02,
             "unit": "MB"
           }
@@ -2532,24 +2532,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7734516350319609,
             "range": "0.09243076893021644",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.61,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.461859951959923,
             "range": "0.1359367387824848",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4342.95,
             "unit": "MB"
           }
@@ -2576,24 +2576,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7574324175948277,
             "range": "0.4569899296064178",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.62,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.362606418086216,
             "range": "0.08649190608570058",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4341.52,
             "unit": "MB"
           }
@@ -2620,24 +2620,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7656423408770934,
             "range": "0.4323864769327675",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.69,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.4543582340702415,
             "range": "0.12772944473901168",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4338.04,
             "unit": "MB"
           }
@@ -2664,24 +2664,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7667898054933175,
             "range": "0.5475368211621803",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.71,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.320426422869787,
             "range": "0.09834993516066386",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4339.86,
             "unit": "MB"
           }
@@ -2708,24 +2708,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7975266720168293,
             "range": "0.7118876850669812",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.6,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.388027068693191,
             "range": "0.4610813195460961",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4340.99,
             "unit": "MB"
           }
@@ -2752,24 +2752,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7236057545014773,
             "range": "0.3550194055752225",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 86.21,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.35371984700032,
             "range": "0.09919612484307193",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4321.36,
             "unit": "MB"
           }
@@ -2796,24 +2796,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.713903854979435,
             "range": "0.3546802568538317",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.77,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.105132391967345,
             "range": "0.14662990755206648",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4339.96,
             "unit": "MB"
           }
@@ -2840,24 +2840,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7130628229351714,
             "range": "0.5613113098632806",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.78,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.384552247123793,
             "range": "0.7344937205683711",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4342.2,
             "unit": "MB"
           }
@@ -2884,24 +2884,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7089828711468726,
             "range": "0.14682009468194243",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 87.72,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.513207664247602,
             "range": "0.032096285738633316",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4339.43,
             "unit": "MB"
           }
@@ -2928,24 +2928,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7173614869825542,
             "range": "0.06535968003268255",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 85.7,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.516979484818876,
             "range": "0.2806056279551392",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4126.07,
             "unit": "MB"
           }
@@ -2972,24 +2972,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7259155694628134,
             "range": "0.33307985106951987",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 85.34,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.065840002847835,
             "range": "0.03621407041570066",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4127.36,
             "unit": "MB"
           }
@@ -3016,24 +3016,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.7128692604601383,
             "range": "0.3758832727471952",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 85.57,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.1278385310433805,
             "range": "0.03437473805542072",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4124.85,
             "unit": "MB"
           }
@@ -3060,24 +3060,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.700513317482546,
             "range": "0.20838698824755492",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 85.19,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.108386614127085,
             "range": "0.033682667071130844",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4126.62,
             "unit": "MB"
           }
@@ -3104,24 +3104,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.704296946991235,
             "range": "0.36759726846069374",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 85.43,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.187234411016107,
             "range": "0.05216429786025078",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4120.95,
             "unit": "MB"
           }
@@ -3148,24 +3148,24 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Time",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
             "value": 0.710909431334585,
             "range": "0.6559353140811006",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_4_4_4_4_nproc_2] - Memory",
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
             "value": 85.09,
             "unit": "MB"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Time",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
             "value": 5.157950506079942,
             "range": "0.04721245455974907",
             "unit": "seconds"
           },
           {
-            "name": "test_eval[nlevels_32_32_32_32_nproc_32] - Memory",
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
             "value": 4124.8,
             "unit": "MB"
           }
