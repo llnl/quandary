@@ -138,7 +138,7 @@ def setup_quandary(
     target: Optional[Sequence[complex]] = None,
     gate_rot_freq: Optional[Sequence[float]] = None,
     Pmin: int = 150,
-    control_amplitude_bounds: Optional[Sequence[float]] = None,
+    control_amplitude_bound: Optional[Sequence[float]] = None,
     nspline: Optional[int] = None,
     spline_knot_spacing: Optional[float] = None,
     spline_order: Optional[int] = None,
@@ -204,7 +204,7 @@ def setup_quandary(
     Pmin : int
         Minimum time steps per period of the fastest oscillation (used for
         auto-computing ntime). Default: 150.
-    control_amplitude_bounds : sequence of float, optional
+    control_amplitude_bound : sequence of float, optional
         Maximum control amplitudes [GHz] per qubit. Sets optimization bounds.
         Default: unbounded.
     nspline : int, optional
@@ -264,7 +264,7 @@ def setup_quandary(
         dipole_coupling = []
     # Use 0.01 GHz (= 10 MHz) as default amplitude for timestep estimation only.
     # When user doesn't specify bounds, optimization bounds are left unset (C++ default: 1e12).
-    bounds_for_estimation = control_amplitude_bounds if control_amplitude_bounds is not None \
+    bounds_for_estimation = control_amplitude_bound if control_amplitude_bound is not None \
         else [0.01] * nqubits
 
     # Resolve output directory against QUANDARY_BASE_DATADIR if set
@@ -313,7 +313,7 @@ def setup_quandary(
             Hsys=Hsys,
             Hc_re=Hc_re,
             Hc_im=Hc_im,
-            control_amplitude_bounds=bounds_for_estimation,
+            control_amplitude_bound=bounds_for_estimation,
             Pmin=Pmin,
         )
         dt = final_time / ntime
@@ -408,8 +408,8 @@ def setup_quandary(
         setup.decay_time = decay_time
     if dephase_time is not None:
         setup.dephase_time = dephase_time
-    if control_amplitude_bounds is not None:
-        setup.control_amplitude_bounds = control_amplitude_bounds
+    if control_amplitude_bound is not None:
+        setup.control_amplitude_bound = control_amplitude_bound
     setup.carrier_frequencies = carrier_frequency
     setup.output_directory = output_directory
     if control_zero_boundary_condition is not None:

@@ -182,7 +182,7 @@ NB_MODULE(_quandary_impl, m) {
     .def_rw("control_zero_boundary_condition", &Setup::control_zero_boundary_condition, "(bool) Enforce zero control amplitude at boundaries")
     .def_rw("control_parameterizations", &Setup::control_parameterizations, "(list[ControlParameterizationSettings]) Control parameterizations per oscillator")
     .def_rw("control_initializations", &Setup::control_initializations, "(list[ControlInitializationSettings]) Control initializations per oscillator")
-    .def_rw("control_amplitude_bounds", &Setup::control_amplitude_bounds, "(list[float]) Maximum control amplitude per oscillator [GHz]")
+    .def_rw("control_amplitude_bound", &Setup::control_amplitude_bound, "(list[float]) Maximum control amplitude per oscillator [GHz]")
     .def_rw("carrier_frequencies", &Setup::carrier_frequencies, "(list[list[float]]) Carrier frequencies for each control [GHz]")
     // Optimization parameters
     .def_rw("optim_target", &Setup::optim_target, "(OptimTargetSettings) Optimization target configuration")

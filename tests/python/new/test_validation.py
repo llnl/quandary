@@ -59,9 +59,9 @@ class TestVectorSizeValidation:
         with pytest.raises(ValidationError, match="dephase_time.*must have exactly 1 elements.*got 2"):
             Config(setup, True)
 
-    def test_control_amplitude_bounds_wrong_size(self):
-        setup = _make_setup(control_amplitude_bounds=[0.01, 0.02])  # 2 values for 1 qubit
-        with pytest.raises(ValidationError, match="control_amplitude_bounds.*must have exactly 1 elements.*got 2"):
+    def test_control_amplitude_bound_wrong_size(self):
+        setup = _make_setup(control_amplitude_bound=[0.01, 0.02])  # 2 values for 1 qubit
+        with pytest.raises(ValidationError, match="control_amplitude_bound.*must have exactly 1 elements.*got 2"):
             Config(setup, True)
 
     def test_carrier_frequencies_wrong_size(self):

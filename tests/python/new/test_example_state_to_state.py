@@ -67,7 +67,7 @@ def test_example_state_to_state(tmp_path, request):
         nguard=Ng,
         transition_frequency=freq01,
         selfkerr=selfkerr,
-        control_amplitude_bounds=[maxctrl_MHz/1000],
+        control_amplitude_bound=[maxctrl_MHz/1000],
         initial_condition=initialcondition,
         final_time=T,
         spline_knot_spacing=3.0,               # Old default: new default is 10 splines

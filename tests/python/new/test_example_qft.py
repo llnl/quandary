@@ -321,7 +321,7 @@ def test_example_qft(tmp_path, request):
         transition_frequency=freq01,
         dipole_coupling=Jkl,
         rotation_frequency=list(rotfreq),
-        control_amplitude_bounds=[maxctrl_MHz/1000]*nqubits,
+        control_amplitude_bound=[maxctrl_MHz/1000]*nqubits,
         final_time=T,
         Pmin=Pmin,
         spline_knot_spacing=spline_knot_spacing,

@@ -69,7 +69,7 @@ struct ConfigFieldsT {
   Wrapper<bool> control_zero_boundary_condition; ///< Decide whether control pulses should start and end at zero
   Wrapper<std::vector<ControlParameterizationSettings>> control_parameterizations; ///< Control parameterizations for each oscillator
   Wrapper<std::vector<ControlInitializationSettings>> control_initializations; ///< Control initializations for each oscillator
-  Wrapper<std::vector<double>> control_amplitude_bounds; ///< Control amplitude bounds for each oscillator
+  Wrapper<std::vector<double>> control_amplitude_bound; ///< Control amplitude bounds for each oscillator
   Wrapper<std::vector<std::vector<double>>> carrier_frequencies; ///< Carrier frequencies for each oscillator
 
   // Optimization parameters
@@ -253,7 +253,7 @@ class Config {
   const ControlInitializationSettings& getControlInitializations(size_t i_osc) const {
     return data.control_initializations[i_osc];
   }
-  double getControlAmplitudeBound(size_t i_osc) const { return data.control_amplitude_bounds[i_osc]; }
+  double getControlAmplitudeBound(size_t i_osc) const { return data.control_amplitude_bound[i_osc]; }
   const std::vector<double>& getCarrierFrequencies(size_t i_osc) const { return data.carrier_frequencies[i_osc]; }
   const OptimTargetSettings& getOptimTarget() const { return data.optim_target; }
   ObjectiveType getOptimObjective() const { return data.optim_objective; }

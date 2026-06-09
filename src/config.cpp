@@ -407,7 +407,7 @@ Setup extractSetup(const toml::table& toml, const MPILogger& logger) {
         control_table, "initialization", num_osc, ControlInitializationSettings{}, parseControlInitSpecsToml, logger);
   }
 
-  input.control_amplitude_bounds = extractScalarOrVector<double>(control_table, "amplitude_bound", num_osc);
+  input.control_amplitude_bound = extractScalarOrVector<double>(control_table, "amplitude_bound", num_osc);
 
   // Parse carrier frequencies
   if (control_table.contains("carrier_frequency")) {
@@ -599,7 +599,7 @@ Config::Config(const Setup& input, bool quiet_mode) : logger(MPILogger(quiet_mod
       .valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
   }
 
-  data.control_amplitude_bounds = validators::vectorField<double>(input.control_amplitude_bounds, "control_amplitude_bounds").hasLength(num_osc).valueOr(std::vector<double>(num_osc, ConfigDefaults::CONTROL_AMPLITUDE_BOUND));
+  data.control_amplitude_bound = validators::vectorField<double>(input.control_amplitude_bound, "control_amplitude_bound").hasLength(num_osc).valueOr(std::vector<double>(num_osc, ConfigDefaults::CONTROL_AMPLITUDE_BOUND));
 
   std::vector<double> default_carrier_freq = {ConfigDefaults::CARRIER_FREQ};
   data.carrier_frequencies = validators::vectorField<std::vector<double>>(input.carrier_frequencies, "carrier_frequencies").hasLength(num_osc).valueOr(std::vector<std::vector<double>>(num_osc, default_carrier_freq));
@@ -975,7 +975,7 @@ void Config::printConfig(std::stringstream& log) const {
   log << "parameterization = " << ::toString(data.control_parameterizations) << "\n";
   log << "carrier_frequency = " << ::toString(data.carrier_frequencies) << "\n";
   log << "initialization = " << ::toString(data.control_initializations) << "\n";
-  log << "amplitude_bound = " << ::toString(data.control_amplitude_bounds) << "\n";
+  log << "amplitude_bound = " << ::toString(data.control_amplitude_bound) << "\n";
   log << "zero_boundary_condition = " << (data.control_zero_boundary_condition ? "true" : "false") << "\n";
 
   log << "\n";
@@ -1199,9 +1199,9 @@ void Config::validate() const {
   }
 
   // Validate control bounds are positive
-  for (size_t i = 0; i < data.control_amplitude_bounds.size(); i++) {
-    if (data.control_amplitude_bounds[i] <= 0.0) {
-      throw validators::ValidationError("control_amplitude_bounds[" + std::to_string(i) + "] must be positive");
+  for (size_t i = 0; i < data.control_amplitude_bound.size(); i++) {
+    if (data.control_amplitude_bound[i] <= 0.0) {
+      throw validators::ValidationError("control_amplitude_bound[" + std::to_string(i) + "] must be positive");
     }
   }
 

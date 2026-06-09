@@ -339,7 +339,7 @@ def fit_bspline2nd(
 
 
 
-def estimate_timesteps(*, final_time=1.0, Hsys=None, Hc_re=None, Hc_im=None, control_amplitude_bounds=None, Pmin=40):
+def estimate_timesteps(*, final_time=1.0, Hsys=None, Hc_re=None, Hc_im=None, control_amplitude_bound=None, Pmin=40):
     """Estimate the number of time steps based on eigenvalues of Hamiltonians.
 
     The estimate does not account for quickly varying signals or a large number
@@ -356,7 +356,7 @@ def estimate_timesteps(*, final_time=1.0, Hsys=None, Hc_re=None, Hc_im=None, con
         Real parts of control Hamiltonian operators for each oscillator.
     Hc_im : sequence of ndarray, optional
         Imaginary parts of control Hamiltonian operators for each oscillator.
-    control_amplitude_bounds : sequence of float, optional
+    control_amplitude_bound : sequence of float, optional
         Estimated max control amplitudes [GHz] per oscillator. Used to scale
         the control Hamiltonians when computing the largest eigenvalue.
         Default: 0.01 GHz per oscillator.
@@ -375,23 +375,23 @@ def estimate_timesteps(*, final_time=1.0, Hsys=None, Hc_re=None, Hc_im=None, con
         Hc_re = []
     if Hc_im is None:
         Hc_im = []
-    if control_amplitude_bounds is None:
-        control_amplitude_bounds = []
+    if control_amplitude_bound is None:
+        control_amplitude_bound = []
 
     # Get estimated control pulse amplitude [GHz]
-    est_control_amplitude_bounds = control_amplitude_bounds[:]
-    if len(control_amplitude_bounds) == 0:
-        est_control_amplitude_bounds = [0.01 for _ in range(max(len(Hc_re), len(Hc_im)))]
+    est_control_amplitude_bound = control_amplitude_bound[:]
+    if len(control_amplitude_bound) == 0:
+        est_control_amplitude_bound = [0.01 for _ in range(max(len(Hc_re), len(Hc_im)))]
 
     # Set up Hsys +  maxctrl*Hcontrol
     K1 = np.copy(Hsys)
 
     for i in range(len(Hc_re)):
-        est_radns = est_control_amplitude_bounds[i] * 2.0 * np.pi
+        est_radns = est_control_amplitude_bound[i] * 2.0 * np.pi
         if len(Hc_re[i]) > 0:
             K1 += est_radns * Hc_re[i]
     for i in range(len(Hc_im)):
-        est_radns = est_control_amplitude_bounds[i] * 2.0 * np.pi
+        est_radns = est_control_amplitude_bound[i] * 2.0 * np.pi
         if len(Hc_im[i]) > 0:
             K1 = K1 + 1j * est_radns * Hc_im[i]  # can't use += due to type!
 
