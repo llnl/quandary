@@ -35,7 +35,8 @@ class TimeStepper{
     Vec x; ///< Auxiliary vector for forward time stepping
     Vec xadj; ///< Auxiliary vector needed for adjoint (backward) time stepping
     Vec xprimal; ///< Auxiliary vector for backward time stepping
-    std::vector<Vec> store_states; ///< Storage for primal states during forward evolution
+    std::vector<std::vector<Vec>> trajectory_states; ///< Storage for primal states during forward evolution, one trajectory for each local initial condition..
+    std::vector<Vec> final_states; ///< Storage for final states for each local initial condition. Always filled after solveODE.
     std::vector<Vec> dpdm_states; ///< Storage for states needed for second-order derivative penalty
     int mpirank_world; ///< MPI rank in global communicator
     int mpisize_petsc; ///< MPI size in Petsc communicator
@@ -48,60 +49,63 @@ class TimeStepper{
     bool eval_energy; ///< Flag to compute energy integral term
     bool eval_dpdm; ///< Flag to compute second-order derivative integral term
     bool eval_weightedcost; ///< Flag to compute weighted cost integral term
-
     double leakage_integral; ///< Sums the integral over leakage 
     double energy_integral; ///< Sums the energy term
     double dpdm_integral; ///< Sums second-order derivative variation value
     double weightedcost_integral; ///< Sums the integral over weighted cost function
     double weightedcost_width; ///< Width parameter for weighted cost function
 
-  public:
-    MasterEq* mastereq; ///< Pointer to master equation solver
     int ntime; ///< Number of time steps
     double total_time; ///< Final evolution time
     double dt; ///< Time step size
     bool writeTrajectoryDataFiles;  ///< Flag to determine whether or not trajectory data will be written to files during forward simulation */
 
     Vec redgrad; ///< Reduced gradient vector for optimization
-
     OptimTarget* optim_target; ///< Pointer to optimization target specification
     Output* output; ///< Pointer to output handler
+    MasterEq* mastereq; ///< Pointer to master equation solver
 
   public: 
-    bool storeFWD; ///< Flag to store primal states during forward evaluation
-
     TimeStepper(); 
 
     /**
      * @brief Constructor for time stepper.
      *
+     * @param config Configuration parameters from input file
      * @param mastereq_ Pointer to master equation solver
-     * @param ntime_ Number of time steps
-     * @param total_time_ Final evolution time
      * @param output_ Pointer to output handler
-     * @param storeFWD_ Flag to store forward states
+     * @param ninit_local Number of initial conditions local to this processor
      */
-    TimeStepper(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_); 
+    TimeStepper(const Config& config, MasterEq* mastereq_, Output* output_, int ninit_local); 
 
     virtual ~TimeStepper(); 
-
-    /**
-     * @brief Retrieves stored state at a specific time index.
-     *
-     * @param tindex Time step index
-     * @return Vec State vector at the specified time
-     */
-    Vec getState(size_t tindex);
-
-    void setEvalLeakage(bool flag){ eval_leakage = flag; };
-    void setEvalWeightedCost(bool flag, double width){ eval_weightedcost = flag; weightedcost_width = width; };
-    void setEvalDPDM(bool flag){ eval_dpdm = flag; };
-    void setEvalEnergy(bool flag){ eval_energy = flag; };
 
     double getLeakageIntegral(){ return leakage_integral; };
     double getWeightedCostIntegral(){ return weightedcost_integral; };
     double getEnergyIntegral(){ return energy_integral; };
     double getDPDMIntegral(){ return dpdm_integral; };
+    Vec getReducedGradient(){ return redgrad; };
+    void setWriteTrajectoryDataFiles(bool write){ writeTrajectoryDataFiles = write; };
+
+    void setOptimTarget(OptimTarget* optim_target_){ optim_target = optim_target_; };
+
+    /**
+     * @brief Retrieves the final state for a specific local initial condition.
+     *
+     * @param iinit_local Local index of the initial condition
+     * @return Vec Final state vector for the specified initial condition
+     */
+    Vec getFinalState(size_t iinit_local){ return final_states[iinit_local]; }
+
+    /**
+     * @brief Get the smallest timestep size used during timestepping.
+     *
+     * For adaptive timestepping methods, returns the minimum timestep size chosen.
+     * For fixed timestep methods, returns the regular timestep size (dt).
+     *
+     * @return double Smallest timestep size
+     */
+    virtual double getMinTimestepSize() const { return dt; }
 
     /**
      * @brief Solves the ODE forward in time.
@@ -109,10 +113,11 @@ class TimeStepper{
      * This performs the time-stepping to propagate an initial condition to the final time.
      *
      * @param initid Initial condition identifier
+     * @param iinit_local Local index of initial condition for this processor
      * @param rho_t0 Initial state vector
      * @return Vec Final state vector at time T
      */
-    Vec solveODE(int initid, Vec rho_t0);
+    virtual Vec solveODE(int initid, int iinit_local, Vec rho_t0);
 
     /**
      * @brief Solves the adjoint ODE backward in time.
@@ -120,14 +125,14 @@ class TimeStepper{
      * This performs backward time-stepping to backpropagate an adjoint initial condition at 
      * final time (aka a terminal condtion) to time t=0, while accumulating the reduced gradient. 
      *
+     * @param iinit_local Local index of initial condition for this processor
      * @param rho_t0_bar Terminal condition for adjoint state
-     * @param finalstate Final state from forward evolution
      * @param Jbar_leakage Adjoint of leakage integral term
      * @param Jbar_weightedcost Adjoint of weighted cost integral term
      * @param Jbar_dpdm Adjoint of second-order derivative variation
      * @param Jbar_energy Adjoint of energy integral term
      */
-    void solveAdjointODE(Vec rho_t0_bar, Vec finalstate, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy);
+    virtual void solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy);
 
     /**
      * @brief Evaluates leakage into guard levels 
@@ -240,13 +245,12 @@ class ExplEuler : public TimeStepper {
     /**
      * @brief Constructor for explicit Euler scheme.
      *
+     * @param config Configuration parameters from input file
      * @param mastereq_ Pointer to master equation solver
-     * @param ntime_ Number of time steps
-     * @param total_time_ Final evolution time
      * @param output_ Pointer to output handler
-     * @param storeFWD_ Flag to store forward states
+     * @param ninit_local Number of initial conditions local to this processor
      */
-    ExplEuler(MasterEq* mastereq_, int ntime_, double total_time_, Output* output_, bool storeFWD_);
+    ExplEuler(const Config& config, MasterEq* mastereq_, Output* output_, int ninit_local);
 
     ~ExplEuler();
 
@@ -304,15 +308,12 @@ class ImplMidpoint : public TimeStepper {
     /**
      * @brief Constructor for implicit midpoint scheme.
      *
+     * @param config Configuration parameters from input file
      * @param mastereq_ Pointer to master equation solver
-     * @param ntime_ Number of time steps
-     * @param total_time_ Final evolution time
-     * @param linsolve_type_ Linear solver type (GMRES or NEUMANN)
-     * @param linsolve_maxiter_ Maximum linear solver iterations
      * @param output_ Pointer to output handler
-     * @param storeFWD_ Flag to store forward states
+     * @param ninit_local Number of initial conditions local to this processor
      */
-    ImplMidpoint(MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_);
+    ImplMidpoint(const Config& config, MasterEq* mastereq_, Output* output_, int ninit_local);
 
     ~ImplMidpoint();
 
@@ -369,16 +370,13 @@ class CompositionalImplMidpoint : public ImplMidpoint {
     /**
      * @brief Constructor for compositional implicit midpoint scheme.
      *
-     * @param order_ Order of the compositional method
+     * @param config Configuration parameters from input file
      * @param mastereq_ Pointer to master equation solver
-     * @param ntime_ Number of time steps
-     * @param total_time_ Final evolution time
-     * @param linsolve_type_ Linear solver type
-     * @param linsolve_maxiter_ Maximum linear solver iterations
      * @param output_ Pointer to output handler
-     * @param storeFWD_ Flag to store forward states
+     * @param ninit_local Number of initial conditions local to this processor
+     * @param order_ Order of the compositional method
      */
-    CompositionalImplMidpoint(int order_, MasterEq* mastereq_, int ntime_, double total_time_, LinearSolverType linsolve_type_, int linsolve_maxiter_, Output* output_, bool storeFWD_);
+    CompositionalImplMidpoint(const Config& config, MasterEq* mastereq_, Output* output_, int ninit_local, int order_);
 
     ~CompositionalImplMidpoint();
 
@@ -402,4 +400,159 @@ class CompositionalImplMidpoint : public ImplMidpoint {
      * @param compute_gradient Flag to compute gradient
      */
     void evolveBWD(const double tstart, const double tstop, const Vec x_stop, Vec x_adj, Vec grad, bool compute_gradient);
+};
+
+
+/**
+ * @brief Petsc's adaptive timestepper
+ */
+class PetscTS : public TimeStepper {
+  protected:
+    TS ts;      ///< Backward-compatible alias to ts_pool[0].
+    std::vector<TS> ts_pool; ///< One PETSc TS per initial condition.
+    std::vector<Vec> q_pool; ///< One quadrature state vector per TS/initial condition.
+    Vec redgrad_ts; ///< TS-internal gradient vector with PETSc communicator-compatible layout.
+
+    Mat dRHSdp; ///< MatShell for applying derivative of the RHS to control parameters.
+    Mat dIntegralCostdY; ///< Dense matrix for derivative of integral costs wrt state.
+    Mat dIntegralCostdP; ///< Dense matrix for derivative of integral costs wrt parameters.
+    PetscReal dRHSdp_time; ///< Cached time used by the RHSJacobianP MatShell callbacks.
+    double adj_scale_leakage; ///< Per-solve scaling for leakage integral adjoint contribution.
+    double adj_scale_weightedcost; ///< Per-solve scaling for weighted-cost integral adjoint contribution.
+    double adj_scale_energy; ///< Per-solve scaling for energy integral adjoint contribution.
+    double min_timestep_size; ///< Smallest timestep size chosen during adaptive timestepping
+
+  public:
+    /**
+     * @brief Constructor for PetscTS.
+     *
+     * @param config Configuration parameters from input file
+     * @param mastereq_ Pointer to master equation solver
+     * @param output_ Pointer to output handler
+     * @param ninit_local Number of initial conditions local to this processor
+     */
+    PetscTS(const Config& config, MasterEq* mastereq_, Output* output_, int ninit_local);
+    ~PetscTS();
+
+    /**
+     * @brief Overwrites the default time-stepping by calling PETSc's TSSolve.
+     * 
+     * @param initid Initial condition identifier
+     * @param iinit_local Local index of initial condition for this processor
+     * @param rho_t0 Initial state vector
+     * @return Vec Final state vector at time T
+     */
+    Vec solveODE(int initid, int iinit_local, Vec rho_t0) override;
+
+    /** 
+     * @brief Overwrites the default adjoint time-stepping by calling PETSc's TSSolve on the adjoint system.
+     * 
+     * @param iinit_local Local index of initial condition for this processor
+     * @param rho_t0_bar Terminal condition for adjoint state
+     * @param Jbar_leakage Adjoint seed of leakage integral term
+     * @param Jbar_weightedcost Adjoint seed of weighted cost integral term
+     * @param Jbar_dpdm Adjoint seed of second-order derivative variation term
+     * @param Jbar_energy Adjoint seed of energy integral term
+     */
+    void solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) override;
+
+    /** 
+     * @brief PETSc callback to update the RHS matrix for the forward system at time t.
+      *
+      * This is called by PETSc's TS at each time step to get the current system matrix. We use it to update the MasterEq's RHS MatShell with the current time and assemble it, which is needed for time-dependent Hamiltonian terms.
+      * @param ts PETSc TS context
+      * @param t Current time
+      * @param x Current state vector (not used here, but required by PETSc's interface)
+      * @param A Matrix to store the RHS (Jacobian) for the forward system
+      * @param B Matrix to store the mass matrix (not used here, but required by PETSc's interface)
+      * @param ptr Pointer to PetscTS object (self)
+      * @return PetscErrorCode PETSc error code
+     */
+    static PetscErrorCode RHSMatrixUpdate(TS ts, PetscReal t, Vec x, Mat A, Mat B, void *ptr);
+
+    /**
+     * @brief PETSc callback to update the matrix for the derivative of the RHS with respect to control parameters at time t.
+     * 
+     * @param ts PETSc TS context
+     * @param t Current time
+     * @param x Current state vector (not used here, but required by PETSc's interface)
+     * @param A Matrix to store the derivative of the RHS with respect to parameters
+     * @param ptr Pointer to PetscTS object (self)
+     * @return PetscErrorCode PETSc error code
+     */
+    static PetscErrorCode dRHSdpMatrixUpdate(TS ts, PetscReal t, Vec x, Mat A, void *ptr);
+
+    /** 
+     * @brief PETSc callback to compute the action of the derivative of the RHS with respect to parameters on a vector, used during adjoint solves.
+     *  
+     * Computes y = (dRHS/dp)^T x via MasterEq::compute_dRHS_dParams.
+     * 
+     * @param A Matrix representing the derivative of the RHS with respect to parameters
+     * @param x Input vector
+     * @param y Output vector
+     * @return PetscErrorCode PETSc error code
+     */
+    static PetscErrorCode computedRHSdp(Mat A, Vec x, Vec y);
+
+    /** 
+     * @brief PETSc callback to evaluate integral cost functions at time t for the current state x.
+     * 
+     * @param ts PETSc TS context
+     * @param t Current time
+     * @param x Current state vector
+     * @param F Vector to store the evaluated integral cost function values
+     * @param ctx Pointer to PetscTS object (self)
+     * @return PetscErrorCode PETSc error code
+     */
+    static PetscErrorCode IntegralCosts(TS ts, PetscReal t, Vec x, Vec F, void *ctx);
+
+    /** 
+     * @brief PETSc callback to update the matrix for the derivative of integral cost functions with respect to the state at time t.
+     * 
+     * @param ts PETSc TS context
+     * @param t Current time
+     * @param x Current state vector
+     * @param A Matrix to store the derivative of integral cost functions with respect to the state
+     * @param B Matrix to store additional information (not used here, but required by PETSc's interface)
+     * @param ptr Pointer to PetscTS object (self)
+     * @return PetscErrorCode PETSc error code
+     */
+    static PetscErrorCode dIntegralCostdYUpdate(TS ts, PetscReal t, Vec x, Mat A, Mat B, void *ptr);
+
+    /** 
+     * @brief PETSc callback to update the matrix for the derivative of integral cost functions with respect to the parameters at time t.
+     * 
+     * @param ts PETSc TS context
+     * @param t Current time
+     * @param x Current state vector
+     * @param A Matrix to store the derivative of integral cost functions with respect to the parameters
+     * @param ptr Pointer to PetscTS object (self)
+     * @return PetscErrorCode PETSc error code
+     */
+    static PetscErrorCode dIntegralCostdPUpdate(TS ts, PetscReal t, Vec x, Mat A, void *ptr);
+
+    // Callback function during TSSolve to evaluate trajectory data at each accepted time step 
+    /**
+     * @brief PETSc callback to monitor the trajectory during time-stepping and write data to output files.
+      *
+      * This is called by PETSc's TS at each accepted time step. We use it to write trajectory data to output files via the Output handler, and also to track the minimum timestep size chosen by the adaptive time-stepping.
+      * @param ts PETSc TS context
+      * @param step Current time step index
+      * @param time Current time
+      * @param state Current state vector
+      * @param ctx Pointer to PetscTS object (self) 
+      * @return PetscErrorCode PETSc error code
+     */
+    static PetscErrorCode monitorTrajectory(TS ts, PetscInt step, PetscReal time, Vec state, void *ctx);
+
+    // THESE ARE NOT USED. Instead, solveODE and solveAdjointODE overwrites the default time-stepping by calling TSSolve. 
+    void evolveFWD(const double, const double, Vec) override {};
+    void evolveBWD(const double, const double, const Vec, Vec, Vec, bool) override {};
+
+    /**
+     * @brief Get the smallest timestep size chosen during adaptive timestepping.
+     *
+     * @return double Smallest timestep size from the last forward solve
+     */
+    double getMinTimestepSize() const override { return min_timestep_size; }
 };

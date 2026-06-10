@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include "config.hpp"
 #include "config_defaults.hpp"
 #include "util.hpp"
@@ -319,6 +321,7 @@ ConfigInput extractConfigInput(const toml::table& toml, const MPILogger& logger)
   input.nessential = extractScalarOrVector<size_t>(*system_table, "nessential", num_osc);
   input.ntime = extractToml<size_t>(*system_table, "ntime");
   input.dt = extractToml<double>(*system_table, "dt");
+  input.total_time = extractToml<double>(*system_table, "total_time");
   input.transition_frequency = extractScalarOrVector<double>(*system_table, "transition_frequency", num_osc);
   input.selfkerr = extractScalarOrVector<double>(*system_table, "selfkerr", num_osc);
 
@@ -540,9 +543,11 @@ Config::Config(const ConfigInput& input, bool quiet_mode) : logger(MPILogger(qui
 
   validated_config.nessential = validators::vectorField<size_t>(input.nessential, "nessential").hasLength(num_osc).valueOr(validated_config.nlevels);
 
-  validated_config.ntime = validators::field<size_t>(input.ntime, "ntime").positive().value();
+  validated_config.ntime = validators::field<size_t>(input.ntime, "ntime").positive().valueOr(0);
 
-  validated_config.dt = validators::field<double>(input.dt, "dt").positive().value();
+  validated_config.dt = validators::field<double>(input.dt, "dt").positive().valueOr(0.0);
+
+  validated_config.total_time = validators::field<double>(input.total_time, "total_time").positive().valueOr(-1.0);
 
   validated_config.transition_frequency = validators::vectorField<double>(input.transition_frequency, "transition_frequency").hasLength(num_osc).valueOr(std::vector<double>(num_osc, ConfigDefaults::TRANSITION_FREQUENCY));
 
@@ -949,8 +954,11 @@ void Config::printConfig(std::stringstream& log) const {
   // System parameters
   log << "nlevels = " << printVector(validated_config.nlevels) << "\n";
   log << "nessential = " << printVector(validated_config.nessential) << "\n";
-  log << "ntime = " << validated_config.ntime << "\n";
-  log << "dt = " << validated_config.dt << "\n";
+  log << "total_time = " << formatDouble(validated_config.total_time) << "\n";
+  if (validated_config.timestepper_type != TimeStepperType::PETSCTS) {
+    log << "ntime = " << validated_config.ntime << "\n";
+    log << "dt = " << validated_config.dt << "\n";
+  }
   log << "transition_frequency = " << printVector(validated_config.transition_frequency) << "\n";
   log << "selfkerr = " << printVector(validated_config.selfkerr) << "\n";
   log << "crosskerr_coupling = " << toStringCoupling(validated_config.crosskerr_coupling, validated_config.nlevels.size()) << "\n";
@@ -1025,6 +1033,32 @@ void Config::printConfig(std::stringstream& log) const {
 }
 
 void Config::finalize() {
+  // Time domain specification: total_time is required, ntime and dt are optional but must be consistent with total_time if provided. If PetscTimestepper is used, ignore N and dt and print a warning if they were provided. For other timesteppers, either ntime or dt must be provided, and the other will be computed from total_time. If both are provided, check for consistency with total_time and print a warning if they are inconsistent.
+  if (validated_config.total_time < 0.0) {
+    logger.log("# Warning: total_time not provided. Setting total_time to ntime * dt = " + std::to_string(validated_config.ntime * validated_config.dt) + ". It is suggested to provide total_time and remove either ntime or dt from the configuration.\n");
+    validated_config.total_time = validated_config.ntime * validated_config.dt;
+  }
+  if (validated_config.timestepper_type == TimeStepperType::PETSCTS) {
+    if (validated_config.ntime > 0 || validated_config.dt > 0) {
+      logger.log("# Warning: PETSCTS timestepper is adaptive and ignores configuration input for ntime and dt.\n");
+      validated_config.ntime = 0;
+      validated_config.dt = 0.0;
+    }
+  } else { // any timestepper other than PETSCTS
+    if (validated_config.ntime > 0 && validated_config.dt > 0) { // if both are provided, check consistency with total_time.
+      double total_time_from_ntime_dt = validated_config.ntime * validated_config.dt;
+      if (std::abs(total_time_from_ntime_dt - validated_config.total_time) > 1e-6) {
+        throw validators::ValidationError("ntime/dt", "ntime * dt = " + std::to_string(total_time_from_ntime_dt) + " is inconsistent with total_time = " + std::to_string(validated_config.total_time) + ". Provide consistent values for ntime and dt, or provide only one of them and it will be computed from total_time.");
+      }
+    } else if (validated_config.ntime > 0) { // if only ntime is provided, compute dt from total_time
+      validated_config.dt = validated_config.total_time / validated_config.ntime;
+    } else if (validated_config.dt > 0) { // if only dt is provided, compute ntime from total_time
+      validated_config.ntime = static_cast<size_t>(std::round(validated_config.total_time / validated_config.dt));
+    } else {
+      throw validators::ValidationError("time domain", "Either ntime or dt must be provided when using a non-PETSCTS timestepper.");
+    }
+  }
+
   // Hamiltonian file + matrix-free compatibility check
   if ((validated_config.hamiltonian_file_Hsys.has_value() || validated_config.hamiltonian_file_Hc.has_value()) && validated_config.usematfree) {
     logger.log(
@@ -1239,6 +1273,20 @@ void Config::validate() const {
       }
     }
   }
+
+  // Validate supported features for PetscTS timestepper
+  if (validated_config.timestepper_type == TimeStepperType::PETSCTS) {
+    // Gradient of more than one integral penalty term not correct.
+    if (validated_config.runtype != RunType::SIMULATION && validated_config.optim_penalty_energy > 1e-13 && validated_config.optim_penalty_leakage > 1e-13) {
+      throw validators::ValidationError("penalty", "Gradient using Petsc's adaptive timestepping might be wrong if both the energy and the leakage penalties are enabled. It is advised to disable one of them, or use a non-adaptive time-stepper, such as type IMR.");
+    }
+    // Bspline0 parameterization doesn't work for adaptive PETSCTS timestepper.
+    for (size_t i = 0; i < validated_config.control_parameterizations.size(); i++) {
+      if (validated_config.control_parameterizations[i].type == ControlType::BSPLINE0) {
+        throw validators::ValidationError("control_parameterizations", "Control parameterization type BSPLINE0 is not compatible with PETSCTS adaptive timestepper. Use a different parameterization or timestepper.");
+      }
+    }
+  }
 }
 
 size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, DecoherenceType decoherence_type) const {
@@ -1287,7 +1335,6 @@ size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_se
       }
       break;
   }
-  logger.log("Number of initial conditions: " + std::to_string(n_initial_conditions) + "\n");
   return n_initial_conditions;
 }
 

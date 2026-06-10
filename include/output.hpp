@@ -44,7 +44,6 @@ class Output{
 
   public:
     std::string output_dir; ///< Directory path for output data files
-    int output_optimization_stride; ///< Write output files every N optimization iterations
 
   public:
     Output();
@@ -83,18 +82,22 @@ class Output{
     void writeOptimFile(int optim_iter, double objective, double gnorm, double stepsize, double Favg, double cost, double tikh_regul,  double penalty_leakage, double penalty_dpdm, double penalty_energy, double penalty_variation, double penalty_weightedcost);
 
     /**
-     * @brief Writes current control pulses per oscillator and control parameters.
-     *
-     * Called every output_optimization_stride optimization iterations. 
-     * Control pulses are written to `<output_dir>/control<ioscillator>.dat`
-     * Control parameters are written to `<output_dir>/params.dat`
+     * @brief Writes current control parameters to file.
      *
      * @param params Current parameter vector
-     * @param mastereq Pointer to master equation solver
-     * @param ntime Total number of time steps
-     * @param dt Time step size
      */
-    void writeControls(Vec params, MasterEq* mastereq, int ntime, double dt);
+    void writeControlParams(Vec params);
+
+    /**
+     * @brief Writes current control pulses to file.
+     * 
+     * @param params Current parameter vector
+     * @param mastereq Pointer to master equation solver
+     * @param total_time Total evolution time 
+     * @param dt Time step size 
+     * @param min_dt Smallest timestep size chosen during adaptive timestepping (default: equal to dt)
+     */
+    void writeControls(Vec params, MasterEq* mastereq, double total_time, double dt, double min_dt = -1.0);
 
     /**
      * @brief Writes gradient vector for debugging adjoint calculations.

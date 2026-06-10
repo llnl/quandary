@@ -185,13 +185,15 @@ enum class TimeStepperType {
   IMR4,  ///< Implicit Midpoint Rule with 4th order extrapolation
   IMR8,  ///< Implicit Midpoint Rule with 8th order extrapolation
   EE,    ///< Explicit Euler (1st order)
+  PETSCTS ///< PETSc's TS time-stepping solvers
 };
 
 const std::map<std::string, TimeStepperType> TIME_STEPPER_TYPE_MAP = {
     {"imr", TimeStepperType::IMR},
     {"imr4", TimeStepperType::IMR4},
     {"imr8", TimeStepperType::IMR8},
-    {"ee", TimeStepperType::EE}
+    {"ee", TimeStepperType::EE},
+    {"petscts", TimeStepperType::PETSCTS}
 };
 
 /**
