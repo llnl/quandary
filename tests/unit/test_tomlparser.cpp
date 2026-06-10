@@ -640,7 +640,7 @@ TEST_F(TomlParserTest, ControlInitialization_Defaults) {
 
   // Check first oscillator has default settings
   const auto& control_init0 = config.getControlInitializations(0);
-  EXPECT_EQ(control_init0.type, ControlInitializationType::CONSTANT);
+  EXPECT_EQ(control_init0.type, ControlInitializationType::RANDOM);
   EXPECT_DOUBLE_EQ(control_init0.amplitude.value(), 0.0);
 
   // Check second oscillator has given settings
@@ -650,7 +650,7 @@ TEST_F(TomlParserTest, ControlInitialization_Defaults) {
 
   // Check third oscillator has default settings
   const auto& control_init2 = config.getControlInitializations(2);
-  EXPECT_EQ(control_init2.type, ControlInitializationType::CONSTANT);
+  EXPECT_EQ(control_init2.type, ControlInitializationType::RANDOM);
   EXPECT_DOUBLE_EQ(control_init2.amplitude.value(), 0.0);
 }
 
@@ -779,7 +779,7 @@ TEST_F(TomlParserTest, ControlInitialization_DefaultWithOverrides) {
 
   // Check first oscillator has default settings
   const auto& control_init0 = config.getControlInitializations(0);
-  EXPECT_EQ(control_init0.type, ControlInitializationType::CONSTANT);
+  EXPECT_EQ(control_init0.type, ControlInitializationType::RANDOM);
   EXPECT_DOUBLE_EQ(control_init0.amplitude.value(), 0.0);
 
   // Check second oscillator has override settings
@@ -789,7 +789,7 @@ TEST_F(TomlParserTest, ControlInitialization_DefaultWithOverrides) {
 
   // Check third oscillator has default settings
   const auto& control_init2 = config.getControlInitializations(2);
-  EXPECT_EQ(control_init2.type, ControlInitializationType::CONSTANT);
+  EXPECT_EQ(control_init2.type, ControlInitializationType::RANDOM);
   EXPECT_DOUBLE_EQ(control_init2.amplitude.value(), 0.0);
 }
 
