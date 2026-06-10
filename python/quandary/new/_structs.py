@@ -119,3 +119,7 @@ class ConfigInput(_CppConfigInput):
     __setattr__ = _numpy_setattr("ConfigInput")
 
     __repr__ = _make_repr(_CppConfigInput)
+
+    def copy(self):
+        """Create an independent copy preserving the Python wrapper type."""
+        return type(self)(self)
