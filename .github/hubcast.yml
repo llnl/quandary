@@ -5,12 +5,12 @@ Repo:
 
   check_name: gitlab-ci
 
-  check_types: [pipeline, child-pipelines, jobs]
+  check_types: [pipeline, child-pipelines]
 
   delete_closed: true
 
-  sync_drafts: true
+  sync_drafts: false
 
   sync_drafts_msg: true
 
-  create_mr: false
+  create_mr: true
