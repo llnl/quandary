@@ -16,7 +16,7 @@ carrier_frequency = [
   {subsystem = 0, value = [0, -0.2198, -0.10000000000000001]},
   {subsystem = 1, value = [0, -0.22520000000000001, -0.10000000000000001]}
 ]
-initialization = {type = "constant", amplitude = 0.005 }
+initialization = {type = "constant", amplitude = 0.015 }
 amplitude_bound = 0.008
 zero_boundary_condition = false
 

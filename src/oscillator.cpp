@@ -116,8 +116,9 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
 
     } else if (controlinitialization.type == ControlInitializationType::CONSTANT || controlinitialization.type == ControlInitializationType::RANDOM) { 
 
-      // Note, the config amplitude is multiplied by 2pi here!!
+      // Note, the config amplitude is assumed to be in frequency domain, multiply by 2PI here. 
       double initval = controlinitialization.amplitude.value()*2.0*M_PI;
+      initval = initval / getNCarrierfrequencies(); // scale down by number of carrier frequencies
       
       for (size_t f = 0; f<carrier_freq.size(); f++) {
         for (int i=0; i<basisfunctions[iseg]->getNparams(); i++){
