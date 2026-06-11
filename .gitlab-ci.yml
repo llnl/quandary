@@ -149,6 +149,7 @@ performance-test:
     forward:
       pipeline_variables: true
   variables:
+    CI_MACHINE: "performance"
     PERFORMANCE_TESTS: "true"
     PERF_ARTIFACT_DIR: "performance-results"
     PERF_RESULTS_FILE: "*_*-*.cali"
