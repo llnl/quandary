@@ -13,4 +13,4 @@ Repo:
 
   sync_drafts_msg: true
 
-  create_mr: true
+  create_mr: false
