@@ -35,6 +35,7 @@ stages:
 workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - when: never
 
 ###############################################################################
@@ -149,6 +150,7 @@ performance-test:
     forward:
       pipeline_variables: true
   variables:
+    CI_MACHINE: "performance"
     PERFORMANCE_TESTS: "true"
     PERF_ARTIFACT_DIR: "performance-results"
-    PERF_RESULTS_FILE: "*_*-*.cali"
+    PERF_RESULTS_FILE: "benchmark_results.json"
