@@ -81,6 +81,7 @@ from .utils import (  # noqa: F401, E402
 # Setup helpers (factory/configuration functions)
 from .setup_helpers import (  # noqa: F401, E402
     setup_quandary,
+    setup_quandary_fromfile,
     resolve_output_dir,
     set_target,
     set_initial_condition,
@@ -139,6 +140,7 @@ __all__ = [
     "fit_bspline2nd",
     # Setup helpers
     "setup_quandary",
+    "setup_quandary_fromfile",
     "resolve_output_dir",
     "set_target",
     "set_initial_condition",

@@ -688,6 +688,10 @@ Config Config::fromString(const std::string& toml_content, bool quiet_mode) {
   return Config(toml, quiet_mode);
 }
 
+ConfigInput inputFromFile(const std::string& filename, bool quiet_mode) {
+  toml::table toml = toml::parse_file(filename);
+  return extractConfigInput(toml, MPILogger(quiet_mode));
+}
 namespace {
 
 std::string formatDouble(double value) {

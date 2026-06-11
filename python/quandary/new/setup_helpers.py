@@ -14,6 +14,7 @@ from .._quandary_impl import (
     GateType,
     DecoherenceType,
     OutputType,
+    inputFromFile,
 )
 from ._structs import (
     ConfigInput,
@@ -119,6 +120,29 @@ def _write_hamiltonian_files(output_directory, Hsys=None, Hc=None):
         logger.info("Hamiltonian operators written to %s", ", ".join(paths))
 
     return hsys_path, hc_path
+
+def setup_quandary_fromfile(
+    filename: str,
+    quiet: bool = False,
+) -> ConfigInput:
+    """Set up a ConfigInput by parsing an existing TOML configuration file.
+
+    Parameters
+    ----------
+    filename : str
+        Path to the TOML configuration file.
+    quiet : bool, optional
+        Whether to suppress logging output during parsing. Default: False.
+
+    Returns
+    -------
+    ConfigInput
+        ConfigInput object populated from the TOML file (without validation/finalization).
+    """
+    # Make sure file exists:
+    if not os.path.isfile(filename):
+        raise ValueError(f"Configuration file not found: {filename}")
+    return inputFromFile(filename, quiet=quiet)
 
 
 def setup_quandary(

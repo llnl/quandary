@@ -151,10 +151,9 @@ class Config {
   * @brief Constructs a Config from a ConfigInput struct (primary constructor).
    *
    * This is the main constructor that all other constructors delegate to.
-   * It takes a pre-parsed ConfigInput struct where all fields are std::optional, 
-   * validates all fields using the validator chains in config_validators.hpp, applies 
-   * defaults for missing optional fields, and calls finalize()/validate() for cross-field 
-   * consistency checks.
+   * It takes a pre-parsed ConfigInput struct where all fields are std::optional and sets up and stores 
+   * the ValidatedConfig instance by validating each field, applying defaults for missing optional fields, 
+   * and performing cross-field consistency checks.
    *
    * Used directly from Python (nanobind) and programmatic C++ use, where the
    * caller populates a ConfigInput struct with std::optional fields.
@@ -180,7 +179,7 @@ class Config {
   ~Config() = default;
 
   /**
-   * @brief Parses a TOML file and constructs a Config object from the TOML table.
+   * @brief Parses a TOML file and constructs a validated Config object from the TOML table.
    * @param filename Path to the configuration file
    * @param quiet_mode Whether to suppress logging output
    */
@@ -290,3 +289,11 @@ class Config {
 
   void setRandSeed(int rand_seed_);
 };
+
+/**
+ * @brief Parse a TOML file and construct a ConfigInput without validation/finalization.
+ * @param filename Path to the configuration file
+ * @param quiet_mode Whether to suppress logging output
+ */
+ConfigInput inputFromFile(const std::string& filename, bool quiet_mode = false);
+

@@ -287,6 +287,12 @@ NB_MODULE(_quandary_impl, m) {
         return ss.str();
       });
 
+  m.def("inputFromFile", [](const std::string& filename, bool quiet) {
+      return inputFromFile(filename, quiet);
+    },
+    nb::arg("filename"), nb::arg("quiet") = false,
+    "Parse a TOML file and construct a ConfigInput without validation");
+
   // Run function - accepts Config
   m.def("run", [](const Config& config, bool quiet) {
       return runQuandary(config, quiet);
