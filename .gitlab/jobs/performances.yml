@@ -12,10 +12,14 @@ clang_19_1_3_gcc_13_3_1_perf:
 
 process_results:
   extends: .convert_to_gh_benchmark
+  rules:
+    - when: on_success
   dependencies:
     - clang_19_1_3_gcc_13_3_1_perf
 
 report_results:
   extends: .report_to_gh_benchmark
+  rules:
+    - when: on_success
   dependencies:
     - process_results
