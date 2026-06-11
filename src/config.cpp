@@ -957,7 +957,7 @@ void Config::printConfig(std::stringstream& log) const {
   log << "total_time = " << formatDouble(validated_config.total_time) << "\n";
   if (validated_config.timestepper_type != TimeStepperType::PETSCTS) {
     log << "ntime = " << validated_config.ntime << "\n";
-    log << "dt = " << validated_config.dt << "\n";
+    log << "dt = " << formatDouble(validated_config.dt) << "\n";
   }
   log << "transition_frequency = " << printVector(validated_config.transition_frequency) << "\n";
   log << "selfkerr = " << printVector(validated_config.selfkerr) << "\n";
