@@ -59,10 +59,6 @@ include:
 generate-job-lists:
   stage: prerequisites
   tags: [shell, oslic]
-  rules:
-    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
-      when: never
-    - when: on_success
   variables:
     RADIUSS_JOBS_PATH: ".ci-scripts/radiuss-spack-configs/gitlab/radiuss-jobs"
     LOCAL_JOBS_PATH: ".gitlab/jobs"
@@ -77,20 +73,12 @@ generate-job-lists:
 # DANE
 dane-up-check:
   extends: [.dane, .machine-check]
-  rules:
-    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
-      when: never
-    - !reference [.dane, rules]
   variables:
     ASSOCIATED_CHILD_PIPELINE: "dane-build-and-test"
 
 dane-build-and-test:
   stage: build-and-test
   extends: [.dane]
-  rules:
-    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
-      when: never
-    - !reference [.dane, rules]
   needs: [dane-up-check, generate-job-lists]
   trigger:
     include:
@@ -111,20 +99,12 @@ dane-build-and-test:
 # TUOLUMNE
 tuolumne-up-check:
   extends: [.tuolumne, .machine-check]
-  rules:
-    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
-      when: never
-    - !reference [.tuolumne, rules]
   variables:
     ASSOCIATED_CHILD_PIPELINE: "tuolumne-build-and-test"
 
 tuolumne-build-and-test:
   stage: build-and-test
   extends: [.tuolumne]
-  rules:
-    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
-      when: never
-    - !reference [.tuolumne, rules]
   needs: [tuolumne-up-check, generate-job-lists]
   trigger:
     include:
@@ -145,10 +125,6 @@ tuolumne-build-and-test:
 # PERFORMANCE
 performance-test:
   stage: performance-measurements
-  rules:
-    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
-      when: never
-    - when: on_success
   trigger:
     include:
       - local: '.gitlab/custom-jobs.yml'
