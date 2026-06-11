@@ -152,4 +152,4 @@ performance-test:
     CI_MACHINE: "performance"
     PERFORMANCE_TESTS: "true"
     PERF_ARTIFACT_DIR: "performance-results"
-    PERF_RESULTS_FILE: "*_*-*.cali"
+    PERF_RESULTS_FILE: "benchmark_results.json"
