@@ -298,7 +298,7 @@ def test_example_qft(tmp_path, request):
                 val = 0.0
             Jkl.append(val)
 
-    T = 100
+    T = 100.0
     favg = sum(freq01)/len(freq01)
     rotfreq = favg*np.ones(len(freq01))
     unitary = get_QFT_gate(np.prod(Ne))
@@ -322,7 +322,7 @@ def test_example_qft(tmp_path, request):
         dipole_coupling=Jkl,
         rotation_frequency=list(rotfreq),
         control_amplitude_bound=[maxctrl_MHz/1000]*nqubits,
-        final_time=T,
+        total_time=T,
         Pmin=Pmin,
         spline_knot_spacing=spline_knot_spacing,
         control_zero_boundary_condition=False,  # Old default: new default is True

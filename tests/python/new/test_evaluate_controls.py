@@ -14,12 +14,11 @@ def test_evaluate_controls_updates_timestep(tmp_path, request):
     setup = setup_quandary(
         nessential=[2],
         transition_frequency=[4.0],
-        final_time=T,
+        total_time=T,
         output_directory=datadir_path,
     )
 
     original_dt = setup.dt
-    original_ntime = setup.ntime
 
     # Test evaluate_controls with different sampling rate
     points_per_ns = 2
@@ -34,4 +33,3 @@ def test_evaluate_controls_updates_timestep(tmp_path, request):
 
     # Verify original setup is unchanged (new interface copies setup internally)
     assert setup.dt == approx(original_dt)
-    assert setup.ntime == original_ntime

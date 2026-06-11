@@ -16,7 +16,7 @@ TRANSITION_FREQUENCY = [4.10595]
 SELFKERR = [0.2198]
 ROTATION_FREQUENCY = [4.10595]
 FINAL_TIME = 10.0
-NTIME = 100
+DT = FINAL_TIME / 100
 
 
 @pytest.fixture
@@ -27,8 +27,8 @@ def standard_setup(tmp_path):
         transition_frequency=TRANSITION_FREQUENCY,
         selfkerr=SELFKERR,
         rotation_frequency=ROTATION_FREQUENCY,
-        final_time=FINAL_TIME,
-        ntime=NTIME,
+        total_time=FINAL_TIME,
+        dt=DT,
         output_directory=os.path.join(tmp_path, "std"),
     )
 
@@ -56,8 +56,8 @@ def test_custom_hsys_and_hc(tmp_path, standard_setup, standard_hamiltonians):
         transition_frequency=TRANSITION_FREQUENCY,
         selfkerr=SELFKERR,
         rotation_frequency=ROTATION_FREQUENCY,
-        final_time=FINAL_TIME,
-        ntime=NTIME,
+        total_time=FINAL_TIME,
+        dt=DT,
         hamiltonian_Hsys=Hsys,
         hamiltonian_Hc=Hc,
         output_directory=os.path.join(tmp_path, "custom_both"),
@@ -81,8 +81,8 @@ def test_custom_hsys_only(tmp_path, standard_setup, standard_hamiltonians):
         transition_frequency=TRANSITION_FREQUENCY,
         selfkerr=SELFKERR,
         rotation_frequency=ROTATION_FREQUENCY,
-        final_time=FINAL_TIME,
-        ntime=NTIME,
+        total_time=FINAL_TIME,
+        dt=DT,
         hamiltonian_Hsys=Hsys,
         output_directory=os.path.join(tmp_path, "custom_hsys"),
     )
@@ -105,8 +105,8 @@ def test_custom_hc_only(tmp_path, standard_setup, standard_hamiltonians):
         transition_frequency=TRANSITION_FREQUENCY,
         selfkerr=SELFKERR,
         rotation_frequency=ROTATION_FREQUENCY,
-        final_time=FINAL_TIME,
-        ntime=NTIME,
+        total_time=FINAL_TIME,
+        dt=DT,
         hamiltonian_Hc=Hc,
         output_directory=os.path.join(tmp_path, "custom_hc"),
     )
@@ -130,8 +130,8 @@ def test_hamiltonian_files_written(tmp_path, standard_hamiltonians):
         transition_frequency=TRANSITION_FREQUENCY,
         selfkerr=SELFKERR,
         rotation_frequency=ROTATION_FREQUENCY,
-        final_time=FINAL_TIME,
-        ntime=NTIME,
+        total_time=FINAL_TIME,
+        dt=DT,
         hamiltonian_Hsys=Hsys,
         hamiltonian_Hc=Hc,
         output_directory=outdir,

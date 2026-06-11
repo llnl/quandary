@@ -134,12 +134,12 @@ def _configure_run(
 
         # Fit control parameters to either Bspline 0-th order or Bspline 2nd order. 
         if control_type == ControlType.BSPLINE0:
-            nsplines = [max(2, config_input.ntime + 1) for _ in range(len(config_input.nessential))]
+            nsteps = pt0.shape[1]
+            nsplines = [max(2, nsteps + 1) for _ in range(len(config_input.nessential))]
             pcof = fit_bspline0(
                 pt0=pt0, qt0=qt0,
                 nsplines=nsplines[0],
                 spline_knot_spacing=config_input.dt,
-                ntime=config_input.ntime, 
                 dt=config_input.dt,
                 nessential=config_input.nessential,
             )
@@ -150,12 +150,12 @@ def _configure_run(
             if len(existing_control_params) == 0:
                 # Default to spline_knot_spacing of 3ns.
                 spline_knot_spacing = 3.0
-                computed_nspline = int(np.max([np.ceil(config_input.ntime * config_input.dt / spline_knot_spacing + 2), 5]))
+                computed_nspline = int(np.max([np.ceil(config_input.total_time / spline_knot_spacing + 2), 5]))
                 nsplines = [computed_nspline for _ in range(n_osc)]
             else:
                 nsplines = [param.nspline for param in existing_control_params]
             pcof = fit_bspline2nd(0.0, 
-                                  config_input.ntime*config_input.dt, 
+                                  config_input.total_time, 
                                   pt0, qt0, 
                                   nsplines, 
                                   carrier_frequencies=config_input.carrier_frequencies,
@@ -619,9 +619,9 @@ def evaluate_controls(
     )
 
     # Recalculate time grid: keep total time, change resolution
-    total_time = configured.ntime * configured.dt
-    configured.ntime = int(np.floor(total_time * points_per_ns))
-    configured.dt = total_time / configured.ntime
+    total_time = configured.total_time
+    nsteps = int(np.floor(total_time * points_per_ns))
+    configured.dt = total_time / nsteps
 
     # Run or dry run, return Results struct
     if dry_run:

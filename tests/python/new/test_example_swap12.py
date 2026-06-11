@@ -136,7 +136,7 @@ def test_example_swap12(tmp_path, request):
     setup = setup_quandary(
         nessential=[2, 2],
         transition_frequency=freq01,
-        final_time=T,
+        total_time=T,
         dipole_coupling=Jkl,
         rotation_frequency=list(rotfreq),
         control_amplitude_bound=list(maxctrl_MHz/1000),

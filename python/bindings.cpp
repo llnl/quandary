@@ -150,7 +150,6 @@ NB_MODULE(_quandary_impl, m) {
     "Example:\n"
     "    config = ConfigInput()\n"
     "    config.nlevels = [2, 2]\n"
-    "    config.ntime = 100\n"
     "    config.dt = 0.01\n"
     "    results = simulate(config)\n\n"
     "Note: Use .copy() to create independent copies of ConfigInput objects.")
@@ -164,8 +163,8 @@ NB_MODULE(_quandary_impl, m) {
     // System parameters
     .def_rw("nlevels", &ConfigInput::nlevels, "(list[int]) Number of levels per subsystem")
     .def_rw("nessential", &ConfigInput::nessential, "(list[int]) Number of essential levels per subsystem (default: same as nlevels)")
-    .def_rw("ntime", &ConfigInput::ntime, "(int) Number of time steps")
     .def_rw("dt", &ConfigInput::dt, "(float) Time step size [ns]")
+    .def_rw("total_time", &ConfigInput::total_time, "(float) Total simulation time [ns]")
     .def_rw("transition_frequency", &ConfigInput::transition_frequency, "(list[float]) Fundamental transition frequencies [GHz]")
     .def_rw("selfkerr", &ConfigInput::selfkerr, "(list[float]) Self-Kerr frequencies [GHz]")
     .def_rw("crosskerr_coupling", &ConfigInput::crosskerr_coupling, "(list[float]) Cross-Kerr coupling frequencies [GHz]")
@@ -243,8 +242,6 @@ NB_MODULE(_quandary_impl, m) {
     .def_prop_ro("num_osc", &Config::getNumOsc,
       "Number of oscillators")
     // Time configuration
-    .def_prop_ro("ntime", &Config::getNTime,
-      "Number of time steps")
     .def_prop_ro("dt", &Config::getDt,
       "Time step size [ns]")
     .def_prop_ro("total_time", &Config::getTotalTime,

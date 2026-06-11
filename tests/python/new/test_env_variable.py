@@ -16,8 +16,8 @@ def run_optimize(datadir):
         nessential=[2],
         transition_frequency=[4.0],
         selfkerr=[0.2],
-        final_time=1.0,
-        ntime=10,
+        total_time=1.0,
+        dt=0.1,
         spline_order=0,
         output_directory=datadir,
     )
@@ -35,8 +35,8 @@ def run_simulate(datadir):
         nessential=[2],
         transition_frequency=[4.0],
         selfkerr=[0.2],
-        final_time=1.0,
-        ntime=10,
+        total_time=1.0,
+        dt=0.1,
         spline_order=0,
         output_directory=datadir,
     )

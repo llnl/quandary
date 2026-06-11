@@ -49,7 +49,7 @@ def state_infidelity(psi, phi):
     return 1.0 - np.abs(np.vdot(psi, phi))**2
 
 
-def fit_bspline0(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, ntime, dt, nessential):
+def fit_bspline0(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, dt, nessential):
     """Fit 0-th order Bspline (piecewise constant) to given control pulses. 
 
     Parameters
@@ -64,8 +64,6 @@ def fit_bspline0(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, ntime, dt
         Number of B-spline basis functions.
     spline_knot_spacing : float
         Spacing between B-spline knots [ns].
-    ntime : int
-        Number of time steps.
     dt : float
         Time step size [ns].
     nessential : sequence of int
@@ -339,16 +337,16 @@ def fit_bspline2nd(
 
 
 
-def estimate_timesteps(*, final_time=1.0, Hsys=None, Hc_re=None, Hc_im=None, control_amplitude_bound=None, Pmin=40):
-    """Estimate the number of time steps based on eigenvalues of Hamiltonians.
+def estimate_timestep_size(*, Hsys=None, Hc_re=None, Hc_im=None, control_amplitude_bound=None, Pmin=40):
+    """Estimate the time steps size based on largest eigenvalue of the Hamiltonians.
 
-    The estimate does not account for quickly varying signals or a large number
+    The estimate does not account for quickly varying control signals or a large number
     of splines. Verify that at least 2-3 time steps per spline are present to
     resolve the control function.
 
     Parameters
     ----------
-    final_time : float
+    total_time : float
         Total simulation time [ns]. Default: 1.0.
     Hsys : ndarray
         System Hamiltonian [rad/ns].
@@ -366,8 +364,8 @@ def estimate_timesteps(*, final_time=1.0, Hsys=None, Hc_re=None, Hc_im=None, con
 
     Returns
     -------
-    ntime : int
-        Estimated number of time steps.
+    suggested_dt : float
+        Estimated timestep size [ns].
     """
     if Hsys is None:
         Hsys = []
@@ -400,9 +398,9 @@ def estimate_timesteps(*, final_time=1.0, Hsys=None, Hc_re=None, Hc_im=None, con
     maxeig = np.max(np.abs(eigenvalues))
     ctrl_fac = 1.0
     samplerate = ctrl_fac * maxeig * Pmin / (2 * np.pi)
-    ntime = int(np.ceil(final_time * samplerate))
+    suggested_dt = 1.0 / samplerate
 
-    return ntime
+    return suggested_dt
 
 
 def timestep_richardson_est(config_input, pcof, tol=1e-8, order=2, **kwargs):
@@ -448,7 +446,6 @@ def timestep_richardson_est(config_input, pcof, tol=1e-8, order=2, **kwargs):
     dts = []
     for i in range(10):
         dt_org = config_input.dt
-        config_input.ntime = config_input.ntime * m
         config_input.dt = config_input.dt / m
 
         results = simulate(config_input, pcof=pcof, **kwargs)
@@ -462,7 +459,7 @@ def timestep_richardson_est(config_input, pcof, tol=1e-8, order=2, **kwargs):
         logger.info(f"  i={i}, dt={dt_org:.6f}: err_J={err_J:.3e}, err_u={err_u:.3e}")
 
         if err_J < tol:
-            logger.info(f"  Tolerance reached: ntime={config_input.ntime}, dt={config_input.dt:.6f}")
+            logger.info(f"  Tolerance reached for dt={config_input.dt:.6f}")
             break
 
         Jcurr = results.infidelity

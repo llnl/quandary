@@ -189,7 +189,7 @@ def test_example_spinchain(tmp_path, request):
         dipole_coupling=Jkl,
         carrier_frequency=[[0.0] for _ in range(N)],
         initial_condition=initial_condition,
-        final_time=T,
+        total_time=T,
         dt=dT,
         output_directory=datadir_path,
     )
@@ -201,7 +201,7 @@ def test_example_spinchain(tmp_path, request):
     # Run forward simulation with explicit zero controls.
     # Passing pt0/qt0 ensures control_initializations is set so the C++ outputs
     # control*.dat files (needed by assert_results_equal to check len(pt) == n_osc).
-    ntime = setup.ntime
+    ntime = int(setup.total_time / setup.dt)
     pt0 = [np.zeros(ntime + 1) for _ in range(N)]
     qt0 = [np.zeros(ntime + 1) for _ in range(N)]
     results = simulate(setup, pt0=pt0, qt0=qt0, quiet=True)

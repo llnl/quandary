@@ -72,7 +72,7 @@ from .visualization import (  # noqa: F401, E402
 from .utils import (  # noqa: F401, E402
     gate_infidelity,
     state_infidelity,
-    estimate_timesteps,
+    estimate_timestep_size,
     timestep_richardson_est,
     fit_bspline0,
     fit_bspline2nd,
@@ -126,7 +126,7 @@ __all__ = [
     "hamiltonians",
     "get_resonances",
     # Time estimation
-    "estimate_timesteps",
+    "estimate_timestep_size",
     "timestep_richardson_est",
     # Visualization
     "plot_pulse",

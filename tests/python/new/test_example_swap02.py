@@ -81,7 +81,7 @@ def test_example_swap02(tmp_path, request):
         transition_frequency=freq01,
         selfkerr=selfkerr,
         control_amplitude_bound=[maxctrl_MHz / 1000],
-        final_time=T,
+        total_time=T,
         spline_knot_spacing=3.0,               # Match old default (new default: 10 splines)
         control_zero_boundary_condition=False,  # Match old default (new default: True)
         output_directory=datadir_path,

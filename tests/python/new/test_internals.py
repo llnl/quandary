@@ -12,8 +12,8 @@ def _make_setup(output_directory="./run_dir"):
         nessential=[2],
         transition_frequency=[4.0],
         selfkerr=[0.2],
-        final_time=1.0,
-        ntime=10,
+        total_time=1.0,
+        dt=0.1,
         spline_order=0,
         output_directory=output_directory,
     )
@@ -23,14 +23,14 @@ def test_config_input_copy_preserves_wrapper_type():
     """ConfigInput.copy() keeps Python wrapper behavior while copying values."""
     setup = ConfigInput()
     setup.nlevels = np.array([2, 3])
-    setup.ntime = 10
+    setup.dt = 0.1
 
     copied = setup.copy()
 
     assert type(copied) is ConfigInput
     assert copied is not setup
     assert copied.nlevels == [2, 3]
-    assert copied.ntime == 10
+    assert copied.dt == 0.1
     assert repr(copied).startswith("ConfigInput(")
 
     setup.nlevels = [4, 5]
@@ -86,7 +86,7 @@ class TestDryRun:
     def test_dry_run_does_not_mutate_setup(self, tmp_path):
         """The original setup object is not modified by a dry_run call."""
         setup = _make_setup(str(tmp_path / "orig"))
-        original_ntime = setup.ntime
+        original_dt = setup.dt
         original_output_dir = setup.output_directory
 
         optimize(
@@ -96,7 +96,7 @@ class TestDryRun:
             quiet=True,
         )
 
-        assert setup.ntime == original_ntime
+        assert setup.dt == original_dt
         assert setup.output_directory == original_output_dir
         # Runtype should not have been set on the original
         assert setup.runtype is None

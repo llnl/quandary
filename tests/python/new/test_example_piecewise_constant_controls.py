@@ -143,7 +143,7 @@ def test_example_piecewise_constant_controls(tmp_path, request):
     setup = setup_quandary(
         nessential=[2, 2],
         transition_frequency=freq01,
-        final_time=T,
+        total_time=T,
         dipole_coupling=Jkl,
         rotation_frequency=list(rotfreq),
         spline_order=spline_order,

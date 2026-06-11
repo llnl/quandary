@@ -69,7 +69,7 @@ def test_example_state_to_state(tmp_path, request):
         selfkerr=selfkerr,
         control_amplitude_bound=[maxctrl_MHz/1000],
         initial_condition=initialcondition,
-        final_time=T,
+        total_time=T,
         spline_knot_spacing=3.0,               # Old default: new default is 10 splines
         control_zero_boundary_condition=False,  # Old default: new default is True
         output_directory=datadir_path,

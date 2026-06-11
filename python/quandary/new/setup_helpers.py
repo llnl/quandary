@@ -23,7 +23,7 @@ from ._structs import (
     ControlParameterizationSettings,
 )
 from .quantum_operators import hamiltonians, get_resonances
-from .utils import fit_bspline0, fit_bspline2nd, estimate_timesteps
+from .utils import fit_bspline0, fit_bspline2nd, estimate_timestep_size
 
 logger = logging.getLogger(__name__)
 
@@ -147,10 +147,9 @@ def setup_quandary_fromfile(
 
 def setup_quandary(
     nessential: Sequence[int],
-    final_time: float,
-    transition_frequency: Optional[Sequence[float]] = None,
-    ntime: Optional[int] = None,
+    total_time: float,
     dt: Optional[float] = None,
+    transition_frequency: Optional[Sequence[float]] = None,
     selfkerr: Optional[Sequence[float]] = None,
     nguard: Optional[Sequence[int]] = None,
     rotation_frequency: Optional[Sequence[float]] = None,
@@ -176,10 +175,8 @@ def setup_quandary(
 
     Automatically computes Hamiltonians, timesteps, and carrier frequencies.
 
-    **Time discretization:** specify at most 2 of (final_time, ntime, dt). If
-    all 3 are given they must satisfy ``final_time == ntime * dt``. When ntime
-    and dt are both omitted, ntime is auto-computed from the Hamiltonian
-    eigenvalues.
+    **Time discretization:** total_time is required, timestep size (dt) is optional, 
+    and will be computed from Hamiltonian eigenvalues if omitted. 
 
     **Spline configuration:** specify at most one of (nspline, spline_knot_spacing).
     If neither is given the C++ default (10 splines) is used.
@@ -188,15 +185,13 @@ def setup_quandary(
     ----------
     nessential : sequence of int
         Number of essential energy levels per qubit.
-    final_time : float
+    total_time : float
         Pulse duration [ns].
+    dt : float, optional
+        Timestep size [ns]. Auto-computed if omitted.
     transition_frequency : sequence of float, optional
         01-transition frequencies [GHz] per qubit. Default: zeros (suitable
         for custom Hamiltonians).
-    ntime : int, optional
-        Number of timesteps. Auto-computed from the Hamiltonian if omitted.
-    dt : float, optional
-        Timestep size [ns]. Auto-computed if omitted.
     selfkerr : sequence of float, optional
         Anharmonicities [GHz] per qubit. Default: zeros.
     nguard : sequence of int, optional
@@ -227,7 +222,7 @@ def setup_quandary(
         Gate rotation frequencies [GHz] per qubit.
     Pmin : int
         Minimum time steps per period of the fastest oscillation (used for
-        auto-computing ntime). Default: 150.
+        auto-computing dt). Default: 150.
     control_amplitude_bound : sequence of float, optional
         Maximum control amplitudes [GHz] per qubit. Sets optimization bounds.
         Default: unbounded.
@@ -235,7 +230,7 @@ def setup_quandary(
         Number of B-spline basis functions per oscillator. Cannot be combined
         with spline_knot_spacing.
     spline_knot_spacing : float, optional
-        Spacing between B-spline knots [ns]. Derives nspline from final_time
+        Spacing between B-spline knots [ns]. Derives nspline from total_time
         and this spacing. Cannot be combined with nspline.
     spline_order : int, optional
         B-spline order: 2 (quadratic, default) or 0 (piecewise constant).
@@ -264,13 +259,13 @@ def setup_quandary(
     Examples
     --------
     >>> # Default: BASIS (all basis states)
-    >>> setup = setup_quandary(nessential=[3], transition_frequency=[4.1], final_time=100)
+    >>> setup = setup_quandary(nessential=[3], transition_frequency=[4.1], total_time=100)
     >>> # Product state |001>:
     >>> setup = setup_quandary(nessential=[2, 2, 2], transition_frequency=[4.1, 4.5, 4.9],
-    ...                        final_time=100, initial_levels=[0, 0, 1])
+    ...                        total_time=100, initial_levels=[0, 0, 1])
     >>> # Superposition (|0> + |1>)/sqrt(2):
     >>> setup = setup_quandary(nessential=[2], transition_frequency=[4.1],
-    ...                        final_time=100, initial_state=[1/np.sqrt(2), 1/np.sqrt(2)])
+    ...                        total_time=100, initial_state=[1/np.sqrt(2), 1/np.sqrt(2)])
     """
     # Set defaults
     nqubits = len(nessential)
@@ -328,35 +323,19 @@ def setup_quandary(
             Hc_re = [np.asarray(h, dtype=complex).real for h in hamiltonian_Hc]
             Hc_im = [np.asarray(h, dtype=complex).imag for h in hamiltonian_Hc]
 
-    # Handle time discretization: final_time = ntime * dt
-    # User should specify at most 2 of the 3 parameters, unless they are consistent.
-    if ntime is None and dt is None:
-        # Neither specified - auto-compute ntime from Hamiltonian
-        ntime = estimate_timesteps(
-            final_time=final_time,
+    # Handle time discretization
+    if dt is None:
+        # Auto-compute dt from Hamiltonian eigenvalues
+        dt_est = estimate_timestep_size(
             Hsys=Hsys,
             Hc_re=Hc_re,
             Hc_im=Hc_im,
             control_amplitude_bound=bounds_for_estimation,
             Pmin=Pmin,
         )
-        dt = final_time / ntime
-    elif ntime is None and dt is not None:
-        # Only dt specified - compute ntime
-        ntime = int(np.ceil(final_time / dt))
-    elif ntime is not None and dt is None:
-        # Only ntime specified - compute dt
-        dt = final_time / ntime
-    else:
-        # Both specified - check consistency
-        assert ntime is not None and dt is not None
-        computed_final_time = ntime * dt
-        if abs(computed_final_time - final_time) > 1e-10:
-            raise ValueError(
-                f"Inconsistent time parameters: final_time={final_time}, "
-                f"ntime={ntime}, dt={dt}. Must satisfy final_time = ntime * dt. "
-                f"Got ntime * dt = {computed_final_time}."
-            )
+        # Make sure that total_time is an integer multiple of dt to avoid issues with the last timestep.
+        k = np.ceil(total_time / dt_est)
+        dt = total_time / k
 
     # Compute carrier frequencies (skip if user provided them)
     if carrier_frequency is None:
@@ -393,11 +372,11 @@ def setup_quandary(
     if spline_knot_spacing is not None:
         order = spline_order if spline_order is not None else 2
         if order == 0:
-            computed_nspline = int(np.max([np.rint(final_time / spline_knot_spacing + 1), 2]))
+            computed_nspline = int(np.max([np.rint(total_time/ spline_knot_spacing + 1), 2]))
         else:
             enforce_bc = control_zero_boundary_condition if control_zero_boundary_condition is not None else True
             minspline = 5 if enforce_bc else 3
-            computed_nspline = int(np.max([np.ceil(final_time / spline_knot_spacing + 2), minspline]))
+            computed_nspline = int(np.max([np.ceil(total_time/ spline_knot_spacing + 2), minspline]))
         if nspline is not None and nspline != computed_nspline:
             raise ValueError(
                 f"Inconsistent spline parameters: nspline={nspline} but "
@@ -406,8 +385,7 @@ def setup_quandary(
         nspline = computed_nspline
 
     logger.info("Configuration computed:")
-    logger.info(f"  Total time: {ntime * dt:.6f} ns")
-    logger.info(f"  Time steps: {ntime}")
+    logger.info(f"  Total time: {total_time:.6f} ns")
     logger.info(f"  dt: {dt:.6f} ns")
     logger.info(f"  Carrier frequencies: {carrier_frequency}")
     if nspline is not None:
@@ -417,7 +395,7 @@ def setup_quandary(
     config_input = ConfigInput()
     config_input.nlevels = nlevels
     config_input.nessential = nessential
-    config_input.ntime = ntime
+    config_input.total_time = total_time
     config_input.dt = dt
     config_input.transition_frequency = transition_frequency
     config_input.rotation_frequency = rotation_frequency

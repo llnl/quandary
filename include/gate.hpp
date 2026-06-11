@@ -30,7 +30,7 @@ class Gate {
     PetscInt dim_ess; ///< Dimension of target gate matrix (non-vectorized), essential levels only.
     PetscInt dim_rho; ///< Dimension of system matrix rho (non-vectorized), all levels, N.
 
-    double final_time; ///< Final time T. Time of gate rotation.
+    double total_time; ///< Final time T. Time of gate rotation.
     std::vector<double> gate_rot_freq; ///< Frequencies of gate rotation (rad/time). Default: 0.0.
 
     DecoherenceType decoherence_type; ///< Type of Lindblad operators for open system dynamics.

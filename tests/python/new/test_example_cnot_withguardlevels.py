@@ -144,7 +144,7 @@ def test_example_cnot_withguardlevels(tmp_path, request):
         selfkerr=selfkerr,
         dipole_coupling=Jkl,
         rotation_frequency=list(rotfreq),
-        final_time=T,
+        total_time=T,
         spline_order=spline_order,
         spline_knot_spacing=spline_knot_spacing,
         output_directory=datadir_path,

@@ -135,7 +135,7 @@ def test_example_cnot_const_init_ctrl(tmp_path, request):
     setup = setup_quandary(
         nessential=[2, 2],
         transition_frequency=freq01,
-        final_time=T,
+        total_time=T,
         dipole_coupling=[0.005],
         rotation_frequency=list(rotfreq),
         spline_knot_spacing=3.0,               # Old default: new default is 10 splines

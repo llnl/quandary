@@ -10,8 +10,8 @@ def _make_setup(**overrides):
         nessential=[2],
         transition_frequency=[4.0],
         selfkerr=[0.2],
-        final_time=1.0,
-        ntime=10,
+        total_time=1.0,
+        dt=0.1,
         spline_order=0,
     )
     defaults.update(overrides)
@@ -24,8 +24,8 @@ def _make_2q_setup(**overrides):
         nessential=[2, 2],
         transition_frequency=[4.0, 4.5],
         selfkerr=[0.2, 0.2],
-        final_time=1.0,
-        ntime=10,
+        total_time=1.0,
+        dt=0.1,
         spline_order=0,
     )
     defaults.update(overrides)
@@ -113,8 +113,8 @@ class TestCorrectSizeAccepted:
         setup = setup_quandary(
             nessential=[2],
             transition_frequency=[4.0],
-            final_time=1.0,
-            ntime=10,
+            total_time=1.0,
+            dt=0.1,
         )
         config = Config(setup, True)
         assert config is not None
