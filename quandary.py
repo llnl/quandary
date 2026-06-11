@@ -764,12 +764,12 @@ class Quandary:
         else:
             init_type = "random" if self.randomize_init_ctrl else "constant"
             if len(self.initctrl_MHz) <= 1:
-                initamp = self.initctrl_MHz[0] / 1000.0 / np.sqrt(2) / len(self.carrier_frequency[0])
+                initamp = self.initctrl_MHz[0] / 1000.0  # scale to GHz
                 lines.append(f"initialization = {{ type = {_toml_str(init_type)}, amplitude = {initamp} }}")
             else:
                 lines.append("initialization = [")
                 for iosc in range(len(self.initctrl_MHz)):
-                    initamp = self.initctrl_MHz[iosc] / 1000.0 / np.sqrt(2) / len(self.carrier_frequency[iosc])
+                    initamp = self.initctrl_MHz[iosc] / 1000.0  # scale to GHz
                     lines.append(f"  {{ subsystem = {iosc}, type = {_toml_str(init_type)}, amplitude = {initamp} }},")
                 lines.append("]")
 

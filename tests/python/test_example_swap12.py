@@ -140,6 +140,7 @@ def test_example_swap12(mpi_exec, tmp_path, request):
         T=T,
         maxctrl_MHz=maxctrl_MHz,
         targetgate=unitary,
+        initctrl_MHz=10.0 /np.sqrt(2),
         verbose=False,
         rand_seed=1234,
     )

@@ -149,6 +149,7 @@ def test_example_piecewise_constant_controls(mpi_exec, tmp_path, request):
         verbose=False,
         rand_seed=1234,
         spline_order=spline_order,
+        initctrl_MHz=10.0 /np.sqrt(2),
         nsplines=nsplines,
         gamma_variation=gamma_variation,
         control_enforce_BC=control_enforce_BC
