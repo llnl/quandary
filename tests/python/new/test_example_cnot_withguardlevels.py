@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import pytest
-from quandary.new import setup_quandary, optimize
+from quandary.new import create_config, optimize
 from utils import assert_results_equal
 
 pytestmark = pytest.mark.regression
@@ -137,7 +137,7 @@ def test_example_cnot_withguardlevels(tmp_path, request):
     unitary[2, 3] = 1.0
     unitary[3, 2] = 1.0
 
-    setup = setup_quandary(
+    setup = create_config(
         nessential=Ne,
         nguard=Ng,
         transition_frequency=freq01,

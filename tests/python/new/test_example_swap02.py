@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import pytest
-from quandary.new import setup_quandary, optimize
+from quandary.new import create_config, optimize
 from utils import assert_results_equal
 
 pytestmark = pytest.mark.regression
@@ -75,7 +75,7 @@ def test_example_swap02(tmp_path, request):
     n_osc = 1
     n_levels = 3
 
-    setup = setup_quandary(
+    setup = create_config(
         nessential=Ne,
         nguard=Ng,
         transition_frequency=freq01,

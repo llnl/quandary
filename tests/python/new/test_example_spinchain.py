@@ -1,7 +1,7 @@
 import os
 import pytest
 import numpy as np
-from quandary.new import setup_quandary, simulate, InitialConditionSettings, InitialConditionType
+from quandary.new import create_config, simulate, InitialConditionSettings, InitialConditionType
 from utils import assert_results_equal
 
 # Mark all tests in this file as regression tests
@@ -180,7 +180,7 @@ def test_example_spinchain(tmp_path, request):
     initial_condition.levels = initlevels
 
 
-    setup = setup_quandary(
+    setup = create_config(
         nessential=[2]*N,
         nguard=[0]*N,
         transition_frequency=list(freq01),

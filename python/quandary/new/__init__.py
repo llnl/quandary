@@ -80,12 +80,12 @@ from .utils import (  # noqa: F401, E402
 
 # Setup helpers (factory/configuration functions)
 from .setup_helpers import (  # noqa: F401, E402
-    setup_quandary,
-    setup_quandary_fromfile,
+    create_config,
+    load_config_input,
     resolve_output_dir,
     set_target,
     set_initial_condition,
-    set_control_pulse,
+    set_controls,
 )
 
 # Define public API
@@ -140,10 +140,10 @@ __all__ = [
     "fit_bspline0",
     "fit_bspline2nd",
     # Setup helpers
-    "setup_quandary",
-    "setup_quandary_fromfile",
+    "create_config",
+    "load_config_input",
     "resolve_output_dir",
     "set_target",
-    "set_control_pulse",
+    "set_controls",
     "set_initial_condition",
 ]

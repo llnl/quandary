@@ -1,7 +1,7 @@
 import numpy as np
 import os
 from pytest import approx
-from quandary.new import setup_quandary, evaluate_controls
+from quandary.new import create_config, evaluate_controls
 
 
 def test_evaluate_controls_updates_timestep(tmp_path, request):
@@ -11,7 +11,7 @@ def test_evaluate_controls_updates_timestep(tmp_path, request):
     datadir_path = os.path.join(tmp_path, request.node.name)
 
     T = 5.0
-    setup = setup_quandary(
+    setup = create_config(
         nessential=[2],
         transition_frequency=[4.0],
         total_time=T,

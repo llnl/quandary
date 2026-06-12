@@ -123,7 +123,7 @@ def _write_hamiltonian_files(output_directory, Hsys=None, Hc=None):
 
     return hsys_path, hc_path
 
-def setup_quandary_fromfile(
+def load_config_input(
     filename: str,
     quiet: bool = False,
 ) -> ConfigInput:
@@ -147,7 +147,7 @@ def setup_quandary_fromfile(
     return inputFromFile(filename, quiet=quiet)
 
 
-def setup_quandary(
+def create_config(
     nessential: Sequence[int],
     total_time: float,
     dt: Optional[float] = None,
@@ -268,12 +268,12 @@ def setup_quandary(
     Examples
     --------
     >>> # Default: BASIS (all basis states)
-    >>> setup = setup_quandary(nessential=[3], transition_frequency=[4.1], total_time=100)
+    >>> setup = create_config(nessential=[3], transition_frequency=[4.1], total_time=100)
     >>> # Product state |001>:
-    >>> setup = setup_quandary(nessential=[2, 2, 2], transition_frequency=[4.1, 4.5, 4.9],
+    >>> setup = create_config(nessential=[2, 2, 2], transition_frequency=[4.1, 4.5, 4.9],
     ...                        total_time=100, initial_levels=[0, 0, 1])
     >>> # Superposition (|0> + |1>)/sqrt(2):
-    >>> setup = setup_quandary(nessential=[2], transition_frequency=[4.1],
+    >>> setup = create_config(nessential=[2], transition_frequency=[4.1],
     ...                        total_time=100, initial_state=[1/np.sqrt(2), 1/np.sqrt(2)])
     """
     # Set defaults
@@ -459,7 +459,7 @@ def setup_quandary(
             config_input.carrier_frequencies = [[0.0] for _ in range(nqubits)]
 
     # Set initial control pulse, if provided
-    set_control_pulse(config_input, control_randomize=control_randomize, control_amplitude=control_amplitude)
+    set_controls(config_input, control_randomize=control_randomize, control_amplitude=control_amplitude)
 
     # Set default output observables
     config_input.output_observables = [OutputType.POPULATION, OutputType.EXPECTED_ENERGY, OutputType.FULLSTATE]
@@ -554,7 +554,7 @@ def set_initial_condition(
         config_input.initial_condition = initial_condition
 
 
-def set_control_pulse(
+def set_controls(
     config_input: ConfigInput,
     spline_coefficients=None,
     p_samples=None,

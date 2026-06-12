@@ -1,7 +1,7 @@
 import os
 import pytest
 import numpy as np
-from quandary.new import setup_quandary, optimize
+from quandary.new import create_config, optimize
 from utils import assert_results_equal
 
 # Mark all tests in this file as regression tests
@@ -62,7 +62,7 @@ def test_example_state_to_state(tmp_path, request):
     n_osc = 1
     n_levels = 1
 
-    setup = setup_quandary(
+    setup = create_config(
         nessential=Ne,
         nguard=Ng,
         transition_frequency=freq01,

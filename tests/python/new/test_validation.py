@@ -1,6 +1,6 @@
 """Tests that wrong-sized vector settings produce user-friendly ValidationError messages."""
 import pytest
-from quandary.new import setup_quandary, Config
+from quandary.new import create_config, Config
 from quandary._quandary_impl import ValidationError
 
 
@@ -15,7 +15,7 @@ def _make_setup(**overrides):
         spline_order=0,
     )
     defaults.update(overrides)
-    return setup_quandary(**defaults)
+    return create_config(**defaults)
 
 
 def _make_2q_setup(**overrides):
@@ -29,7 +29,7 @@ def _make_2q_setup(**overrides):
         spline_order=0,
     )
     defaults.update(overrides)
-    return setup_quandary(**defaults)
+    return create_config(**defaults)
 
 
 class TestVectorSizeValidation:
@@ -110,7 +110,7 @@ class TestCorrectSizeAccepted:
 
     def test_omitted_optionals_use_defaults(self):
         """When optional vector fields are omitted, defaults are used without error."""
-        setup = setup_quandary(
+        setup = create_config(
             nessential=[2],
             transition_frequency=[4.0],
             total_time=1.0,

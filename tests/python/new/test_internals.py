@@ -1,6 +1,6 @@
 """Tests for internal machinery: dry_run, core distribution, and subprocess execution."""
 import numpy as np
-from quandary.new import ConfigInput, setup_quandary, optimize, simulate, evaluate_controls
+from quandary.new import ConfigInput, create_config, optimize, simulate, evaluate_controls
 from quandary.new.runner import (
     _compute_optimal_core_distribution,
 )
@@ -8,7 +8,7 @@ from quandary.new.runner import (
 
 def _make_setup(output_directory="./run_dir"):
     """Create a minimal setup for testing."""
-    return setup_quandary(
+    return create_config(
         nessential=[2],
         transition_frequency=[4.0],
         selfkerr=[0.2],
@@ -102,7 +102,7 @@ class TestDryRun:
         assert setup.runtype is None
 
     def test_dry_run_output_directory_flows_through(self, tmp_path):
-        """Output directory set in setup_quandary flows to the dry_run config."""
+        """Output directory set in create_config flows to the dry_run config."""
         custom_dir = str(tmp_path / "custom_output")
         setup = _make_setup(custom_dir)
         results = optimize(

@@ -2,7 +2,7 @@
 
 import os
 import pytest
-from quandary.new import setup_quandary, optimize, simulate
+from quandary.new import create_config, optimize, simulate
 
 # Mark all tests in this file as regression tests
 pytestmark = pytest.mark.regression
@@ -12,7 +12,7 @@ BASE_DATADIR = "QUANDARY_BASE_DATADIR"
 
 def run_optimize(datadir):
     """Run a minimal optimization with the given output directory."""
-    setup = setup_quandary(
+    setup = create_config(
         nessential=[2],
         transition_frequency=[4.0],
         selfkerr=[0.2],
@@ -31,7 +31,7 @@ def run_optimize(datadir):
 
 def run_simulate(datadir):
     """Run a minimal simulation with the given output directory."""
-    setup = setup_quandary(
+    setup = create_config(
         nessential=[2],
         transition_frequency=[4.0],
         selfkerr=[0.2],

@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import pytest
-from quandary.new import setup_quandary, optimize
+from quandary.new import create_config, optimize
 from utils import assert_results_equal
 
 # Mark all tests in this file as regression tests
@@ -133,7 +133,7 @@ def test_example_cnot(tmp_path, request):
     n_osc = 2
     n_levels = 4
 
-    setup = setup_quandary(
+    setup = create_config(
         nessential=[2, 2],
         transition_frequency=freq01,
         total_time=T,

@@ -1,13 +1,13 @@
-"""Test custom Hamiltonian support in setup_quandary.
+"""Test custom Hamiltonian support in create_config.
 
 Builds a standard 2-level qubit Hamiltonian manually as numpy arrays, passes them
-via hamiltonian_Hsys/hamiltonian_Hc to setup_quandary, and verifies the simulation
+via hamiltonian_Hsys/hamiltonian_Hc to create_config, and verifies the simulation
 produces the same result as the standard model path.
 """
 
 import os
 import pytest
-from quandary.new import setup_quandary, simulate, hamiltonians
+from quandary.new import create_config, simulate, hamiltonians
 
 
 # System parameters for a single 2-level qubit
@@ -22,7 +22,7 @@ DT = FINAL_TIME / 100
 @pytest.fixture
 def standard_setup(tmp_path):
     """Create a config_input using the standard model (no custom Hamiltonian)."""
-    return setup_quandary(
+    return create_config(
         nessential=NESSENTIAL,
         transition_frequency=TRANSITION_FREQUENCY,
         selfkerr=SELFKERR,
@@ -51,7 +51,7 @@ def test_custom_hsys_and_hc(tmp_path, standard_setup, standard_hamiltonians):
     """Custom Hsys + Hc should produce the same result as the standard model."""
     Hsys, Hc = standard_hamiltonians
 
-    setup = setup_quandary(
+    setup = create_config(
         nessential=NESSENTIAL,
         transition_frequency=TRANSITION_FREQUENCY,
         selfkerr=SELFKERR,
@@ -76,7 +76,7 @@ def test_custom_hsys_only(tmp_path, standard_setup, standard_hamiltonians):
     """Custom Hsys without custom Hc should also work (standard a+aT operators used for Hc)."""
     Hsys, _ = standard_hamiltonians
 
-    setup = setup_quandary(
+    setup = create_config(
         nessential=NESSENTIAL,
         transition_frequency=TRANSITION_FREQUENCY,
         selfkerr=SELFKERR,
@@ -100,7 +100,7 @@ def test_custom_hc_only(tmp_path, standard_setup, standard_hamiltonians):
     """Custom Hc without custom Hsys should work (standard Hsys model used)."""
     _, Hc = standard_hamiltonians
 
-    setup = setup_quandary(
+    setup = create_config(
         nessential=NESSENTIAL,
         transition_frequency=TRANSITION_FREQUENCY,
         selfkerr=SELFKERR,
@@ -125,7 +125,7 @@ def test_hamiltonian_files_written(tmp_path, standard_hamiltonians):
     Hsys, Hc = standard_hamiltonians
     outdir = os.path.join(tmp_path, "file_check")
 
-    setup_quandary(
+    create_config(
         nessential=NESSENTIAL,
         transition_frequency=TRANSITION_FREQUENCY,
         selfkerr=SELFKERR,

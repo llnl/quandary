@@ -24,7 +24,7 @@ import numpy as np
 from .. import _quandary_impl
 from .._quandary_impl import Config, ConfigInput, RunType, ControlType, ControlInitializationType
 from .results import get_results as _get_results, Results
-from .setup_helpers import set_target, set_initial_condition, resolve_output_dir, _get_output_dir, set_control_pulse
+from .setup_helpers import set_target, set_initial_condition, resolve_output_dir, _get_output_dir, set_controls
 from .utils import fit_bspline0, fit_bspline2nd
 from ._structs import (
     ControlParameterizationSettings,
@@ -285,7 +285,7 @@ def optimize(
     Parameters
     ----------
     config_input : ConfigInput
-        Physics config_input from setup_quandary().
+        Physics config_input from create_config().
     spline_coefficients : array-like, optional
         For Warm-start: Initial B-spline coefficients. ConfigInput must contain the same spline parameterization and carrier frequencies.
     p_samples : sequence of ndarray, optional
@@ -330,7 +330,7 @@ def optimize(
     config_input = config_input.copy()
     config_input.output_directory = resolve_output_dir(config_input.output_directory)
     config_input.runtype = RunType.OPTIMIZATION
-    set_control_pulse(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
+    set_controls(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
     set_target(config_input, target, gate_rot_freq=gate_rot_freq)
     set_initial_condition(config_input, initial_condition=initial_condition)
 
@@ -372,7 +372,7 @@ def simulate(
     Parameters
     ----------
     config_input : ConfigInput
-        Physics config_input from setup_quandary().
+        Physics config_input from create_config().
     spline_coefficients : array-like, optional
         B-spline control coefficients.
     p_samples : sequence of ndarray, optional
@@ -418,7 +418,7 @@ def simulate(
     config_input.output_directory = resolve_output_dir(config_input.output_directory)
     config_input.runtype = RunType.SIMULATION
 
-    set_control_pulse(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
+    set_controls(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
     set_target(config_input, target, gate_rot_freq=gate_rot_freq)
     set_initial_condition(config_input, initial_condition=initial_condition)
 
@@ -458,7 +458,7 @@ def evaluate_controls(
     Parameters
     ----------
     config_input : ConfigInput
-        Physics config_input from setup_quandary().
+        Physics config_input from create_config().
     spline_coefficients : array-like
         B-spline control coefficients.
     p_samples : sequence of ndarray, optional
@@ -500,7 +500,7 @@ def evaluate_controls(
     config_input.output_directory = resolve_output_dir(config_input.output_directory)
     config_input.runtype = RunType.EVALCONTROLS
 
-    set_control_pulse(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
+    set_controls(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
 
     # Recalculate time grid: keep total time, change resolution
     total_time = config_input.total_time

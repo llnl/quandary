@@ -2,7 +2,7 @@ import os
 import pytest
 import numpy as np
 from quandary.new import (
-    setup_quandary, optimize, hamiltonians, get_resonances,
+    create_config, optimize, hamiltonians, get_resonances,
     ControlInitializationSettings, ControlInitializationType,
 )
 from utils import assert_results_equal
@@ -315,7 +315,7 @@ def test_example_qft(tmp_path, request):
     n_osc = 3
     n_levels = 8
 
-    setup = setup_quandary(
+    setup = create_config(
         nessential=Ne,
         nguard=Ng,
         transition_frequency=freq01,
