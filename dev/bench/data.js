@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1781217132658,
+  "lastUpdate": 1781280614002,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -3431,6 +3431,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_2_2_gradient_lindblad_nproc_4] - Memory",
             "value": 177.03,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Tara Drwenski",
+            "username": "tdrwenski",
+            "email": "tdrwenski@users.noreply.github.com"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "b146fb0d6c3d3f2d7350f8adbaafcc57e642f233",
+          "message": "Merge pull request #134 from llnl/improve-petsc-options-parsing\n\nImprove command line argument parsing",
+          "timestamp": "2026-06-12T15:41:23Z",
+          "url": "https://github.com/llnl/quandary/commit/b146fb0d6c3d3f2d7350f8adbaafcc57e642f233"
+        },
+        "date": 1781280610379,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
+            "value": 0.6636353570502251,
+            "range": "0.5357920716357156",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
+            "value": 85.05,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
+            "value": 5.259728753007948,
+            "range": "0.08866801154600955",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
+            "value": 4121.77,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_gradient_schroed_nproc_8] - Time",
+            "value": 1.4326169644482434,
+            "range": "0.4827712890223811",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_gradient_schroed_nproc_8] - Memory",
+            "value": 310.25,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_2_2_gradient_lindblad_nproc_4] - Time",
+            "value": 0.9047449799254537,
+            "range": "0.236099307096838",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_2_2_gradient_lindblad_nproc_4] - Memory",
+            "value": 176.7,
             "unit": "MB"
           }
         ]
