@@ -4,33 +4,14 @@ import logging
 import os
 from collections.abc import Sequence
 from typing import Optional
-
 import numpy as np
-
-from .._quandary_impl import (
-    ControlType,
-    InitialConditionType,
-    ControlInitializationType,
-    TargetType,
-    GateType,
-    DecoherenceType,
-    OutputType,
-    inputFromFile,
-)
-from ._structs import (
-    ConfigInput,
-    InitialConditionSettings,
-    OptimTargetSettings,
-    ControlParameterizationSettings,
-    ControlInitializationSettings,
-)
-from .quantum_operators import hamiltonians, get_resonances
-from .utils import fit_bspline0, fit_bspline2nd, estimate_timestep_size
+from .._quandary_impl import ControlType, ControlInitializationType, InitialConditionType, TargetType, GateType, DecoherenceType, OutputType, inputFromFile
+from .types import ConfigInput, InitialConditionSettings, OptimTargetSettings, ControlParameterizationSettings, ControlInitializationSettings
+from .physics import hamiltonians, get_resonances, fit_bspline0, fit_bspline2nd, estimate_timestep_size
 
 logger = logging.getLogger(__name__)
 
 _DEFAULT_OUTPUT_DIR = "./data_out"
-
 
 def resolve_output_dir(datadir: str) -> str:
     """Resolve the output directory using the QUANDARY_BASE_DATADIR environment variable.
@@ -64,64 +45,6 @@ def resolve_output_dir(datadir: str) -> str:
         datadir = os.path.join(base_dir, datadir)
 
     return os.path.normpath(datadir)
-
-
-def _get_output_dir(config_input):
-    """Get output directory from config_input, falling back to default."""
-    return config_input.output_directory or _DEFAULT_OUTPUT_DIR
-
-
-def _write_hamiltonian_files(output_directory, Hsys=None, Hc=None):
-    """Write custom Hamiltonian matrices to sparse COO format files.
-
-    Parameters
-    ----------
-    output_directory : str
-        Directory to write the files into (created if needed).
-    Hsys : ndarray, optional
-        System Hamiltonian matrix (complex). Written as sparse COO with
-        columns: row col real imag.
-    Hc : sequence of ndarray, optional
-        Control Hamiltonian matrices (complex), one per oscillator. Written
-        as sparse COO with columns: oscillator row col real imag.
-
-    Returns
-    -------
-    hsys_path : str or None
-        Absolute path to the Hsys file, or None if Hsys was not provided.
-    hc_path : str or None
-        Absolute path to the Hc file, or None if Hc was not provided.
-    """
-    os.makedirs(output_directory, exist_ok=True)
-    hsys_path = None
-    hc_path = None
-
-    if Hsys is not None:
-        hsys_path = os.path.join(output_directory, "hamiltonian_Hsys.dat")
-        H = np.asarray(Hsys, dtype=complex)
-        with open(hsys_path, "w", newline='\n') as f:
-            f.write("# row col Hsys_real Hsys_imag\n")
-            nz = np.nonzero(H)
-            for i, j in zip(*nz):
-                v = H[i, j]
-                f.write(f"{i} {j} {v.real:.13e} {v.imag:.13e}\n")
-
-    if Hc is not None and len(Hc) > 0:
-        hc_path = os.path.join(output_directory, "hamiltonian_Hc.dat")
-        with open(hc_path, "w", newline='\n') as f:
-            for iosc, Hc_osc in enumerate(Hc):
-                Hc_mat = np.asarray(Hc_osc, dtype=complex)
-                nz = np.nonzero(Hc_mat)
-                f.write("# oscillator row col Hc_real Hc_imag\n")
-                for i, j in zip(*nz):
-                    v = Hc_mat[i, j]
-                    f.write(f"{iosc} {i} {j} {v.real:.13e} {v.imag:.13e}\n")
-
-    paths = [p for p in (hsys_path, hc_path) if p is not None]
-    if paths:
-        logger.info("Hamiltonian operators written to %s", ", ".join(paths))
-
-    return hsys_path, hc_path
 
 def load_config_input(
     filename: str,
@@ -267,15 +190,10 @@ def create_config(
 
     Examples
     --------
-    >>> # Default: BASIS (all basis states)
-    >>> setup = create_config(nessential=[3], transition_frequency=[4.1], total_time=100)
-    >>> # Product state |001>:
-    >>> setup = create_config(nessential=[2, 2, 2], transition_frequency=[4.1, 4.5, 4.9],
-    ...                        total_time=100, initial_levels=[0, 0, 1])
-    >>> # Superposition (|0> + |1>)/sqrt(2):
-    >>> setup = create_config(nessential=[2], transition_frequency=[4.1],
-    ...                        total_time=100, initial_state=[1/np.sqrt(2), 1/np.sqrt(2)])
+    >>> setup = create_config(nessential=[3], transition_frequency=[4.1], total_time=100.0)
+    >>> setup = create_config(nessential=[2, 3], transition_frequency=[4.0, 5.0], selfkerr=[0.2, 0.3], total_time=50.0, control_amplitude_bound=[0.5, 0.3], nspline=20, control_zero_boundary_condition=True)
     """
+
     # Set defaults
     nqubits = len(nessential)
     if transition_frequency is None:
@@ -652,3 +570,64 @@ def set_controls(
             control_inits.append(init)
 
         config_input.control_initializations = control_inits
+
+# ---------------------------------
+# Private config I/O helpers
+# ---------------------------------
+
+def _get_output_dir(config_input):
+    """Get output directory from config_input, falling back to default."""
+    return config_input.output_directory or _DEFAULT_OUTPUT_DIR
+
+
+def _write_hamiltonian_files(output_directory, Hsys=None, Hc=None):
+    """Write custom Hamiltonian matrices to sparse COO format files.
+
+    Parameters
+    ----------
+    output_directory : str
+        Directory to write the files into (created if needed).
+    Hsys : ndarray, optional
+        System Hamiltonian matrix (complex). Written as sparse COO with
+        columns: row col real imag.
+    Hc : sequence of ndarray, optional
+        Control Hamiltonian matrices (complex), one per oscillator. Written
+        as sparse COO with columns: oscillator row col real imag.
+
+    Returns
+    -------
+    hsys_path : str or None
+        Path to the Hsys file, or None if Hsys was not provided.
+    hc_path : str or None
+        Path to the Hc file, or None if Hc was not provided.
+    """
+    os.makedirs(output_directory, exist_ok=True)
+    hsys_path = None
+    hc_path = None
+
+    if Hsys is not None:
+        hsys_path = os.path.join(output_directory, "hamiltonian_Hsys.dat")
+        H = np.asarray(Hsys, dtype=complex)
+        with open(hsys_path, "w", newline='\n') as f:
+            f.write("# row col Hsys_real Hsys_imag\n")
+            nz = np.nonzero(H)
+            for i, j in zip(*nz):
+                v = H[i, j]
+                f.write(f"{i} {j} {v.real:.13e} {v.imag:.13e}\n")
+
+    if Hc is not None and len(Hc) > 0:
+        hc_path = os.path.join(output_directory, "hamiltonian_Hc.dat")
+        with open(hc_path, "w", newline='\n') as f:
+            for iosc, Hc_osc in enumerate(Hc):
+                Hc_mat = np.asarray(Hc_osc, dtype=complex)
+                nz = np.nonzero(Hc_mat)
+                f.write("# oscillator row col Hc_real Hc_imag\n")
+                for i, j in zip(*nz):
+                    v = Hc_mat[i, j]
+                    f.write(f"{iosc} {i} {j} {v.real:.13e} {v.imag:.13e}\n")
+
+    paths = [p for p in (hsys_path, hc_path) if p is not None]
+    if paths:
+        logger.info("Hamiltonian operators written to %s", ", ".join(paths))
+
+    return hsys_path, hc_path

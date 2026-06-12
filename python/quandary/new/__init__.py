@@ -2,9 +2,7 @@
 
 # Initialize MPI via mpi4py before loading the C++ extension.
 # This ensures MPI is initialized once and managed by Python's lifecycle.
-# MPI_Init called twice is undefined behavior, so this must happen before any C++ code.
 import mpi4py.MPI  # noqa: F401, E402
-
 # Register PETSc finalization to run before mpi4py's MPI_Finalize at exit.
 # atexit handlers fire in reverse registration order, so registering after
 # mpi4py ensures PETSc is finalized while MPI is still active.
@@ -14,13 +12,9 @@ atexit.register(_finalize_petsc)
 
 # Re-export the nanobind implementation from the parent package
 from .._quandary_impl import (
-    # Exceptions
     ValidationError as ValidationError,
-    # Configuration
     Config,
-    # Run function from C++ (used internally)
     run_from_file,
-    # Enums
     DecoherenceType,
     InitialConditionType,
     TargetType,
@@ -34,58 +28,54 @@ from .._quandary_impl import (
     OutputType,
 )
 
-# Python subclass of ConfigInput with __repr__ and improved TypeError messages
-from ._structs import ConfigInput
-
-from ._structs import (
+# Types
+from .types import (  # noqa: F401, E402
+    ConfigInput,
     InitialConditionSettings,
     OptimTargetSettings,
     ControlParameterizationSettings,
     ControlInitializationSettings,
 )
 
-
-# Functional API (primary interface)
-from .runner import optimize, simulate, evaluate_controls  # noqa: F401, E402
-
-# Results
-from .results import Results, get_results  # noqa: F401, E402
-
-# Quantum operators and Hamiltonians
-from .quantum_operators import (  # noqa: F401, E402
-    lowering,
-    number,
-    map_to_oscillators,
-    hamiltonians,
-    get_resonances,
-)
-
-# Visualization utilities
-from .visualization import (  # noqa: F401, E402
-    plot_pulse,
-    plot_expectedEnergy,
-    plot_population,
-    plot_results_1osc,
-)
-
-# General utilities
-from .utils import (  # noqa: F401, E402
-    gate_infidelity,
-    state_infidelity,
-    estimate_timestep_size,
-    timestep_richardson_est,
-    fit_bspline0,
-    fit_bspline2nd,
-)
-
-# Setup helpers (factory/configuration functions)
-from .setup_helpers import (  # noqa: F401, E402
+# Configuration functions
+from .config import (  # noqa: F401, E402
     create_config,
     load_config_input,
     resolve_output_dir,
     set_target,
     set_initial_condition,
     set_controls,
+)
+
+# Runner functions
+from .run import (  # noqa: F401, E402
+    optimize,
+    simulate,
+    evaluate_controls,
+)
+
+# Results and visualization
+from .results import (  # noqa: F401, E402
+    Results,
+    get_results,
+    plot_pulse,
+    plot_expectedEnergy,
+    plot_population,
+    plot_results_1osc,
+)
+
+# Quantum operators, Hamiltonians, and utilities
+from .physics import (  # noqa: F401, E402
+    lowering,
+    number,
+    hamiltonians,
+    get_resonances,
+    gate_infidelity,
+    state_infidelity,
+    estimate_timestep_size,
+    timestep_richardson_est,
+    fit_bspline0,
+    fit_bspline2nd,
 )
 
 # Define public API
@@ -113,6 +103,13 @@ __all__ = [
     "OptimTargetSettings",
     "ControlParameterizationSettings",
     "ControlInitializationSettings",
+    # Configuration 
+    "create_config",
+    "load_config_input",
+    "resolve_output_dir",
+    "set_target",
+    "set_controls",
+    "set_initial_condition",
     # Runner functions
     "optimize",
     "simulate",
@@ -120,30 +117,19 @@ __all__ = [
     # Results
     "Results",
     "get_results",
-    # Quantum operators
-    "lowering",
-    "number",
-    "map_to_oscillators",
-    "hamiltonians",
-    "get_resonances",
-    # Time estimation
-    "estimate_timestep_size",
-    "timestep_richardson_est",
-    # Visualization
     "plot_pulse",
     "plot_expectedEnergy",
     "plot_population",
     "plot_results_1osc",
-    # Utilities
+    # Quantum operators and utilities
+    "lowering",
+    "number",
+    "hamiltonians",
+    "get_resonances",
     "gate_infidelity",
     "state_infidelity",
     "fit_bspline0",
     "fit_bspline2nd",
-    # Setup helpers
-    "create_config",
-    "load_config_input",
-    "resolve_output_dir",
-    "set_target",
-    "set_controls",
-    "set_initial_condition",
+    "estimate_timestep_size",
+    "timestep_richardson_est",
 ]

@@ -1,7 +1,7 @@
 """Tests for internal machinery: dry_run, core distribution, and subprocess execution."""
 import numpy as np
 from quandary.new import ConfigInput, create_config, optimize, simulate, evaluate_controls
-from quandary.new.runner import (
+from quandary.new.run import (
     _compute_optimal_core_distribution,
 )
 

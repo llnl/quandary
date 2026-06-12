@@ -8,34 +8,284 @@ MPI Lifecycle Management:
     The C++ runQuandary function detects that MPI is already initialized (by mpi4py)
     and skips MPI_Init/MPI_Finalize, letting mpi4py manage the MPI lifecycle.
 """
-
 from __future__ import annotations
-
 import logging
 import os
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Optional
-from collections.abc import Sequence
-
+from typing import Optional
 from mpi4py import MPI
 import numpy as np
-
 from .. import _quandary_impl
-from .._quandary_impl import Config, ConfigInput, RunType, ControlType, ControlInitializationType
+from .._quandary_impl import Config, ConfigInput, RunType
 from .results import get_results as _get_results, Results
-from .setup_helpers import set_target, set_initial_condition, resolve_output_dir, _get_output_dir, set_controls
-from .utils import fit_bspline0, fit_bspline2nd
-from ._structs import (
-    ControlParameterizationSettings,
-    ControlInitializationSettings,
-)
-
-if TYPE_CHECKING:
-    pass
+from .config import resolve_output_dir, set_controls, set_target, set_initial_condition
 
 logger = logging.getLogger(__name__)
 
+def simulate(
+    config_input: ConfigInput,
+    spline_coefficients=None,
+    p_samples=None,
+    q_samples=None,
+    control_randomize: bool = True,
+    control_amplitude: Optional[float] = None,
+    initial_condition=None,
+    target=None,
+    gate_rot_freq=None,
+    dry_run: bool = False,
+    max_n_procs: Optional[int] = None,
+    quiet: bool = False,
+    mpi_exec: str = "mpirun",
+    nproc_flag: str = "-np",
+    python_exec: Optional[str] = None,
+    working_dir: str = ".",
+) -> Results:
+    """Run a simulation.
+
+    Copies the config_input internally; the original is not modified.
+
+    Parameters
+    ----------
+    config_input : ConfigInput
+        Physics config_input from create_config().
+    spline_coefficients : array-like, optional
+        B-spline control coefficients.
+    p_samples : sequence of ndarray, optional
+        Real part of control pulses [MHz] per oscillator.
+        Fitted to B-splines coefficients. Must be paired with q_samples.
+    q_samples : sequence of ndarray, optional
+        Imaginary part of control pulses [MHz] per oscillator.
+    control_randomize : bool
+        Initialize controls randomly. Default: True.
+    control_amplitude : float, optional
+        Initial control amplitude [GHz]. When omitted, uses
+        config_input.control_initializations if set, otherwise defaults from C++ code (zero controls)
+    initial_condition : sequence of complex or InitialConditionSettings, optional
+        Either a state vector (arbitrary superposition), or direct struct specification (advanced). 
+        Default: All basis states in the essential dimensions.
+    target : array-like, optional 
+        Optimization target. Either 2D (unitary gate) or 1D (state vector)
+    gate_rot_freq : sequence of float, optional
+        Gate rotation frequencies [GHz].
+    dry_run : bool
+        If True, validate and return Results with config populated but do not
+        run. Use ``print(results.config)`` to inspect the full configuration. Default: False.
+    max_n_procs : int, optional
+        Max MPI processes. Spawns subprocess if set.
+    quiet : bool
+        Suppress output. Default: False.
+    mpi_exec : str
+        MPI launcher. Default: "mpirun".
+    nproc_flag : str
+        Flag for process count. Default: "-np".
+    python_exec : str, optional
+        Python executable path. Default: sys.executable.
+    working_dir : str
+        Working directory. Default: ".".
+
+    Returns
+    -------
+    Results
+        If dry_run=True, only results.config is populated.
+    """
+
+    config_input = config_input.copy()
+    config_input.output_directory = resolve_output_dir(config_input.output_directory)
+    config_input.runtype = RunType.SIMULATION
+
+    set_controls(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
+    set_target(config_input, target, gate_rot_freq=gate_rot_freq)
+    set_initial_condition(config_input, initial_condition=initial_condition)
+
+    if dry_run:
+        return Results(config=Config(config_input, quiet))
+    return _run(
+        config_input,
+        max_n_procs=max_n_procs,
+        quiet=quiet,
+        mpi_exec=mpi_exec,
+        nproc_flag=nproc_flag,
+        python_exec=python_exec,
+        working_dir=working_dir,
+    )
+
+def optimize(
+    config_input: ConfigInput,
+    spline_coefficients=None,
+    p_samples=None,
+    q_samples=None,
+    control_randomize: bool = True,
+    control_amplitude: Optional[float] = None,
+    initial_condition=None,
+    target=None,
+    gate_rot_freq=None,
+    dry_run: bool = False,
+    max_n_procs: Optional[int] = None,
+    quiet: bool = False,
+    mpi_exec: str = "mpirun",
+    nproc_flag: str = "-np",
+    python_exec: Optional[str] = None,
+    working_dir: str = ".",
+) -> Results:
+    """Run an optimization.
+
+    Copies the config_input internally; the original is not modified.
+
+    Parameters
+    ----------
+    config_input : ConfigInput
+        Physics config_input from create_config().
+    spline_coefficients : array-like, optional
+        For Warm-start: Initial B-spline coefficients. ConfigInput must contain the same spline parameterization and carrier frequencies.
+    p_samples : sequence of ndarray, optional
+        For warm-start: Real part of control pulses [MHz] per oscillator.
+        Will be fitted to B-splines coefficients. Must be paired with q_samples.
+    q_samples : sequence of ndarray, optional
+        For warm-start: Imaginary part of control pulses [MHz] per oscillator.
+    control_randomize : bool
+        Initialize controls randomly. Default: True.
+    control_amplitude : float, optional
+        Initial control amplitude [GHz]. When omitted, uses
+        config_input.control_initializations if set, otherwise defaults from C++ code (zero controls)
+    initial_condition : sequence of complex or InitialConditionSettings, optional
+        Either a state vector (arbitrary superposition), or direct struct specification (advanced). 
+        Default: All basis states in the essential dimensions.
+    target : array-like, optional 
+        Optimization target. Either 2D (unitary gate) or 1D (state vector)
+    gate_rot_freq : sequence of float, optional
+        Gate rotation frequencies [GHz].
+    dry_run : bool
+        If True, validate and return Results with config populated but do not
+        run. Use ``print(results.config)`` to inspect the full configuration. Default: False.
+    max_n_procs : int, optional
+        Max MPI processes. Spawns subprocess if set.
+    quiet : bool
+        Suppress output. Default: False.
+    mpi_exec : str
+        MPI launcher. Default: "mpirun".
+    nproc_flag : str
+        Flag for process count. Default: "-np".
+    python_exec : str, optional
+        Python executable path. Default: sys.executable.
+    working_dir : str
+        Working directory. Default: ".".
+
+    Returns
+    -------
+    Results
+        If dry_run=True, only results.config is populated.
+    """
+
+    config_input = config_input.copy()
+    config_input.output_directory = resolve_output_dir(config_input.output_directory)
+    config_input.runtype = RunType.OPTIMIZATION
+    set_controls(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
+    set_target(config_input, target, gate_rot_freq=gate_rot_freq)
+    set_initial_condition(config_input, initial_condition=initial_condition)
+
+    if dry_run:
+        return Results(config=Config(config_input, quiet))
+    return _run(
+        config_input,
+        max_n_procs=max_n_procs,
+        quiet=quiet,
+        mpi_exec=mpi_exec,
+        nproc_flag=nproc_flag,
+        python_exec=python_exec,
+        working_dir=working_dir,
+    )
+
+def evaluate_controls(
+    config_input: ConfigInput,
+    spline_coefficients=None,
+    p_samples=None,
+    q_samples=None,
+    control_randomize: bool = True,
+    control_amplitude: Optional[float] = None,
+    points_per_ns: float = 1.0,
+    dry_run: bool = False,
+    max_n_procs: Optional[int] = None,
+    quiet: bool = False,
+    mpi_exec: str = "mpirun",
+    nproc_flag: str = "-np",
+    python_exec: Optional[str] = None,
+    working_dir: str = ".",
+) -> Results:
+    """Evaluate control pulses at a specific sample rate.
+
+    Copies the config_input internally; the original is not modified.
+
+    Parameters
+    ----------
+    config_input : ConfigInput
+        Physics config_input from create_config().
+    spline_coefficients : array-like
+        B-spline control coefficients.
+    p_samples : sequence of ndarray, optional
+        Real part of control pulses [MHz] per oscillator.
+        Will be fitted to B-splines coefficients. Must be paired with q_samples.
+    q_samples : sequence of ndarray, optional
+        Imaginary part of control pulses [MHz] per oscillator.
+    control_randomize : bool
+        Initialize controls randomly. Default: True.
+    control_amplitude : float, optional
+        Initial control amplitude [GHz]. When omitted, uses
+        config_input.control_initializations if set, otherwise defaults from C++ code (zero controls)
+    points_per_ns : float
+        Sample rate [points per ns]. Default: 1.0.
+    dry_run : bool
+        If True, validate and return Results with config populated but do not
+        run. Use ``print(results.config)`` to inspect the full configuration.
+        Default: False.
+    max_n_procs : int, optional
+        Max MPI processes. Spawns subprocess if set.
+    quiet : bool
+        Suppress output. Default: False.
+    mpi_exec : str
+        MPI launcher. Default: "mpirun".
+    nproc_flag : str
+        Flag for process count. Default: "-np".
+    python_exec : str, optional
+        Python executable path. Default: sys.executable.
+    working_dir : str
+        Working directory. Default: ".".
+
+    Returns
+    -------
+    Results
+        If dry_run=True, only results.config is populated.
+    """
+
+    config_input = config_input.copy()
+    config_input.output_directory = resolve_output_dir(config_input.output_directory)
+    config_input.runtype = RunType.EVALCONTROLS
+
+    set_controls(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
+
+    # Recalculate time grid: keep total time, change resolution
+    total_time = config_input.total_time
+    nsteps = int(np.floor(total_time * points_per_ns))
+    nsteps = max(nsteps, 1)  # Ensure at least one step
+    config_input.dt = total_time / nsteps
+
+    # Run or dry run, return Results struct
+    if dry_run:
+        return Results(config=Config(config_input, quiet))
+    return _run(
+        config_input,
+        max_n_procs=max_n_procs,
+        quiet=quiet,
+        mpi_exec=mpi_exec,
+        nproc_flag=nproc_flag,
+        python_exec=python_exec,
+        working_dir=working_dir,
+    )
+
+
+# ---------------------------------
+# Private run helpers
+# ---------------------------------
 
 def _is_interactive():
     """Detect if running in an interactive Python session (Jupyter, IPython, or plain REPL)."""
@@ -260,262 +510,3 @@ def _run_subprocess(
     return results
 
 
-def optimize(
-    config_input: ConfigInput,
-    spline_coefficients=None,
-    p_samples=None,
-    q_samples=None,
-    control_randomize: bool = True,
-    control_amplitude: Optional[float] = None,
-    initial_condition=None,
-    target=None,
-    gate_rot_freq=None,
-    dry_run: bool = False,
-    max_n_procs: Optional[int] = None,
-    quiet: bool = False,
-    mpi_exec: str = "mpirun",
-    nproc_flag: str = "-np",
-    python_exec: Optional[str] = None,
-    working_dir: str = ".",
-) -> Results:
-    """Run an optimization.
-
-    Copies the config_input internally; the original is not modified.
-
-    Parameters
-    ----------
-    config_input : ConfigInput
-        Physics config_input from create_config().
-    spline_coefficients : array-like, optional
-        For Warm-start: Initial B-spline coefficients. ConfigInput must contain the same spline parameterization and carrier frequencies.
-    p_samples : sequence of ndarray, optional
-        For warm-start: Real part of control pulses [MHz] per oscillator.
-        Will be fitted to B-splines coefficients. Must be paired with q_samples.
-    q_samples : sequence of ndarray, optional
-        For warm-start: Imaginary part of control pulses [MHz] per oscillator.
-    control_randomize : bool
-        Initialize controls randomly. Default: True.
-    control_amplitude : float, optional
-        Initial control amplitude [GHz]. When omitted, uses
-        config_input.control_initializations if set, otherwise defaults from C++ code (zero controls)
-    initial_condition : sequence of complex or InitialConditionSettings, optional
-        Either a state vector (arbitrary superposition), or direct struct specification (advanced). 
-        Default: All basis states in the essential dimensions.
-    target : array-like, optional 
-        Optimization target. Either 2D (unitary gate) or 1D (state vector)
-    gate_rot_freq : sequence of float, optional
-        Gate rotation frequencies [GHz].
-    dry_run : bool
-        If True, validate and return Results with config populated but do not
-        run. Use ``print(results.config)`` to inspect the full configuration. Default: False.
-    max_n_procs : int, optional
-        Max MPI processes. Spawns subprocess if set.
-    quiet : bool
-        Suppress output. Default: False.
-    mpi_exec : str
-        MPI launcher. Default: "mpirun".
-    nproc_flag : str
-        Flag for process count. Default: "-np".
-    python_exec : str, optional
-        Python executable path. Default: sys.executable.
-    working_dir : str
-        Working directory. Default: ".".
-
-    Returns
-    -------
-    Results
-        If dry_run=True, only results.config is populated.
-    """
-
-    config_input = config_input.copy()
-    config_input.output_directory = resolve_output_dir(config_input.output_directory)
-    config_input.runtype = RunType.OPTIMIZATION
-    set_controls(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
-    set_target(config_input, target, gate_rot_freq=gate_rot_freq)
-    set_initial_condition(config_input, initial_condition=initial_condition)
-
-    if dry_run:
-        return Results(config=Config(config_input, quiet))
-    return _run(
-        config_input,
-        max_n_procs=max_n_procs,
-        quiet=quiet,
-        mpi_exec=mpi_exec,
-        nproc_flag=nproc_flag,
-        python_exec=python_exec,
-        working_dir=working_dir,
-    )
-
-
-def simulate(
-    config_input: ConfigInput,
-    spline_coefficients=None,
-    p_samples=None,
-    q_samples=None,
-    control_randomize: bool = True,
-    control_amplitude: Optional[float] = None,
-    initial_condition=None,
-    target=None,
-    gate_rot_freq=None,
-    dry_run: bool = False,
-    max_n_procs: Optional[int] = None,
-    quiet: bool = False,
-    mpi_exec: str = "mpirun",
-    nproc_flag: str = "-np",
-    python_exec: Optional[str] = None,
-    working_dir: str = ".",
-) -> Results:
-    """Run a simulation.
-
-    Copies the config_input internally; the original is not modified.
-
-    Parameters
-    ----------
-    config_input : ConfigInput
-        Physics config_input from create_config().
-    spline_coefficients : array-like, optional
-        B-spline control coefficients.
-    p_samples : sequence of ndarray, optional
-        Real part of control pulses [MHz] per oscillator.
-        Fitted to B-splines coefficients. Must be paired with q_samples.
-    q_samples : sequence of ndarray, optional
-        Imaginary part of control pulses [MHz] per oscillator.
-    control_randomize : bool
-        Initialize controls randomly. Default: True.
-    control_amplitude : float, optional
-        Initial control amplitude [GHz]. When omitted, uses
-        config_input.control_initializations if set, otherwise defaults from C++ code (zero controls)
-    initial_condition : sequence of complex or InitialConditionSettings, optional
-        Either a state vector (arbitrary superposition), or direct struct specification (advanced). 
-        Default: All basis states in the essential dimensions.
-    target : array-like, optional 
-        Optimization target. Either 2D (unitary gate) or 1D (state vector)
-    gate_rot_freq : sequence of float, optional
-        Gate rotation frequencies [GHz].
-    dry_run : bool
-        If True, validate and return Results with config populated but do not
-        run. Use ``print(results.config)`` to inspect the full configuration. Default: False.
-    max_n_procs : int, optional
-        Max MPI processes. Spawns subprocess if set.
-    quiet : bool
-        Suppress output. Default: False.
-    mpi_exec : str
-        MPI launcher. Default: "mpirun".
-    nproc_flag : str
-        Flag for process count. Default: "-np".
-    python_exec : str, optional
-        Python executable path. Default: sys.executable.
-    working_dir : str
-        Working directory. Default: ".".
-
-    Returns
-    -------
-    Results
-        If dry_run=True, only results.config is populated.
-    """
-
-    config_input = config_input.copy()
-    config_input.output_directory = resolve_output_dir(config_input.output_directory)
-    config_input.runtype = RunType.SIMULATION
-
-    set_controls(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
-    set_target(config_input, target, gate_rot_freq=gate_rot_freq)
-    set_initial_condition(config_input, initial_condition=initial_condition)
-
-    if dry_run:
-        return Results(config=Config(config_input, quiet))
-    return _run(
-        config_input,
-        max_n_procs=max_n_procs,
-        quiet=quiet,
-        mpi_exec=mpi_exec,
-        nproc_flag=nproc_flag,
-        python_exec=python_exec,
-        working_dir=working_dir,
-    )
-
-
-def evaluate_controls(
-    config_input: ConfigInput,
-    spline_coefficients=None,
-    p_samples=None,
-    q_samples=None,
-    control_randomize: bool = True,
-    control_amplitude: Optional[float] = None,
-    points_per_ns: float = 1.0,
-    dry_run: bool = False,
-    max_n_procs: Optional[int] = None,
-    quiet: bool = False,
-    mpi_exec: str = "mpirun",
-    nproc_flag: str = "-np",
-    python_exec: Optional[str] = None,
-    working_dir: str = ".",
-) -> Results:
-    """Evaluate control pulses at a specific sample rate.
-
-    Copies the config_input internally; the original is not modified.
-
-    Parameters
-    ----------
-    config_input : ConfigInput
-        Physics config_input from create_config().
-    spline_coefficients : array-like
-        B-spline control coefficients.
-    p_samples : sequence of ndarray, optional
-        Real part of control pulses [MHz] per oscillator.
-        Will be fitted to B-splines coefficients. Must be paired with q_samples.
-    q_samples : sequence of ndarray, optional
-        Imaginary part of control pulses [MHz] per oscillator.
-    control_randomize : bool
-        Initialize controls randomly. Default: True.
-    control_amplitude : float, optional
-        Initial control amplitude [GHz]. When omitted, uses
-        config_input.control_initializations if set, otherwise defaults from C++ code (zero controls)
-    points_per_ns : float
-        Sample rate [points per ns]. Default: 1.0.
-    dry_run : bool
-        If True, validate and return Results with config populated but do not
-        run. Use ``print(results.config)`` to inspect the full configuration.
-        Default: False.
-    max_n_procs : int, optional
-        Max MPI processes. Spawns subprocess if set.
-    quiet : bool
-        Suppress output. Default: False.
-    mpi_exec : str
-        MPI launcher. Default: "mpirun".
-    nproc_flag : str
-        Flag for process count. Default: "-np".
-    python_exec : str, optional
-        Python executable path. Default: sys.executable.
-    working_dir : str
-        Working directory. Default: ".".
-
-    Returns
-    -------
-    Results
-        If dry_run=True, only results.config is populated.
-    """
-
-    config_input = config_input.copy()
-    config_input.output_directory = resolve_output_dir(config_input.output_directory)
-    config_input.runtype = RunType.EVALCONTROLS
-
-    set_controls(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
-
-    # Recalculate time grid: keep total time, change resolution
-    total_time = config_input.total_time
-    nsteps = int(np.floor(total_time * points_per_ns))
-    config_input.dt = total_time / nsteps
-
-    # Run or dry run, return Results struct
-    if dry_run:
-        return Results(config=Config(config_input, quiet))
-    return _run(
-        config_input,
-        max_n_procs=max_n_procs,
-        quiet=quiet,
-        mpi_exec=mpi_exec,
-        nproc_flag=nproc_flag,
-        python_exec=python_exec,
-        working_dir=working_dir,
-    )
