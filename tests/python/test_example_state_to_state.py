@@ -70,6 +70,7 @@ def test_example_state_to_state(mpi_exec, tmp_path, request):
         maxctrl_MHz=maxctrl_MHz,
         initialcondition=initialcondition,
         targetstate=targetstate,
+        initctrl_MHz=10.0 /np.sqrt(2),
         T=T,
         tol_infidelity=1e-5,
         rand_seed=4321,

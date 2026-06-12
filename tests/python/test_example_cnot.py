@@ -138,6 +138,7 @@ def test_example_cnot(mpi_exec, tmp_path, request):
         rotfreq=rotfreq,
         T=T,
         targetgate=unitary,
+        initctrl_MHz=10.0 /np.sqrt(2),
         verbose=False,
         rand_seed=1234,
     )

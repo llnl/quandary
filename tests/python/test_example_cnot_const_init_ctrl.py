@@ -139,7 +139,7 @@ def test_example_cnot_const_init_ctrl(mpi_exec, tmp_path, request):
         T=T,
         targetgate=unitary,
         verbose=False,
-        initctrl_MHz=100.0,
+        initctrl_MHz=100.0 / np.sqrt(2),
         randomize_init_ctrl=False,
     )
 

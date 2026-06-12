@@ -1,6 +1,7 @@
 import os
 import pytest
 from quandary import Quandary
+import numpy as np
 from utils import assert_results_equal
 
 # Mark all tests in this file as regression tests
@@ -82,6 +83,7 @@ def test_example_swap02(mpi_exec, tmp_path, request):
         freq01=freq01,
         selfkerr=selfkerr,
         maxctrl_MHz=maxctrl_MHz,
+        initctrl_MHz=10.0 /np.sqrt(2),
         targetgate=unitary,
         T=T,
         rand_seed=1234,

@@ -150,6 +150,7 @@ def test_example_cnot_withguardlevels(mpi_exec, tmp_path, request):
         Jkl=Jkl,
         rotfreq=rotfreq,
         T=T,
+        initctrl_MHz=10.0 / np.sqrt(2),
         targetgate=unitary,
         verbose=False,
         rand_seed=1234,

@@ -325,6 +325,7 @@ def test_example_qft(mpi_exec, tmp_path, request):
         verbose=False,
         rand_seed=1234,
         maxctrl_MHz=maxctrl_MHz,
+        initctrl_MHz=10.0 /np.sqrt(2),
         cw_amp_thres=cw_amp_thres,
         cw_prox_thres=cw_prox_thres,
         gamma_energy=gamma_energy,
