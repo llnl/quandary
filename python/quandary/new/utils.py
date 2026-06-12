@@ -49,15 +49,15 @@ def state_infidelity(psi, phi):
     return 1.0 - np.abs(np.vdot(psi, phi))**2
 
 
-def fit_bspline0(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, dt, nessential):
+def fit_bspline0(*, p_samples=None, q_samples=None, nsplines, spline_knot_spacing, dt, nessential):
     """Fit 0-th order Bspline (piecewise constant) to given control pulses. 
 
     Parameters
     ----------
-    pt0 : sequence of ndarray
+    p_samples : sequence of ndarray
         Real part of control pulses [MHz] per oscillator.
         Shape: ``(ntime+1,)`` per oscillator.
-    qt0 : sequence of ndarray
+    q_samples : sequence of ndarray
         Imaginary part of control pulses [MHz] per oscillator.
         Shape: ``(ntime+1,)`` per oscillator.
     nsplines : int
@@ -71,31 +71,31 @@ def fit_bspline0(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, dt, nesse
 
     Returns
     -------
-    pcof0 : ndarray
+    spline_coefficients : ndarray
         Control parameter vector (B-spline 0-th order coefficients) in rad/ns.
     """
-    if pt0 is None:
-        pt0 = []
-    if qt0 is None:
-        qt0 = []
+    if p_samples is None:
+        p_samples = []
+    if q_samples is None:
+        q_samples = []
 
     Nsys = len(nessential)
-    if len(pt0) == Nsys and len(qt0) == Nsys:
+    if len(p_samples) == Nsys and len(q_samples) == Nsys:
         sizes_ok = True
         for iosc in range(Nsys):
-            if sizes_ok and len(pt0[iosc]) >= 2 and len(pt0[iosc]) == len(qt0[iosc]):
+            if sizes_ok and len(p_samples[iosc]) >= 2 and len(p_samples[iosc]) == len(q_samples[iosc]):
                 sizes_ok = True
             else:
                 sizes_ok = False
         if sizes_ok:
-            # do the downsampling and construct pcof0
-            pcof0 = np.zeros(0)  # to hold the downsampled numpy array for the control vector
+            # do the downsampling and construct spline_coefficients
+            spline_coefficients = np.zeros(0)  # to hold the downsampled numpy array for the control vector
             fact = 2e-3 * np.pi  # conversion factor from MHz to rad/ns
 
             for iosc in range(Nsys):
-                Nelem = np.size(pt0[iosc])
-                p_seg = pt0[iosc]
-                q_seg = qt0[iosc]
+                Nelem = np.size(p_samples[iosc])
+                p_seg = p_samples[iosc]
+                q_seg = q_samples[iosc]
 
                 seg_re = np.zeros(nsplines)  # to hold downsampled amplitudes
                 seg_im = np.zeros(nsplines)
@@ -109,18 +109,18 @@ def fit_bspline0(*, pt0=None, qt0=None, nsplines, spline_knot_spacing, dt, nesse
                     seg_re[i_spl] = fact * p_seg[i]
                     seg_im[i_spl] = fact * q_seg[i]
 
-                pcof0 = np.append(pcof0, seg_re)  # append segment to the global control vector
-                pcof0 = np.append(pcof0, seg_im)
-            return pcof0
+                spline_coefficients = np.append(spline_coefficients, seg_re)  # append segment to the global control vector
+                spline_coefficients = np.append(spline_coefficients, seg_im)
+            return spline_coefficients
         else:
             raise ValueError(
-                "fit_bspline0: size mismatch in pt0/qt0 -- each oscillator must have "
+                "fit_bspline0: size mismatch in p_samples/q_samples -- each oscillator must have "
                 "matching arrays of length >= 2."
             )
-    elif len(pt0) > 0 or len(qt0) > 0:
+    elif len(p_samples) > 0 or len(q_samples) > 0:
         raise ValueError(
-            f"fit_bspline0: pt0 and qt0 must each have one entry per oscillator "
-            f"(expected {Nsys}, got pt0={len(pt0)}, qt0={len(qt0)})."
+            f"fit_bspline0: p_samples and q_samples must each have one entry per oscillator "
+            f"(expected {Nsys}, got p_samples={len(p_samples)}, q_samples={len(q_samples)})."
         )
     else:
         return np.array([])
@@ -321,9 +321,9 @@ def fit_bspline2nd(
                     f"fit_bspline2nd: carrier_frequencies must have length {n_osc}, got {len(carrier_list)}"
                 )
 
-    pcof_blocks = []
+    spline_coefficients_blocks = []
     for iosc in range(n_osc):
-        pcof_blocks.append(
+        spline_coefficients_blocks.append(
             _fit_one_oscillator(
                 t_data,
                 p_arr[iosc],
@@ -333,7 +333,7 @@ def fit_bspline2nd(
             )
         )
 
-    return np.concatenate(pcof_blocks)
+    return np.concatenate(spline_coefficients_blocks)
 
 
 
@@ -403,7 +403,7 @@ def estimate_timestep_size(*, Hsys=None, Hc_re=None, Hc_im=None, control_amplitu
     return suggested_dt
 
 
-def timestep_richardson_est(config_input, pcof, tol=1e-8, order=2, **kwargs):
+def timestep_richardson_est(config_input, spline_coefficients, tol=1e-8, order=2, **kwargs):
     """Decrease timestep size until Richardson error estimate meets threshold.
 
     Parameters
@@ -411,7 +411,7 @@ def timestep_richardson_est(config_input, pcof, tol=1e-8, order=2, **kwargs):
     config_input : ConfigInput
         Quandary configuration input. A copy is made internally; the caller's
         config_input is not modified.
-    pcof : array-like
+    spline_coefficients : array-like
         B-spline control coefficients to evaluate at each refinement level.
     tol : float
         Richardson error tolerance on the infidelity. Default: 1e-8.
@@ -437,7 +437,7 @@ def timestep_richardson_est(config_input, pcof, tol=1e-8, order=2, **kwargs):
     config_input = config_input.copy()
     kwargs.setdefault("quiet", True)
 
-    results = simulate(config_input, pcof=pcof, **kwargs)
+    results = simulate(config_input, spline_coefficients=spline_coefficients, **kwargs)
     Jcurr = results.infidelity
     uT = results.uT.copy()
 
@@ -448,7 +448,7 @@ def timestep_richardson_est(config_input, pcof, tol=1e-8, order=2, **kwargs):
         dt_org = config_input.dt
         config_input.dt = config_input.dt / m
 
-        results = simulate(config_input, pcof=pcof, **kwargs)
+        results = simulate(config_input, spline_coefficients=spline_coefficients, **kwargs)
 
         err_J = np.abs(Jcurr - results.infidelity) / (m**order - 1.0)
         err_u = np.linalg.norm(np.subtract(uT, results.uT)) / (m**order - 1.0)

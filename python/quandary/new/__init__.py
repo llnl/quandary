@@ -85,6 +85,7 @@ from .setup_helpers import (  # noqa: F401, E402
     resolve_output_dir,
     set_target,
     set_initial_condition,
+    set_control_pulse,
 )
 
 # Define public API
@@ -143,5 +144,6 @@ __all__ = [
     "setup_quandary_fromfile",
     "resolve_output_dir",
     "set_target",
+    "set_control_pulse",
     "set_initial_condition",
 ]

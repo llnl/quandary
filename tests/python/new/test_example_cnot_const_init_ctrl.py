@@ -166,8 +166,8 @@ def test_example_cnot_const_init_ctrl(tmp_path, request):
 
     assert_results_equal(
         t=results.time,
-        pt=results.pt,
-        qt=results.qt,
+        p_samples=results.p_samples,
+        q_samples=results.q_samples,
         infidelity=results.infidelity,
         energy=results.expected_energy,
         population=results.population,

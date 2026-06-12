@@ -10,6 +10,7 @@ import numpy as np
 from .._quandary_impl import (
     ControlType,
     InitialConditionType,
+    ControlInitializationType,
     TargetType,
     GateType,
     DecoherenceType,
@@ -21,6 +22,7 @@ from ._structs import (
     InitialConditionSettings,
     OptimTargetSettings,
     ControlParameterizationSettings,
+    ControlInitializationSettings,
 )
 from .quantum_operators import hamiltonians, get_resonances
 from .utils import fit_bspline0, fit_bspline2nd, estimate_timestep_size
@@ -166,6 +168,8 @@ def setup_quandary(
     spline_knot_spacing: Optional[float] = None,
     spline_order: Optional[int] = None,
     control_zero_boundary_condition: Optional[bool] = None,
+    control_randomize: bool = True,
+    control_amplitude: Optional[float] = None,
     hamiltonian_Hsys: Optional[np.ndarray] = None,
     hamiltonian_Hc: Optional[Sequence[np.ndarray]] = None,
     initial_condition: Optional[Sequence[complex]] = None,
@@ -237,6 +241,11 @@ def setup_quandary(
         Affects the knot spacing formula and carrier frequency defaults.
     control_zero_boundary_condition : bool, optional
         Force control pulses to start and end at zero.
+    control_randomize : bool
+        Initialize controls randomly. Default: True.
+    control_amplitude : float, optional
+        Initial control amplitude [GHz]. When omitted, uses
+        config_input.control_initializations if set, otherwise defaults from C++ code (zero controls)
     hamiltonian_Hsys : ndarray, optional
         Custom system Hamiltonian matrix (complex, in rad/ns). When provided,
         the standard pulse-driven superconducting-qubit Hamiltonian model is
@@ -449,6 +458,9 @@ def setup_quandary(
         if order == 0:
             config_input.carrier_frequencies = [[0.0] for _ in range(nqubits)]
 
+    # Set initial control pulse, if provided
+    set_control_pulse(config_input, control_randomize=control_randomize, control_amplitude=control_amplitude)
+
     # Set default output observables
     config_input.output_observables = [OutputType.POPULATION, OutputType.EXPECTED_ENERGY, OutputType.FULLSTATE]
 
@@ -540,3 +552,103 @@ def set_initial_condition(
         initial_condition.condition_type = InitialConditionType.FROMFILE
         initial_condition.filename = init_state_file
         config_input.initial_condition = initial_condition
+
+
+def set_control_pulse(
+    config_input: ConfigInput,
+    spline_coefficients=None,
+    p_samples=None,
+    q_samples=None,
+    control_randomize: bool = True,
+    control_amplitude: Optional[float] = None,
+) -> None:
+    """Set the control parameterization and initialization on a ConfigInput (in-place).
+
+    The control pulse is defined either by providing the B-spline coefficients (spline_coefficients), or by lists of control pulses at each time point (p_samples, q_samples), or by an explicit amplitude (control_amplitude) for uniform or random initialization.    
+
+    Priority: p_samples/q_samples > spline_coefficients > explicit amplitude > existing config_input.control_initializations > default from C++ code.
+    """
+
+    # If p_samples/q_samples are provide, fit pulses to bspline coefficients. 
+    if p_samples is not None or q_samples is not None:
+        if spline_coefficients is not None:
+            raise ValueError("Cannot specify both spline_coefficients and p_samples/q_samples")
+        if p_samples is None:
+            p_samples = np.zeros_like(q_samples)
+        if q_samples is None:
+            q_samples = np.zeros_like(p_samples)
+        
+        # If control parameterization was not specified, choose Bspline 2nd order for better fitting quality.
+        existing_control_params = config_input.control_parameterizations or []
+        if len(existing_control_params) == 0:
+            control_type = ControlType.BSPLINE
+        else:
+            control_type = existing_control_params[0].control_type
+
+        # Fit control parameters to either Bspline 0-th order or Bspline 2nd order. 
+        if control_type == ControlType.BSPLINE0:
+            nsteps = p_samples.shape[1]
+            nsplines = [max(2, nsteps + 1) for _ in range(len(config_input.nessential))]
+            spline_coefficients = fit_bspline0(
+                p_samples=p_samples, q_samples=q_samples,
+                nsplines=nsplines[0],
+                spline_knot_spacing=config_input.dt,
+                dt=config_input.dt,
+                nessential=config_input.nessential,
+            )
+            # Zero out carrier frequencies (pulses already include carrier)
+            config_input.carrier_frequencies = [[0.0] for _ in range(len(config_input.nessential))]
+        elif control_type == ControlType.BSPLINE:
+            n_osc = len(config_input.nessential)
+            if len(existing_control_params) == 0:
+                # Default to spline_knot_spacing of 3ns.
+                spline_knot_spacing = 3.0
+                computed_nspline = int(np.max([np.ceil(config_input.total_time / spline_knot_spacing + 2), 5]))
+                nsplines = [computed_nspline for _ in range(n_osc)]
+            else:
+                nsplines = [param.nspline for param in existing_control_params]
+            spline_coefficients = fit_bspline2nd(0.0, 
+                                  config_input.total_time, 
+                                  p_samples, q_samples, 
+                                  nsplines, 
+                                  carrier_frequencies=config_input.carrier_frequencies,
+                                  inputs_in_mhz=True )
+
+        # Set control parameterization
+        control_params = []
+        for i in range(len(config_input.nessential)):
+            param = ControlParameterizationSettings()
+            param.control_type = control_type
+            param.nspline = nsplines[i]
+            control_params.append(param)
+        config_input.control_parameterizations = control_params
+
+    # If spline_coefficients is provided (either function input or set above by fitting splines to p_samples/q_samples), write coefficients to file and set control initialization to load from that file.
+    if spline_coefficients is not None and len(spline_coefficients) > 0:
+        output_dir = _get_output_dir(config_input)
+        os.makedirs(output_dir, exist_ok=True)
+        spline_coefficients_file = os.path.join(output_dir, "spline_coefficients_init.dat")
+        np.savetxt(spline_coefficients_file, spline_coefficients, fmt='%20.13e')
+
+        control_inits = []
+        for _ in range(len(config_input.nessential)):
+            init = ControlInitializationSettings()
+            init.init_type = ControlInitializationType.FILE
+            init.filename = spline_coefficients_file
+            control_inits.append(init)
+        config_input.control_initializations = control_inits
+
+    elif control_amplitude is not None:
+        # Explicit amplitude — create uniform per-oscillator inits
+        control_inits = []
+        init_type = (
+            ControlInitializationType.RANDOM if control_randomize
+            else ControlInitializationType.CONSTANT
+        )
+        for _ in range(len(config_input.nessential)):
+            init = ControlInitializationSettings()
+            init.init_type = init_type
+            init.amplitude = control_amplitude
+            control_inits.append(init)
+
+        config_input.control_initializations = control_inits

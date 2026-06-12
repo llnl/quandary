@@ -22,7 +22,7 @@ def test_evaluate_controls_updates_timestep(tmp_path, request):
 
     # Test evaluate_controls with different sampling rate
     points_per_ns = 2
-    results = evaluate_controls(setup, pcof=np.array([]), points_per_ns=points_per_ns, quiet=True)
+    results = evaluate_controls(setup, spline_coefficients=np.array([]), points_per_ns=points_per_ns, quiet=True)
 
     expected_nsteps = int(np.floor(T * points_per_ns))
     expected_dT = T / expected_nsteps

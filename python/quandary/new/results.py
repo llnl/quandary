@@ -26,12 +26,12 @@ class Results:
         represents the exact configuration used to generate these results.
     time : ndarray
         Time points [ns].
-    pt : list of ndarray
+    p_samples : list of ndarray
         Control pulses p(t) [MHz] per oscillator.
-        Access: ``pt[oscillator][time_index]``.
-    qt : list of ndarray
+        Access: ``p_samples[oscillator][time_index]``.
+    q_samples : list of ndarray
         Control pulses q(t) [MHz] per oscillator.
-        Access: ``qt[oscillator][time_index]``.
+        Access: ``q_samples[oscillator][time_index]``.
     ft : list of ndarray
         Lab-frame control pulses f(t) [MHz] per oscillator.
         Access: ``ft[oscillator][time_index]``.
@@ -39,7 +39,7 @@ class Results:
         Evolved states at final time T. This is the (unitary) solution
         operator if the initial conditions span the full basis.
         Access: ``uT[:, initial_condition]``.
-    pcof : ndarray
+    spline_coefficients : ndarray
         Control parameters (B-spline coefficients).
     infidelity : float
         Final infidelity (1 - fidelity). Only meaningful for optimization
@@ -59,11 +59,11 @@ class Results:
 
     config: Config
     time: np.ndarray = field(default_factory=lambda: np.array([]))
-    pt: List[np.ndarray] = field(default_factory=list)
-    qt: List[np.ndarray] = field(default_factory=list)
+    p_samples: List[np.ndarray] = field(default_factory=list)
+    q_samples: List[np.ndarray] = field(default_factory=list)
     ft: List[np.ndarray] = field(default_factory=list)
     uT: np.ndarray = field(default_factory=lambda: np.array([]))
-    pcof: np.ndarray = field(default_factory=lambda: np.array([]))
+    spline_coefficients: np.ndarray = field(default_factory=lambda: np.array([]))
     infidelity: float = 1.0
     optim_hist: Dict[str, np.ndarray] = field(default_factory=dict)
     expected_energy: List[List[np.ndarray]] = field(default_factory=list)
@@ -114,7 +114,7 @@ def get_results(config: Config) -> Results:
     params_file = os.path.join(datadir, "params.dat")
     if os.path.exists(params_file):
         try:
-            results.pcof = np.loadtxt(params_file)
+            results.spline_coefficients = np.loadtxt(params_file)
         except (OSError, ValueError) as e:
             logger.warning(f"Failed to read control parameters from {params_file}: {e}")
 
@@ -157,8 +157,8 @@ def get_results(config: Config) -> Results:
                 data = np.loadtxt(ctrl_file)
                 if iosc == 0:
                     results.time = data[:, 0]
-                results.pt.append(data[:, 1] * ghz_to_mhz)
-                results.qt.append(data[:, 2] * ghz_to_mhz)
+                results.p_samples.append(data[:, 1] * ghz_to_mhz)
+                results.q_samples.append(data[:, 2] * ghz_to_mhz)
                 results.ft.append(data[:, 3] * ghz_to_mhz)
             except (OSError, ValueError, IndexError) as e:
                 logger.warning(f"Failed to read control pulses from {ctrl_file}: {e}")

@@ -14,20 +14,20 @@ def plot_pulse(results):
     """
     Ne = results.config.nessential
     time = results.time
-    pt = results.pt
-    qt = results.qt
+    p_samples = results.p_samples
+    q_samples = results.q_samples
 
     plt.figure()
     nrows = len(Ne)
     ncols = 1
     for iosc in range(len(Ne)):
         plt.subplot(nrows, ncols, iosc + 1)
-        plt.plot(time, pt[iosc], "r", label="p(t)")
-        plt.plot(time, qt[iosc], "b", label="q(t)")
+        plt.plot(time, p_samples[iosc], "r", label="p(t)")
+        plt.plot(time, q_samples[iosc], "b", label="q(t)")
         plt.xlabel('time (ns)')
         plt.ylabel('Drive strength [MHz]')
-        maxp = max(np.abs(pt[iosc]))
-        maxq = max(np.abs(qt[iosc]))
+        maxp = max(np.abs(p_samples[iosc]))
+        maxq = max(np.abs(q_samples[iosc]))
         plt.title('Qubit ' + str(iosc) + '\n max. drive ' + str(round(maxp, 1)) + ", " +
                   str(round(maxq, 1)) + " MHz")
         plt.legend(loc='lower right')
@@ -132,8 +132,8 @@ def plot_results_1osc(results, oscillator=0):
         Index of oscillator to plot. Default: 0.
     """
     t = results.time
-    p = results.pt[oscillator]
-    q = results.qt[oscillator]
+    p = results.p_samples[oscillator]
+    q = results.q_samples[oscillator]
     expectedEnergy = results.expected_energy[oscillator]
     population = results.population[oscillator]
     Ne = results.config.nessential[oscillator]

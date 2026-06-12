@@ -199,17 +199,17 @@ def test_example_spinchain(tmp_path, request):
     setup.linearsolver_maxiter = 20
 
     # Run forward simulation with explicit zero controls.
-    # Passing pt0/qt0 ensures control_initializations is set so the C++ outputs
-    # control*.dat files (needed by assert_results_equal to check len(pt) == n_osc).
+    # Passing p_samples/q_samples ensures control_initializations is set so the C++ outputs
+    # control*.dat files (needed by assert_results_equal to check len(p_samples) == n_osc).
     ntime = int(setup.total_time / setup.dt)
-    pt0 = [np.zeros(ntime + 1) for _ in range(N)]
-    qt0 = [np.zeros(ntime + 1) for _ in range(N)]
-    results = simulate(setup, pt0=pt0, qt0=qt0, quiet=True)
+    p_samples = [np.zeros(ntime + 1) for _ in range(N)]
+    q_samples = [np.zeros(ntime + 1) for _ in range(N)]
+    results = simulate(setup, p_samples=p_samples, q_samples=q_samples, quiet=True)
 
     assert_results_equal(
         t=results.time,
-        pt=results.pt,
-        qt=results.qt,
+        p_samples=results.p_samples,
+        q_samples=results.q_samples,
         infidelity=results.infidelity,
         energy=results.expected_energy,
         population=results.population,

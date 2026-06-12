@@ -24,7 +24,7 @@ import numpy as np
 from .. import _quandary_impl
 from .._quandary_impl import Config, ConfigInput, RunType, ControlType, ControlInitializationType
 from .results import get_results as _get_results, Results
-from .setup_helpers import set_target, set_initial_condition, resolve_output_dir, _get_output_dir
+from .setup_helpers import set_target, set_initial_condition, resolve_output_dir, _get_output_dir, set_control_pulse
 from .utils import fit_bspline0, fit_bspline2nd
 from ._structs import (
     ControlParameterizationSettings,
@@ -89,118 +89,6 @@ def _compute_optimal_core_distribution(maxcores: int, ninit: int) -> int:
         )
 
     return ncores
-
-def _configure_run(
-    config_input: ConfigInput,
-    runtype: RunType,
-    target: Optional[np.ndarray] = None,
-    gate_rot_freq: Optional[Sequence[float]] = None,
-    initial_condition=None,
-    pcof=None,
-    pt0=None,
-    qt0=None,
-    control_randomize: bool = True,
-    control_amplitude: Optional[float] = None,
-) -> ConfigInput:
-    """Return a copy of config_input configured for the specified run type."""
-    
-    config_input = config_input.copy()
-    config_input.output_directory = resolve_output_dir(config_input.output_directory)
-    config_input.runtype = runtype
-
-    if target is not None:
-        set_target(config_input, target, gate_rot_freq=gate_rot_freq)
-    if initial_condition is not None:
-        set_initial_condition(config_input, initial_condition=initial_condition)
-
-    # Set up control initialization.
-    # Priority: pt/qt > pcof > explicit amplitude > existing config_input.control_initializations > default from C++ code.
-
-    # If pt/qt are provide, fit pulses to bspline coefficients. 
-    if pt0 is not None or qt0 is not None:
-        if pcof is not None:
-            raise ValueError("Cannot specify both pcof and pt0/qt0")
-        if pt0 is None:
-            pt0 = np.zeros_like(qt0)
-        if qt0 is None:
-            qt0 = np.zeros_like(pt0)
-        
-        # If control parameterization was not specified, choose Bspline 2nd order for better fitting quality.
-        existing_control_params = config_input.control_parameterizations or []
-        if len(existing_control_params) == 0:
-            control_type = ControlType.BSPLINE
-        else:
-            control_type = existing_control_params[0].control_type
-
-        # Fit control parameters to either Bspline 0-th order or Bspline 2nd order. 
-        if control_type == ControlType.BSPLINE0:
-            nsteps = pt0.shape[1]
-            nsplines = [max(2, nsteps + 1) for _ in range(len(config_input.nessential))]
-            pcof = fit_bspline0(
-                pt0=pt0, qt0=qt0,
-                nsplines=nsplines[0],
-                spline_knot_spacing=config_input.dt,
-                dt=config_input.dt,
-                nessential=config_input.nessential,
-            )
-            # Zero out carrier frequencies (pulses already include carrier)
-            config_input.carrier_frequencies = [[0.0] for _ in range(len(config_input.nessential))]
-        elif control_type == ControlType.BSPLINE:
-            n_osc = len(config_input.nessential)
-            if len(existing_control_params) == 0:
-                # Default to spline_knot_spacing of 3ns.
-                spline_knot_spacing = 3.0
-                computed_nspline = int(np.max([np.ceil(config_input.total_time / spline_knot_spacing + 2), 5]))
-                nsplines = [computed_nspline for _ in range(n_osc)]
-            else:
-                nsplines = [param.nspline for param in existing_control_params]
-            pcof = fit_bspline2nd(0.0, 
-                                  config_input.total_time, 
-                                  pt0, qt0, 
-                                  nsplines, 
-                                  carrier_frequencies=config_input.carrier_frequencies,
-                                  inputs_in_mhz=True )
-
-        # Set control parameterization
-        control_params = []
-        for i in range(len(config_input.nessential)):
-            param = ControlParameterizationSettings()
-            param.control_type = control_type
-            param.nspline = nsplines[i]
-            control_params.append(param)
-        config_input.control_parameterizations = control_params
-
-    # If pcof is provided (either user input or set above by fitting splines to pt/qt), write coefficients to file and set control initialization to load from that file.
-    if pcof is not None and len(pcof) > 0:
-        output_dir = _get_output_dir(config_input)
-        os.makedirs(output_dir, exist_ok=True)
-        pcof_file = os.path.join(output_dir, "pcof_init.dat")
-        np.savetxt(pcof_file, pcof, fmt='%20.13e')
-
-        control_inits = []
-        for _ in range(len(config_input.nessential)):
-            init = ControlInitializationSettings()
-            init.init_type = ControlInitializationType.FILE
-            init.filename = pcof_file
-            control_inits.append(init)
-        config_input.control_initializations = control_inits
-
-    elif control_amplitude is not None:
-        # Explicit amplitude — create uniform per-oscillator inits
-        control_inits = []
-        init_type = (
-            ControlInitializationType.RANDOM if control_randomize
-            else ControlInitializationType.CONSTANT
-        )
-        for _ in range(len(config_input.nessential)):
-            init = ControlInitializationSettings()
-            init.init_type = init_type
-            init.amplitude = control_amplitude
-            control_inits.append(init)
-
-        config_input.control_initializations = control_inits
-
-    return config_input
 
 def _run(
     config_input: ConfigInput,
@@ -374,9 +262,9 @@ def _run_subprocess(
 
 def optimize(
     config_input: ConfigInput,
-    pcof=None,
-    pt0=None,
-    qt0=None,
+    spline_coefficients=None,
+    p_samples=None,
+    q_samples=None,
     control_randomize: bool = True,
     control_amplitude: Optional[float] = None,
     initial_condition=None,
@@ -398,12 +286,12 @@ def optimize(
     ----------
     config_input : ConfigInput
         Physics config_input from setup_quandary().
-    pcof : array-like, optional
+    spline_coefficients : array-like, optional
         For Warm-start: Initial B-spline coefficients. ConfigInput must contain the same spline parameterization and carrier frequencies.
-    pt0 : sequence of ndarray, optional
+    p_samples : sequence of ndarray, optional
         For warm-start: Real part of control pulses [MHz] per oscillator.
-        Will be fitted to B-splines coefficients. Must be paired with qt0.
-    qt0 : sequence of ndarray, optional
+        Will be fitted to B-splines coefficients. Must be paired with q_samples.
+    q_samples : sequence of ndarray, optional
         For warm-start: Imaginary part of control pulses [MHz] per oscillator.
     control_randomize : bool
         Initialize controls randomly. Default: True.
@@ -438,21 +326,18 @@ def optimize(
     Results
         If dry_run=True, only results.config is populated.
     """
-    configured = _configure_run(config_input,
-        runtype = RunType.OPTIMIZATION,
-        pcof=pcof,
-        pt0=pt0,
-        qt0=qt0,
-        target=target,
-        gate_rot_freq=gate_rot_freq,
-        initial_condition=initial_condition,
-        control_randomize=control_randomize,
-        control_amplitude=control_amplitude,
-    )
+
+    config_input = config_input.copy()
+    config_input.output_directory = resolve_output_dir(config_input.output_directory)
+    config_input.runtype = RunType.OPTIMIZATION
+    set_control_pulse(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
+    set_target(config_input, target, gate_rot_freq=gate_rot_freq)
+    set_initial_condition(config_input, initial_condition=initial_condition)
+
     if dry_run:
-        return Results(config=Config(configured, quiet))
+        return Results(config=Config(config_input, quiet))
     return _run(
-        configured,
+        config_input,
         max_n_procs=max_n_procs,
         quiet=quiet,
         mpi_exec=mpi_exec,
@@ -464,9 +349,9 @@ def optimize(
 
 def simulate(
     config_input: ConfigInput,
-    pcof=None,
-    pt0=None,
-    qt0=None,
+    spline_coefficients=None,
+    p_samples=None,
+    q_samples=None,
     control_randomize: bool = True,
     control_amplitude: Optional[float] = None,
     initial_condition=None,
@@ -488,12 +373,12 @@ def simulate(
     ----------
     config_input : ConfigInput
         Physics config_input from setup_quandary().
-    pcof : array-like, optional
+    spline_coefficients : array-like, optional
         B-spline control coefficients.
-    pt0 : sequence of ndarray, optional
+    p_samples : sequence of ndarray, optional
         Real part of control pulses [MHz] per oscillator.
-        Fitted to B-splines coefficients. Must be paired with qt0.
-    qt0 : sequence of ndarray, optional
+        Fitted to B-splines coefficients. Must be paired with q_samples.
+    q_samples : sequence of ndarray, optional
         Imaginary part of control pulses [MHz] per oscillator.
     control_randomize : bool
         Initialize controls randomly. Default: True.
@@ -528,21 +413,19 @@ def simulate(
     Results
         If dry_run=True, only results.config is populated.
     """
-    configured = _configure_run(config_input, 
-        runtype=RunType.SIMULATION, 
-        pcof=pcof, 
-        pt0=pt0, 
-        qt0=qt0, 
-        target=target, 
-        gate_rot_freq=gate_rot_freq,
-        initial_condition=initial_condition, 
-        control_randomize=control_randomize, 
-        control_amplitude=control_amplitude, 
-    )
+
+    config_input = config_input.copy()
+    config_input.output_directory = resolve_output_dir(config_input.output_directory)
+    config_input.runtype = RunType.SIMULATION
+
+    set_control_pulse(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
+    set_target(config_input, target, gate_rot_freq=gate_rot_freq)
+    set_initial_condition(config_input, initial_condition=initial_condition)
+
     if dry_run:
-        return Results(config=Config(configured, quiet))
+        return Results(config=Config(config_input, quiet))
     return _run(
-        configured,
+        config_input,
         max_n_procs=max_n_procs,
         quiet=quiet,
         mpi_exec=mpi_exec,
@@ -554,9 +437,11 @@ def simulate(
 
 def evaluate_controls(
     config_input: ConfigInput,
-    pcof=None,
-    pt0=None,
-    qt0=None,
+    spline_coefficients=None,
+    p_samples=None,
+    q_samples=None,
+    control_randomize: bool = True,
+    control_amplitude: Optional[float] = None,
     points_per_ns: float = 1.0,
     dry_run: bool = False,
     max_n_procs: Optional[int] = None,
@@ -574,13 +459,18 @@ def evaluate_controls(
     ----------
     config_input : ConfigInput
         Physics config_input from setup_quandary().
-    pcof : array-like
+    spline_coefficients : array-like
         B-spline control coefficients.
-    pt0 : sequence of ndarray, optional
+    p_samples : sequence of ndarray, optional
         Real part of control pulses [MHz] per oscillator.
-        Will be fitted to B-splines coefficients. Must be paired with qt0.
-    qt0 : sequence of ndarray, optional
+        Will be fitted to B-splines coefficients. Must be paired with q_samples.
+    q_samples : sequence of ndarray, optional
         Imaginary part of control pulses [MHz] per oscillator.
+    control_randomize : bool
+        Initialize controls randomly. Default: True.
+    control_amplitude : float, optional
+        Initial control amplitude [GHz]. When omitted, uses
+        config_input.control_initializations if set, otherwise defaults from C++ code (zero controls)
     points_per_ns : float
         Sample rate [points per ns]. Default: 1.0.
     dry_run : bool
@@ -606,28 +496,22 @@ def evaluate_controls(
         If dry_run=True, only results.config is populated.
     """
 
-    # Either pcof0 or pt0/qt0 must be provided to evaluate controls
-    if pcof is None and (pt0 is None or qt0 is None):
-        raise ValueError("Must provide either pcof or both pt0 and qt0 to evaluate control pulses.")
+    config_input = config_input.copy()
+    config_input.output_directory = resolve_output_dir(config_input.output_directory)
+    config_input.runtype = RunType.EVALCONTROLS
 
-    # Configure the run with provided config_input
-    configured = _configure_run(config_input, 
-        pcof=pcof, 
-        pt0=pt0, 
-        qt0=qt0,
-        runtype = RunType.EVALCONTROLS
-    )
+    set_control_pulse(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
 
     # Recalculate time grid: keep total time, change resolution
-    total_time = configured.total_time
+    total_time = config_input.total_time
     nsteps = int(np.floor(total_time * points_per_ns))
-    configured.dt = total_time / nsteps
+    config_input.dt = total_time / nsteps
 
     # Run or dry run, return Results struct
     if dry_run:
-        return Results(config=Config(configured, quiet))
+        return Results(config=Config(config_input, quiet))
     return _run(
-        configured,
+        config_input,
         max_n_procs=max_n_procs,
         quiet=quiet,
         mpi_exec=mpi_exec,

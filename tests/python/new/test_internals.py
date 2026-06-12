@@ -56,7 +56,7 @@ class TestDryRun:
         assert results.config.output_directory == str(tmp_path / "opt")
         # No solver output
         assert len(results.time) == 0
-        assert len(results.pt) == 0
+        assert len(results.p_samples) == 0
 
     def test_simulate_dry_run_has_config(self, tmp_path):
         """simulate(dry_run=True) returns Results with a populated config."""
@@ -73,10 +73,10 @@ class TestDryRun:
     def test_evaluate_controls_dry_run_has_config(self, tmp_path):
         """evaluate_controls(dry_run=True) returns Results with a populated config."""
         setup = _make_setup(str(tmp_path / "eval"))
-        pcof = np.zeros(10)
+        spline_coefficients = np.zeros(10)
         results = evaluate_controls(
             setup,
-            pcof=pcof,
+            spline_coefficients=spline_coefficients,
             dry_run=True,
             quiet=True,
         )
