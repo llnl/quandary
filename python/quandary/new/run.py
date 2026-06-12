@@ -18,7 +18,7 @@ from mpi4py import MPI
 import numpy as np
 from .. import _quandary_impl
 from .._quandary_impl import Config, ConfigInput, RunType
-from .results import get_results as _get_results, Results
+from .results import get_results, Results
 from .config import resolve_output_dir, set_controls, set_target, set_initial_condition
 
 logger = logging.getLogger(__name__)
@@ -439,7 +439,7 @@ def _run_directly(config_input: ConfigInput, quiet: bool = False) -> Results:
         raise RuntimeError(f"Quandary execution failed with return code {return_code}")
 
     # Load results with validated config
-    results = _get_results(validated_config)
+    results = get_results(validated_config.output_directory)
 
     return results
 
@@ -505,7 +505,7 @@ def _run_subprocess(
         raise RuntimeError("Quandary failed (see output above)")
 
     # Load results with validated config
-    results = _get_results(validated_config)
+    results = get_results(validated_config.output_directory)
 
     return results
 
