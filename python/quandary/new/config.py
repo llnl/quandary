@@ -67,7 +67,10 @@ def load_config_input(
     # Make sure file exists:
     if not os.path.isfile(filename):
         raise ValueError(f"Configuration file not found: {filename}")
-    return inputFromFile(filename, quiet=quiet)
+
+    # inputFromFile returns the nanobind C++ base type.
+    # Wrap it so callers consistently receive the Python ConfigInput wrapper.
+    return ConfigInput(inputFromFile(filename, quiet=quiet))
 
 
 def create_config(
