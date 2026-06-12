@@ -1275,7 +1275,7 @@ def hamiltonians(*, N, freq01, selfkerr, crosskerr=[], Jkl = [], rotfreq=[], ver
     Hc_im = [Amat[q] - Amat[q].T for q in range(nqubits)]
 
     if verbose:
-        print(f"*** {nqubits} coupled quantum systems setup ***")
+        print(f"*** {nqubits} coupled quantum systems ***")
         print("System Hamiltonian frequencies [GHz]: f01 =", freq01, "rot. freq =", rotfreq)
         print("Selfkerr=", selfkerr)
         print("Coupling: X-Kerr=", crosskerr, ", J-C=", Jkl)

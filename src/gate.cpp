@@ -16,7 +16,7 @@ Gate::Gate(const std::vector<size_t>& nlevels_, const std::vector<size_t>& nesse
 
   nessential = nessential_;
   nlevels = nlevels_;
-  final_time = time_;
+  total_time = time_;
   gate_rot_freq = gate_rot_freq_;
   decoherence_type = decoherence_type_;
   for (size_t i=0; i<gate_rot_freq.size(); i++){
@@ -110,8 +110,8 @@ void Gate::assembleGate(){
       freq = freq + rk * gate_rot_freq[iosc];
       r = r % dim_post;
     }
-    double ra = cos(freq*final_time);
-    double rb = sin(freq*final_time);
+    double ra = cos(freq*total_time);
+    double rb = sin(freq*total_time);
     /* Get row in V that is to be scaled by the rotation */
     MatGetRow(V_re, row, NULL, NULL, &vals_vre);  // V_re, V_im is stored dense , so ncols = dim_ess!
     MatGetRow(V_im, row, NULL, NULL, &vals_vim);
