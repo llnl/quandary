@@ -29,13 +29,22 @@ void printHelp() {
 ParsedArgs parseArguments(int argc, char** argv) {
   ParsedArgs args;
 
-  if (argc < 2 || std::string(argv[1]) == "--help") {
-    printHelp();
-    exit(0);
+  // Handle --help / --version anywhere on the command line, before any other
+  // validation, so they work regardless of position or config-file validity.
+  for (int i=1; i<argc; i++) {
+    std::string arg = argv[i];
+    if (arg == "--help") {
+      printHelp();
+      exit(0);
+    }
+    if (arg == "--version") {
+      printf("Quandary %s %s\n", QUANDARY_FULL_VERSION_STRING, QUANDARY_GIT_SHA);
+      exit(0);
+    }
   }
 
-  if (std::string(argv[1]) == "--version") {
-    printf("Quandary %s %s\n", QUANDARY_FULL_VERSION_STRING, QUANDARY_GIT_SHA);
+  if (argc < 2) {
+    printHelp();
     exit(0);
   }
 
@@ -44,21 +53,41 @@ ParsedArgs parseArguments(int argc, char** argv) {
   // Validate config file exists and is readable
   std::ifstream test_file(args.config_filename);
   if (!test_file.good()) {
-    printf("\nERROR: Cannot open config file '%s'\n", args.config_filename.c_str());
-    printf("Please check that the file exists and is readable.\n\n");
+    fprintf(stderr, "\nERROR: Cannot open config file '%s'\n", args.config_filename.c_str());
+    fprintf(stderr, "Please check that the file exists and is readable.\n\n");
     exit(1);
   }
   test_file.close();
 
   // Parse quiet mode and PETSc options flags
   std::string petsc_options;
+  std::vector<std::string> unrecognized;
   for (int i=2; i<argc; i++) {
     std::string arg = argv[i];
     if (arg == "--quiet") {
       args.quietmode = true;
-    } else if (arg == "--petsc-options" && i + 1 < argc) {
-      petsc_options = argv[++i];
+    } else if (arg == "--petsc-options") {
+      if (i + 1 < argc) {
+        petsc_options = argv[++i];
+      } else {
+        fprintf(stderr, "\nERROR: --petsc-options requires a quoted argument, e.g.\n");
+        fprintf(stderr, "    --petsc-options \"-log_view -tao_view\"\n\n");
+        exit(1);
+      }
+    } else {
+      unrecognized.push_back(arg);
     }
+  }
+
+  // Reject unknown arguments rather than silently ignoring them
+  if (!unrecognized.empty()) {
+    fprintf(stderr, "\nERROR: Unrecognized argument(s):");
+    for (const auto& arg : unrecognized) fprintf(stderr, " %s", arg.c_str());
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Hint: pass ALL PETSc/SLEPc options together inside quotes, e.g.\n");
+    fprintf(stderr, "    --petsc-options \"-vec_type kokkos -mat_type aijkokkos -log_view\"\n");
+    fprintf(stderr, "Run 'quandary --help' for usage.\n\n");
+    exit(1);
   }
 
   // Build PETSc argc/argv
