@@ -12,4 +12,16 @@ if(ENABLE_TESTS)
     NAME test_tomlparser
     COMMAND test_tomlparser
   )
+
+  blt_add_executable(
+    NAME test_argparser
+    SOURCES test_argparser.cpp
+    DEPENDS_ON quandary_lib gtest
+    FOLDER tests
+  )
+
+  blt_add_test(
+    NAME test_argparser
+    COMMAND test_argparser
+  )
 endif()
