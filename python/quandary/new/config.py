@@ -220,7 +220,6 @@ def create_config(
     output_directory = resolve_output_dir(output_directory)
 
     # Build Hamiltonians
-    nlevels = [nessential[i] + nguard[i] for i in range(nqubits)]
     if hamiltonian_Hsys is not None:
         # Custom Hsys provided — use it directly
         Hsys = np.asarray(hamiltonian_Hsys, dtype=complex)
@@ -231,7 +230,8 @@ def create_config(
         else:
             # No custom Hc — build standard a+aT operators for estimation
             _, Hc_re, Hc_im = hamiltonians(
-                N=nlevels,
+                nessential=nessential,
+                nguard=nguard,
                 transition_frequency=transition_frequency,
                 selfkerr=selfkerr,
                 crosskerr_coupling=crosskerr_coupling,
@@ -241,7 +241,8 @@ def create_config(
     else:
         # Standard model
         Hsys, Hc_re, Hc_im = hamiltonians(
-            N=nlevels,
+            nessential=nessential,
+            nguard=nguard,
             transition_frequency=transition_frequency,
             selfkerr=selfkerr,
             crosskerr_coupling=crosskerr_coupling,
@@ -323,7 +324,7 @@ def create_config(
 
     # Create ConfigInput with common fields
     config_input = ConfigInput()
-    config_input.nlevels = nlevels
+    config_input.nlevels = [nessential[i] + nguard[i] for i in range(nqubits)]
     config_input.nessential = nessential
     config_input.total_time = total_time
     config_input.dt = dt

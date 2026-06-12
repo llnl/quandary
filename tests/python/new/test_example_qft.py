@@ -330,11 +330,10 @@ def test_example_qft(tmp_path, request):
     )
 
     # Recompute carrier frequencies with custom thresholds to match old test
-    nlevels = [Ne[i] + Ng[i] for i in range(nqubits)]
     Hsys, Hc_re, Hc_im = hamiltonians(
-        N=nlevels,
+        nessential=Ne,
+        nguard=Ng,
         transition_frequency=freq01,
-        selfkerr=[0.0]*nqubits,
         crosskerr_coupling=[],
         dipole_coupling=Jkl,
         rotation_frequency=list(rotfreq),

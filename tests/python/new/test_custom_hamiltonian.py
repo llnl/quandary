@@ -18,7 +18,6 @@ ROTATION_FREQUENCY = [4.10595]
 FINAL_TIME = 10.0
 DT = FINAL_TIME / 100
 
-
 @pytest.fixture
 def standard_setup(tmp_path):
     """Create a config_input using the standard model (no custom Hamiltonian)."""
@@ -36,9 +35,8 @@ def standard_setup(tmp_path):
 @pytest.fixture
 def standard_hamiltonians():
     """Build the standard Hamiltonian matrices as numpy arrays."""
-    nlevels = NESSENTIAL  # no guard levels
     Hsys, Hc_re, Hc_im = hamiltonians(
-        N=nlevels,
+        nessential=NESSENTIAL,
         transition_frequency=TRANSITION_FREQUENCY,
         selfkerr=SELFKERR,
         rotation_frequency=ROTATION_FREQUENCY,

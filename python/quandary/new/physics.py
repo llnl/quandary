@@ -2,6 +2,7 @@
 
 import logging
 import numpy as np
+from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -150,17 +151,26 @@ def get_resonances(*, nessential, nguard, Hsys, Hc_re=None, Hc_im=None, rotation
     return om, growth_rate
 
 
-def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=None, dipole_coupling=None,
-                 rotation_frequency=None):
+def hamiltonians(*, 
+    nessential: Sequence[int], 
+    transition_frequency: Sequence[float], 
+    nguard: Sequence[int]=None, 
+    selfkerr: Sequence[float]=None, 
+    crosskerr_coupling: Sequence[float]=None, 
+    dipole_coupling: Sequence[float]=None,
+    rotation_frequency: Sequence[float]=None
+) -> tuple:
     """Create standard Hamiltonian operators for pulse-driven superconducting qubits.
 
     Parameters
     ----------
-    N : sequence of int
-        Total levels per oscillator (essential plus guard levels).
-    transition_frequency : sequence of float
+    nessential : sequence of int, required
+        Number of essential levels per oscillator.
+    transition_frequency : sequence of float, required
         Ground-state transition frequency for each qubit [GHz].
-    selfkerr : sequence of float
+    nguard : sequence of int, optional
+        Number of guard levels per oscillator. Default: zeros.
+    selfkerr : sequence of float, optional
         Self-Kerr (anharmonicity) coefficient for each qubit [GHz].
     crosskerr_coupling : sequence of float, optional
         Cross-Kerr coupling strengths [GHz]. Format: [g01, g02, ..., g12, ...].
@@ -183,7 +193,10 @@ def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=None, 
         Imaginary (anti-symmetric) control Hamiltonian operators for each
         qubit. Dimensionless; scaled by the control amplitude at runtime.
     """
-
+    if nguard is None:
+        nguard = [0 for _ in nessential]
+    if selfkerr is None:
+        selfkerr = []
     if crosskerr_coupling is None:
         crosskerr_coupling = []
     if dipole_coupling is None:
@@ -192,23 +205,26 @@ def hamiltonians(*, N, transition_frequency, selfkerr, crosskerr_coupling=None, 
         rotation_frequency = []
 
     if len(rotation_frequency) == 0:
-        rotation_frequency = np.zeros(len(N))
+        rotation_frequency = np.zeros(len(nessential))
+    if len(selfkerr) == 0:
+        selfkerr = np.zeros(len(nessential))
 
-    nqubits = len(N)
+    nqubits = len(nessential)
     assert len(selfkerr) == nqubits
     assert len(transition_frequency) == nqubits
     assert len(rotation_frequency) == nqubits
 
-    n = np.prod(N)  # System size
+    Ntot = np.array(nessential) + np.array(nguard)
+    n = np.prod(Ntot)  # System size
 
     # Set up lowering operators in full dimension
     Amat = []
-    for i in range(len(N)):
-        ai = lowering(N[i])
+    for i in range(len(Ntot)):
+        ai = lowering(Ntot[i])
         for j in range(i):
-            ai = np.kron(np.identity(N[j]), ai)
-        for j in range(i + 1, len(N)):
-            ai = np.kron(ai, np.identity(N[j]))
+            ai = np.kron(np.identity(Ntot[j]), ai)
+        for j in range(i + 1, len(Ntot)):
+            ai = np.kron(ai, np.identity(Ntot[j]))
         Amat.append(ai)
 
     # Set up system Hamiltonian: Duffing oscillators
