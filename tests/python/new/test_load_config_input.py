@@ -58,10 +58,12 @@ rand_seed = 1
         f.write(toml_content)
     return str(config_file)
 
-def test_load_config_input_system_parameters(tmp_path):
+def test_load_config_input_system_parameters(tmp_path, request):
     """Test that config inputs are loaded correctly."""
 
-    config_file = _create_sample_toml(tmp_path)
+    datadir_path = os.path.join(tmp_path, request.node.name)
+
+    config_file = _create_sample_toml(datadir_path)
     config = load_config_input(config_file, quiet=True)
     
     assert isinstance(config, ConfigInput)
