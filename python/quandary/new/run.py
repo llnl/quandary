@@ -35,7 +35,7 @@ def simulate(
     gate_rot_freq=None,
     dry_run: bool = False,
     max_n_procs: Optional[int] = None,
-    quiet: bool = False,
+    quiet: bool = True,
     mpi_exec: str = "mpirun",
     nproc_flag: str = "-np",
     python_exec: Optional[str] = None,
@@ -74,7 +74,7 @@ def simulate(
     max_n_procs : int, optional
         Max MPI processes. Spawns subprocess if set.
     quiet : bool
-        Suppress output. Default: False.
+        Suppress output. Default: True.
     mpi_exec : str
         MPI launcher. Default: "mpirun".
     nproc_flag : str
@@ -122,7 +122,7 @@ def optimize(
     gate_rot_freq=None,
     dry_run: bool = False,
     max_n_procs: Optional[int] = None,
-    quiet: bool = False,
+    quiet: bool = True,
     mpi_exec: str = "mpirun",
     nproc_flag: str = "-np",
     python_exec: Optional[str] = None,
@@ -161,7 +161,7 @@ def optimize(
     max_n_procs : int, optional
         Max MPI processes. Spawns subprocess if set.
     quiet : bool
-        Suppress output. Default: False.
+        Suppress output. Default: True.
     mpi_exec : str
         MPI launcher. Default: "mpirun".
     nproc_flag : str
@@ -206,7 +206,7 @@ def evaluate_controls(
     points_per_ns: float = 1.0,
     dry_run: bool = False,
     max_n_procs: Optional[int] = None,
-    quiet: bool = False,
+    quiet: bool = True,
     mpi_exec: str = "mpirun",
     nproc_flag: str = "-np",
     python_exec: Optional[str] = None,
@@ -241,7 +241,7 @@ def evaluate_controls(
     max_n_procs : int, optional
         Max MPI processes. Spawns subprocess if set.
     quiet : bool
-        Suppress output. Default: False.
+        Suppress output. Default: True.
     mpi_exec : str
         MPI launcher. Default: "mpirun".
     nproc_flag : str
@@ -343,7 +343,7 @@ def _compute_optimal_core_distribution(maxcores: int, ninit: int) -> int:
 def _run(
     config_input: ConfigInput,
     max_n_procs: Optional[int] = None,
-    quiet: bool = False,
+    quiet: bool = True,
     mpi_exec: str = "mpirun",
     nproc_flag: str = "-np",
     python_exec: Optional[str] = None,
@@ -369,7 +369,7 @@ def _run(
         determined based on the number of initial conditions. If None,
         runs directly (serial or existing MPI context).
     quiet : bool
-        Suppress console output. Default: False.
+        Suppress console output. Default: True.
     mpi_exec : str
         MPI launcher command (e.g., "mpirun", "srun", "flux run").
         Default: "mpirun". Only used when spawning subprocess.
@@ -423,7 +423,7 @@ def _run(
     return _run_directly(config_input, quiet)
 
 
-def _run_directly(config_input: ConfigInput, quiet: bool = False) -> Results:
+def _run_directly(config_input: ConfigInput, quiet: bool = True) -> Results:
     """Internal: Run Quandary directly without spawning subprocess.
 
     This is used when max_n_procs is not specified, or when already in an MPI context.
@@ -447,7 +447,7 @@ def _run_directly(config_input: ConfigInput, quiet: bool = False) -> Results:
 def _run_subprocess(
     config_input: ConfigInput,
     max_n_procs: int,
-    quiet: bool = False,
+    quiet: bool = True,
     mpi_exec: str = "mpirun",
     nproc_flag: str = "-np",
     python_exec: Optional[str] = None,
