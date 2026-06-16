@@ -49,10 +49,10 @@ class TimeStepper{
     bool eval_energy; ///< Flag to compute energy integral term
     bool eval_dpdm; ///< Flag to compute second-order derivative integral term
     bool eval_weightedcost; ///< Flag to compute weighted cost integral term
-    double leakage_integral; ///< Sums the integral over leakage 
-    double energy_integral; ///< Sums the energy term
-    double dpdm_integral; ///< Sums second-order derivative variation value
-    double weightedcost_integral; ///< Sums the integral over weighted cost function
+    double leakage_integral=0.0; ///< Sums the integral over leakage 
+    double energy_integral=0.0; ///< Sums the energy term
+    double dpdm_integral=0.0; ///< Sums second-order derivative variation value
+    double weightedcost_integral=0.0; ///< Sums the integral over weighted cost function
     double weightedcost_width; ///< Width parameter for weighted cost function
 
     int ntime; ///< Number of time steps
