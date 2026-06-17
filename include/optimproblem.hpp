@@ -65,16 +65,16 @@ class OptimProblem {
 
   std::vector<double> obj_weights; ///< Weights for averaging objective over initial conditions
   int ndesign; ///< Number of global design (optimization) parameters
-  double objective; ///< Current objective function value (sum over final-time cost, regularization terms and penalty terms)
-  double obj_cost; ///< Final-time measure J(T) in objective
-  double obj_regul; ///< Regularization term in objective
-  double obj_penal_leakage; ///< Penalty term for leakage into guard levels
-  double obj_penal_weightedcost; ///< Penalty term for weighted running cost 
-  double obj_penal_dpdm; ///< Penalty term second-order state derivatives (penalizes variations of the state evolution)
-  double obj_penal_variation; ///< Penalty term for variation of control parameters
-  double obj_penal_energy; ///< Energy penalty term in objective
-  double fidelity; ///< Final-time fidelity: 1/ninit sum_i Tr(rho_target^dag rho(T)) for Lindblad, |1/ninit sum_i phi_target^dag phi|^2 for Schrodinger
-  double gnorm; ///< Current norm of gradient
+  double objective = 0.0; ///< Current objective function value (sum over final-time cost, regularization terms and penalty terms)
+  double obj_cost = 0.0; ///< Final-time measure J(T) in objective
+  double obj_regul = 0.0; ///< Regularization term in objective
+  double obj_penal_leakage = 0.0; ///< Penalty term for leakage into guard levels
+  double obj_penal_weightedcost = 0.0; ///< Penalty term for weighted running cost 
+  double obj_penal_dpdm = 0.0; ///< Penalty term second-order state derivatives (penalizes variations of the state evolution)
+  double obj_penal_variation = 0.0; ///< Penalty term for variation of control parameters
+  double obj_penal_energy = 0.0; ///< Energy penalty term in objective
+  double fidelity = 0.0; ///< Final-time fidelity: 1/ninit sum_i Tr(rho_target^dag rho(T)) for Lindblad, |1/ninit sum_i phi_target^dag phi|^2 for Schrodinger
+  double gnorm = 0.0; ///< Current norm of gradient
   double gamma_tikhonov; ///< Parameter for Tikhonov regularization
   bool tikhonov_use_x0; ///< Switch to use ||x - x0||^2 for Tikhonov regularization instead of ||x||^2
   double gamma_penalty_leakage; ///< Parameter multiplying integral leakage term
