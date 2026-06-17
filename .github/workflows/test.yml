@@ -41,7 +41,7 @@ jobs:
       with:
         spack_ref: v1.1.1
         packages_repository: tdrwenski/spack-packages
-        packages_ref: cd2fbd83bf1ffc9bce12cefd843ee5c1a6c3653d
+        packages_ref: 847904d68c93d979b3ba81486298d571b70fad2c
 
     - name: Configure Spack
       run: |
