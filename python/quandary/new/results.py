@@ -144,28 +144,19 @@ def get_results(
         except (OSError, ValueError, IndexError) as e:
             logger.warning(f"Failed to read control pulses from {ctrl_file}: {e}")
     
-    # Helper function to group files by oscillator index and initial condition index, with optional filtering for Lindblad diagonal initial conditions
-    def _group_files_by_osc(pattern: str, prefix: str) -> Dict[int, List[tuple[int, str]]]:
-        grouped: Dict[int, List[tuple[int, str]]] = {}
-        for filename in sorted(glob.glob(os.path.join(datadir, pattern))):
-            iosc_part, iinit_part, _ = os.path.basename(filename).split(".")
-            iosc = int(iosc_part.replace(prefix, ""))
-            iinit = int(iinit_part.replace("iinit", ""))
-            # For Lindblad, we only want diagonal initial conditions 
-            if results.config.decoherence_type != DecoherenceType.NONE:
-                n_init_diag = np.prod(results.config.nessential)
-                diag_iinit, _ = divmod(iinit, n_init_diag + 1)
-                if iinit != diag_iinit * n_init_diag + diag_iinit:
-                    continue
-                iinit = diag_iinit
-            grouped.setdefault(iosc, []).append((iinit, filename))
-        return grouped
+    # Number of initial conditions to read. For Lindblad, files are read only for diagonal density-matrix initial conditions.
+    is_lindblad = results.config.decoherence_type != DecoherenceType.NONE
+    if not is_lindblad:
+        n_initial_conditions_to_read = int(results.config.n_initial_conditions)
+    else:
+        n_initial_conditions_to_read = int(np.sqrt(results.config.n_initial_conditions))
 
-    # Read expected energy for each oscillator and initial condition 
-    expected_by_osc = _group_files_by_osc("expected*.dat", "expected")
-    for iosc in sorted(expected_by_osc):
+    # Read expected energy for each oscillator and initial condition.
+    for iosc in range(len(results.config.nessential)):
         osc_expected: List[np.ndarray] = []
-        for _, filename in sorted(expected_by_osc[iosc], key=lambda x: x[0]):
+        for iinit in range(n_initial_conditions_to_read):
+            file_iinit = iinit if not is_lindblad else iinit * n_initial_conditions_to_read + iinit
+            filename = os.path.join(datadir, f"expected{iosc}.iinit{file_iinit:04d}.dat")
             try:
                 data = np.loadtxt(filename)
                 osc_expected.append(data[:, 1])
@@ -174,11 +165,13 @@ def get_results(
         if osc_expected:
             results.expected_energy.append(osc_expected)
 
-    # Read population for each oscillator and initial condition and level. Population files have columns: time, pop_level0, pop_level1, ...
-    population_by_osc = _group_files_by_osc("population*.dat", "population")
-    for iosc in sorted(population_by_osc):
+    # Read population for each oscillator and initial condition and level.
+    # Population files have columns: time, pop_level0, pop_level1, ...
+    for iosc in range(len(results.config.nessential)):
         osc_population: List[np.ndarray] = []
-        for _, filename in sorted(population_by_osc[iosc], key=lambda x: x[0]):
+        for iinit in range(n_initial_conditions_to_read):
+            file_iinit = iinit if not is_lindblad else iinit * n_initial_conditions_to_read + iinit
+            filename = os.path.join(datadir, f"population{iosc}.iinit{file_iinit:04d}.dat")
             try:
                 data = np.loadtxt(filename)
                 # Population data: first column is time, rest are level populations
@@ -188,43 +181,27 @@ def get_results(
         if osc_population:
             results.population.append(osc_population)
 
-    # Read final state/density matrix and store only the final-time vector uT
-    def _rho_file_map(part: str) -> Dict[int, str]:
-        files: Dict[int, str] = {}
-        for filename in sorted(glob.glob(os.path.join(datadir, f"rho_{part}.iinit*.dat"))):
-            _, iinit_part, _ = os.path.basename(filename).split(".")
-            iinit = int(iinit_part.replace("iinit", ""))
-            files[iinit] = filename
-        return files
-
-    rho_re = _rho_file_map("Re")
-    rho_im = _rho_file_map("Im")
-    rho_iinit = sorted(set(rho_re) | set(rho_im))
-
-    if rho_iinit:
-        sample_file = rho_re.get(rho_iinit[0], rho_im[rho_iinit[0]])
-        sample = np.loadtxt(sample_file, skiprows=1)
+    # Read final state/density matrix and store only the final-time vector uT.
+    if n_initial_conditions_to_read > 0:
+        # Sample the first rho_Re file to determine ndim
+        sample_re_file = os.path.join(datadir, f"rho_Re.iinit0000.dat")
+        sample = np.loadtxt(sample_re_file)
         ndim = sample.shape[1] - 1  # First column is time
-        ncols = rho_iinit[-1] + 1
-        results.uT = np.zeros((ndim, ncols), dtype=complex)
-        for iinit in rho_iinit:
-            re_file = rho_re.get(iinit)
-            im_file = rho_im.get(iinit)
+        results.uT = np.zeros((ndim, n_initial_conditions_to_read), dtype=complex)
+        for iinit in range(n_initial_conditions_to_read):
+            file_iinit = iinit if not is_lindblad else iinit * n_initial_conditions_to_read + iinit
+            re_file = os.path.join(datadir, f"rho_Re.iinit{file_iinit:04d}.dat")
+            im_file = os.path.join(datadir, f"rho_Im.iinit{file_iinit:04d}.dat")
             try:
-                re_data = np.loadtxt(re_file, skiprows=1)
+                re_data = np.loadtxt(re_file)
                 results.uT[:, iinit] = re_data[-1, 1:]
             except (OSError, ValueError, IndexError) as e:
-                logger.warning(
-                    f"Failed to read real part of rho from {re_file}: {e}"
-                )
+                logger.warning(f"Failed to read real part of rho from {re_file}: {e}")
             try:
-                im_data = np.loadtxt(im_file, skiprows=1)
+                im_data = np.loadtxt(im_file)
                 results.uT[:, iinit] += 1j * im_data[-1, 1:]
             except (OSError, ValueError, IndexError) as e:
-                logger.warning(
-                    f"Failed to read imaginary part of rho from {im_file}: {e}"
-                )
-
+                logger.warning(f"Failed to read imaginary part of rho from {im_file}: {e}")
     return results
 
 
