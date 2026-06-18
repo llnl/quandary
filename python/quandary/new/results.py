@@ -135,14 +135,15 @@ def get_results(
     ghz_to_mhz = 1e3 
     for iosc in range(len(results.config.nessential)):
         ctrl_file = os.path.join(datadir, f"control{iosc}.dat")
-        try:
-            data = np.loadtxt(ctrl_file)
-            if iosc == 0:
-                results.time = data[:, 0]
-            results.p_samples.append(data[:, 1] * ghz_to_mhz)
-            results.q_samples.append(data[:, 2] * ghz_to_mhz)
-        except (OSError, ValueError, IndexError) as e:
-            logger.warning(f"Failed to read control pulses from {ctrl_file}: {e}")
+        if os.path.exists(ctrl_file):
+            try:
+                data = np.loadtxt(ctrl_file)
+                if iosc == 0:
+                    results.time = data[:, 0]
+                results.p_samples.append(data[:, 1] * ghz_to_mhz)
+                results.q_samples.append(data[:, 2] * ghz_to_mhz)
+            except (OSError, ValueError, IndexError) as e:
+                logger.warning(f"Failed to read control pulses from {ctrl_file}: {e}")
     
     # Number of initial conditions to read. For Lindblad, files are read only for diagonal density-matrix initial conditions.
     is_lindblad = results.config.decoherence_type != DecoherenceType.NONE
@@ -157,11 +158,12 @@ def get_results(
         for iinit in range(n_initial_conditions_to_read):
             file_iinit = iinit if not is_lindblad else iinit * n_initial_conditions_to_read + iinit
             filename = os.path.join(datadir, f"expected{iosc}.iinit{file_iinit:04d}.dat")
-            try:
-                data = np.loadtxt(filename)
-                osc_expected.append(data[:, 1])
-            except (OSError, ValueError, IndexError) as e:
-                logger.warning(f"Failed to read expected energy from {filename}: {e}")
+            if os.path.exists(filename):
+                try:
+                    data = np.loadtxt(filename)
+                    osc_expected.append(data[:, 1])
+                except (OSError, ValueError, IndexError) as e:
+                    logger.warning(f"Failed to read expected energy from {filename}: {e}")
         if osc_expected:
             results.expected_energy.append(osc_expected)
 
@@ -172,36 +174,38 @@ def get_results(
         for iinit in range(n_initial_conditions_to_read):
             file_iinit = iinit if not is_lindblad else iinit * n_initial_conditions_to_read + iinit
             filename = os.path.join(datadir, f"population{iosc}.iinit{file_iinit:04d}.dat")
-            try:
-                data = np.loadtxt(filename)
-                # Population data: first column is time, rest are level populations
-                osc_population.append(data[:, 1:].T)
-            except (OSError, ValueError, IndexError) as e:
-                logger.warning(f"Failed to read population from {filename}: {e}")
+            if os.path.exists(filename):
+                try:
+                    data = np.loadtxt(filename)
+                    # Population data: first column is time, rest are level populations
+                    osc_population.append(data[:, 1:].T)
+                except (OSError, ValueError, IndexError) as e:
+                    logger.warning(f"Failed to read population from {filename}: {e}")
         if osc_population:
             results.population.append(osc_population)
 
     # Read final state/density matrix and store only the final-time vector uT.
-    if n_initial_conditions_to_read > 0:
-        # Sample the first rho_Re file to determine ndim
-        sample_re_file = os.path.join(datadir, f"rho_Re.iinit0000.dat")
+    sample_re_file = os.path.join(datadir, f"rho_Re.iinit0000.dat") # Sample the first rho_Re file to determine ndim
+    if n_initial_conditions_to_read > 0 and os.path.exists(sample_re_file):
         sample = np.loadtxt(sample_re_file)
         ndim = sample.shape[1] - 1  # First column is time
         results.uT = np.zeros((ndim, n_initial_conditions_to_read), dtype=complex)
         for iinit in range(n_initial_conditions_to_read):
             file_iinit = iinit if not is_lindblad else iinit * n_initial_conditions_to_read + iinit
             re_file = os.path.join(datadir, f"rho_Re.iinit{file_iinit:04d}.dat")
+            if os.path.exists(re_file):
+                try:
+                    re_data = np.loadtxt(re_file)
+                    results.uT[:, iinit] = re_data[-1, 1:]
+                except (OSError, ValueError, IndexError) as e:
+                    logger.warning(f"Failed to read real part of rho from {re_file}: {e}")
             im_file = os.path.join(datadir, f"rho_Im.iinit{file_iinit:04d}.dat")
-            try:
-                re_data = np.loadtxt(re_file)
-                results.uT[:, iinit] = re_data[-1, 1:]
-            except (OSError, ValueError, IndexError) as e:
-                logger.warning(f"Failed to read real part of rho from {re_file}: {e}")
-            try:
-                im_data = np.loadtxt(im_file)
-                results.uT[:, iinit] += 1j * im_data[-1, 1:]
-            except (OSError, ValueError, IndexError) as e:
-                logger.warning(f"Failed to read imaginary part of rho from {im_file}: {e}")
+            if os.path.exists(im_file):
+                try:
+                    im_data = np.loadtxt(im_file)
+                    results.uT[:, iinit] += 1j * im_data[-1, 1:]
+                except (OSError, ValueError, IndexError) as e:
+                    logger.warning(f"Failed to read imaginary part of rho from {im_file}: {e}")
     return results
 
 
