@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1781280614002,
+  "lastUpdate": 1781811793972,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -3497,6 +3497,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_2_2_gradient_lindblad_nproc_4] - Memory",
             "value": 176.7,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Stefanie Guenther",
+            "username": "steffi7574",
+            "email": "guenther5@llnl.gov"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "57943a09a0c0d93dddcbd35db9c991162a5d2d3f",
+          "message": "Merge pull request #142 from llnl/bugfix-evalControl-tolerance\n\nBugfix: Lower tolerance for testing whether t0 <= time <- tfinal.",
+          "timestamp": "2026-06-18T19:13:46Z",
+          "url": "https://github.com/llnl/quandary/commit/57943a09a0c0d93dddcbd35db9c991162a5d2d3f"
+        },
+        "date": 1781811791689,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
+            "value": 0.6557046339730732,
+            "range": "0.5168868334748679",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
+            "value": 85,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
+            "value": 5.267770482925698,
+            "range": "0.05373738279094342",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
+            "value": 4121.7,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_gradient_schroed_nproc_8] - Time",
+            "value": 1.4127144709927961,
+            "range": "0.26431580519157616",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_gradient_schroed_nproc_8] - Memory",
+            "value": 310.17,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_2_2_gradient_lindblad_nproc_4] - Time",
+            "value": 0.8962589099537581,
+            "range": "0.5854771626279406",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_2_2_gradient_lindblad_nproc_4] - Memory",
+            "value": 176.43,
             "unit": "MB"
           }
         ]
