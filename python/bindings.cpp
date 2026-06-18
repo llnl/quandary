@@ -7,6 +7,10 @@
 
 #include "config.hpp"
 #include "main.hpp"
+#include "petsc.h"
+#ifdef WITH_SLEPC
+#include <slepceps.h>
+#endif
 
 namespace nb = nanobind;
 
@@ -322,7 +326,11 @@ NB_MODULE(_quandary_impl, m) {
         PetscBool finalized = PETSC_FALSE;
         PetscFinalized(&finalized);
         if (!finalized) {
+          #ifdef WITH_SLEPC
+          SlepcFinalize();
+          #else
           PetscFinalize();
+          #endif
         }
       }
     });
