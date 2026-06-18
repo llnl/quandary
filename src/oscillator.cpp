@@ -4,7 +4,7 @@
 #include "mpi_logger.hpp"
 #include <stdexcept>
 
-const double TOLERANCE = 1e-13; // Tolerance for avoiding numerical precision issues when comparing floating point numbers in evalControl.
+const double TOLERANCE = 1e-10; // Tolerance for avoiding numerical precision issues when comparing floating point numbers in evalControl.
 
 Oscillator::Oscillator(){
   nlevels = 0;
