@@ -29,7 +29,7 @@
 int runQuandary(const Config& config, bool quietmode, int argc, char** argv, int petsc_argc, char** petsc_argv)
 {
   char filename[255];
-  PetscErrorCode ierr;
+  PetscErrorCode ierr = 0;
 
   /* Track whether MPI was initialized externally (e.g. by Python).
    * If so, Python handles MPI and PETSc init/finalize, allowing
