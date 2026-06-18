@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1781811793972,
+  "lastUpdate": 1781817269610,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -3563,6 +3563,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_2_2_gradient_lindblad_nproc_4] - Memory",
             "value": 176.43,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Stefanie Guenther",
+            "username": "steffi7574",
+            "email": "guenther5@llnl.gov"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "511cc7cd325ed3144ad1f73dd103c253d30c1595",
+          "message": "Merge pull request #141 from llnl/bugfix-writeControls\n\nRound number of timesteps when writing controls.",
+          "timestamp": "2026-06-18T20:44:50Z",
+          "url": "https://github.com/llnl/quandary/commit/511cc7cd325ed3144ad1f73dd103c253d30c1595"
+        },
+        "date": 1781817264871,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
+            "value": 0.6581050044624135,
+            "range": "0.29197400573135834",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
+            "value": 85.12,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
+            "value": 5.25588296004571,
+            "range": "0.054419254373423716",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
+            "value": 4121.65,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_gradient_schroed_nproc_8] - Time",
+            "value": 1.420131029910408,
+            "range": "0.3517325322056056",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_gradient_schroed_nproc_8] - Memory",
+            "value": 309.21,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_2_2_gradient_lindblad_nproc_4] - Time",
+            "value": 0.8980705760186538,
+            "range": "0.33213448182200506",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_2_2_gradient_lindblad_nproc_4] - Memory",
+            "value": 176.82,
             "unit": "MB"
           }
         ]
