@@ -1,7 +1,6 @@
 """Quandary results parsing and data structures."""
 
 from __future__ import annotations
-import glob
 import logging
 import os
 from dataclasses import dataclass, field
@@ -132,9 +131,9 @@ def get_results(
             )
 
     # Read control pulses for each oscillator, converted from GHz (file) to MHz (output) 
-    control_files = sorted(glob.glob(os.path.join(datadir, "control*.dat")))
     ghz_to_mhz = 1e3 
-    for iosc, ctrl_file in enumerate(control_files):
+    for iosc in range(len(results.config.nessential)):
+        ctrl_file = os.path.join(datadir, f"control{iosc}.dat")
         try:
             data = np.loadtxt(ctrl_file)
             if iosc == 0:
