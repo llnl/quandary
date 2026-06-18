@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List
 import matplotlib.pyplot as plt
 import numpy as np
+from mpi4py import MPI
 from .._quandary_impl import Config, DecoherenceType
 from .config import resolve_output_dir
 
