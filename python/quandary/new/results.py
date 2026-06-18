@@ -212,29 +212,30 @@ def plot_pulse(results):
     results : Results
         Results from optimize(), simulate(), or evaluate_controls().
     """
+    if MPI.COMM_WORLD.Get_rank() != 0:
+        return  
     Ne = results.config.nessential
     time = results.time
     p_samples = results.p_samples
     q_samples = results.q_samples
 
-    plt.figure()
     nrows = len(Ne)
     ncols = 1
+    fig, axes = plt.subplots(nrows, ncols, squeeze=False)
     for iosc in range(len(Ne)):
-        plt.subplot(nrows, ncols, iosc + 1)
-        plt.plot(time, p_samples[iosc], "r", label="p(t)")
-        plt.plot(time, q_samples[iosc], "b", label="q(t)")
-        plt.xlabel('time (ns)')
-        plt.ylabel('Drive strength [MHz]')
+        ax = axes[iosc, 0]
+        ax.plot(time, p_samples[iosc], "r", label="p(t)")
+        ax.plot(time, q_samples[iosc], "b", label="q(t)")
+        ax.set_xlabel('time (ns)')
+        ax.set_ylabel('Drive strength [MHz]')
         maxp = max(np.abs(p_samples[iosc]))
         maxq = max(np.abs(q_samples[iosc]))
-        plt.title('Qubit ' + str(iosc) + '\n max. drive ' + str(round(maxp, 1)) + ", " +
-                  str(round(maxq, 1)) + " MHz")
-        plt.legend(loc='lower right')
-        plt.xlim([0.0, time[-1]])
-    plt.subplots_adjust(hspace=0.6)
-    plt.draw()
-    plt.show()
+        ax.set_title('Qubit ' + str(iosc) + '\n max. drive ' + str(round(maxp, 1)) + ", " +
+                     str(round(maxq, 1)) + " MHz")
+        ax.legend(loc='lower right')
+        ax.set_xlim([0.0, time[-1]])
+    fig.subplots_adjust(hspace=0.6)
+    return fig
 
 
 def plot_expectedEnergy(results):
@@ -245,6 +246,8 @@ def plot_expectedEnergy(results):
     results : Results
         Results from optimize(), simulate(), or evaluate_controls().
     """
+    if MPI.COMM_WORLD.Get_rank() != 0:
+        return  
     Ne = results.config.nessential
     time = results.time
     expectedEnergy = results.expected_energy
@@ -255,28 +258,25 @@ def plot_expectedEnergy(results):
     nrows = int(np.ceil(nplots / ncols))
     figsizex = 6.4 * nrows * 0.75
     figsizey = 4.8 * nrows * 0.75
-    plt.figure(figsize=(figsizex, figsizey))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(figsizex, figsizey), squeeze=False)
     for iplot in range(nplots):
         iinit = iplot
-        plt.subplot(nrows, ncols, iplot + 1)
+        ax = axes[iplot // ncols, iplot % ncols]
         emax = 1.0
         for iosc in range(len(Ne)):
             label = 'Qubit ' + str(iosc) if len(Ne) > 1 else ''
-            plt.plot(time, expectedEnergy[iosc][iinit], label=label)
+            ax.plot(time, expectedEnergy[iosc][iinit], label=label)
             emax_iosc = np.max(expectedEnergy[iosc][iinit])
             emax = max(emax, emax_iosc)  # keep track of max energy level for setting ylim
-        plt.xlabel('time (ns)')
-        plt.ylabel('expected energy')
-
-        plt.ylim([0.0 - 1e-2, emax + 1e-2])
-        plt.xlim([0.0, time[-1]])
+        ax.set_xlabel('time (ns)')
+        ax.set_ylabel('expected energy')
+        ax.set_ylim([0.0 - 1e-2, emax + 1e-2])
+        ax.set_xlim([0.0, time[-1]])
         binary_ID = iplot if len(Ne) == 1 else bin(iplot).replace("0b", "").zfill(len(Ne))
-        plt.title("from |" + str(binary_ID) + ">")
-        plt.legend(loc='lower right')
-    plt.subplots_adjust(hspace=0.5)
-    plt.subplots_adjust(wspace=0.5)
-    plt.draw()
-    plt.show()
+        ax.set_title("from |" + str(binary_ID) + ">")
+        ax.legend(loc='lower right')
+    fig.subplots_adjust(hspace=0.5, wspace=0.5)
+    return fig
 
 
 def plot_population(results):
@@ -287,6 +287,8 @@ def plot_population(results):
     results : Results
         Results from optimize(), simulate(), or evaluate_controls().
     """
+    if MPI.COMM_WORLD.Get_rank() != 0:
+        return  
     Ne = results.config.nessential
     time = results.time
     population = results.population
@@ -297,28 +299,26 @@ def plot_population(results):
     nrows = int(np.ceil(nplots / ncols))
     figsizex = 6.4 * nrows * 0.75
     figsizey = 4.8 * nrows * 0.75
-    plt.figure(figsize=(figsizex, figsizey))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(figsizex, figsizey), squeeze=False)
 
     # Iterate over initial conditions (one plot for each)
     for iplot in range(nplots):
         iinit = iplot
-        plt.subplot(nrows, ncols, iplot + 1)
+        ax = axes[iplot // ncols, iplot % ncols]
         for iosc in range(len(Ne)):
             for istate in range(Ne[iosc]):
                 label = 'Qubit ' + str(iosc) if len(Ne) > 1 else ''
                 label = label + " |" + str(istate) + ">"
-                plt.plot(time, population[iosc][iinit][istate], label=label)
-        plt.xlabel('time (ns)')
-        plt.ylabel('population')
-        plt.ylim([0.0 - 1e-4, 1.0 + 1e-2])
-        plt.xlim([0.0, time[-1]])
+                ax.plot(time, population[iosc][iinit][istate], label=label)
+        ax.set_xlabel('time (ns)')
+        ax.set_ylabel('population')
+        ax.set_ylim([0.0 - 1e-4, 1.0 + 1e-2])
+        ax.set_xlim([0.0, time[-1]])
         binary_ID = iplot if len(Ne) == 1 else bin(iplot).replace("0b", "").zfill(len(Ne))
-        plt.title("from |" + str(binary_ID) + ">")
-        plt.legend(loc='lower right')
-    plt.subplots_adjust(hspace=0.5)
-    plt.subplots_adjust(wspace=0.5)
-    plt.draw()
-    plt.show()
+        ax.set_title("from |" + str(binary_ID) + ">")
+        ax.legend(loc='lower right')
+    fig.subplots_adjust(hspace=0.5, wspace=0.5)
+    return fig
 
 
 def plot_results_1osc(results, oscillator=0):
@@ -331,6 +331,8 @@ def plot_results_1osc(results, oscillator=0):
     oscillator : int
         Index of oscillator to plot. Default: 0.
     """
+    if MPI.COMM_WORLD.Get_rank() != 0:
+        return  
     t = results.time
     p = results.p_samples[oscillator]
     q = results.q_samples[oscillator]
@@ -389,6 +391,5 @@ def plot_results_1osc(results, oscillator=0):
     ax[row, col].legend()
     ax[row, col].set_title('Expected Energy Level')
     ax[row, col].grid()
+    return fig
 
-    plt.draw()
-    plt.show()
