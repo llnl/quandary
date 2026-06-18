@@ -279,22 +279,6 @@ def create_config(
             rotation_frequency=rotation_frequency,
         )
     
-    # Set decoherence type if provided
-    decoherence_type = None 
-    if decay_time is not None or dephase_time is not None:
-        if decay_time is not None and len(decay_time) != nqubits:
-            raise ValueError(f"decay_time must have length {nqubits}, got {len(decay_time)}")
-        if dephase_time is not None and len(dephase_time) != nqubits:
-            raise ValueError(f"dephase_time must have length {nqubits}, got {len(dephase_time)}")
-        if decay_time is not None and dephase_time is not None:
-            decoherence_type = DecoherenceType.BOTH
-        elif decay_time is not None:
-            decoherence_type = DecoherenceType.DECAY
-            dephase_time = None
-        elif dephase_time is not None:
-            decoherence_type = DecoherenceType.DEPHASE
-            decay_time = None
-
     # Validate spline_order
     if spline_order is not None and spline_order not in (0, 2):
         raise ValueError(f"spline_order must be 0 or 2, got {spline_order}")
@@ -335,18 +319,15 @@ def create_config(
         config_input.crosskerr_coupling = crosskerr_coupling
     if len(dipole_coupling) > 0:
         config_input.dipole_coupling = dipole_coupling
-    if decoherence_type is not None:
-        config_input.decoherence_type = decoherence_type
-    if decay_time is not None:
-        config_input.decay_time = decay_time
-    if dephase_time is not None:
-        config_input.dephase_time = dephase_time
     if control_amplitude_bound is not None:
         config_input.control_amplitude_bound = control_amplitude_bound
     config_input.carrier_frequencies = carrier_frequency
     config_input.output_directory = output_directory
     if control_zero_boundary_condition is not None:
         config_input.control_zero_boundary_condition = control_zero_boundary_condition
+    
+    # Set decoherence if provided
+    set_decoherence(config_input, decay_time=decay_time, dephase_time=dephase_time)
 
     # Write target and initial conditions to file, if provided, and store in ConfigInput.
     set_target(config_input, target, gate_rot_freq=gate_rot_freq)
@@ -574,6 +555,37 @@ def set_controls(
             control_inits.append(init)
 
         config_input.control_initializations = control_inits
+
+def set_decoherence(config_input: ConfigInput, decay_time=None, dephase_time=None) -> None:
+    """Set the decoherence parameters on a ConfigInput (in-place).
+
+    Configures the decay and dephasing times, and sets the decoherence type accordingly. If neither is provided, decoherence_type is left unset (C++ default: no decoherence).
+    """
+
+    # Set decoherence type if provided
+    decoherence_type = None 
+    nqubits = len(config_input.nessential)
+    if decay_time is not None or dephase_time is not None:
+        if decay_time is not None and len(decay_time) != nqubits:
+            raise ValueError(f"decay_time must have length {nqubits}, got {len(decay_time)}")
+        if dephase_time is not None and len(dephase_time) != nqubits:
+            raise ValueError(f"dephase_time must have length {nqubits}, got {len(dephase_time)}")
+        if decay_time is not None and dephase_time is not None:
+            decoherence_type = DecoherenceType.BOTH
+        elif decay_time is not None:
+            decoherence_type = DecoherenceType.DECAY
+            dephase_time = None
+        elif dephase_time is not None:
+            decoherence_type = DecoherenceType.DEPHASE
+            decay_time = None
+
+    if decoherence_type is not None:
+        config_input.decoherence_type = decoherence_type
+    if decay_time is not None:
+        config_input.decay_time = decay_time
+    if dephase_time is not None:
+        config_input.dephase_time = dephase_time
+
 
 # ---------------------------------
 # Private config I/O helpers

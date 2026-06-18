@@ -45,6 +45,7 @@ from .config import (  # noqa: F401, E402
     set_target,
     set_initial_condition,
     set_controls,
+    set_decoherence,
 )
 
 # Runner functions
@@ -110,6 +111,7 @@ __all__ = [
     "set_target",
     "set_controls",
     "set_initial_condition",
+    "set_decoherence",
     # Runner functions
     "optimize",
     "simulate",
