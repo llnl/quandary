@@ -97,18 +97,10 @@ Quandary has two Python interfaces:
 - **New (nanobind)**: `from quandary.new import *` — the recommended interface, built on nanobind C++ bindings.
 - **Old (deprecated)**: `from quandary import *` — the legacy class-based interface, which will be removed in a future version.
 
-Create and activate a Python environment — venv or conda both work.
-
-For venv:
+Create and activate a Python environment. For venv:
 ```
 python3 -m venv .venv
 source .venv/bin/activate
-```
-For Conda:
-```
-conda create --name myenv python pip
-conda activate myenv
-```
 
 Ensure PETSc is discoverable by setting the following environment variables:
 ```
