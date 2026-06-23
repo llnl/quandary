@@ -193,8 +193,8 @@ def create_config(
 
     Examples
     --------
-    >>> setup = create_config(nessential=[3], transition_frequency=[4.1], total_time=100.0)
-    >>> setup = create_config(nessential=[2, 3], transition_frequency=[4.0, 5.0], selfkerr=[0.2, 0.3], total_time=50.0, control_amplitude_bound=[0.5, 0.3], nspline=20, control_zero_boundary_condition=True)
+    >>> config = create_config(nessential=[3], transition_frequency=[4.1], total_time=100.0)
+    >>> config = create_config(nessential=[2, 3], transition_frequency=[4.0, 5.0], selfkerr=[0.2, 0.3], total_time=50.0, control_amplitude_bound=[0.5, 0.3], nspline=20, control_zero_boundary_condition=True)
     """
 
     # Set defaults
@@ -380,6 +380,20 @@ def set_target(
     The type is inferred from the dimensionality of ``target``: a 2-D array
     is treated as a gate, a 1-D array as a state.  Writes the data to a file
     in the output directory and sets ``config_input.optim_target``.
+
+    Parameters
+    ----------
+    config_input : ConfigInput
+        ConfigInput to modify in-place.
+    target : array-like
+        Target for optimization and fidelity computation. Either a 2D (unitary gate) or 1D (state vector).
+    gate_rot_freq : sequence of float, optional
+        Rotation frequencies for the gate. Default: None.
+
+    Returns
+    -------
+    None
+        Modifies config_input in-place to set the optimization target.
     """
     if target is None:
         return
@@ -410,7 +424,7 @@ def set_target(
         config_input.optim_target = optim_target
 
     else:
-        # State-to-state: verify dimensions andwrite target state to file
+        # State-to-state: verify dimensions and write target state to file
         # dimension must match to nessential product
         if target_array.shape != (dim_ess,):
             raise ValueError(f"Target state must have shape ({dim_ess},), got {target_array.shape}")
@@ -429,7 +443,19 @@ def set_initial_condition(
 ) -> None:
     """Set the initial condition on a ConfigInput (in-place).
 
-    The initial condition can be either as a state vector (arbitrary superposition) or as an InitialConditionSettings struct for advanced use cases. If it's a state vector, it is written to a file in the output directory and the struct is configured to load from that file. If it's already an InitialConditionSettings struct, it is used directly. If None, the C++ default is used. 
+    The initial condition can be either as a state vector (arbitrary superposition) or an InitialConditionSettings struct for advanced use cases. If it's a state vector, it is written to a file in the output directory and the struct is configured to load from that file. If it's already an InitialConditionSettings struct, it is used directly. If None, the C++ default is used. 
+
+    Parameters
+    ----------
+    config_input : ConfigInput
+        ConfigInput to modify in-place.
+    initial_condition : array-like or InitialConditionSettings, optional
+        Either a state vector (arbitrary superposition) or an InitialConditionSettings struct. If None, the C++ default is used (all basis states in the essential dimensions).
+
+    Returns
+    -------
+    None
+        Modifies config_input in-place to set the initial condition.
     """
     if initial_condition is None:
         return  
@@ -462,14 +488,34 @@ def set_controls(
     spline_coefficients=None,
     p_samples=None,
     q_samples=None,
-    control_randomize: bool = True,
     control_amplitude: Optional[float] = None,
+    control_randomize: bool = True,
 ) -> None:
     """Set the control parameterization and initialization on a ConfigInput (in-place).
 
     The control pulse is defined either by providing the B-spline coefficients (spline_coefficients), or by lists of control pulses at each time point (p_samples, q_samples), or by an explicit amplitude (control_amplitude) for uniform or random initialization.    
 
     Priority: p_samples/q_samples > spline_coefficients > explicit amplitude > existing config_input.control_initializations > default from C++ code.
+
+    Parameters
+    ----------
+    config_input : ConfigInput
+        ConfigInput to modify in-place.
+    spline_coefficients : array-like, optional
+        B-spline coefficients for the control pulses. If provided, they are written to a file and the control initialization is set to load from that file.
+    p_samples : array-like, optional
+        Control pulse samples for the p quadrature for each qubit and each timestep. If provided, they are fitted to B-splines and the coefficients are written to a file. Requires q_samples to be provided as well. Overrides spline_coefficients if both are provided.
+    q_samples : array-like, optional
+        Control pulse samples for the q quadrature for each qubit and each timestep. If provided, they are fitted to B-splines and the coefficients are written to a file. Requires p_samples to be provided as well. Overrides spline_coefficients if both are provided.
+    control_amplitude : float, optional
+        Amplitude for uniform or random initialization. Overrides existing control_initializations if provided.
+    control_randomize : bool, optional
+        Whether to randomize the control pulses if an explicit amplitude is provided. Default is True.
+
+    Returns
+    -------
+    None
+        Modifies config_input in-place to set the control parameterization and initialization.
     """
 
     # If p_samples/q_samples are provide, fit pulses to bspline coefficients. 
@@ -559,7 +605,21 @@ def set_controls(
 def set_decoherence(config_input: ConfigInput, decay_time=None, dephase_time=None) -> None:
     """Set the decoherence parameters on a ConfigInput (in-place).
 
-    Configures the decay and dephasing times, and sets the decoherence type accordingly. If neither is provided, decoherence_type is left unset (C++ default: no decoherence).
+    Configures the decay and dephasing times, and sets the decoherence type accordingly. If decay or dephasing times are provided, Lindblad's master equation is solved. If neither is provided, decoherence_type is left unset (C++ default: no decoherence), solving Schroedinger's equation.
+
+    Parameters
+    ----------
+    config_input : ConfigInput
+        ConfigInput to modify in-place.
+    decay_time : sequence of float, optional
+        T1 relaxation times [ns] per qubit. If provided, sets decoherence_type to DECAY or BOTH.
+    dephase_time : sequence of float, optional
+        T2 dephasing times [ns] per qubit. If provided, sets decoherence_type to DEPHASE or BOTH.
+
+    Returns
+    -------
+    None
+        Modifies config_input in-place to set decoherence parameters.
     """
 
     # Set decoherence type if provided
