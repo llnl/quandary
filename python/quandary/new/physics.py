@@ -210,9 +210,12 @@ def hamiltonians(*,
         selfkerr = np.zeros(len(nessential))
 
     nqubits = len(nessential)
-    assert len(selfkerr) == nqubits
-    assert len(transition_frequency) == nqubits
-    assert len(rotation_frequency) == nqubits
+    if len(selfkerr) != nqubits:
+        raise ValueError(f"selfkerr must have length {nqubits} (one per oscillator), got {len(selfkerr)}")
+    if len(transition_frequency) != nqubits:
+        raise ValueError(f"transition_frequency must have length {nqubits} (one per oscillator), got {len(transition_frequency)}")
+    if len(rotation_frequency) != nqubits:
+        raise ValueError(f"rotation_frequency must have length {nqubits} (one per oscillator), got {len(rotation_frequency)}")
 
     Ntot = np.array(nessential) + np.array(nguard)
     n = np.prod(Ntot)  # System size
