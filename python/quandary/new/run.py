@@ -515,16 +515,24 @@ def _run_subprocess(
             quiet_flag,
         ]
 
+    # Run the subprocess from a deterministic working directory.
+    # Using the config directory avoids failures when the parent process
+    # has a different cwd than an interactive shell session.
+    subprocess_cwd = os.path.dirname(config_file)
+    if working_dir != ".":
+        subprocess_cwd = os.path.abspath(working_dir)
+
     # Run the subprocess
     if total_cores <= 1:
         logger.info("Spawning single-process subprocess without MPI launcher")
     else:
         logger.info(f"Spawning subprocess with {total_cores} processes using {mpi_exec}")
     logger.debug(f"Subprocess command: {shlex.join(cmd)}")
+    logger.debug(f"Subprocess cwd: {subprocess_cwd}")
     capture_output = quiet
     result = subprocess.run(
         cmd,
-        cwd=working_dir,
+        cwd=subprocess_cwd,
         stdout=subprocess.PIPE if capture_output else None,
         stderr=subprocess.PIPE if capture_output else None,
         text=True,
