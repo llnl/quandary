@@ -485,23 +485,32 @@ def _run_subprocess(
     with open(config_file, "w") as f:
         f.write(toml_content)
 
-    # Python code to run Quandary from the TOML file.
-    # Pass dynamic values through argv to avoid launcher/shell quoting issues.
-    python_code = "import sys; from quandary.new import run_from_file; run_from_file(sys.argv[1], quiet=bool(int(sys.argv[2])))"
+    # Create a small launcher script instead of using `python -c`.
+    # Some MPI launchers are sensitive to `-c` payload parsing.
+    launcher_script = os.path.abspath(
+        os.path.join(validated_config.output_directory, "_quandary_run_from_file.py")
+    )
+    launcher_code = (
+        "import sys\n"
+        "from quandary.new import run_from_file\n"
+        "run_from_file(sys.argv[1], quiet=bool(int(sys.argv[2])))\n"
+    )
+    with open(launcher_script, "w") as f:
+        f.write(launcher_code)
+
     quiet_flag = "1" if quiet else "0"
 
     # Build command: bypass MPI launcher for single-process execution.
     # Some remote environments restrict mpirun even for -np 1.
     if total_cores <= 1:
-        cmd = [python_exec, "-c", python_code, config_file, quiet_flag]
+        cmd = [python_exec, launcher_script, config_file, quiet_flag]
     else:
         cmd = [
             mpi_exec,
             nproc_flag,
             str(total_cores),
             python_exec,
-            "-c",
-            python_code,
+            launcher_script,
             config_file,
             quiet_flag,
         ]
