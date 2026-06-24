@@ -489,11 +489,18 @@ def _run_subprocess(
         f"run_from_file({config_file!r}, quiet={quiet})"
     )
 
-    # Build the command with optimized core count
-    cmd = [mpi_exec, nproc_flag, str(total_cores), python_exec, "-c", python_code]
+    # Build command: bypass MPI launcher for single-process execution.
+    # Some remote environments restrict mpirun even for -np 1.
+    if total_cores <= 1:
+        cmd = [python_exec, "-c", python_code]
+    else:
+        cmd = [mpi_exec, nproc_flag, str(total_cores), python_exec, "-c", python_code]
 
     # Run the subprocess
-    logger.info(f"Spawning subprocess with {total_cores} processes using {mpi_exec}")
+    if total_cores <= 1:
+        logger.info("Spawning single-process subprocess without MPI launcher")
+    else:
+        logger.info(f"Spawning subprocess with {total_cores} processes using {mpi_exec}")
     logger.debug(f"Subprocess command: {shlex.join(cmd)}")
     capture_output = quiet
     result = subprocess.run(
