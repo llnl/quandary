@@ -99,9 +99,11 @@ def simulate(
     set_target(config, target, gate_rot_freq=gate_rot_freq)
     set_initial_condition(config, initial_condition=initial_condition)
 
+    # Create a validated config
+    config = config.validate(quiet=quiet)
+
     if dry_run:
-        toml_content = config.printConfig()
-        return Results(config=Config.from_string(toml_content, quiet))
+        return Results(config=config)
     return _run(
         config,
         max_n_procs=max_n_procs,
@@ -186,9 +188,11 @@ def optimize(
     set_target(config, target, gate_rot_freq=gate_rot_freq)
     set_initial_condition(config, initial_condition=initial_condition)
 
+    # Create a validated config
+    config = config.validate(quiet=quiet)
+
     if dry_run:
-        toml_content = config.printConfig()
-        return Results(config=Config.from_string(toml_content, quiet))
+        return Results(config=config)
     return _run(
         config,
         max_n_procs=max_n_procs,
@@ -272,10 +276,12 @@ def evaluate_controls(
     nsteps = max(nsteps, 1)  # Ensure at least one step
     config.dt = total_time / nsteps
 
+    # Create a validated config
+    config = config.validate(quiet=quiet)
+
     # Run or dry run, return Results struct
     if dry_run:
-        toml_content = config.printConfig()
-        return Results(config=Config.from_string(toml_content, quiet))
+        return Results(config=config)
     return _run(
         config,
         max_n_procs=max_n_procs,
@@ -402,10 +408,6 @@ def _run(
     # Check MPI context
     comm = MPI.COMM_WORLD
     size = comm.Get_size()
-
-    # Create validated config 
-    toml_content = config.printConfig()
-    config = Config.from_string(toml_content, quiet)
 
     if _is_interactive():
         # In interactive environment without MPI, spawn subprocess with MPI launcher for better performance

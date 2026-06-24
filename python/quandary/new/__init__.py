@@ -40,6 +40,7 @@ from .types import (  # noqa: F401, E402
 from .config import (  # noqa: F401, E402
     create_config,
     load_config,
+    validate,
     resolve_output_dir,
     set_target,
     set_initial_condition,
@@ -105,6 +106,7 @@ __all__ = [
     # Configuration 
     "create_config",
     "load_config",
+    "validate",
     "resolve_output_dir",
     "set_target",
     "set_controls",

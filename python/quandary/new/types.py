@@ -120,6 +120,13 @@ class Config(_CppConfig):
 
     __repr__ = _make_repr(_CppConfig)
 
+    def validate(self, quiet=False):
+        """Return a validated copy by round-tripping through TOML parsing: prints the Config to TOML text and creates a new Config from that text including defaults and validation. 
+
+        """
+        validated = _CppConfig.from_string(self.printConfig(), quiet)
+        return type(self)(validated)
+
     def copy(self):
         """Create an independent copy preserving the Python wrapper type."""
         return type(self)(self)

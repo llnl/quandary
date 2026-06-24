@@ -72,6 +72,15 @@ def load_config(
     return Config(inputFromFile(filename, quiet=quiet))
 
 
+def validate(config: Config, quiet: bool = False) -> Config:
+    """Validate and return a new finalized Config instance.
+
+    This helper mirrors ``Config.validate()`` while providing a module-level
+    function for ergonomic imports like ``from quandary.new import validate``.
+    """
+    return config.validate(quiet=quiet)
+
+
 def create_config(
     nessential: Sequence[int],
     total_time: float,
