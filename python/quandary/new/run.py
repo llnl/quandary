@@ -11,7 +11,6 @@ MPI Lifecycle Management:
 from __future__ import annotations
 import logging
 import os
-import glob
 import shlex
 import subprocess
 import sys
@@ -486,59 +485,25 @@ def _run_subprocess(
     with open(config_file, "w") as f:
         f.write(toml_content)
 
-    # Create a small launcher script instead of using `python -c`.
-    # Some MPI launchers are sensitive to `-c` payload parsing.
-    launcher_script = os.path.abspath(
-        os.path.join(validated_config.output_directory, "_quandary_run_from_file.py")
-    )
-    launcher_code = (
-        "import os\n"
-        "import sys\n"
-        "import traceback\n"
-        "from quandary.new import run_from_file\n"
-        "rank = os.environ.get('OMPI_COMM_WORLD_RANK', os.environ.get('PMI_RANK', '?'))\n"
-        "quiet = bool(int(sys.argv[2]))\n"
-        "log_file = os.path.join(sys.argv[3], f'_quandary_launcher_rank_{rank}.log')\n"
-        "def _log(msg):\n"
-        "    with open(log_file, 'a') as _f:\n"
-        "        _f.write(msg + '\\n')\n"
-        "_log(f'start cwd={os.getcwd()} config={sys.argv[1]} quiet={quiet}')\n"
-        "print(f'[quandary-launcher rank={rank}] start cwd={os.getcwd()} config={sys.argv[1]} quiet={quiet}', file=sys.stderr, flush=True)\n"
-        "try:\n"
-        "    rc = run_from_file(sys.argv[1], quiet=quiet)\n"
-        "    _log(f'run_from_file returned {rc}')\n"
-        "    if rc not in (None, 0):\n"
-        "        print(f'[quandary-launcher rank={rank}] run_from_file return code {rc}', file=sys.stderr, flush=True)\n"
-        "        _log(f'nonzero return code {rc}')\n"
-        "        sys.exit(int(rc))\n"
-        "    _log('finished')\n"
-        "    print(f'[quandary-launcher rank={rank}] finished', file=sys.stderr, flush=True)\n"
-        "except Exception:\n"
-        "    _log('exception')\n"
-        "    _log(traceback.format_exc())\n"
-        "    print(f'[quandary-launcher rank={rank}] exception', file=sys.stderr, flush=True)\n"
-        "    traceback.print_exc()\n"
-        "    raise\n"
-    )
-    with open(launcher_script, "w") as f:
-        f.write(launcher_code)
-
+    # Python code to run Quandary from the TOML file.
+    # Dynamic values are passed via argv to avoid quoting edge cases.
+    python_code = "import sys; from quandary.new import run_from_file; run_from_file(sys.argv[1], quiet=bool(int(sys.argv[2])))"
     quiet_flag = "1" if quiet else "0"
 
     # Build command: bypass MPI launcher for single-process execution.
     # Some remote environments restrict mpirun even for -np 1.
     if total_cores <= 1:
-        cmd = [python_exec, launcher_script, config_file, quiet_flag, validated_config.output_directory]
+        cmd = [python_exec, "-c", python_code, config_file, quiet_flag]
     else:
         cmd = [
             mpi_exec,
             nproc_flag,
             str(total_cores),
             python_exec,
-            launcher_script,
+            "-c",
+            python_code,
             config_file,
             quiet_flag,
-            validated_config.output_directory,
         ]
 
     # Default subprocess cwd to caller's cwd (working_dir=".").
@@ -591,9 +556,6 @@ def _run_subprocess(
             print(result.stderr, end="", file=sys.stderr)
 
     if result.returncode != 0:
-        launcher_logs = sorted(
-            glob.glob(os.path.join(validated_config.output_directory, "_quandary_launcher_rank_*.log"))
-        )
         message_lines = [
             f"Quandary failed with return code {result.returncode}.",
             f"Command: {shlex.join(cmd)}",
@@ -602,23 +564,6 @@ def _run_subprocess(
         if removed_mpi_env:
             message_lines.append(
                 "Removed MPI env vars for child launch:\n" + "\n".join(removed_mpi_env)
-            )
-        if launcher_logs:
-            message_lines.append("Launcher logs found:\n" + "\n".join(launcher_logs))
-            log_snippets = []
-            for log_path in launcher_logs:
-                try:
-                    with open(log_path, "r") as f:
-                        content = f.read().strip()
-                    if content:
-                        log_snippets.append(f"{log_path}:\n{content}")
-                except OSError:
-                    pass
-            if log_snippets:
-                message_lines.append("Launcher log contents:\n\n" + "\n\n".join(log_snippets))
-        else:
-            message_lines.append(
-                "No launcher log files were created. MPI likely failed before Python ranks executed."
             )
         if result.stderr and result.stderr.strip():
             message_lines.append(f"stderr:\n{result.stderr.strip()}")
