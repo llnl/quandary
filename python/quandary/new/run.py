@@ -545,6 +545,25 @@ def _run_subprocess(
     # This preserves expected resolution for relative paths in config files.
     subprocess_cwd = os.path.abspath(working_dir)
 
+    # Sanitize inherited MPI runtime environment before launching a new MPI job.
+    # This avoids pre-launch failures when parent Python already has MPI-related vars.
+    child_env = os.environ.copy()
+    mpi_env_prefixes = (
+        "OMPI_",
+        "PMI_",
+        "PMIX_",
+        "MPI_",
+        "MPICH_",
+        "HYDRA_",
+        "I_MPI_",
+        "SLURM_MPI_",
+    )
+    removed_mpi_env = sorted(
+        k for k in list(child_env.keys()) if k.startswith(mpi_env_prefixes)
+    )
+    for k in removed_mpi_env:
+        child_env.pop(k, None)
+
     # Run the subprocess
     if total_cores <= 1:
         logger.info("Spawning single-process subprocess without MPI launcher")
@@ -552,11 +571,14 @@ def _run_subprocess(
         logger.info(f"Spawning subprocess with {total_cores} processes using {mpi_exec}")
     logger.debug(f"Subprocess command: {shlex.join(cmd)}")
     logger.debug(f"Subprocess cwd: {subprocess_cwd}")
+    if removed_mpi_env:
+        logger.debug("Removed MPI env vars for child launch: %s", ", ".join(removed_mpi_env))
     # Always capture output so failures can include diagnostics.
     capture_output = True
     result = subprocess.run(
         cmd,
         cwd=subprocess_cwd,
+        env=child_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -577,6 +599,10 @@ def _run_subprocess(
             f"Command: {shlex.join(cmd)}",
             f"CWD: {subprocess_cwd}",
         ]
+        if removed_mpi_env:
+            message_lines.append(
+                "Removed MPI env vars for child launch:\n" + "\n".join(removed_mpi_env)
+            )
         if launcher_logs:
             message_lines.append("Launcher logs found:\n" + "\n".join(launcher_logs))
             log_snippets = []
