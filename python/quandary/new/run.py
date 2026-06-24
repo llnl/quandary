@@ -485,18 +485,30 @@ def _run_subprocess(
     with open(config_file, "w") as f:
         f.write(toml_content)
 
-    # Python code to run Quandary from the TOML file
+    # Python code to run Quandary from the TOML file.
+    # Pass dynamic values through argv to avoid launcher/shell quoting issues.
     python_code = (
-        "from quandary.new import run_from_file; "
-        f"run_from_file({config_file!r}, quiet={quiet})"
+        "import sys\n"
+        "from quandary.new import run_from_file\n"
+        "run_from_file(sys.argv[1], quiet=bool(int(sys.argv[2])))"
     )
+    quiet_flag = "1" if quiet else "0"
 
     # Build command: bypass MPI launcher for single-process execution.
     # Some remote environments restrict mpirun even for -np 1.
     if total_cores <= 1:
-        cmd = [python_exec, "-c", python_code]
+        cmd = [python_exec, "-c", python_code, config_file, quiet_flag]
     else:
-        cmd = [mpi_exec, nproc_flag, str(total_cores), python_exec, "-c", python_code]
+        cmd = [
+            mpi_exec,
+            nproc_flag,
+            str(total_cores),
+            python_exec,
+            "-c",
+            python_code,
+            config_file,
+            quiet_flag,
+        ]
 
     # Run the subprocess
     if total_cores <= 1:
