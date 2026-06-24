@@ -493,23 +493,12 @@ def _run_subprocess(
     quiet_flag = "1" if quiet else "0"
 
     # Build command: 
-    cmd = [
-        mpi_exec,
-        nproc_flag,
-        str(total_cores),
-        python_exec,
-        "-c",
-        python_code,
-        config_file,
-        quiet_flag,
-    ]
+    cmd = [mpi_exec, nproc_flag, str(total_cores), python_exec, "-c", python_code, config_file, quiet_flag]
 
     # Default subprocess cwd to caller's cwd (working_dir=".").
-    # This preserves expected resolution for relative paths in config files.
     subprocess_cwd = os.path.abspath(working_dir)
 
-    # Sanitize inherited MPI runtime environment before launching a new MPI job.
-    # This avoids pre-launch failures when parent Python already has MPI-related vars.
+    # Sanitize inherited MPI runtime environment before launching a new MPI job. This avoids pre-launch failures when parent Python already has MPI-related vars.
     child_env = os.environ.copy()
     mpi_env_prefixes = (
         "OMPI_",
@@ -533,22 +522,14 @@ def _run_subprocess(
     logger.debug(f"Subprocess cwd: {subprocess_cwd}")
     if removed_mpi_env:
         logger.debug("Removed MPI env vars for child launch: %s", ", ".join(removed_mpi_env))
-    # Always capture output so failures can include diagnostics.
-    capture_output = True
     result = subprocess.run(
         cmd,
         cwd=subprocess_cwd,
         env=child_env,
-        stdout=subprocess.PIPE,
+        stdout=subprocess.PIPE if quiet else None,
         stderr=subprocess.PIPE,
         text=True,
     )
-
-    if not quiet:
-        if result.stdout:
-            print(result.stdout, end="")
-        if result.stderr:
-            print(result.stderr, end="", file=sys.stderr)
 
     if result.returncode != 0:
         message_lines = [
