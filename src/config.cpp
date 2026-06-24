@@ -219,7 +219,7 @@ Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
       if (!init_table) {
         throw validators::ValidationError("initial_condition", "must be a table");
       }
-      auto type_str = validators::field<std::string>(*init_table, "type").value();
+      auto type_str = validators::field<std::string>(*init_table, "type").valueOr(enumToString(ConfigDefaults::INITIAL_CONDITION_TYPE, INITCOND_TYPE_MAP));
       auto type_enum = parseEnum(type_str, INITCOND_TYPE_MAP);
       if (!type_enum.has_value()) {
         throw validators::ValidationError("initial_condition.type", "unknown type: " + type_str);
@@ -394,16 +394,15 @@ Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
     usematfree = solver_table["usematfree"].value_or(ConfigDefaults::USEMATFREE);
 
     // Parse linearsolver as an inline table
-    if (!solver_table.contains("linearsolver")) {
-      // No linearsolver table specified, use defaults
-      linearsolver_type = ConfigDefaults::LINEARSOLVER_TYPE;
-      linearsolver_maxiter = ConfigDefaults::LINEARSOLVER_MAXITER;
-    } else {
+    linearsolver_type = ConfigDefaults::LINEARSOLVER_TYPE;
+    linearsolver_maxiter = ConfigDefaults::LINEARSOLVER_MAXITER;
+    if (solver_table.contains("linearsolver")) {
       auto* linearsolver_table_inner = solver_table["linearsolver"].as_table();
       if (!linearsolver_table_inner) {
         throw validators::ValidationError("linearsolver", "linearsolver must be a table");
       }
-      linearsolver_type = parseEnum(validators::field<std::string>(*linearsolver_table_inner, "type").value(), LINEAR_SOLVER_TYPE_MAP, ConfigDefaults::LINEARSOLVER_TYPE);
+      auto type_str = validators::field<std::string>(*linearsolver_table_inner, "type").valueOr(enumToString(ConfigDefaults::LINEARSOLVER_TYPE, LINEAR_SOLVER_TYPE_MAP));
+      linearsolver_type = parseEnum(type_str, LINEAR_SOLVER_TYPE_MAP, ConfigDefaults::LINEARSOLVER_TYPE);
       linearsolver_maxiter = validators::field<size_t>(*linearsolver_table_inner, "maxiter").positive().valueOr(ConfigDefaults::LINEARSOLVER_MAXITER);
     }
 
@@ -682,6 +681,18 @@ std::string toString(const std::vector<double>& vec) {
 // Print config as toml
 // Decided to do this manually instead of with the tomlplusplus library so we could control the ordering and comments.
 void Config::printConfig(std::stringstream& log) const {
+
+  // Helper function to print an inline table with key = { field1, field2, ... }
+  auto printInlineTable = [&log](const std::string& key, const std::vector<std::string>& fields) {
+    if (fields.empty()) return;
+    log << key << " = { ";
+    for (size_t i = 0; i < fields.size(); ++i) {
+      if (i > 0) log << ", ";
+      log << fields[i];
+    }
+    log << " }\n";
+  };
+
   log << "[system]\n";
 
   // System parameters
@@ -729,26 +740,29 @@ void Config::printConfig(std::stringstream& log) const {
     }
   }
   if (optim_tol_grad_abs.has_value() || optim_tol_grad_rel.has_value() || optim_tol_final_cost.has_value() || optim_tol_infidelity.has_value()) {
-    log << "tolerance = {";
-    if (optim_tol_grad_abs.has_value()) log << "  grad_abs = " << formatDouble(optim_tol_grad_abs.value()) << ",";
-    if (optim_tol_grad_rel.has_value()) log << "  grad_rel = " << formatDouble(optim_tol_grad_rel.value()) << ",";
-    if (optim_tol_final_cost.has_value()) log << "  final_cost = " << formatDouble(optim_tol_final_cost.value()) << ",";
-    if (optim_tol_infidelity.has_value()) log << "  infidelity = " << formatDouble(optim_tol_infidelity.value()) << " }\n";
+    std::vector<std::string> fields;
+    if (optim_tol_grad_abs.has_value()) fields.push_back("grad_abs = " + formatDouble(optim_tol_grad_abs.value()));
+    if (optim_tol_grad_rel.has_value()) fields.push_back("grad_rel = " + formatDouble(optim_tol_grad_rel.value()));
+    if (optim_tol_final_cost.has_value()) fields.push_back("final_cost = " + formatDouble(optim_tol_final_cost.value()));
+    if (optim_tol_infidelity.has_value()) fields.push_back("infidelity = " + formatDouble(optim_tol_infidelity.value()));
+    printInlineTable("tolerance", fields);
   }
   if (optim_maxiter.has_value()) log << "maxiter = " << optim_maxiter.value() << "\n";
   if (optim_tikhonov_coeff.has_value()) {
-    log << "tikhonov = {  coeff = " << optim_tikhonov_coeff.value(); 
-    if (optim_tikhonov_use_x0.has_value()) log << ", use_x0 = " << (optim_tikhonov_use_x0.value() ? "true" : "false");
-    log << " }\n";
+    std::vector<std::string> fields;
+    fields.push_back("coeff = " + formatDouble(optim_tikhonov_coeff.value()));
+    if (optim_tikhonov_use_x0.has_value()) fields.push_back("use_x0 = " + std::string(optim_tikhonov_use_x0.value() ? "true" : "false"));
+    printInlineTable("tikhonov", fields);
   }
   if (optim_penalty_leakage.has_value() || optim_penalty_energy.has_value() || optim_penalty_dpdm.has_value() || optim_penalty_variation.has_value() || optim_penalty_weightedcost.has_value() || optim_penalty_weightedcost_width.has_value()) {
-    log << "penalty = { ";
-    if (optim_penalty_leakage.has_value()) log << "leakage = " << optim_penalty_leakage.value();
-    if (optim_penalty_energy.has_value()) log << ", energy = " << optim_penalty_energy.value();
-    if (optim_penalty_dpdm.has_value()) log << ", dpdm = " << optim_penalty_dpdm.value();
-    if (optim_penalty_variation.has_value()) log << ", variation = " << optim_penalty_variation.value();
-    if (optim_penalty_weightedcost.has_value()) log << ", weightedcost = " << optim_penalty_weightedcost.value();
-    if (optim_penalty_weightedcost_width.has_value()) log << ", weightedcost_width = " << optim_penalty_weightedcost_width.value() << " }\n";
+    std::vector<std::string> fields;
+    if (optim_penalty_leakage.has_value()) fields.push_back("leakage = " + formatDouble(optim_penalty_leakage.value()));
+    if (optim_penalty_energy.has_value()) fields.push_back("energy = " + formatDouble(optim_penalty_energy.value()));
+    if (optim_penalty_dpdm.has_value()) fields.push_back("dpdm = " + formatDouble(optim_penalty_dpdm.value()));
+    if (optim_penalty_variation.has_value()) fields.push_back("variation = " + formatDouble(optim_penalty_variation.value()));
+    if (optim_penalty_weightedcost.has_value()) fields.push_back("weightedcost = " + formatDouble(optim_penalty_weightedcost.value()));
+    if (optim_penalty_weightedcost_width.has_value()) fields.push_back("weightedcost_width = " + formatDouble(optim_penalty_weightedcost_width.value()));
+    printInlineTable("penalty", fields);
   }
 
   log << "\n";
@@ -772,10 +786,10 @@ void Config::printConfig(std::stringstream& log) const {
   if (runtype.has_value()) log << "runtype = \"" << enumToString(runtype.value(), RUN_TYPE_MAP) << "\"\n";
   if (usematfree.has_value()) log << "usematfree = " << (usematfree.value() ? "true" : "false") << "\n";
   if (linearsolver_type.has_value() || linearsolver_maxiter.has_value()) {
-    log << "linearsolver = { ";
-    if (linearsolver_type.has_value()) log << " type = \"" << enumToString(linearsolver_type.value(), LINEAR_SOLVER_TYPE_MAP) << "\"";
-    if (linearsolver_maxiter.has_value()) log << ", maxiter = " << linearsolver_maxiter.value();
-    log << " }\n";
+    std::vector<std::string> fields;
+    if (linearsolver_type.has_value()) fields.push_back("type = \"" + enumToString(linearsolver_type.value(), LINEAR_SOLVER_TYPE_MAP) + "\"");
+    if (linearsolver_maxiter.has_value()) fields.push_back("maxiter = " + std::to_string(linearsolver_maxiter.value()));
+    printInlineTable("linearsolver", fields);
   }
   if (timestepper_type.has_value()) log << "timestepper = \"" << enumToString(timestepper_type.value(), TIME_STEPPER_TYPE_MAP) << "\"\n";
   if (rand_seed.has_value()) log << "rand_seed = " << rand_seed.value() << "\n";
