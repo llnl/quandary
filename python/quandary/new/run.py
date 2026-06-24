@@ -11,6 +11,7 @@ MPI Lifecycle Management:
 from __future__ import annotations
 import logging
 import os
+import glob
 import shlex
 import subprocess
 import sys
@@ -497,14 +498,24 @@ def _run_subprocess(
         "from quandary.new import run_from_file\n"
         "rank = os.environ.get('OMPI_COMM_WORLD_RANK', os.environ.get('PMI_RANK', '?'))\n"
         "quiet = bool(int(sys.argv[2]))\n"
+        "log_file = os.path.join(sys.argv[3], f'_quandary_launcher_rank_{rank}.log')\n"
+        "def _log(msg):\n"
+        "    with open(log_file, 'a') as _f:\n"
+        "        _f.write(msg + '\\n')\n"
+        "_log(f'start cwd={os.getcwd()} config={sys.argv[1]} quiet={quiet}')\n"
         "print(f'[quandary-launcher rank={rank}] start cwd={os.getcwd()} config={sys.argv[1]} quiet={quiet}', file=sys.stderr, flush=True)\n"
         "try:\n"
         "    rc = run_from_file(sys.argv[1], quiet=quiet)\n"
+        "    _log(f'run_from_file returned {rc}')\n"
         "    if rc not in (None, 0):\n"
         "        print(f'[quandary-launcher rank={rank}] run_from_file return code {rc}', file=sys.stderr, flush=True)\n"
+        "        _log(f'nonzero return code {rc}')\n"
         "        sys.exit(int(rc))\n"
+        "    _log('finished')\n"
         "    print(f'[quandary-launcher rank={rank}] finished', file=sys.stderr, flush=True)\n"
         "except Exception:\n"
+        "    _log('exception')\n"
+        "    _log(traceback.format_exc())\n"
         "    print(f'[quandary-launcher rank={rank}] exception', file=sys.stderr, flush=True)\n"
         "    traceback.print_exc()\n"
         "    raise\n"
@@ -517,7 +528,7 @@ def _run_subprocess(
     # Build command: bypass MPI launcher for single-process execution.
     # Some remote environments restrict mpirun even for -np 1.
     if total_cores <= 1:
-        cmd = [python_exec, launcher_script, config_file, quiet_flag]
+        cmd = [python_exec, launcher_script, config_file, quiet_flag, validated_config.output_directory]
     else:
         cmd = [
             mpi_exec,
@@ -527,6 +538,7 @@ def _run_subprocess(
             launcher_script,
             config_file,
             quiet_flag,
+            validated_config.output_directory,
         ]
 
     # Default subprocess cwd to caller's cwd (working_dir=".").
@@ -557,11 +569,31 @@ def _run_subprocess(
             print(result.stderr, end="", file=sys.stderr)
 
     if result.returncode != 0:
+        launcher_logs = sorted(
+            glob.glob(os.path.join(validated_config.output_directory, "_quandary_launcher_rank_*.log"))
+        )
         message_lines = [
             f"Quandary failed with return code {result.returncode}.",
             f"Command: {shlex.join(cmd)}",
             f"CWD: {subprocess_cwd}",
         ]
+        if launcher_logs:
+            message_lines.append("Launcher logs found:\n" + "\n".join(launcher_logs))
+            log_snippets = []
+            for log_path in launcher_logs:
+                try:
+                    with open(log_path, "r") as f:
+                        content = f.read().strip()
+                    if content:
+                        log_snippets.append(f"{log_path}:\n{content}")
+                except OSError:
+                    pass
+            if log_snippets:
+                message_lines.append("Launcher log contents:\n\n" + "\n\n".join(log_snippets))
+        else:
+            message_lines.append(
+                "No launcher log files were created. MPI likely failed before Python ranks executed."
+            )
         if result.stderr and result.stderr.strip():
             message_lines.append(f"stderr:\n{result.stderr.strip()}")
         if result.stdout and result.stdout.strip():
