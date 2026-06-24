@@ -488,6 +488,7 @@ def _run_subprocess(
     # Python code to run Quandary from the TOML file.
     # Dynamic values are passed via argv to avoid quoting edge cases.
     python_code = "import sys; from quandary.new import run_from_file; run_from_file(sys.argv[1], quiet=bool(int(sys.argv[2])))"
+    quiet_flag = "1" if quiet else "0"
 
     # Build command: 
     cmd = [
@@ -498,7 +499,7 @@ def _run_subprocess(
         "-c",
         python_code,
         config_file,
-        quiet,
+        quiet_flag,
     ]
 
     # Default subprocess cwd to caller's cwd (working_dir=".").
