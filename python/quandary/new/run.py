@@ -290,6 +290,10 @@ def evaluate_controls(
 
 def _is_interactive():
     """Detect if running in an interactive Python session (Jupyter, IPython, or plain REPL)."""
+    # python -i script.py sets this flag during script execution.
+    if sys.flags.interactive:
+        return True
+
     # Check for IPython/Jupyter
     try:
         from IPython import get_ipython
@@ -400,12 +404,10 @@ def _run(
     comm = MPI.COMM_WORLD
     size = comm.Get_size()
 
-    # if _is_interactive():
-    if True:
+    if _is_interactive():
         # In interactive environment without MPI, spawn subprocess with MPI launcher for better performance
         if max_n_procs is None:
-            #max_n_procs = 4  # Default to 4 processes if not specified
-            max_n_procs = 2  # Default to 4 processes if not specified
+            max_n_procs = 4  # Default to 4 processes if not specified
         return _run_subprocess(
             config_input=config_input,
             max_n_procs=max_n_procs,
