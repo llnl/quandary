@@ -488,23 +488,18 @@ def _run_subprocess(
     # Python code to run Quandary from the TOML file.
     # Dynamic values are passed via argv to avoid quoting edge cases.
     python_code = "import sys; from quandary.new import run_from_file; run_from_file(sys.argv[1], quiet=bool(int(sys.argv[2])))"
-    quiet_flag = "1" if quiet else "0"
 
-    # Build command: bypass MPI launcher for single-process execution.
-    # Some remote environments restrict mpirun even for -np 1.
-    if total_cores <= 1:
-        cmd = [python_exec, "-c", python_code, config_file, quiet_flag]
-    else:
-        cmd = [
-            mpi_exec,
-            nproc_flag,
-            str(total_cores),
-            python_exec,
-            "-c",
-            python_code,
-            config_file,
-            quiet_flag,
-        ]
+    # Build command: 
+    cmd = [
+        mpi_exec,
+        nproc_flag,
+        str(total_cores),
+        python_exec,
+        "-c",
+        python_code,
+        config_file,
+        quiet,
+    ]
 
     # Default subprocess cwd to caller's cwd (working_dir=".").
     # This preserves expected resolution for relative paths in config files.
@@ -530,10 +525,7 @@ def _run_subprocess(
         child_env.pop(k, None)
 
     # Run the subprocess
-    if total_cores <= 1:
-        logger.info("Spawning single-process subprocess without MPI launcher")
-    else:
-        logger.info(f"Spawning subprocess with {total_cores} processes using {mpi_exec}")
+    logger.info(f"Spawning subprocess with {total_cores} processes using {mpi_exec}")
     logger.debug(f"Subprocess command: {shlex.join(cmd)}")
     logger.debug(f"Subprocess cwd: {subprocess_cwd}")
     if removed_mpi_env:
