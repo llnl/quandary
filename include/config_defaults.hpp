@@ -78,12 +78,10 @@ const int RAND_SEED = 1; ///< Default random seed
  * @brief Settings for initial conditions. Required, no defaults.
  */
 struct InitialConditionSettings {
-  InitialConditionType type; ///< Type of initial condition
-
-  // Optional settings - populate based on type
-  std::optional<std::string> filename; ///< For FROMFILE: File to read initial condition from
-  std::optional<std::vector<size_t>> levels; ///< For PRODUCT_STATE: Quantum level for each oscillator
-  std::optional<std::vector<size_t>> subsystem; ///< For ENSEMBLE, DIAGONAL, BASIS: Oscillator IDs
+  InitialConditionType type = ConfigDefaults::INITIAL_CONDITION_TYPE; ///< Type of initial condition
+  std::optional<std::string> filename = std::nullopt; ///< For FROMFILE: File to read initial condition from
+  std::optional<std::vector<size_t>> levels = std::nullopt; ///< For PRODUCT_STATE: Quantum level for each oscillator
+  std::optional<std::vector<size_t>> subsystem = std::nullopt; ///< For ENSEMBLE, DIAGONAL, BASIS: Oscillator IDs
 };
 
 /**

@@ -145,77 +145,77 @@ NB_MODULE(_quandary_impl, m) {
     .def_rw("filename", &ControlInitializationSettings::filename, "(str | None) File path (for FILE type)")
     .def("__repr__", [](const ControlInitializationSettings& s) { return Config::toString(s); });
 
-  // ConfigInput - mutable configuration with all fields optional
-  nb::class_<ConfigInput>(m, "ConfigInput",
-    "Mutable configuration builder for Quandary simulations.\n\n"
-    "Use this class to build a configuration by setting individual fields.\n"
-    "All fields are optional and will use defaults if not specified.\n"
-    "Pass to optimize(), simulate(), or evaluate_controls() to run.\n\n"
-    "Example:\n"
-    "    config = ConfigInput()\n"
-    "    config.nlevels = [2, 2]\n"
-    "    config.dt = 0.01\n"
-    "    results = simulate(config)\n\n"
-    "Note: Use .copy() to create independent copies of ConfigInput objects.")
-    .def(nb::init<>())
-    .def(nb::init<const ConfigInput&>(),
-      nb::arg("other"),
-      "Copy constructor - creates a copy of another ConfigInput")
-    .def("copy", [](const ConfigInput& self) {
-        return ConfigInput(self);
-      }, "Create a copy of this ConfigInput")
-    // System parameters
-    .def_rw("nlevels", &ConfigInput::nlevels, "(list[int]) Number of levels per subsystem")
-    .def_rw("nessential", &ConfigInput::nessential, "(list[int]) Number of essential levels per subsystem (default: same as nlevels)")
-    .def_rw("dt", &ConfigInput::dt, "(float) Time step size [ns]")
-    .def_rw("total_time", &ConfigInput::total_time, "(float) Total simulation time [ns]")
-    .def_rw("transition_frequency", &ConfigInput::transition_frequency, "(list[float]) Fundamental transition frequencies [GHz]")
-    .def_rw("selfkerr", &ConfigInput::selfkerr, "(list[float]) Self-Kerr frequencies [GHz]")
-    .def_rw("crosskerr_coupling", &ConfigInput::crosskerr_coupling, "(list[float]) Cross-Kerr coupling frequencies [GHz]")
-    .def_rw("dipole_coupling", &ConfigInput::dipole_coupling, "(list[float]) Dipole-dipole coupling frequencies [GHz]")
-    .def_rw("rotation_frequency", &ConfigInput::rotation_frequency, "(list[float]) Rotating frame frequencies [GHz]")
-    .def_rw("decoherence_type", &ConfigInput::decoherence_type, "(DecoherenceType) Decoherence model type")
-    .def_rw("decay_time", &ConfigInput::decay_time, "(list[float]) T1 decay times [ns]")
-    .def_rw("dephase_time", &ConfigInput::dephase_time, "(list[float]) T2 dephasing times [ns]")
-    .def_rw("initial_condition", &ConfigInput::initial_condition, "(InitialConditionSettings) Initial quantum state configuration")
-    // Inherently optional
-    .def_rw("hamiltonian_file_Hsys", &ConfigInput::hamiltonian_file_Hsys, "(str | None) Optional file path for system Hamiltonian")
-    .def_rw("hamiltonian_file_Hc", &ConfigInput::hamiltonian_file_Hc, "(str | None) Optional file path for control Hamiltonians")
-    // Control parameters
-    .def_rw("control_zero_boundary_condition", &ConfigInput::control_zero_boundary_condition, "(bool) Enforce zero control amplitude at boundaries")
-    .def_rw("control_parameterizations", &ConfigInput::control_parameterizations, "(list[ControlParameterizationSettings]) Control parameterizations per oscillator")
-    .def_rw("control_initializations", &ConfigInput::control_initializations, "(list[ControlInitializationSettings]) Control initializations per oscillator")
-    .def_rw("control_amplitude_bound", &ConfigInput::control_amplitude_bound, "(list[float]) Maximum control amplitude per oscillator [GHz]")
-    .def_rw("carrier_frequencies", &ConfigInput::carrier_frequencies, "(list[list[float]]) Carrier frequencies for each control [GHz]")
-    // Optimization parameters
-    .def_rw("optim_target", &ConfigInput::optim_target, "(OptimTargetSettings) Optimization target configuration")
-    .def_rw("optim_objective", &ConfigInput::optim_objective, "(ObjectiveType) Objective function type")
-    .def_rw("optim_weights", &ConfigInput::optim_weights, "(list[float]) Weights for summing objective function")
-    .def_rw("optim_tol_grad_abs", &ConfigInput::optim_tol_grad_abs, "(float) Absolute gradient tolerance")
-    .def_rw("optim_tol_grad_rel", &ConfigInput::optim_tol_grad_rel, "(float) Relative gradient tolerance")
-    .def_rw("optim_tol_final_cost", &ConfigInput::optim_tol_final_cost, "(float) Final cost tolerance")
-    .def_rw("optim_tol_infidelity", &ConfigInput::optim_tol_infidelity, "(float) Infidelity tolerance")
-    .def_rw("optim_maxiter", &ConfigInput::optim_maxiter, "(int) Maximum optimization iterations")
-    .def_rw("optim_tikhonov_coeff", &ConfigInput::optim_tikhonov_coeff, "(float) Tikhonov regularization coefficient")
-    .def_rw("optim_tikhonov_use_x0", &ConfigInput::optim_tikhonov_use_x0, "(bool) Use initial guess in Tikhonov regularization")
-    .def_rw("optim_penalty_leakage", &ConfigInput::optim_penalty_leakage, "(float) Leakage penalty coefficient")
-    .def_rw("optim_penalty_weightedcost", &ConfigInput::optim_penalty_weightedcost, "(float) Weighted cost penalty coefficient")
-    .def_rw("optim_penalty_weightedcost_width", &ConfigInput::optim_penalty_weightedcost_width, "(float) Weighted cost penalty width parameter")
-    .def_rw("optim_penalty_dpdm", &ConfigInput::optim_penalty_dpdm, "(float) Second derivative penalty coefficient")
-    .def_rw("optim_penalty_energy", &ConfigInput::optim_penalty_energy, "(float) Energy penalty coefficient")
-    .def_rw("optim_penalty_variation", &ConfigInput::optim_penalty_variation, "(float) Amplitude variation penalty coefficient")
-    // Output parameters
-    .def_rw("output_directory", &ConfigInput::output_directory, "(str) Directory for output files")
-    .def_rw("output_observables", &ConfigInput::output_observables, "(list[OutputType]) Observable quantities to output")
-    .def_rw("output_timestep_stride", &ConfigInput::output_timestep_stride, "(int) Output frequency in time steps")
-    .def_rw("output_optimization_stride", &ConfigInput::output_optimization_stride, "(int) Output frequency in optimization iterations")
-    // Solver parameters
-    .def_rw("runtype", &ConfigInput::runtype, "(RunType) Type of computation to perform")
-    .def_rw("usematfree", &ConfigInput::usematfree, "(bool) Use matrix-free solver")
-    .def_rw("linearsolver_type", &ConfigInput::linearsolver_type, "(LinearSolverType) Linear solver type")
-    .def_rw("linearsolver_maxiter", &ConfigInput::linearsolver_maxiter, "(int) Maximum linear solver iterations")
-    .def_rw("timestepper_type", &ConfigInput::timestepper_type, "(TimeStepperType) Time integration method")
-    .def_rw("rand_seed", &ConfigInput::rand_seed, "(int) Random seed for reproducibility");
+  // // ConfigInput - mutable configuration with all fields optional
+  // nb::class_<ConfigInput>(m, "ConfigInput",
+  //   "Mutable configuration builder for Quandary simulations.\n\n"
+  //   "Use this class to build a configuration by setting individual fields.\n"
+  //   "All fields are optional and will use defaults if not specified.\n"
+  //   "Pass to optimize(), simulate(), or evaluate_controls() to run.\n\n"
+  //   "Example:\n"
+  //   "    config = ConfigInput()\n"
+  //   "    config.nlevels = [2, 2]\n"
+  //   "    config.dt = 0.01\n"
+  //   "    results = simulate(config)\n\n"
+  //   "Note: Use .copy() to create independent copies of ConfigInput objects.")
+  //   .def(nb::init<>())
+  //   .def(nb::init<const ConfigInput&>(),
+  //     nb::arg("other"),
+  //     "Copy constructor - creates a copy of another ConfigInput")
+  //   .def("copy", [](const ConfigInput& self) {
+  //       return ConfigInput(self);
+  //     }, "Create a copy of this ConfigInput")
+  //   // System parameters
+  //   .def_rw("nlevels", &ConfigInput::nlevels, "(list[int]) Number of levels per subsystem")
+  //   .def_rw("nessential", &ConfigInput::nessential, "(list[int]) Number of essential levels per subsystem (default: same as nlevels)")
+  //   .def_rw("dt", &ConfigInput::dt, "(float) Time step size [ns]")
+  //   .def_rw("total_time", &ConfigInput::total_time, "(float) Total simulation time [ns]")
+  //   .def_rw("transition_frequency", &ConfigInput::transition_frequency, "(list[float]) Fundamental transition frequencies [GHz]")
+  //   .def_rw("selfkerr", &ConfigInput::selfkerr, "(list[float]) Self-Kerr frequencies [GHz]")
+  //   .def_rw("crosskerr_coupling", &ConfigInput::crosskerr_coupling, "(list[float]) Cross-Kerr coupling frequencies [GHz]")
+  //   .def_rw("dipole_coupling", &ConfigInput::dipole_coupling, "(list[float]) Dipole-dipole coupling frequencies [GHz]")
+  //   .def_rw("rotation_frequency", &ConfigInput::rotation_frequency, "(list[float]) Rotating frame frequencies [GHz]")
+  //   .def_rw("decoherence_type", &ConfigInput::decoherence_type, "(DecoherenceType) Decoherence model type")
+  //   .def_rw("decay_time", &ConfigInput::decay_time, "(list[float]) T1 decay times [ns]")
+  //   .def_rw("dephase_time", &ConfigInput::dephase_time, "(list[float]) T2 dephasing times [ns]")
+  //   .def_rw("initial_condition", &ConfigInput::initial_condition, "(InitialConditionSettings) Initial quantum state configuration")
+  //   // Inherently optional
+  //   .def_rw("hamiltonian_file_Hsys", &ConfigInput::hamiltonian_file_Hsys, "(str | None) Optional file path for system Hamiltonian")
+  //   .def_rw("hamiltonian_file_Hc", &ConfigInput::hamiltonian_file_Hc, "(str | None) Optional file path for control Hamiltonians")
+  //   // Control parameters
+  //   .def_rw("control_zero_boundary_condition", &ConfigInput::control_zero_boundary_condition, "(bool) Enforce zero control amplitude at boundaries")
+  //   .def_rw("control_parameterizations", &ConfigInput::control_parameterizations, "(list[ControlParameterizationSettings]) Control parameterizations per oscillator")
+  //   .def_rw("control_initializations", &ConfigInput::control_initializations, "(list[ControlInitializationSettings]) Control initializations per oscillator")
+  //   .def_rw("control_amplitude_bound", &ConfigInput::control_amplitude_bound, "(list[float]) Maximum control amplitude per oscillator [GHz]")
+  //   .def_rw("carrier_frequencies", &ConfigInput::carrier_frequencies, "(list[list[float]]) Carrier frequencies for each control [GHz]")
+  //   // Optimization parameters
+  //   .def_rw("optim_target", &ConfigInput::optim_target, "(OptimTargetSettings) Optimization target configuration")
+  //   .def_rw("optim_objective", &ConfigInput::optim_objective, "(ObjectiveType) Objective function type")
+  //   .def_rw("optim_weights", &ConfigInput::optim_weights, "(list[float]) Weights for summing objective function")
+  //   .def_rw("optim_tol_grad_abs", &ConfigInput::optim_tol_grad_abs, "(float) Absolute gradient tolerance")
+  //   .def_rw("optim_tol_grad_rel", &ConfigInput::optim_tol_grad_rel, "(float) Relative gradient tolerance")
+  //   .def_rw("optim_tol_final_cost", &ConfigInput::optim_tol_final_cost, "(float) Final cost tolerance")
+  //   .def_rw("optim_tol_infidelity", &ConfigInput::optim_tol_infidelity, "(float) Infidelity tolerance")
+  //   .def_rw("optim_maxiter", &ConfigInput::optim_maxiter, "(int) Maximum optimization iterations")
+  //   .def_rw("optim_tikhonov_coeff", &ConfigInput::optim_tikhonov_coeff, "(float) Tikhonov regularization coefficient")
+  //   .def_rw("optim_tikhonov_use_x0", &ConfigInput::optim_tikhonov_use_x0, "(bool) Use initial guess in Tikhonov regularization")
+  //   .def_rw("optim_penalty_leakage", &ConfigInput::optim_penalty_leakage, "(float) Leakage penalty coefficient")
+  //   .def_rw("optim_penalty_weightedcost", &ConfigInput::optim_penalty_weightedcost, "(float) Weighted cost penalty coefficient")
+  //   .def_rw("optim_penalty_weightedcost_width", &ConfigInput::optim_penalty_weightedcost_width, "(float) Weighted cost penalty width parameter")
+  //   .def_rw("optim_penalty_dpdm", &ConfigInput::optim_penalty_dpdm, "(float) Second derivative penalty coefficient")
+  //   .def_rw("optim_penalty_energy", &ConfigInput::optim_penalty_energy, "(float) Energy penalty coefficient")
+  //   .def_rw("optim_penalty_variation", &ConfigInput::optim_penalty_variation, "(float) Amplitude variation penalty coefficient")
+  //   // Output parameters
+  //   .def_rw("output_directory", &ConfigInput::output_directory, "(str) Directory for output files")
+  //   .def_rw("output_observables", &ConfigInput::output_observables, "(list[OutputType]) Observable quantities to output")
+  //   .def_rw("output_timestep_stride", &ConfigInput::output_timestep_stride, "(int) Output frequency in time steps")
+  //   .def_rw("output_optimization_stride", &ConfigInput::output_optimization_stride, "(int) Output frequency in optimization iterations")
+  //   // Solver parameters
+  //   .def_rw("runtype", &ConfigInput::runtype, "(RunType) Type of computation to perform")
+  //   .def_rw("usematfree", &ConfigInput::usematfree, "(bool) Use matrix-free solver")
+  //   .def_rw("linearsolver_type", &ConfigInput::linearsolver_type, "(LinearSolverType) Linear solver type")
+  //   .def_rw("linearsolver_maxiter", &ConfigInput::linearsolver_maxiter, "(int) Maximum linear solver iterations")
+  //   .def_rw("timestepper_type", &ConfigInput::timestepper_type, "(TimeStepperType) Time integration method")
+  //   .def_rw("rand_seed", &ConfigInput::rand_seed, "(int) Random seed for reproducibility");
 
   // Config - final validated configuration data 
   nb::class_<Config>(m, "Config",
@@ -226,9 +226,9 @@ NB_MODULE(_quandary_impl, m) {
     "    config = Config(config_input)\n"
     "    config = Config.from_file('simulation.toml')\n"
     "    config = Config.from_string(toml_content)")
-    .def(nb::init<const ConfigInput&, bool>(),
-      nb::arg("input"), nb::arg("quiet") = false,
-      "Create a validated Config from ConfigInput")
+    // .def(nb::init<const ConfigInput&, bool>(),
+      // nb::arg("input"), nb::arg("quiet") = false,
+      // "Create a validated Config from ConfigInput")
     .def(nb::init<const Config&>(),
       nb::arg("other"),
       "Copy constructor - creates a copy of another Config")
@@ -289,10 +289,10 @@ NB_MODULE(_quandary_impl, m) {
       });
 
   m.def("inputFromFile", [](const std::string& filename, bool quiet) {
-      return inputFromFile(filename, quiet);
+      return Config::fromFile(filename, quiet);
     },
     nb::arg("filename"), nb::arg("quiet") = false,
-    "Parse a TOML file and construct a ConfigInput without validation");
+    "Parse a TOML file and construct a Config without validation");
 
   // Run function - accepts Config
   m.def("run", [](const Config& config, bool quiet) {
@@ -301,13 +301,13 @@ NB_MODULE(_quandary_impl, m) {
     nb::arg("config"), nb::arg("quiet") = false,
     "Run a Quandary simulation or optimization from a Config");
 
-  // Run function - accepts ConfigInput, creates Config internally
-  m.def("run", [](const ConfigInput& input, bool quiet) {
-      Config config(input, quiet);
-      return runQuandary(config, quiet);
-    },
-    nb::arg("config_input"), nb::arg("quiet") = false,
-    "Run a Quandary simulation or optimization from a ConfigInput");
+  // // Run function - accepts ConfigInput, creates Config internally
+  // m.def("run", [](const ConfigInput& input, bool quiet) {
+  //     Config config(input, quiet);
+  //     return runQuandary(config, quiet);
+  //   },
+  //   nb::arg("config_input"), nb::arg("quiet") = false,
+  //   "Run a Quandary simulation or optimization from a ConfigInput");
 
   // Run from file - loads TOML and runs directly
   m.def("run_from_file", [](const std::string& filename, bool quiet) {
