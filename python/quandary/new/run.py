@@ -495,29 +495,28 @@ def _run_subprocess(
     # Run the subprocess
     logger.info(f"Spawning subprocess with {total_cores} processes using {mpi_exec}")
     logger.debug(f"Subprocess command: {shlex.join(cmd)}")
+    capture_output = quiet
     result = subprocess.run(
         cmd,
         cwd=working_dir,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE if capture_output else None,
+        stderr=subprocess.PIPE if capture_output else None,
         text=True,
     )
-
-    if not quiet:
-        if result.stdout:
-            print(result.stdout, end="")
-        if result.stderr:
-            print(result.stderr, end="", file=sys.stderr)
 
     if result.returncode != 0:
         message_lines = [
             f"Quandary failed with return code {result.returncode}.",
             f"Command: {shlex.join(cmd)}",
         ]
-        if result.stderr and result.stderr.strip():
+        if capture_output and result.stderr and result.stderr.strip():
             message_lines.append(f"stderr:\n{result.stderr.strip()}")
-        if result.stdout and result.stdout.strip():
+        if capture_output and result.stdout and result.stdout.strip():
             message_lines.append(f"stdout:\n{result.stdout.strip()}")
+        if not capture_output:
+            message_lines.append(
+                "Subprocess output was streamed directly to terminal (quiet=False); see logs above for details."
+            )
         raise RuntimeError("\n\n".join(message_lines))
 
     # Load results with validated config
