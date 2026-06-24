@@ -421,20 +421,6 @@ Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
   validate();
 }
 
-// Config Config::fromFile(const std::string& filename, bool quiet_mode) {
-//   toml::table toml = toml::parse_file(filename);
-//   return Config(toml, quiet_mode);
-// }
-
-// Config Config::fromString(const std::string& toml_content, bool quiet_mode) {
-//   toml::table toml = toml::parse(toml_content);
-//   return Config(toml, quiet_mode);
-// }
-
-// ConfigInput inputFromFile(const std::string& filename, bool quiet_mode) {
-//   toml::table toml = toml::parse_file(filename);
-//   return extractConfigInput(toml, MPILogger(quiet_mode));
-// }
 namespace {
 
 std::string formatDouble(double value) {
@@ -783,11 +769,11 @@ void Config::printConfig(std::stringstream& log) const {
   log << "\n";
   log << "[solver]\n";
 
-  if (runtype.has_value()) log << "runtype = \"" << enumToString(runtype.value(), RUN_TYPE_MAP) << "\n";
+  if (runtype.has_value()) log << "runtype = \"" << enumToString(runtype.value(), RUN_TYPE_MAP) << "\"\n";
   if (usematfree.has_value()) log << "usematfree = " << (usematfree.value() ? "true" : "false") << "\n";
   if (linearsolver_type.has_value() || linearsolver_maxiter.has_value()) {
     log << "linearsolver = { ";
-    if (linearsolver_type.has_value()) log << " type = " << enumToString(linearsolver_type.value(), LINEAR_SOLVER_TYPE_MAP);
+    if (linearsolver_type.has_value()) log << " type = \"" << enumToString(linearsolver_type.value(), LINEAR_SOLVER_TYPE_MAP) << "\"";
     if (linearsolver_maxiter.has_value()) log << ", maxiter = " << linearsolver_maxiter.value();
     log << " }\n";
   }

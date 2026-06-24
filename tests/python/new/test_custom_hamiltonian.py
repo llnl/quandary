@@ -20,7 +20,7 @@ DT = FINAL_TIME / 100
 
 @pytest.fixture
 def standard_setup(tmp_path):
-    """Create a config_input using the standard model (no custom Hamiltonian)."""
+    """Create a config using the standard model (no custom Hamiltonian)."""
     return create_config(
         nessential=NESSENTIAL,
         transition_frequency=TRANSITION_FREQUENCY,

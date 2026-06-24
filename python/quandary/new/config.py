@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import Optional
 import numpy as np
 from .._quandary_impl import ControlType, ControlInitializationType, InitialConditionType, TargetType, GateType, DecoherenceType, OutputType, inputFromFile
-from .types import ConfigInput, InitialConditionSettings, OptimTargetSettings, ControlParameterizationSettings, ControlInitializationSettings
+from .types import Config, InitialConditionSettings, OptimTargetSettings, ControlParameterizationSettings, ControlInitializationSettings
 from .physics import hamiltonians, get_resonances, fit_bspline0, fit_bspline2nd, estimate_timestep_size
 
 logger = logging.getLogger(__name__)
@@ -46,11 +46,11 @@ def resolve_output_dir(datadir: str) -> str:
 
     return os.path.normpath(datadir)
 
-def load_config_input(
+def load_config(
     filename: str,
     quiet: bool = False,
-) -> ConfigInput:
-    """Set up a ConfigInput by parsing an existing TOML configuration file.
+) -> Config:
+    """Set up a Configuration by parsing an existing TOML configuration file.
 
     Parameters
     ----------
@@ -61,16 +61,15 @@ def load_config_input(
 
     Returns
     -------
-    ConfigInput
-        ConfigInput object populated from the TOML file (without validation/finalization).
+    Config
+        Config object populated from the TOML file (without validation/finalization).
     """
     # Make sure file exists:
     if not os.path.isfile(filename):
         raise ValueError(f"Configuration file not found: {filename}")
 
     # inputFromFile returns the nanobind C++ base type.
-    # Wrap it so callers consistently receive the Python ConfigInput wrapper.
-    return ConfigInput(inputFromFile(filename, quiet=quiet))
+    return Config(inputFromFile(filename, quiet=quiet))
 
 
 def create_config(
@@ -100,8 +99,8 @@ def create_config(
     hamiltonian_Hc: Optional[Sequence[np.ndarray]] = None,
     initial_condition: Optional[Sequence[complex]] = None,
     output_directory: str = _DEFAULT_OUTPUT_DIR,
-) -> ConfigInput:
-    """Create a ConfigInput with physics parameters configured.
+) -> Config:
+    """Create a Config with physics parameters configured.
 
     Automatically computes Hamiltonians, timesteps, and carrier frequencies.
 
@@ -171,7 +170,7 @@ def create_config(
         Initialize controls randomly. Default: True.
     control_amplitude : float, optional
         Initial control amplitude [GHz]. When omitted, uses
-        config_input.control_initializations if set, otherwise defaults from C++ code (zero controls)
+        config.control_initializations if set, otherwise defaults from C++ code (zero controls)
     hamiltonian_Hsys : ndarray, optional
         Custom system Hamiltonian matrix (complex, in rad/ns). When provided,
         the standard pulse-driven superconducting-qubit Hamiltonian model is
@@ -188,8 +187,8 @@ def create_config(
 
     Returns
     -------
-    ConfigInput
-        ConfigInput with physics parameters configured (no runtype set).
+    Config
+        Config with physics parameters configured (no runtype set).
 
     Examples
     --------
@@ -307,33 +306,33 @@ def create_config(
         logger.info(f"  B-spline basis functions: {nspline}")
 
     # Create ConfigInput with common fields
-    config_input = ConfigInput()
-    config_input.nlevels = [nessential[i] + nguard[i] for i in range(nqubits)]
-    config_input.nessential = nessential
-    config_input.total_time = total_time
-    config_input.dt = dt
-    config_input.transition_frequency = transition_frequency
-    config_input.rotation_frequency = rotation_frequency
-    config_input.selfkerr = selfkerr
+    config = Config()
+    config.nlevels = [nessential[i] + nguard[i] for i in range(nqubits)]
+    config.nessential = nessential
+    config.total_time = total_time
+    config.dt = dt
+    config.transition_frequency = transition_frequency
+    config.rotation_frequency = rotation_frequency
+    config.selfkerr = selfkerr
     if len(crosskerr_coupling) > 0:
-        config_input.crosskerr_coupling = crosskerr_coupling
+        config.crosskerr_coupling = crosskerr_coupling
     if len(dipole_coupling) > 0:
-        config_input.dipole_coupling = dipole_coupling
+        config.dipole_coupling = dipole_coupling
     if control_amplitude_bound is not None:
-        config_input.control_amplitude_bound = control_amplitude_bound
-    config_input.carrier_frequencies = carrier_frequency
-    config_input.output_directory = output_directory
+        config.control_amplitude_bound = control_amplitude_bound
+    config.carrier_frequencies = carrier_frequency
+    config.output_directory = output_directory
     if control_zero_boundary_condition is not None:
-        config_input.control_zero_boundary_condition = control_zero_boundary_condition
+        config.control_zero_boundary_condition = control_zero_boundary_condition
     
     # Set decoherence if provided
-    set_decoherence(config_input, decay_time=decay_time, dephase_time=dephase_time)
+    set_decoherence(config, decay_time=decay_time, dephase_time=dephase_time)
 
-    # Write target and initial conditions to file, if provided, and store in ConfigInput.
-    set_target(config_input, target, gate_rot_freq=gate_rot_freq)
-    set_initial_condition(config_input, initial_condition=initial_condition)
+    # Write target and initial conditions to file, if provided, and store in Config.
+    set_target(config, target, gate_rot_freq=gate_rot_freq)
+    set_initial_condition(config, initial_condition=initial_condition)
 
-    # Write custom Hamiltonian files and set paths on ConfigInput
+    # Write custom Hamiltonian files and set paths on Config
     if hamiltonian_Hsys is not None or hamiltonian_Hc is not None:
         hsys_path, hc_path = _write_hamiltonian_files(
             output_directory,
@@ -341,9 +340,9 @@ def create_config(
             Hc=hamiltonian_Hc,
         )
         if hsys_path is not None:
-            config_input.hamiltonian_file_Hsys = hsys_path
+            config.hamiltonian_file_Hsys = hsys_path
         if hc_path is not None:
-            config_input.hamiltonian_file_Hc = hc_path
+            config.hamiltonian_file_Hc = hc_path
 
     # Set control parameterizations if nspline or spline_order was specified
     if nspline is not None or spline_order is not None:
@@ -356,35 +355,35 @@ def create_config(
             if nspline is not None:
                 param.nspline = nspline
             control_params.append(param)
-        config_input.control_parameterizations = control_params
+        config.control_parameterizations = control_params
         # Order 0 uses zero carrier frequencies by default
         if order == 0:
-            config_input.carrier_frequencies = [[0.0] for _ in range(nqubits)]
+            config.carrier_frequencies = [[0.0] for _ in range(nqubits)]
 
     # Set initial control pulse, if provided
-    set_controls(config_input, control_randomize=control_randomize, control_amplitude=control_amplitude)
+    set_controls(config, control_randomize=control_randomize, control_amplitude=control_amplitude)
 
     # Set default output observables
-    config_input.output_observables = [OutputType.POPULATION, OutputType.EXPECTED_ENERGY, OutputType.FULLSTATE]
+    config.output_observables = [OutputType.POPULATION, OutputType.EXPECTED_ENERGY, OutputType.FULLSTATE]
 
-    return config_input
+    return config
 
 
 def set_target(
-    config_input: ConfigInput,
+    config: Config,
     target: np.ndarray,
     gate_rot_freq: Optional[Sequence[float]] = None,
 ) -> None:
-    """Set the optimization target on a ConfigInput (in-place).
+    """Set the optimization target on a Config (in-place).
 
     The type is inferred from the dimensionality of ``target``: a 2-D array
     is treated as a gate, a 1-D array as a state.  Writes the data to a file
-    in the output directory and sets ``config_input.optim_target``.
+    in the output directory and sets ``config.optim_target``.
 
     Parameters
     ----------
-    config_input : ConfigInput
-        ConfigInput to modify in-place.
+    config : Config
+        Config to modify in-place.
     target : array-like
         Target for optimization and fidelity computation. Either a 2D (unitary gate) or 1D (state vector).
     gate_rot_freq : sequence of float, optional
@@ -393,15 +392,15 @@ def set_target(
     Returns
     -------
     None
-        Modifies config_input in-place to set the optimization target.
+        Modifies config in-place to set the optimization target.
     """
     if target is None:
         return
 
     target_array = np.asarray(target, dtype=complex)
-    dim_ess = int(np.prod(config_input.nessential))
+    dim_ess = int(np.prod(config.nessential))
 
-    output_dir = _get_output_dir(config_input)
+    output_dir = _get_output_dir(config)
     os.makedirs(output_dir, exist_ok=True)
 
     if target_array.ndim == 2:
@@ -421,7 +420,7 @@ def set_target(
         optim_target.filename = gate_file
         if gate_rot_freq is not None:
             optim_target.gate_rot_freq = gate_rot_freq
-        config_input.optim_target = optim_target
+        config.optim_target = optim_target
 
     else:
         # State-to-state: verify dimensions and write target state to file
@@ -435,43 +434,43 @@ def set_target(
         optim_target = OptimTargetSettings()
         optim_target.target_type = TargetType.STATE
         optim_target.filename = state_file
-        config_input.optim_target = optim_target
+        config.optim_target = optim_target
 
 def set_initial_condition(
-    config_input: ConfigInput,
+    config: Config,
     initial_condition = None,
 ) -> None:
-    """Set the initial condition on a ConfigInput (in-place).
+    """Set the initial condition on a Config (in-place).
 
     The initial condition can be either as a state vector (arbitrary superposition) or an InitialConditionSettings struct for advanced use cases. If it's a state vector, it is written to a file in the output directory and the struct is configured to load from that file. If it's already an InitialConditionSettings struct, it is used directly. If None, the C++ default is used. 
 
     Parameters
     ----------
-    config_input : ConfigInput
-        ConfigInput to modify in-place.
+    config : Config
+        Config to modify in-place.
     initial_condition : array-like or InitialConditionSettings, optional
         Either a state vector (arbitrary superposition) or an InitialConditionSettings struct. If None, the C++ default is used (all basis states in the essential dimensions).
 
     Returns
     -------
     None
-        Modifies config_input in-place to set the initial condition.
+        Modifies config in-place to set the initial condition.
     """
     if initial_condition is None:
         return  
 
     if isinstance(initial_condition, InitialConditionSettings):
         # Already an InitialConditionSettings struct, use it directly
-        config_input.initial_condition = initial_condition
+        config.initial_condition = initial_condition
 
     else:
         # Initial condition is a state vector (arbitrary superposition). Check dimensions and write to file
-        dim_ess = int(np.prod(config_input.nessential))
+        dim_ess = int(np.prod(config.nessential))
         initial_state_array = np.array(initial_condition, dtype=complex)
         if len(initial_state_array) != dim_ess:
             raise ValueError(f"initial_condition state must have length {dim_ess} (product of nessential), "
                              f"got {len(initial_state_array)}")
-        output_dir = _get_output_dir(config_input)
+        output_dir = _get_output_dir(config)
         os.makedirs(output_dir, exist_ok=True)
 
         init_state_file = os.path.join(output_dir, "initial_state.dat")
@@ -480,27 +479,27 @@ def set_initial_condition(
         initial_condition = InitialConditionSettings()
         initial_condition.condition_type = InitialConditionType.FROMFILE
         initial_condition.filename = init_state_file
-        config_input.initial_condition = initial_condition
+        config.initial_condition = initial_condition
 
 
 def set_controls(
-    config_input: ConfigInput,
+    config: Config,
     spline_coefficients=None,
     p_samples=None,
     q_samples=None,
     control_amplitude: Optional[float] = None,
     control_randomize: bool = True,
 ) -> None:
-    """Set the control parameterization and initialization on a ConfigInput (in-place).
+    """Set the control parameterization and initialization on a Config (in-place).
 
     The control pulse is defined either by providing the B-spline coefficients (spline_coefficients), or by lists of control pulses at each time point (p_samples, q_samples), or by an explicit amplitude (control_amplitude) for uniform or random initialization.    
 
-    Priority: p_samples/q_samples > spline_coefficients > explicit amplitude > existing config_input.control_initializations > default from C++ code.
+    Priority: p_samples/q_samples > spline_coefficients > explicit amplitude > existing cfg.control_initializations > default from C++ code.
 
     Parameters
     ----------
-    config_input : ConfigInput
-        ConfigInput to modify in-place.
+    config : Config
+        Config to modify in-place.
     spline_coefficients : array-like, optional
         B-spline coefficients for the control pulses. If provided, they are written to a file and the control initialization is set to load from that file.
     p_samples : array-like, optional
@@ -515,7 +514,7 @@ def set_controls(
     Returns
     -------
     None
-        Modifies config_input in-place to set the control parameterization and initialization.
+        Modifies cfg in-place to set the control parameterization and initialization.
     """
 
     # If p_samples/q_samples are provide, fit pulses to bspline coefficients. 
@@ -528,7 +527,7 @@ def set_controls(
             q_samples = np.zeros_like(p_samples)
         
         # If control parameterization was not specified, choose Bspline 2nd order for better fitting quality.
-        existing_control_params = config_input.control_parameterizations or []
+        existing_control_params = config.control_parameterizations or []
         if len(existing_control_params) == 0:
             control_type = ControlType.BSPLINE
         else:
@@ -537,55 +536,55 @@ def set_controls(
         # Fit control parameters to either Bspline 0-th order or Bspline 2nd order. 
         if control_type == ControlType.BSPLINE0:
             nsteps = p_samples.shape[1]
-            nsplines = [max(2, nsteps + 1) for _ in range(len(config_input.nessential))]
+            nsplines = [max(2, nsteps + 1) for _ in range(len(config.nessential))]
             spline_coefficients = fit_bspline0(
                 p_samples=p_samples, q_samples=q_samples,
                 nsplines=nsplines[0],
-                spline_knot_spacing=config_input.dt,
-                dt=config_input.dt,
-                nessential=config_input.nessential,
+                spline_knot_spacing=config.dt,
+                dt=config.dt,
+                nessential=config.nessential,
             )
             # Zero out carrier frequencies (pulses already include carrier)
-            config_input.carrier_frequencies = [[0.0] for _ in range(len(config_input.nessential))]
+            config.carrier_frequencies = [[0.0] for _ in range(len(config.nessential))]
         elif control_type == ControlType.BSPLINE:
-            n_osc = len(config_input.nessential)
+            n_osc = len(config.nessential)
             if len(existing_control_params) == 0:
                 # Default to spline_knot_spacing of 3ns.
                 spline_knot_spacing = 3.0
-                computed_nspline = int(np.max([np.ceil(config_input.total_time / spline_knot_spacing + 2), 5]))
+                computed_nspline = int(np.max([np.ceil(config.total_time / spline_knot_spacing + 2), 5]))
                 nsplines = [computed_nspline for _ in range(n_osc)]
             else:
                 nsplines = [param.nspline for param in existing_control_params]
             spline_coefficients = fit_bspline2nd(0.0, 
-                                  config_input.total_time, 
+                                  config.total_time, 
                                   p_samples, q_samples, 
                                   nsplines, 
-                                  carrier_frequencies=config_input.carrier_frequencies,
+                                  carrier_frequencies=config.carrier_frequencies,
                                   inputs_in_mhz=True )
 
         # Set control parameterization
         control_params = []
-        for i in range(len(config_input.nessential)):
+        for i in range(len(config.nessential)):
             param = ControlParameterizationSettings()
             param.control_type = control_type
             param.nspline = nsplines[i]
             control_params.append(param)
-        config_input.control_parameterizations = control_params
+        config.control_parameterizations = control_params
 
     # If spline_coefficients is provided (either function input or set above by fitting splines to p_samples/q_samples), write coefficients to file and set control initialization to load from that file.
     if spline_coefficients is not None and len(spline_coefficients) > 0:
-        output_dir = _get_output_dir(config_input)
+        output_dir = _get_output_dir(config)
         os.makedirs(output_dir, exist_ok=True)
         spline_coefficients_file = os.path.join(output_dir, "spline_coefficients_init.dat")
         np.savetxt(spline_coefficients_file, spline_coefficients, fmt='%20.13e')
 
         control_inits = []
-        for _ in range(len(config_input.nessential)):
+        for _ in range(len(config.nessential)):
             init = ControlInitializationSettings()
             init.init_type = ControlInitializationType.FILE
             init.filename = spline_coefficients_file
             control_inits.append(init)
-        config_input.control_initializations = control_inits
+        config.control_initializations = control_inits
 
     elif control_amplitude is not None:
         # Explicit amplitude — create uniform per-oscillator inits
@@ -594,23 +593,23 @@ def set_controls(
             ControlInitializationType.RANDOM if control_randomize
             else ControlInitializationType.CONSTANT
         )
-        for _ in range(len(config_input.nessential)):
+        for _ in range(len(config.nessential)):
             init = ControlInitializationSettings()
             init.init_type = init_type
             init.amplitude = control_amplitude
             control_inits.append(init)
 
-        config_input.control_initializations = control_inits
+        config.control_initializations = control_inits
 
-def set_decoherence(config_input: ConfigInput, decay_time=None, dephase_time=None) -> None:
-    """Set the decoherence parameters on a ConfigInput (in-place).
+def set_decoherence(config: Config, decay_time=None, dephase_time=None) -> None:
+    """Set the decoherence parameters on a Config (in-place).
 
     Configures the decay and dephasing times, and sets the decoherence type accordingly. If decay or dephasing times are provided, Lindblad's master equation is solved. If neither is provided, decoherence_type is left unset (C++ default: no decoherence), solving Schroedinger's equation.
 
     Parameters
     ----------
-    config_input : ConfigInput
-        ConfigInput to modify in-place.
+    config : Config
+        Config to modify in-place.
     decay_time : sequence of float, optional
         T1 relaxation times [ns] per qubit. If provided, sets decoherence_type to DECAY or BOTH.
     dephase_time : sequence of float, optional
@@ -619,12 +618,12 @@ def set_decoherence(config_input: ConfigInput, decay_time=None, dephase_time=Non
     Returns
     -------
     None
-        Modifies config_input in-place to set decoherence parameters.
+        Modifies config in-place to set decoherence parameters.
     """
 
     # Set decoherence type if provided
     decoherence_type = None 
-    nqubits = len(config_input.nessential)
+    nqubits = len(config.nessential)
     if decay_time is not None or dephase_time is not None:
         if decay_time is not None and len(decay_time) != nqubits:
             raise ValueError(f"decay_time must have length {nqubits}, got {len(decay_time)}")
@@ -640,20 +639,20 @@ def set_decoherence(config_input: ConfigInput, decay_time=None, dephase_time=Non
             decay_time = None
 
     if decoherence_type is not None:
-        config_input.decoherence_type = decoherence_type
+        config.decoherence_type = decoherence_type
     if decay_time is not None:
-        config_input.decay_time = decay_time
+        config.decay_time = decay_time
     if dephase_time is not None:
-        config_input.dephase_time = dephase_time
+        config.dephase_time = dephase_time
 
 
 # ---------------------------------
 # Private config I/O helpers
 # ---------------------------------
 
-def _get_output_dir(config_input):
-    """Get output directory from config_input, falling back to default."""
-    return config_input.output_directory or _DEFAULT_OUTPUT_DIR
+def _get_output_dir(config):
+    """Get output directory from config, falling back to default."""
+    return config.output_directory or _DEFAULT_OUTPUT_DIR
 
 
 def _write_hamiltonian_files(output_directory, Hsys=None, Hc=None):

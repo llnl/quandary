@@ -17,14 +17,15 @@ from typing import Optional
 from mpi4py import MPI
 import numpy as np
 from .. import _quandary_impl
-from .._quandary_impl import Config, ConfigInput, RunType
+from .._quandary_impl import RunType
+from .types import Config
 from .results import get_results, Results
 from .config import resolve_output_dir, set_controls, set_target, set_initial_condition
 
 logger = logging.getLogger(__name__)
 
 def simulate(
-    config_input: ConfigInput,
+    config: Config,
     spline_coefficients=None,
     p_samples=None,
     q_samples=None,
@@ -43,12 +44,12 @@ def simulate(
 ) -> Results:
     """Run a simulation.
 
-    Copies the config_input internally; the original is not modified.
+    Copies the config internally; the original is not modified.
 
     Parameters
     ----------
-    config_input : ConfigInput
-        Physics config_input from create_config().
+    config : Config
+        Physics config from create_config().
     spline_coefficients : array-like, optional
         B-spline control coefficients.
     p_samples : sequence of ndarray, optional
@@ -60,7 +61,7 @@ def simulate(
         Initialize controls randomly. Default: True.
     control_amplitude : float, optional
         Initial control amplitude [GHz]. When omitted, uses
-        config_input.control_initializations if set, otherwise defaults from C++ code (zero controls)
+        config.control_initializations if set, otherwise defaults from C++ code (zero controls)
     initial_condition : sequence of complex or InitialConditionSettings, optional
         Either a state vector (arbitrary superposition), or direct struct specification (advanced). 
         Default: All basis states in the essential dimensions.
@@ -90,18 +91,19 @@ def simulate(
         If dry_run=True, only results.config is populated.
     """
 
-    config_input = config_input.copy()
-    config_input.output_directory = resolve_output_dir(config_input.output_directory)
-    config_input.runtype = RunType.SIMULATION
+    config = config.copy()
+    config.output_directory = resolve_output_dir(config.output_directory)
+    config.runtype = RunType.SIMULATION
 
-    set_controls(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
-    set_target(config_input, target, gate_rot_freq=gate_rot_freq)
-    set_initial_condition(config_input, initial_condition=initial_condition)
+    set_controls(config, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
+    set_target(config, target, gate_rot_freq=gate_rot_freq)
+    set_initial_condition(config, initial_condition=initial_condition)
 
     if dry_run:
-        return Results(config=Config(config_input, quiet))
+        toml_content = config.printConfig()
+        return Results(config=Config.from_string(toml_content, quiet))
     return _run(
-        config_input,
+        config,
         max_n_procs=max_n_procs,
         quiet=quiet,
         mpi_exec=mpi_exec,
@@ -111,7 +113,7 @@ def simulate(
     )
 
 def optimize(
-    config_input: ConfigInput,
+    config : Config,
     spline_coefficients=None,
     p_samples=None,
     q_samples=None,
@@ -130,14 +132,14 @@ def optimize(
 ) -> Results:
     """Run an optimization.
 
-    Copies the config_input internally; the original is not modified.
+    Copies the config internally; the original is not modified.
 
     Parameters
     ----------
-    config_input : ConfigInput
-        Physics config_input from create_config().
+    config : Config
+        Physics config from create_config().
     spline_coefficients : array-like, optional
-        For Warm-start: Initial B-spline coefficients. ConfigInput must contain the same spline parameterization and carrier frequencies.
+        For Warm-start: Initial B-spline coefficients. Config must contain the same spline parameterization and carrier frequencies.
     p_samples : sequence of ndarray, optional
         For warm-start: Real part of control pulses [MHz] per oscillator.
         Will be fitted to B-splines coefficients. Must be paired with q_samples.
@@ -147,7 +149,7 @@ def optimize(
         Initialize controls randomly. Default: True.
     control_amplitude : float, optional
         Initial control amplitude [GHz]. When omitted, uses
-        config_input.control_initializations if set, otherwise defaults from C++ code (zero controls)
+        config.control_initializations if set, otherwise defaults from C++ code (zero controls)
     initial_condition : sequence of complex or InitialConditionSettings, optional
         Either a state vector (arbitrary superposition), or direct struct specification (advanced). 
         Default: All basis states in the essential dimensions.
@@ -177,17 +179,18 @@ def optimize(
         If dry_run=True, only results.config is populated.
     """
 
-    config_input = config_input.copy()
-    config_input.output_directory = resolve_output_dir(config_input.output_directory)
-    config_input.runtype = RunType.OPTIMIZATION
-    set_controls(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
-    set_target(config_input, target, gate_rot_freq=gate_rot_freq)
-    set_initial_condition(config_input, initial_condition=initial_condition)
+    config = config.copy()
+    config.output_directory = resolve_output_dir(config.output_directory)
+    config.runtype = RunType.OPTIMIZATION
+    set_controls(config, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
+    set_target(config, target, gate_rot_freq=gate_rot_freq)
+    set_initial_condition(config, initial_condition=initial_condition)
 
     if dry_run:
-        return Results(config=Config(config_input, quiet))
+        toml_content = config.printConfig()
+        return Results(config=Config.from_string(toml_content, quiet))
     return _run(
-        config_input,
+        config,
         max_n_procs=max_n_procs,
         quiet=quiet,
         mpi_exec=mpi_exec,
@@ -197,7 +200,7 @@ def optimize(
     )
 
 def evaluate_controls(
-    config_input: ConfigInput,
+    config: Config,
     spline_coefficients=None,
     p_samples=None,
     q_samples=None,
@@ -214,12 +217,12 @@ def evaluate_controls(
 ) -> Results:
     """Evaluate control pulses at a specific sample rate.
 
-    Copies the config_input internally; the original is not modified.
+    Copies the config internally; the original is not modified.
 
     Parameters
     ----------
-    config_input : ConfigInput
-        Physics config_input from create_config().
+    config : Config
+        Physics config from create_config().
     spline_coefficients : array-like
         B-spline control coefficients.
     p_samples : sequence of ndarray, optional
@@ -231,7 +234,7 @@ def evaluate_controls(
         Initialize controls randomly. Default: True.
     control_amplitude : float, optional
         Initial control amplitude [GHz]. When omitted, uses
-        config_input.control_initializations if set, otherwise defaults from C++ code (zero controls)
+        config.control_initializations if set, otherwise defaults from C++ code (zero controls)
     points_per_ns : float
         Sample rate [points per ns]. Default: 1.0.
     dry_run : bool
@@ -257,23 +260,24 @@ def evaluate_controls(
         If dry_run=True, only results.config is populated.
     """
 
-    config_input = config_input.copy()
-    config_input.output_directory = resolve_output_dir(config_input.output_directory)
-    config_input.runtype = RunType.EVALCONTROLS
+    config = config.copy()
+    config.output_directory = resolve_output_dir(config.output_directory)
+    config.runtype = RunType.EVALCONTROLS
 
-    set_controls(config_input, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
+    set_controls(config, spline_coefficients=spline_coefficients, p_samples=p_samples, q_samples=q_samples, control_randomize=control_randomize, control_amplitude=control_amplitude)
 
     # Recalculate time grid: keep total time, change resolution
-    total_time = config_input.total_time
+    total_time = config.total_time
     nsteps = int(np.floor(total_time * points_per_ns))
     nsteps = max(nsteps, 1)  # Ensure at least one step
-    config_input.dt = total_time / nsteps
+    config.dt = total_time / nsteps
 
     # Run or dry run, return Results struct
     if dry_run:
-        return Results(config=Config(config_input, quiet))
+        toml_content = config.printConfig()
+        return Results(config=Config.from_string(toml_content, quiet))
     return _run(
-        config_input,
+        config,
         max_n_procs=max_n_procs,
         quiet=quiet,
         mpi_exec=mpi_exec,
@@ -341,7 +345,7 @@ def _compute_optimal_core_distribution(maxcores: int, ninit: int) -> int:
     return ncores
 
 def _run(
-    config_input: ConfigInput,
+    config: Config,
     max_n_procs: Optional[int] = None,
     quiet: bool = True,
     mpi_exec: str = "mpirun",
@@ -351,8 +355,8 @@ def _run(
 ) -> Results:
     """Run a Quandary simulation or optimization.
 
-    This function validates the config_input, runs the simulation/optimization,
-    and returns results with the validated configuration attached.
+    This function runs the simulation/optimization,
+    and returns results with the configuration attached.
 
     If max_n_procs is specified and not already in an MPI context, spawns a subprocess
     with the MPI launcher (useful for Jupyter notebooks). If already running in an
@@ -361,8 +365,8 @@ def _run(
 
     Parameters
     ----------
-    config_input : ConfigInput
-        A ConfigInput object.
+    config : Config
+        A Config object.
     max_n_procs : int, optional
         Max number of MPI processes to use. If specified and not in MPI
         context, spawns subprocess. The actual number of cores will be
@@ -386,7 +390,7 @@ def _run(
     Returns
     -------
     Results
-        Output data and the validated configuration.
+        Output data and the configuration.
 
     Raises
     ------
@@ -399,12 +403,16 @@ def _run(
     comm = MPI.COMM_WORLD
     size = comm.Get_size()
 
+    # Create validated config 
+    toml_content = config.printConfig()
+    config = Config.from_string(toml_content, quiet)
+
     if _is_interactive():
         # In interactive environment without MPI, spawn subprocess with MPI launcher for better performance
         if max_n_procs is None:
             max_n_procs = 4  # Default to 4 processes if not specified
         return _run_subprocess(
-            config_input=config_input,
+            config=config,
             max_n_procs=max_n_procs,
             quiet=quiet,
             mpi_exec=mpi_exec,
@@ -420,32 +428,30 @@ def _run(
         )
 
     logger.info(f"Running directly in existing MPI context with {size} processes")
-    return _run_directly(config_input, quiet)
+    return _run_directly(config, quiet)
 
 
-def _run_directly(config_input: ConfigInput, quiet: bool = True) -> Results:
+def _run_directly(config: Config, quiet: bool = True) -> Results:
     """Internal: Run Quandary directly without spawning subprocess.
 
     This is used when max_n_procs is not specified, or when already in an MPI context.
     """
-    # Validate configuration
-    validated_config = Config(config_input, quiet)
-    logger.debug("Configuration:\n%s", validated_config)
+    logger.debug("Configuration:\n%s", config)
 
     # Run simulation/optimization
-    return_code = _quandary_impl.run(validated_config, quiet)
+    return_code = _quandary_impl.run(config, quiet)
 
     if return_code != 0:
         raise RuntimeError(f"Quandary execution failed with return code {return_code}")
 
-    # Load results with validated config
-    results = get_results(validated_config.output_directory)
+    # Load results and the config from C++ output files
+    results = get_results(config.output_directory)
 
     return results
 
 
 def _run_subprocess(
-    config_input: ConfigInput,
+    config: Config,
     max_n_procs: int,
     quiet: bool = True,
     mpi_exec: str = "mpirun",
@@ -461,12 +467,10 @@ def _run_subprocess(
     The number of processes is automatically optimized based on the number of
     initial conditions for efficient parallelization.
     """
-    # Validate configuration
-    validated_config = Config(config_input, quiet)
-    logger.debug("Configuration:\n%s", validated_config)
+    logger.debug("Configuration:\n%s", config)
 
     # Compute optimal core distribution based on number of initial conditions
-    n_init = validated_config.n_initial_conditions
+    n_init = config.n_initial_conditions
     total_cores = _compute_optimal_core_distribution(max_n_procs, n_init)
 
     # Use current Python interpreter if not specified
@@ -474,13 +478,12 @@ def _run_subprocess(
         python_exec = sys.executable
 
     # Create the output directory if it doesn't exist
-    os.makedirs(validated_config.output_directory, exist_ok=True)
+    os.makedirs(config.output_directory, exist_ok=True)
 
     # Write the TOML config file to the output directory (use absolute path for subprocess)
-    config_file = os.path.abspath(os.path.join(validated_config.output_directory, "config.toml"))
-    toml_content = validated_config.to_toml()
+    config_file = os.path.abspath(os.path.join(config.output_directory, "config.toml"))
     with open(config_file, "w") as f:
-        f.write(toml_content)
+        f.write(config.printConfig())
 
     # Python code to run Quandary from the TOML file
     python_code = f'from quandary.new import run_from_file; run_from_file("{config_file}", quiet={quiet})'
@@ -504,8 +507,8 @@ def _run_subprocess(
             raise RuntimeError(f"Quandary failed:\n{result.stderr.strip()}")
         raise RuntimeError("Quandary failed (see output above)")
 
-    # Load results with validated config
-    results = get_results(validated_config.output_directory)
+    # Load results and the config from C++ output files
+    results = get_results(config.output_directory)
 
     return results
 

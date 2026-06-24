@@ -1,6 +1,6 @@
 """Tests for internal machinery: dry_run, core distribution, and subprocess execution."""
 import numpy as np
-from quandary.new import ConfigInput, create_config, optimize, simulate, evaluate_controls
+from quandary.new import Config, create_config, optimize, simulate, evaluate_controls
 from quandary.new.run import (
     _compute_optimal_core_distribution,
 )
@@ -20,18 +20,18 @@ def _make_setup(output_directory="./run_dir"):
 
 
 def test_config_input_copy_preserves_wrapper_type():
-    """ConfigInput.copy() keeps Python wrapper behavior while copying values."""
-    setup = ConfigInput()
+    """Config.copy() keeps Python wrapper behavior while copying values."""
+    setup = Config()
     setup.nlevels = np.array([2, 3])
     setup.dt = 0.1
 
     copied = setup.copy()
 
-    assert type(copied) is ConfigInput
+    assert type(copied) is Config
     assert copied is not setup
     assert copied.nlevels == [2, 3]
     assert copied.dt == 0.1
-    assert repr(copied).startswith("ConfigInput(")
+    assert repr(copied).startswith("Config(")
 
     setup.nlevels = [4, 5]
     assert copied.nlevels == [2, 3]

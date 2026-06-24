@@ -15,7 +15,7 @@ type information and allowed values.
 
 import numpy as np
 
-from .._quandary_impl import ConfigInput as _CppConfigInput
+from .._quandary_impl import Config as _CppConfig
 from .._quandary_impl import (
     InitialConditionSettings as _CppInitialConditionSettings,
     OptimTargetSettings as _CppOptimTargetSettings,
@@ -114,11 +114,11 @@ class ControlInitializationSettings(_CppControlInitializationSettings):
     __setattr__ = _numpy_setattr("ControlInitializationSettings")
 
 
-class ConfigInput(_CppConfigInput):
-    __doc__ = _CppConfigInput.__doc__
-    __setattr__ = _numpy_setattr("ConfigInput")
+class Config(_CppConfig):
+    __doc__ = _CppConfig.__doc__
+    __setattr__ = _numpy_setattr("Config")
 
-    __repr__ = _make_repr(_CppConfigInput)
+    __repr__ = _make_repr(_CppConfig)
 
     def copy(self):
         """Create an independent copy preserving the Python wrapper type."""

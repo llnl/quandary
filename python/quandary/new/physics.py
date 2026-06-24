@@ -676,14 +676,14 @@ def estimate_timestep_size(*, Hsys=None, Hc_re=None, Hc_im=None, control_amplitu
     return suggested_dt
 
 
-def timestep_richardson_est(config_input, spline_coefficients, tol=1e-8, order=2, **kwargs):
+def timestep_richardson_est(config, spline_coefficients, tol=1e-8, order=2, **kwargs):
     """Decrease timestep size until Richardson error estimate meets threshold.
 
     Parameters
     ----------
-    config_input : ConfigInput
+    config : Config
         Quandary configuration input. A copy is made internally; the caller's
-        config_input is not modified.
+        config is not modified.
     spline_coefficients : array-like
         B-spline control coefficients to evaluate at each refinement level.
     tol : float
@@ -707,10 +707,10 @@ def timestep_richardson_est(config_input, spline_coefficients, tol=1e-8, order=2
     # Factor by which ntime is multiplied (dt halved) each step
     m = 2
 
-    config_input = config_input.copy()
+    cfg_copy = config.copy()
     kwargs.setdefault("quiet", True)
 
-    results = simulate(config_input, spline_coefficients=spline_coefficients, **kwargs)
+    results = simulate(cfg_copy, spline_coefficients=spline_coefficients, **kwargs)
     Jcurr = results.infidelity
     uT = results.uT.copy()
 
@@ -718,10 +718,10 @@ def timestep_richardson_est(config_input, spline_coefficients, tol=1e-8, order=2
     errs_u = []
     dts = []
     for i in range(10):
-        dt_org = config_input.dt
-        config_input.dt = config_input.dt / m
+        dt_org = cfg_copy.dt
+        cfg_copy.dt = cfg_copy.dt / m
 
-        results = simulate(config_input, spline_coefficients=spline_coefficients, **kwargs)
+        results = simulate(cfg_copy, spline_coefficients=spline_coefficients, **kwargs)
 
         err_J = np.abs(Jcurr - results.infidelity) / (m**order - 1.0)
         err_u = np.linalg.norm(np.subtract(uT, results.uT)) / (m**order - 1.0)
@@ -732,7 +732,7 @@ def timestep_richardson_est(config_input, spline_coefficients, tol=1e-8, order=2
         logger.info(f"  i={i}, dt={dt_org:.6f}: err_J={err_J:.3e}, err_u={err_u:.3e}")
 
         if err_J < tol:
-            logger.info(f"  Tolerance reached for dt={config_input.dt:.6f}")
+            logger.info(f"  Tolerance reached for dt={cfg_copy.dt:.6f}")
             break
 
         Jcurr = results.infidelity

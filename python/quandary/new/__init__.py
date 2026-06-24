@@ -13,7 +13,6 @@ atexit.register(_finalize_petsc)
 # Re-export the nanobind implementation from the parent package
 from .._quandary_impl import (
     ValidationError as ValidationError,
-    Config,
     run_from_file,
     DecoherenceType,
     InitialConditionType,
@@ -30,7 +29,7 @@ from .._quandary_impl import (
 
 # Types
 from .types import (  # noqa: F401, E402
-    ConfigInput,
+    Config,
     InitialConditionSettings,
     OptimTargetSettings,
     ControlParameterizationSettings,
@@ -40,7 +39,7 @@ from .types import (  # noqa: F401, E402
 # Configuration functions
 from .config import (  # noqa: F401, E402
     create_config,
-    load_config_input,
+    load_config,
     resolve_output_dir,
     set_target,
     set_initial_condition,
@@ -84,7 +83,6 @@ __all__ = [
     # Exceptions
     "ValidationError",
     # Configuration classes and types
-    "ConfigInput",
     "Config",
     "run_from_file",
     # Enums
@@ -106,7 +104,7 @@ __all__ = [
     "ControlInitializationSettings",
     # Configuration 
     "create_config",
-    "load_config_input",
+    "load_config",
     "resolve_output_dir",
     "set_target",
     "set_controls",

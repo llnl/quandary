@@ -1,9 +1,9 @@
-"""Tests for load_config_input function."""
+"""Tests for load_config function."""
 
 import os
 import pytest
 import numpy as np
-from quandary.new import load_config_input, ConfigInput
+from quandary.new import load_config, Config
 
 
 def _create_sample_toml(tmp_path):
@@ -64,9 +64,9 @@ def test_load_config_input_system_parameters(tmp_path, request):
     datadir_path = os.path.join(tmp_path, request.node.name)
 
     config_file = _create_sample_toml(datadir_path)
-    config = load_config_input(config_file, quiet=True)
+    config = load_config(config_file, quiet=True)
     
-    assert isinstance(config, ConfigInput)
+    assert isinstance(config, Config)
     assert np.allclose(config.nlevels, [2, 2])
     assert np.allclose(config.nessential, [2, 2])
     assert np.isclose(config.dt, 0.588235294117647)
