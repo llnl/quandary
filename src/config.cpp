@@ -148,7 +148,6 @@ Config::Config(bool quiet_mode) : logger(quiet_mode) {
   linearsolver_type = ConfigDefaults::LINEARSOLVER_TYPE;
   linearsolver_maxiter = ConfigDefaults::LINEARSOLVER_MAXITER;
   timestepper_type = ConfigDefaults::TIMESTEPPER_TYPE;
-  runtype = ConfigDefaults::RUNTYPE;
 }
 
 Config Config::fromFile(const std::string& filename, bool quiet_mode) {
@@ -422,7 +421,9 @@ Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
         throw validators::ValidationError("solver.runtype", "unknown run type: " + runtype_str.value());
       }
       runtype = runtype_enum.value();
-    } 
+    } else {
+      runtype = ConfigDefaults::RUNTYPE;
+    }
     usematfree = solver_table["usematfree"].value_or(ConfigDefaults::USEMATFREE);
 
     // Parse linearsolver as an inline table
