@@ -124,8 +124,29 @@ ControlInitializationSettings parseControlInitSpecsToml(const toml::table& init_
 
 
 
-// Empty constructor for Python use only.
+// Default constructor. Sets simple defaults. 
 Config::Config(bool quiet_mode) : logger(quiet_mode) {
+  decoherence_type = ConfigDefaults::DECOHERENCE_TYPE;
+  control_zero_boundary_condition = ConfigDefaults::CONTROL_ZERO_BOUNDARY_CONDITION;
+  optim_tol_grad_abs = ConfigDefaults::OPTIM_TOL_GRAD_ABS;
+  optim_tol_grad_rel = ConfigDefaults::OPTIM_TOL_GRAD_REL;
+  optim_tol_final_cost = ConfigDefaults::OPTIM_TOL_FINAL_COST;
+  optim_tol_infidelity = ConfigDefaults::OPTIM_TOL_INFIDELITY;
+  optim_maxiter = ConfigDefaults::OPTIM_MAXITER;
+  optim_tikhonov_coeff = ConfigDefaults::OPTIM_TIKHONOV_COEFF;
+  optim_tikhonov_use_x0 = ConfigDefaults::OPTIM_TIKHONOV_USE_X0;
+  optim_penalty_leakage = ConfigDefaults::OPTIM_PENALTY_LEAKAGE;
+  optim_penalty_weightedcost = ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST;
+  optim_penalty_weightedcost_width = ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH;
+  optim_penalty_dpdm = ConfigDefaults::OPTIM_PENALTY_DPDM;
+  optim_penalty_energy = ConfigDefaults::OPTIM_PENALTY_ENERGY;
+  optim_penalty_variation = ConfigDefaults::OPTIM_PENALTY_VARIATION;
+  output_timestep_stride = ConfigDefaults::OUTPUT_TIMESTEP_STRIDE;
+  output_optimization_stride = ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE;
+  usematfree = ConfigDefaults::USEMATFREE;
+  linearsolver_type = ConfigDefaults::LINEARSOLVER_TYPE;
+  linearsolver_maxiter = ConfigDefaults::LINEARSOLVER_MAXITER;
+  timestepper_type = ConfigDefaults::TIMESTEPPER_TYPE;
 }
 
 Config Config::fromFile(const std::string& filename, bool quiet_mode) {
@@ -199,7 +220,6 @@ Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
     hamiltonian_file_Hc = validators::getOptional<std::string>((*system_table)["hamiltonian_file_Hc"]);
 
     // Parse decoherence setting
-    decoherence_type = ConfigDefaults::DECOHERENCE_TYPE;
     decay_time = std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME);
     dephase_time = std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME);
     if (system_table->contains("decoherence")) {
@@ -310,12 +330,7 @@ Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
     optim_weights = validators::vectorField<double>(optimization_table, "weights").valueOr({});
 
     // Parse optional optimization tolerances
-    if (!optimization_table.contains("tolerance")) {
-      optim_tol_grad_abs = ConfigDefaults::OPTIM_TOL_GRAD_ABS;
-      optim_tol_grad_rel = ConfigDefaults::OPTIM_TOL_GRAD_REL;
-      optim_tol_final_cost = ConfigDefaults::OPTIM_TOL_FINAL_COST;
-      optim_tol_infidelity = ConfigDefaults::OPTIM_TOL_INFIDELITY;
-    } else {
+    if (optimization_table.contains("tolerance")) {
       // Parse tolerance table
       auto* tol_table = optimization_table["tolerance"].as_table();
       if (!tol_table) {
@@ -343,15 +358,7 @@ Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
     }
 
     // Parse penalty table
-    if (!optimization_table.contains("penalty")) {
-      // No penalty table is specified, use defaults
-      optim_penalty_leakage = ConfigDefaults::OPTIM_PENALTY_LEAKAGE;
-      optim_penalty_weightedcost = ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST;
-      optim_penalty_weightedcost_width = ConfigDefaults::OPTIM_PENALTY_WEIGHTEDCOST_WIDTH;
-      optim_penalty_dpdm = ConfigDefaults::OPTIM_PENALTY_DPDM;
-      optim_penalty_energy = ConfigDefaults::OPTIM_PENALTY_ENERGY;
-      optim_penalty_variation = ConfigDefaults::OPTIM_PENALTY_VARIATION;
-    } else {
+    if (optimization_table.contains("penalty")) {
       // Parse penalty table
       auto penalty_table = optimization_table["penalty"].as_table();
       if (!penalty_table) {
@@ -394,8 +401,6 @@ Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
     usematfree = solver_table["usematfree"].value_or(ConfigDefaults::USEMATFREE);
 
     // Parse linearsolver as an inline table
-    linearsolver_type = ConfigDefaults::LINEARSOLVER_TYPE;
-    linearsolver_maxiter = ConfigDefaults::LINEARSOLVER_MAXITER;
     if (solver_table.contains("linearsolver")) {
       auto* linearsolver_table_inner = solver_table["linearsolver"].as_table();
       if (!linearsolver_table_inner) {
@@ -709,11 +714,11 @@ void Config::printConfig(std::stringstream& log) const {
   if (dipole_coupling.has_value()) log << "dipole_coupling = " << toStringCoupling(dipole_coupling.value(), nlevels.value().size()) << "\n";
   if (rotation_frequency.has_value()) log << "rotation_frequency = " << printVector(rotation_frequency.value()) << "\n";
   if (decoherence_type.has_value() || decay_time.has_value() || dephase_time.has_value()) {
-    log << "decoherence = {\n";
-    if (decoherence_type.has_value()) log << "  type = \"" << enumToString(decoherence_type.value(), DECOHERENCE_TYPE_MAP) << "\",\n";
-    if (decay_time.has_value()) log << "  decay_time = " << printVector(decay_time.value()) << ",\n";
-    if (dephase_time.has_value()) log << "  dephase_time = " << printVector(dephase_time.value()) << "\n";
-    log << "}\n";
+    std::vector<std::string> fields;
+    if (decoherence_type.has_value()) fields.push_back("type = \"" + enumToString(decoherence_type.value(), DECOHERENCE_TYPE_MAP) + "\"");
+    if (decay_time.has_value()) fields.push_back("decay_time = " + printVector(decay_time.value()));
+    if (dephase_time.has_value()) fields.push_back("dephase_time = " + printVector(dephase_time.value()));
+    printInlineTable("decoherence", fields);
   }
   if (initial_condition.has_value()) log << "initial_condition = " << Config::toString(initial_condition.value()) << "\n";
   if (hamiltonian_file_Hsys.has_value()) log << "hamiltonian_file_Hsys = \"" << hamiltonian_file_Hsys.value() << "\"\n";
