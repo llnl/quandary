@@ -11,6 +11,7 @@ MPI Lifecycle Management:
 from __future__ import annotations
 import logging
 import os
+import shlex
 import subprocess
 import sys
 from typing import Optional
@@ -483,26 +484,41 @@ def _run_subprocess(
         f.write(toml_content)
 
     # Python code to run Quandary from the TOML file
-    python_code = f'from quandary.new import run_from_file; run_from_file("{config_file}", quiet={quiet})'
+    python_code = (
+        "from quandary.new import run_from_file; "
+        f"run_from_file({config_file!r}, quiet={quiet})"
+    )
 
     # Build the command with optimized core count
     cmd = [mpi_exec, nproc_flag, str(total_cores), python_exec, "-c", python_code]
 
     # Run the subprocess
     logger.info(f"Spawning subprocess with {total_cores} processes using {mpi_exec}")
-    logger.debug(f"Subprocess command: {' '.join(cmd)}")
+    logger.debug(f"Subprocess command: {shlex.join(cmd)}")
     result = subprocess.run(
         cmd,
         cwd=working_dir,
-        stdout=subprocess.PIPE if quiet else None,
+        stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
     )
 
-    if result.returncode != 0:
+    if not quiet:
+        if result.stdout:
+            print(result.stdout, end="")
         if result.stderr:
-            raise RuntimeError(f"Quandary failed:\n{result.stderr.strip()}")
-        raise RuntimeError("Quandary failed (see output above)")
+            print(result.stderr, end="", file=sys.stderr)
+
+    if result.returncode != 0:
+        message_lines = [
+            f"Quandary failed with return code {result.returncode}.",
+            f"Command: {shlex.join(cmd)}",
+        ]
+        if result.stderr and result.stderr.strip():
+            message_lines.append(f"stderr:\n{result.stderr.strip()}")
+        if result.stdout and result.stdout.strip():
+            message_lines.append(f"stdout:\n{result.stdout.strip()}")
+        raise RuntimeError("\n\n".join(message_lines))
 
     # Load results with validated config
     results = get_results(validated_config.output_directory)
