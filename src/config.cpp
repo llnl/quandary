@@ -129,6 +129,7 @@ Config::Config(bool quiet_mode) : logger(quiet_mode) {
   decoherence_type = ConfigDefaults::DECOHERENCE_TYPE;
   control_zero_boundary_condition = ConfigDefaults::CONTROL_ZERO_BOUNDARY_CONDITION;
   optim_tol_grad_abs = ConfigDefaults::OPTIM_TOL_GRAD_ABS;
+  optim_objective = ConfigDefaults::OPTIM_OBJECTIVE;
   optim_tol_grad_rel = ConfigDefaults::OPTIM_TOL_GRAD_REL;
   optim_tol_final_cost = ConfigDefaults::OPTIM_TOL_FINAL_COST;
   optim_tol_infidelity = ConfigDefaults::OPTIM_TOL_INFIDELITY;
@@ -147,6 +148,7 @@ Config::Config(bool quiet_mode) : logger(quiet_mode) {
   linearsolver_type = ConfigDefaults::LINEARSOLVER_TYPE;
   linearsolver_maxiter = ConfigDefaults::LINEARSOLVER_MAXITER;
   timestepper_type = ConfigDefaults::TIMESTEPPER_TYPE;
+  runtype = ConfigDefaults::RUNTYPE;
 }
 
 Config Config::fromFile(const std::string& filename, bool quiet_mode) {
@@ -227,8 +229,14 @@ Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
       if (!decoherence_table) {
         throw validators::ValidationError("decoherence", "must be a table");
       }
-      auto type_str = validators::field<std::string>(*decoherence_table, "type").valueOr("none");
-      decoherence_type = parseEnum(type_str, DECOHERENCE_TYPE_MAP, ConfigDefaults::DECOHERENCE_TYPE);
+      auto type_str = validators::getOptional<std::string>((*decoherence_table)["type"]);
+      if (type_str.has_value()) {
+        auto type_enum = parseEnum(type_str.value(), DECOHERENCE_TYPE_MAP);
+        if (!type_enum.has_value()) {
+          throw validators::ValidationError("decoherence.type", "unknown decoherence type: " + type_str.value());
+        }
+        decoherence_type = type_enum.value();
+      } 
       decay_time = validators::scalarOrVectorOr<double>(*decoherence_table, "decay_time", num_osc, std::vector<double>(num_osc, ConfigDefaults::DECAY_TIME));
       dephase_time = validators::scalarOrVectorOr<double>(*decoherence_table, "dephase_time", num_osc, std::vector<double>(num_osc, ConfigDefaults::DEPHASE_TIME));
     }
@@ -239,14 +247,18 @@ Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
       if (!init_table) {
         throw validators::ValidationError("initial_condition", "must be a table");
       }
-      auto type_str = validators::field<std::string>(*init_table, "type").valueOr(enumToString(ConfigDefaults::INITIAL_CONDITION_TYPE, INITCOND_TYPE_MAP));
-      auto type_enum = parseEnum(type_str, INITCOND_TYPE_MAP);
-      if (!type_enum.has_value()) {
-        throw validators::ValidationError("initial_condition.type", "unknown type: " + type_str);
+      auto type_str = validators::getOptional<std::string>((*init_table)["type"]);
+      InitialConditionType type_enum = ConfigDefaults::INITIAL_CONDITION_TYPE;
+      if (type_str.has_value()) {
+        auto parsed_type = parseEnum(type_str.value(), INITCOND_TYPE_MAP);
+        if (!parsed_type.has_value()) {
+          throw validators::ValidationError("initial_condition.type", "unknown initial condition type: " + type_str.value());
+        }
+        type_enum = parsed_type.value();
       }
 
       InitialConditionSettings init_cond;
-      init_cond.type = type_enum.value();
+      init_cond.type = type_enum;
       init_cond.levels = validators::getOptionalVector<size_t>((*init_table)["levels"]);
       init_cond.filename = validators::getOptional<std::string>((*init_table)["filename"]);
       init_cond.subsystem = validators::getOptionalVector<size_t>((*init_table)["subsystem"]);
@@ -324,7 +336,14 @@ Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
     }
 
     // Parse optimization objective
-    optim_objective = parseEnum(optimization_table["objective"].value<std::string>(), OBJECTIVE_TYPE_MAP, ConfigDefaults::OPTIM_OBJECTIVE);
+    auto objective_str = optimization_table["objective"].value<std::string>();
+    if (objective_str.has_value()) {
+      auto objective_enum = parseEnum(objective_str.value(), OBJECTIVE_TYPE_MAP);
+      if (!objective_enum.has_value()) {
+        throw validators::ValidationError("optimization.objective", "unknown objective type: " + objective_str.value());
+      }
+      optim_objective = objective_enum.value();
+    } 
 
     // Parse optional weights
     optim_weights = validators::vectorField<double>(optimization_table, "weights").valueOr({});
@@ -334,7 +353,7 @@ Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
       // Parse tolerance table
       auto* tol_table = optimization_table["tolerance"].as_table();
       if (!tol_table) {
-        validators::ValidationError("tolerance must be a table");
+        throw validators::ValidationError("tolerance must be a table");
       }
       optim_tol_grad_abs = validators::field<double>(*tol_table, "grad_abs").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_ABS);
       optim_tol_grad_rel = validators::field<double>(*tol_table, "grad_rel").positive().valueOr(ConfigDefaults::OPTIM_TOL_GRAD_REL);
@@ -396,8 +415,14 @@ Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
     output_optimization_stride = validators::field<size_t>(output_table, "optimization_stride").valueOr(ConfigDefaults::OUTPUT_OPTIMIZATION_STRIDE);
 
     // Parse solver options from [solver] table
-    runtype = parseEnum(solver_table["runtype"].value<std::string>(), RUN_TYPE_MAP, ConfigDefaults::RUNTYPE);
-
+    auto runtype_str = solver_table["runtype"].value<std::string>();
+    if (runtype_str.has_value()) {
+      auto runtype_enum = parseEnum(runtype_str.value(), RUN_TYPE_MAP);
+      if (!runtype_enum.has_value()) {
+        throw validators::ValidationError("solver.runtype", "unknown run type: " + runtype_str.value());
+      }
+      runtype = runtype_enum.value();
+    } 
     usematfree = solver_table["usematfree"].value_or(ConfigDefaults::USEMATFREE);
 
     // Parse linearsolver as an inline table
@@ -406,12 +431,25 @@ Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
       if (!linearsolver_table_inner) {
         throw validators::ValidationError("linearsolver", "linearsolver must be a table");
       }
-      auto type_str = validators::field<std::string>(*linearsolver_table_inner, "type").valueOr(enumToString(ConfigDefaults::LINEARSOLVER_TYPE, LINEAR_SOLVER_TYPE_MAP));
-      linearsolver_type = parseEnum(type_str, LINEAR_SOLVER_TYPE_MAP, ConfigDefaults::LINEARSOLVER_TYPE);
+      auto type_str = validators::getOptional<std::string>((*linearsolver_table_inner)["type"]);
+      if (type_str.has_value()) {
+        auto type_enum = parseEnum(type_str.value(), LINEAR_SOLVER_TYPE_MAP);
+        if (!type_enum.has_value()) {
+          throw validators::ValidationError("linearsolver.type", "unknown linearsolver type: " + type_str.value());
+        }
+        linearsolver_type = type_enum.value();
+      } 
       linearsolver_maxiter = validators::field<size_t>(*linearsolver_table_inner, "maxiter").positive().valueOr(ConfigDefaults::LINEARSOLVER_MAXITER);
     }
 
-    timestepper_type = parseEnum(solver_table["timestepper"].value<std::string>(), TIME_STEPPER_TYPE_MAP, ConfigDefaults::TIMESTEPPER_TYPE);
+    auto timestepper_str = solver_table["timestepper"].value<std::string>();
+    if (timestepper_str.has_value()) {
+      auto timestepper_enum = parseEnum(timestepper_str.value(), TIME_STEPPER_TYPE_MAP);
+      if (!timestepper_enum.has_value()) {
+        throw validators::ValidationError("solver.timestepper", "unknown timestepper type: " + timestepper_str.value());
+      }
+      timestepper_type = timestepper_enum.value();
+    } 
 
     int rand_seed_ = solver_table["rand_seed"].value_or(ConfigDefaults::RAND_SEED);
     setRandSeed(rand_seed_);
