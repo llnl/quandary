@@ -167,7 +167,7 @@ void Output::writeControls(Vec params, MasterEq* mastereq, double total_time, do
     fprintf(file_c, "#\"time\"         \"p(t) (rotating)\"          \"q(t) (rotating)\"         \"f(t) (labframe)\"\n");
 
     /* Write every <num> timestep to file */
-    int ntime = static_cast<int>(total_time/dt_sample);
+    int ntime = static_cast<int>(std::round(total_time/dt_sample));
     for (int i=0; i<=ntime; i+=output_timestep_stride) {
       double time = i*dt_sample; 
 
