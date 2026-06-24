@@ -491,9 +491,23 @@ def _run_subprocess(
         os.path.join(validated_config.output_directory, "_quandary_run_from_file.py")
     )
     launcher_code = (
+        "import os\n"
         "import sys\n"
+        "import traceback\n"
         "from quandary.new import run_from_file\n"
-        "run_from_file(sys.argv[1], quiet=bool(int(sys.argv[2])))\n"
+        "rank = os.environ.get('OMPI_COMM_WORLD_RANK', os.environ.get('PMI_RANK', '?'))\n"
+        "quiet = bool(int(sys.argv[2]))\n"
+        "print(f'[quandary-launcher rank={rank}] start cwd={os.getcwd()} config={sys.argv[1]} quiet={quiet}', file=sys.stderr, flush=True)\n"
+        "try:\n"
+        "    rc = run_from_file(sys.argv[1], quiet=quiet)\n"
+        "    if rc not in (None, 0):\n"
+        "        print(f'[quandary-launcher rank={rank}] run_from_file return code {rc}', file=sys.stderr, flush=True)\n"
+        "        sys.exit(int(rc))\n"
+        "    print(f'[quandary-launcher rank={rank}] finished', file=sys.stderr, flush=True)\n"
+        "except Exception:\n"
+        "    print(f'[quandary-launcher rank={rank}] exception', file=sys.stderr, flush=True)\n"
+        "    traceback.print_exc()\n"
+        "    raise\n"
     )
     with open(launcher_script, "w") as f:
         f.write(launcher_code)
@@ -515,12 +529,9 @@ def _run_subprocess(
             quiet_flag,
         ]
 
-    # Run the subprocess from a deterministic working directory.
-    # Using the config directory avoids failures when the parent process
-    # has a different cwd than an interactive shell session.
-    subprocess_cwd = os.path.dirname(config_file)
-    if working_dir != ".":
-        subprocess_cwd = os.path.abspath(working_dir)
+    # Default subprocess cwd to caller's cwd (working_dir=".").
+    # This preserves expected resolution for relative paths in config files.
+    subprocess_cwd = os.path.abspath(working_dir)
 
     # Run the subprocess
     if total_cores <= 1:
@@ -529,28 +540,32 @@ def _run_subprocess(
         logger.info(f"Spawning subprocess with {total_cores} processes using {mpi_exec}")
     logger.debug(f"Subprocess command: {shlex.join(cmd)}")
     logger.debug(f"Subprocess cwd: {subprocess_cwd}")
-    capture_output = quiet
+    # Always capture output so failures can include diagnostics.
+    capture_output = True
     result = subprocess.run(
         cmd,
         cwd=subprocess_cwd,
-        stdout=subprocess.PIPE if capture_output else None,
-        stderr=subprocess.PIPE if capture_output else None,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
     )
+
+    if not quiet:
+        if result.stdout:
+            print(result.stdout, end="")
+        if result.stderr:
+            print(result.stderr, end="", file=sys.stderr)
 
     if result.returncode != 0:
         message_lines = [
             f"Quandary failed with return code {result.returncode}.",
             f"Command: {shlex.join(cmd)}",
+            f"CWD: {subprocess_cwd}",
         ]
-        if capture_output and result.stderr and result.stderr.strip():
+        if result.stderr and result.stderr.strip():
             message_lines.append(f"stderr:\n{result.stderr.strip()}")
-        if capture_output and result.stdout and result.stdout.strip():
+        if result.stdout and result.stdout.strip():
             message_lines.append(f"stdout:\n{result.stdout.strip()}")
-        if not capture_output:
-            message_lines.append(
-                "Subprocess output was streamed directly to terminal (quiet=False); see logs above for details."
-            )
         raise RuntimeError("\n\n".join(message_lines))
 
     # Load results with validated config
