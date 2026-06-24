@@ -210,7 +210,7 @@ NB_MODULE(_quandary_impl, m) {
       "Control parameterizations for each oscillator")
     .def_rw("control_initializations", &Config::control_initializations,
       "Control initializations for each oscillator")
-    .def_rw("control_amplitude_bounds", &Config::control_amplitude_bounds,
+    .def_rw("control_amplitude_bound", &Config::control_amplitude_bound,
       "Control amplitude bounds for each oscillator")
     .def_rw("carrier_frequencies", &Config::carrier_frequencies,
       "Carrier frequencies for each oscillator")

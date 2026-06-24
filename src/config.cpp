@@ -285,7 +285,7 @@ Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
     }
 
     // Parse optional control bounds: either single value or per-oscillator array
-    control_amplitude_bounds = validators::scalarOrVectorOr<double>(control_table, "amplitude_bound", num_osc, std::vector<double>(num_osc, ConfigDefaults::CONTROL_AMPLITUDE_BOUND));
+    control_amplitude_bound = validators::scalarOrVectorOr<double>(control_table, "amplitude_bound", num_osc, std::vector<double>(num_osc, ConfigDefaults::CONTROL_AMPLITUDE_BOUND));
 
     // Parse carrier frequencies: either one vector (applies to all oscillators) or per-oscillator array of tables
     std::vector<double> default_carrier_freq = {ConfigDefaults::CARRIER_FREQ};
@@ -769,7 +769,7 @@ void Config::printConfig(std::stringstream& log) const {
   if (control_parameterizations.has_value()) log << "parameterization = " << ::toString(control_parameterizations.value()) << "\n";
   if (carrier_frequencies.has_value()) log << "carrier_frequency = " << ::toString(carrier_frequencies.value()) << "\n";
   if (control_initializations.has_value()) log << "initialization = " << ::toString(control_initializations.value()) << "\n";
-  if (control_amplitude_bounds.has_value()) log << "amplitude_bound = " << ::toString(control_amplitude_bounds.value()) << "\n";
+  if (control_amplitude_bound.has_value()) log << "amplitude_bound = " << ::toString(control_amplitude_bound.value()) << "\n";
   if (control_zero_boundary_condition.has_value()) log << "zero_boundary_condition = " << (control_zero_boundary_condition.value() ? "true" : "false") << "\n";
 
   log << "\n";
@@ -1035,8 +1035,8 @@ void Config::validate() const {
   }
 
   // Validate control bounds are positive
-  for (size_t i = 0; i < control_amplitude_bounds.value().size(); i++) {
-    if (control_amplitude_bounds.value()[i] <= 0.0) {
+  for (size_t i = 0; i < control_amplitude_bound.value().size(); i++) {
+    if (control_amplitude_bound.value()[i] <= 0.0) {
       throw validators::ValidationError("control_amplitude_bound[" + std::to_string(i) + "] must be positive");
     }
   }

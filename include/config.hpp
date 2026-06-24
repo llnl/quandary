@@ -71,7 +71,7 @@ class Config {
   std::optional<bool> control_zero_boundary_condition; ///< Decide whether control pulses should start and end at zero
   std::optional<std::vector<ControlParameterizationSettings>> control_parameterizations; ///< Control parameterizations for each oscillator
   std::optional<std::vector<ControlInitializationSettings>> control_initializations; ///< Control initializations for each oscillator
-  std::optional<std::vector<double>> control_amplitude_bounds; ///< Control amplitude bounds for each oscillator
+  std::optional<std::vector<double>> control_amplitude_bound; ///< Control amplitude bounds for each oscillator
   std::optional<std::vector<std::vector<double>>> carrier_frequencies; ///< Carrier frequencies for each oscillator
   std::optional<OptimTargetSettings> optim_target; ///< Grouped optimization target configuration
   std::optional<ObjectiveType> optim_objective; ///< Objective function measure
@@ -156,7 +156,7 @@ class Config {
   const ControlInitializationSettings& getControlInitializations(size_t i_osc) const {
     return control_initializations.value()[i_osc];
   }
-  double getControlAmplitudeBound(size_t i_osc) const { return control_amplitude_bounds.value()[i_osc]; }
+  double getControlAmplitudeBound(size_t i_osc) const { return control_amplitude_bound.value()[i_osc]; }
   const std::vector<double>& getCarrierFrequencies(size_t i_osc) const { return carrier_frequencies.value()[i_osc]; }
   const OptimTargetSettings& getOptimTarget() const { return optim_target.value(); }
   ObjectiveType getOptimObjective() const { return optim_objective.value(); }
