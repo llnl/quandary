@@ -400,10 +400,12 @@ def _run(
     comm = MPI.COMM_WORLD
     size = comm.Get_size()
 
-    if _is_interactive():
+    # if _is_interactive():
+    if True:
         # In interactive environment without MPI, spawn subprocess with MPI launcher for better performance
         if max_n_procs is None:
-            max_n_procs = 4  # Default to 4 processes if not specified
+            #max_n_procs = 4  # Default to 4 processes if not specified
+            max_n_procs = 1  # Default to 4 processes if not specified
         return _run_subprocess(
             config_input=config_input,
             max_n_procs=max_n_procs,
