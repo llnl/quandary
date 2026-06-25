@@ -22,12 +22,16 @@
 
 
 /**
- * @brief Configuration class containing all validated settings.
+ * @brief Configuration class containing all settings.
  *
- * Contains the validated, typed configuration. All data fields have been
- * validated with defaults set. Handles parsing from TOML configuration files
- * and printing log of used configuration.
- * This class is immutable after construction.
+ * All fields are std::optional, allowing for detection of missing 
+ * values when called form the Python bindings. A config can be 
+ * constructed either from an empty contructor Config() (for Python 
+ * use, it sets simple default fields), or from a TOML table 
+ * Config(toml::table). The latter constructor performs full validation 
+ * and sets all defaults for missing values. Helper function to 
+ * construct from a TOML file or string are also provided. 
+ * 
  *
  * @note Error handling: Use exceptions (std::runtime_error, std::invalid_argument)
  * instead of logger.exitWithError(). The Config class is called from Python via
@@ -35,15 +39,13 @@
  * and other interactive sessions. Exceptions are caught by nanobind and converted
  * to Python exceptions, allowing graceful error handling.
  *
- * @note Adding a new toml configuration option:
+ * @note How to add a new configuration option:
  *
- * 1) Add new member variable to the ConfigDataT struct
- * 2) Add TOML extraction logic in `extractConfigInput()` (src/config.cpp),
- * 3) Add validation/defaulting logic in `Config::Config(const ConfigInput&)`.
- *    Extraction and validation are intentionally split. 
- * 4) Add a getter method to the Config class below 
- * 5) Add printing logic in Config::printConfig() in src/config.cpp
- * 6) Add Python bindings in python/bindings.cpp if the new config option should be accessible from Python. For example, add `.def_prop_ro("foo", &Config::getFoo, "Description of foo")` to the nb::class_<Config> definition.
+ * 1) Add the new configuration option as a member variable in the Config class below, using std::optional<T> where T is the type of the new option, and add a getter method to the Config class. 
+ * 2) Add TOML extraction logic in the Config(const toml::table&) constructor in src/config.cpp, and apply validation and defaulting. 
+ * 3) Add printing logic in Config::printConfig() in src/config.cpp
+ * 4) Add a Python bindings in python/bindings.cpp if the new config option should be accessible from Python.
+ * 
  */
 class Config {
  private:
@@ -105,15 +107,18 @@ class Config {
   size_t n_initial_conditions; ///< Number of initial conditions (computed, nor parsed)
 
  public:
-  Config(bool quiet_mode); // for python
-  Config(const toml::table& toml, bool quiet_mode = false); // Parses the content, sets defaults, and validates the configuration
-  static Config fromFile(const std::string& filename, bool quiet_mode = false);
-  static Config fromString(const std::string& toml_content, bool quiet_mode = false);
+
+  Config(bool quiet_mode); // Default constructor, sets simple scalar defaults. 
+  Config(const toml::table& toml, bool quiet_mode = false);  ///< // Main C++ constructor: parses the input toml content, sets defaults, and validates the configuration.
 
   ~Config() = default;
 
+  static Config fromFile(const std::string& filename, bool quiet_mode = false);
+  static Config fromString(const std::string& toml_content, bool quiet_mode = false);
+
+
   /**
-   * @brief Prints the validated configuration to TOML format.
+   * @brief Prints the validated configuration in TOML format.
    * @param log Output stream to write the TOML representation to
    */
   void printConfig(std::stringstream& log) const;

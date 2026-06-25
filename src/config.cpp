@@ -6,7 +6,7 @@
 
 
 /**
- * Generic template function for parsing per-subsystem settings.
+ * Helper function for parsing per-subsystem settings (templated).
  * Handles two formats:
  * 1. A single table that applies to all subsystems
  * 2. An array of tables with 'subsystem' field for per-subsystem specification
@@ -122,10 +122,11 @@ ControlInitializationSettings parseControlInitSpecsToml(const toml::table& init_
   return init;
 }
 
-
-
-// Default constructor. Sets simple defaults. 
 Config::Config(bool quiet_mode) : logger(quiet_mode) {
+  
+  // Set simple scalar default values here. Those will be available in the python interface, 
+  // which calls this constructor in create_config(...). Other, more complex defaults are set in the 
+  // main constructor Config(const toml::table& toml) below, which is called from the fromFile() and fromString() methods.
   decoherence_type = ConfigDefaults::DECOHERENCE_TYPE;
   control_zero_boundary_condition = ConfigDefaults::CONTROL_ZERO_BOUNDARY_CONDITION;
   optim_tol_grad_abs = ConfigDefaults::OPTIM_TOL_GRAD_ABS;
@@ -150,16 +151,8 @@ Config::Config(bool quiet_mode) : logger(quiet_mode) {
   timestepper_type = ConfigDefaults::TIMESTEPPER_TYPE;
 }
 
-Config Config::fromFile(const std::string& filename, bool quiet_mode) {
-  return Config(toml::parse_file(filename), quiet_mode);
-}
-
-Config Config::fromString(const std::string& toml_content, bool quiet_mode) {
-  return Config(toml::parse(toml_content), quiet_mode);
-}
-
-// Main C++ constructor: Input is a stringstream containing the TOML content. This constructor parses  the toml contant, sets defaults, and validates the configuration.
 Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
+
   try { 
 
     // Get section tables - only [system] is required
@@ -463,7 +456,13 @@ Config::Config(const toml::table& toml, bool quiet_mode) : Config(quiet_mode) {
   finalize();
   validate();
 }
+Config Config::fromFile(const std::string& filename, bool quiet_mode) {
+  return Config(toml::parse_file(filename), quiet_mode);
+}
 
+Config Config::fromString(const std::string& toml_content, bool quiet_mode) {
+  return Config(toml::parse(toml_content), quiet_mode);
+}
 namespace {
 
 std::string formatDouble(double value) {
