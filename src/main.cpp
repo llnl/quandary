@@ -142,6 +142,17 @@ int main(int argc,char **argv)
     for (int col = 0; col < dim; col++) {
       MPI_Bcast(transmon_eigenvectors[col].data(), dim, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
+    // Check the norm of each column
+    for (int col = 0; col < dim; col++) {
+      double norm = 0.0;
+      for (int row = 0; row < dim; row++) {
+        norm += transmon_eigenvectors[col][row] * transmon_eigenvectors[col][row];
+      }
+      norm = std::sqrt(norm);
+      if (std::abs(norm - 1.0) > 1e-10) {
+        printf("\n WARNING: Eigenvector %d is not normalized. Norm = %1.10e\n\n", col, norm);
+      }
+    }
     // Store them to the 0'th oscillator 
     oscil_vec[0]->setTransmonEigenvectors(transmon_eigenvectors);
   }
