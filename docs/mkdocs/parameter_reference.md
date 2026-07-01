@@ -30,6 +30,16 @@ This document provides a comprehensive mapping between parameters in the TOML co
 | `amplitude_bound` | `maxctrl_MHz` | Control amplitude bounds |
 | `zero_boundary_condition` | `control_enforce_BC` | Control boundary condition |
 
+## Flux Control Parameters
+
+| TOML Setting | Python Interface | Description |
+|-------------|----------------|-------------|
+| `control.flux.enabled` | N/A | Enable the independent flux control channel |
+| `control.flux.parameterization` | N/A | Flux control parameterization |
+| `control.flux.initialization` | N/A | Flux control initialization |
+| `control.flux.amplitude_bound` | N/A | Flux control amplitude bounds |
+| `control.flux.zero_boundary_condition` | N/A | Flux control boundary condition |
+
 ## Optimization Parameters
 
 | TOML Setting | Python Interface | Description |

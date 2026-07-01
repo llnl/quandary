@@ -78,11 +78,16 @@ class Config {
   std::optional<std::string> hamiltonian_file_Hc; ///< File to read the control Hamiltonian from
 
   // Optimization options
-  bool control_zero_boundary_condition; ///< Decide whether control pulses should start and end at zero
-  std::vector<ControlParameterizationSettings> control_parameterizations; ///< Control parameterizations for each oscillator
-  std::vector<ControlInitializationSettings> control_initializations; ///< Control initializations for each oscillator
-  std::vector<double> control_amplitude_bounds; ///< Control amplitude bounds for each oscillator
+  bool control_zero_boundary_condition; ///< Decide whether drive controls should start and end at zero
+  std::vector<ControlParameterizationSettings> control_parameterizations; ///< Drive control parameterizations for each oscillator
+  std::vector<ControlInitializationSettings> control_initializations; ///< Drive control initializations for each oscillator
+  std::vector<double> control_amplitude_bounds; ///< Drive control amplitude bounds for each oscillator
   std::vector<std::vector<double>> carrier_frequencies; ///< Carrier frequencies for each oscillator
+  bool control_flux_enabled; ///< Enable additional flux control channel per oscillator
+  std::vector<ControlParameterizationSettings> control_flux_parameterizations; ///< Flux control parameterizations for each oscillator
+  std::vector<ControlInitializationSettings> control_flux_initializations; ///< Flux control initializations for each oscillator
+  std::vector<double> control_flux_amplitude_bounds; ///< Flux control amplitude bounds for each oscillator
+  bool control_flux_zero_boundary_condition; ///< Decide whether flux controls should start and end at zero
   OptimTargetSettings optim_target; ///< Grouped optimization target configuration
   ObjectiveType optim_objective; ///< Objective function measure
   std::vector<double> optim_weights; ///< Weights for summing up the objective function
@@ -152,6 +157,11 @@ class Config {
   }
   double getControlAmplitudeBound(size_t i_osc) const { return control_amplitude_bounds[i_osc]; }
   const std::vector<double>& getCarrierFrequencies(size_t i_osc) const { return carrier_frequencies[i_osc]; }
+  bool getControlFluxEnabled() const { return control_flux_enabled; }
+  bool getControlFluxZeroBoundaryCondition() const { return control_flux_zero_boundary_condition; }
+  const ControlParameterizationSettings& getControlFluxParameterizations(size_t i_osc) const { return control_flux_parameterizations[i_osc]; }
+  const ControlInitializationSettings& getControlFluxInitializations(size_t i_osc) const { return control_flux_initializations[i_osc]; }
+  double getControlFluxAmplitudeBound(size_t i_osc) const { return control_flux_amplitude_bounds[i_osc]; }
   const OptimTargetSettings& getOptimTarget() const { return optim_target; }
   ObjectiveType getOptimObjective() const { return optim_objective; }
   const std::vector<double>& getOptimWeights() const { return optim_weights; }

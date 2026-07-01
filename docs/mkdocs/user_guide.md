@@ -42,7 +42,7 @@ The **default Hamiltonian** in Quandary models superconducting (transmon) qubits
 
 where $\omega_k\geq 0$ denotes $0 \rightarrow 1$ transition frequencies for each oscillator $k$ (configured as `transition_frequency`), $\xi_k\geq 0$ are the self-Kerr coefficients (`selfkerr`). Couplings can be specified through the cross resonance coefficients $J_{kl}\geq 0$ ("dipole-dipole interaction", configured as `dipole_coupling`) or through $\xi_{kl}\geq 0$ (`crosskerr_coupling`). 
 Here, $a_k\in \C^{N\times N}$ denotes the lowering operator acting on subsystem $k$.
-The control pulses $f^k(t)$ can be either specified or optimized for, compare section [Control pulse parameterization](#sec:controlpulses). **Custom system and control Hamiltonian operators** can be specified through Quandary's python interface.
+The control pulses $f^k(t)$ can be either specified or optimized for, compare section [Control pulse parameterization](#sec:controlpulses). In addition, Quandary can optionally add an independent flux control $f_{\mathrm{flux}}^k(t)a_k^\dagger a_k$ per oscillator. **Custom system and control Hamiltonian operators** can be specified through Quandary's python interface.
 
 The **default Lindbladian** operator $\Ell(\rho(t))$ is of the form
 
@@ -102,6 +102,9 @@ where $B^{(1)}(t) = \sum_{s=1}^{N_s^k} \alpha^{k(1)}_{s,f} B_s(t)$ and $B^{(2)}(
 By default, the basis functions are piecewise quadratic B-spline polynomials with compact support, centered on an equally spaced grid in time. To instead use a piecewise constant (0th order) Bspline basis, see Section [0-th order Bspline basis functions](#sec:bspline-0).
 
 The control parameter vector $\boldsymbol{\alpha} = (\alpha_{f,s}^{k(i)})$ (*design* variables) can be either specified or can be optimized for in order to realize a desired system behavior (Section [The Optimal Control Problem](#sec:optim)).  
+
+### Optional flux control channel
+Quandary can also optimize or evaluate an additional flux control channel per oscillator. The flux control enters the Hamiltonian as $f_{\mathrm{flux}}^k(t)a_k^\dagger a_k$ and is configured independently in `[control.flux]`. Unlike the drive control, the flux channel is single-valued, uses its own parameterization and time window, and does not use carrier waves.
 
 ### Carrier wave frequencies
 The rotating-frame carrier wave frequencies $\Omega^k_f \in \R$ should be chosen to trigger intrinsic system resonance frequencies. For example, when $\xi_{kl} << \xi_k$, the intrinsic qubit transition frequencies are $\omega_k - n\xi_k$. Thus by choosing $\Omega^k_f = \omega_k-\omega_k^r - n \xi_k$ in the rotating frame, one triggers transition between energy levels $n$ and $n+1$ in subsystem $k$. Choosing effective carrier wave frequencies is quite important for optimization performance, particulary when qubit interactions are desired, such as when optimizing for a CNOT gate. Using the python interface for Quandary, the carrier wave frequencies $\Omega^k_f$ are automatically computed based on an eigenvalue decomposition of the system Hamiltonian. For the C++ code, it is recommended to follow [@petersson2021optimal] for details on how to choose them effectively.  
@@ -408,6 +411,8 @@ iterating over $Q$ subsystems first, then $N_f^k$ carrier wave frequencies, then
   \alpha_{s,f}^{k(i)} = \bfa \left[ \left(\sum_{j=0}^{k-1} 2 N_s^j N_f^j\right) + f*2 N_s^k + s + i*N_s^k N_f^k \right],
 \end{align}
 
+If flux control is enabled, its coefficients are appended after the drive coefficients for each oscillator, using the same oscillator ordering but without a carrier-wave expansion.
+
 # Parallelization
 Quandary offers two levels of parallelization using MPI.
 
@@ -458,7 +463,7 @@ The user can change the frequency of output in time (printing only every $j$-th 
 ### Output with regard to simulation and optimization
 - `config_log.toml` contains all configuration options that had been used for the current run of the C++ code.
 - `params.dat` contains the control parameters $\bfa$ that had been used to determine the current control pulses. This file contains one column containing all parameters, ordered as stored, see Section [Control pulses](#sec:controlpulses).
-- `control<k>.dat` contain the resulting control pulses applied to subsystem $k$ over time. It contains four columns, the first one being the time, second and third being $p^k(t)$ and $q^k(t)$ (rotating frame controls), and the last one is the corresponding lab-frame pulse $f^k(t)$. Note that the units of the control pulses are in frequency domain (divided by $2\pi)$. The unit matches the unit specified with the system parameters such as the qubit ground frequencies $\omega_k$.
+- `control<k>.dat` contain the resulting control drive pulses $p_k(t)$, $q_k(t)$, applied to subsystem $k$ over time. If flux control is enabled, it contains one more column being the flux control $f_{\mathrm{flux}}^k(t)$. The units of the control pulses and flux are in frequency domain (divided by $2\pi$). The unit matches the unit specified with the system parameters such as the qubit ground frequencies $\omega_k$.
 - `optim_history.dat` contains information about the optimization progress in terms of the overall objective function and contribution from each term (cost at final time $T$ and contribution from the tikhonov regularization and the penalty term), as well the norm of the gradient and the fidelity, for each iteration of the optimization. If only a forward simulation is performed, this file still prints out the objective function and fidelity for the forward simulation.
 Quandary always prints the current parameters and control pulses at the beginning of a simulation or optimization, and in addition at every $l$-th optimization iteration determined from the `optimization_stride` configuration option in the `[output]` section.
 

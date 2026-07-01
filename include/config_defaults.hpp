@@ -24,15 +24,17 @@ const double DECAY_TIME = 0.0; ///< Default decay time
 const double DEPHASE_TIME = 0.0; ///< Default dephase time
 
 // Optimization options
-const bool CONTROL_ZERO_BOUNDARY_CONDITION = true; ///< Default control pulse boundary conditions enforcement
-const ControlType CONTROL_TYPE = ControlType::BSPLINE; ///< Default control parameterization type
-const size_t CONTROL_SPLINE_COUNT = 10; ///< Default number of B-spline basis functions
-const ControlInitializationType CONTROL_INIT_TYPE = ControlInitializationType::CONSTANT; ///< Default control initialization amplitude
-const double CONTROL_INIT_AMPLITUDE = 0.0; ///< Default control initialization amplitude
-const double CONTROL_INIT_PHASE = 0.0; ///< Default control initialization phase
-
-const double CONTROL_AMPLITUDE_BOUND = 1e12; ///< Default amplitude bound for control pulses
+const bool CONTROL_ZERO_BOUNDARY_CONDITION = true; ///< Default drive-control boundary conditions enforcement
+const ControlType CONTROL_TYPE = ControlType::BSPLINE; ///< Default drive-control parameterization type
+const size_t CONTROL_SPLINE_COUNT = 10; ///< Default number of B-spline basis functions for drive control
+const ControlInitializationType CONTROL_INIT_TYPE = ControlInitializationType::CONSTANT; ///< Default drive-control initialization type
+const double CONTROL_INIT_AMPLITUDE = 0.0; ///< Default drive-control initialization amplitude
+const double CONTROL_INIT_PHASE = 0.0; ///< Default drive-control initialization phase
+const double CONTROL_AMPLITUDE_BOUND = 1e12; ///< Default amplitude bound for drive controls
 const double CARRIER_FREQ = 0.0; ///< Default carrier frequency
+
+const double CONTROL_FLUX_AMPLITUDE_BOUND = 1e12; ///< Default amplitude bound for flux control
+const bool CONTROL_FLUX_ENABLED = false; ///< Default switch for flux control channel
 
 const TargetType OPTIM_TARGET = TargetType::NONE; ///< Default optimization target: NONE
 const GateType GATE_TYPE = GateType::NONE; ///< Default gate type

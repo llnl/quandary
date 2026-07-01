@@ -31,10 +31,12 @@ typedef struct {
   std::vector<double> eta; ///< Frequency differences of the rotating frames
   DecoherenceType decoherence_type; ///< Type of Lindblad operators to include
   bool addT1, addT2; ///< Flags for T1 decay and T2 dephasing
-  std::vector<double> control_Re;  ///< Real parts of control pulse \f$p(t)\f$
-  std::vector<double> control_Im;  ///< Imaginary parts of control pulse \f$q(t)\f$
+  std::vector<double> control_p;  ///< Real drive-control component \f$p(t)\f$
+  std::vector<double> control_q;  ///< Imaginary drive-control component \f$q(t)\f$
+  std::vector<double> control_flux;  ///< Flux control \f$f(t)\f$ for number operator term
   std::vector<Mat> Ac_vec; ///< Vector of real parts of control matrices per oscillator
   std::vector<Mat> Bc_vec; ///< Vector of imaginary parts of control matrices per oscillator
+  std::vector<Mat> Bf_vec; ///< Vector of imaginary parts of flux control matrices per oscillator (number operator channel)
   Mat *Ad; ///< Real parts of time-independent system matrix 
   Mat *Bd; ///< Imaginary parts of time-independent system matrix 
   std::vector<Mat> Ad_vec; ///< Vector of real parts of dipole-dipole coupling system matrices
@@ -107,6 +109,7 @@ class MasterEq{
 
     std::vector<Mat> Ac_vec;  // Vector of constant mats for time-varying control term (real). One for each oscillators. 
     std::vector<Mat> Bc_vec;  // Vector of constant mats for time-varying control term (imag). One for each oscillators. 
+    std::vector<Mat> Bf_vec;  // Vector of constant mats for time-varying flux control term (imag). One for each oscillator.
     Mat  Ad, Bd;  // Real and imaginary part of constant system matrix
     std::vector<Mat> Ad_vec;  // Vector of constant mats for Dipole-Dipole coupling term in drift Hamiltonian (real)
     std::vector<Mat> Bd_vec;  // Vector of constant mats for Dipole-Dipole coupling term in drift Hamiltonian (imag)
@@ -161,6 +164,25 @@ class MasterEq{
      * @brief Initializes matrices needed for the sparse matrix solver.
      */
     void initSparseMatSolver();
+
+    /**
+     * @brief Initializes the standard Hamiltonian matrices for the sparse solver.
+     */
+    void initStdHamiltonianMats();
+
+    /**
+     * @brief Initializes the standard control matrices for one oscillator.
+     * 
+     * @param iosc Index of the oscillator
+     * @param nk Number of levels for this oscillator
+     * @param npostk Number of levels for the coupled subsystems following this oscillator
+     */
+    void initStdControlMats(int iosc, int nk, int npostk);
+
+    /**
+     * @brief Initializes decoherence contributions for the sparse solver.
+     */
+    void initStdDecoherenceMats();
 
     /**
      * @brief Retrieves the i-th oscillator.
@@ -280,7 +302,7 @@ class MasterEq{
  * @param[in] aux Auxiliary vector for computations 
  * @param[in] oscil_vec Vector of quantum oscilators
  */
-void compute_dRHS_dParams_sparsemat(const double t,const Vec x,const Vec x_bar, const double alpha, Vec grad, std::vector<size_t>& nlevels, IS isu, IS isv, std::vector<Mat>& Ac_vec, std::vector<Mat>& Bc_vec, Vec aux, Oscillator** oscil_vec);
+void compute_dRHS_dParams_sparsemat(const double t,const Vec x,const Vec x_bar, const double alpha, Vec grad, std::vector<size_t>& nlevels, IS isu, IS isv, std::vector<Mat>& Ac_vec, std::vector<Mat>& Bc_vec, std::vector<Mat>& Bf_vec, Vec aux, Oscillator** oscil_vec);
 
 /**
  * @brief: Matrix free version to compute gradient of RHS with respect to parameters 
@@ -548,12 +570,21 @@ inline int TensorGetIndex(const int nlevels0, const int nlevels1, const int nlev
  * @param res_q_re Pointer to store real part of q result
  * @param res_q_im Pointer to store imaginary part of q result
  */
-inline void dRHSdp_getcoeffs(const PetscInt dim, const int it, const int n, const int np, const int i, const int ip, const int stridei, const int strideip, const double* xptr, double* res_p_re, double* res_p_im, double* res_q_re, double* res_q_im) {
+inline void dRHSdp_getcoeffs(const PetscInt dim, const int it, const int n, const int np, const int i, const int ip, const int stridei, const int strideip, const double* xptr, double* res_p_re, double* res_p_im, double* res_q_re, double* res_q_im, double* res_f_re, double* res_f_im) {
 
   *res_p_re = 0.0;
   *res_p_im = 0.0;
   *res_q_re = 0.0;
   *res_q_im = 0.0;
+  *res_f_re = 0.0;
+  *res_f_im = 0.0;
+
+  // Flux channel: f(t) multiplies number operator a^\dagger a => diagonal (i-ip) contribution.
+  double xre0 = xptr[it];
+  double xim0 = xptr[it + dim];
+  double coeff = static_cast<double>(i - ip);
+  *res_f_re += coeff * xim0;
+  *res_f_im += -coeff * xre0;
 
   /* ik+1..,ik'.. term */
   if (i < n-1) {
@@ -852,6 +883,14 @@ inline void control(const PetscInt dim, const int it, const int n, const int i, 
     }
 }
 
+inline void control_flux(const PetscInt dim, const int it, const int i, const int ip, const double* xptr, const double ft, double* yre, double* yim) {
+  double xre = xptr[it];
+  double xim = xptr[it + dim];
+  double coeff = static_cast<double>(i - ip);
+  *yre += ft * coeff * xim;
+  *yim += -ft * coeff * xre;
+}
+
 
 /**
  * @brief Matrix-free Transpose of control terms for adjoint computations.
@@ -907,4 +946,12 @@ inline void control_T(const PetscInt dim, const int it, const int n, const int i
     *yre += sq * (+ pt * xim - qt * xre);
     *yim += sq * (- pt * xre - qt * xim);
   }
+}
+
+inline void control_flux_T(const PetscInt dim, const int it, const int i, const int ip, const double* xptr, const double ft, double* yre, double* yim) {
+  double xre = xptr[it];
+  double xim = xptr[it + dim];
+  double coeff = static_cast<double>(i - ip);
+  *yre += -ft * coeff * xim;
+  *yim += ft * coeff * xre;
 }

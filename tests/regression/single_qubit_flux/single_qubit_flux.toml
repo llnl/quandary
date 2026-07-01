@@ -1,0 +1,45 @@
+[system]
+nlevels = [2]
+nessential = [2]
+total_time = 20.0
+dt = 0.05
+transition_frequency = [4.1]
+rotation_frequency = [4.0]
+selfkerr = [0.0]
+decoherence = { type = "none" }
+initial_condition = { type = "basis"}
+
+[control]
+parameterization = { type = "spline0", num = 40 }
+carrier_frequency = [0.12]
+initialization = { type = "constant", amplitude = 0.01 }
+amplitude_bound = 0.05
+zero_boundary_condition = false
+
+[control.flux]
+enabled = true 
+parameterization = { type = "spline0", num = 10 }
+initialization = { type = "random", amplitude = 0.02 }
+amplitude_bound = 0.1
+zero_boundary_condition = false
+
+[optimization]
+target = { type = "state", levels = [1] }
+objective = "Jtrace"
+tolerance = { grad_abs = 1e-7, grad_rel = 1e-8, final_cost = 1e-5, infidelity = 1e-5 }
+maxiter = 1
+tikhonov = { coeff = 0.0, use_x0 = false }
+penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0 }
+
+[output]
+directory = "./data_out"
+observables = ["population", "fullstate"]
+timestep_stride = 1
+optimization_stride = 1
+
+[solver]
+runtype = "simulation"
+usematfree = true 
+linearsolver = { type = "gmres", maxiter = 20 }
+timestepper = "IMR"
+rand_seed = 1234

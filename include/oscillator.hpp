@@ -23,12 +23,14 @@
  * It also manages this oscillator's control pulse parameterization and carrier wave frequencies.
  * 
  * Main functionality:
- *    - @ref evalControl computes the rotating-frame pulses p(t) & q(t) at a given time t. Those pulses are products
- *      of fixed-frequency carrier waves multiplied with an outer envelop (spline) whose shape is defined through the
- *      control parameters (@ref params) and their corresponding basis functions defined in the @ref ControlBasis. 
+ *    - @ref evalControl computes the rotating-frame drive pulses p(t) & q(t) as well as the flux control f(t) at a given time t. 
+ *      The drive pulses are products of fixed-frequency carrier waves multiplied with an outer envelop (spline) whose shape is 
+ *      defined through the drive control parameters (@ref drive_params) and their corresponding basis functions defined in 
+ *      the @ref ControlBasis. The flux control is a single scalar channel that multiplies the number operator term in the Hamiltonian.
+ *      It is parameterized with basis functions (no carrier waves) and its parameters are stored in @ref flux_params.
  *    - @ref expectedEnergy and @ref population for computing this oscillators expected Energy and level occupations
  *      given a current state
- *    - @ref evalControlVariation for evaluating control parameter variations used as penalty term in the optimization
+ *    - @ref evalDriveControlVariation for evaluating drive control parameter variations used as penalty term in the optimization
  * 
  * This class contains references to:
  *    - Vector of @ref ControlBasis for evaluating the oscillators control pulse envelop (e.g. Bspline) at a given
@@ -46,9 +48,11 @@ class Oscillator {
     double decay_time; ///< Characteristic time for T1 decay operations
     double dephase_time; ///< Characteristic time for T2 dephasing operations
 
-    std::vector<double> params; ///< Control parameters for this oscillator
+    std::vector<double> drive_params; ///< Drive control parameters for this oscillator
+    std::vector<double> flux_params; ///< Flux control parameters for this oscillator
     double total_time; ///< Final evolution time
-    std::vector<ControlBasis *> basisfunctions; ///< Basis functions for control parameterization foreach time parameterization. Note: Currently only one parameterization is supported!
+    std::vector<ControlBasis *> drive_basisfunctions; ///< Basis functions for drive control parameterization foreach time parameterization. Note: Currently only one parameterization is supported!
+    std::vector<ControlBasis *> flux_basisfunctions; ///< Basis functions for flux control parameterization
     std::vector<double> carrier_freq; ///< Frequencies of the carrier waves
 
     int mpirank_world; ///< Rank of MPI_COMM_WORLD
@@ -58,7 +62,8 @@ class Oscillator {
     PetscInt ilow; ///< First index of the local sub vector u,v
     PetscInt iupp; ///< Last index (+1) of the local sub vector u,v
 
-    bool control_zero_boundary_condition; ///< Flag to enforce boundary conditions on controls
+    bool control_zero_boundary_condition; ///< Flag to enforce boundary conditions on drive controls
+    bool control_flux_zero_boundary_condition; ///< Flag to enforce boundary conditions on flux controls
 
   public:
     PetscInt dim_preOsc; ///< Dimension of coupled subsystems preceding this oscillator
@@ -84,7 +89,9 @@ class Oscillator {
      *
      * @return size_t Number of control parameters
      */
-    size_t getNParams() { return params.size(); };
+    size_t getNParams() { return drive_params.size() + flux_params.size(); };
+    size_t getNFluxParams() { return flux_params.size(); };
+    size_t getNDriveParams() { return drive_params.size(); };
 
     /**
      * @brief Retrieves the number of energy levels.
@@ -126,7 +133,7 @@ class Oscillator {
      *
      * @return size_t Number of time parameterizations (currently always returns 1)
      */
-    size_t getNParameterizations() {return basisfunctions.size(); };
+    size_t getNParameterizations() {return drive_basisfunctions.size(); };
 
     /**
      * @brief Retrieves the number of carrier frequencies.
@@ -136,18 +143,18 @@ class Oscillator {
     size_t getNCarrierfrequencies() {return carrier_freq.size(); };
 
     /**
-     * @brief Retrieves the type of control parameterization.
+     * @brief Retrieves the type of drive-control parameterization.
      *
-     * @return ControlType Type of control parameterization
+     * @return ControlType Type of drive-control parameterization
      */
-    ControlType getControlType() {return basisfunctions[0]->getType(); };
+    ControlType getControlType() {return drive_basisfunctions[0]->getType(); };
 
     /**
      * @brief Retrieves the number of splines used in the control parameterization
      *
      * @return int Number of splines
      */
-    int getNSplines() {return basisfunctions[0]->getNSplines();};
+    int getNSplines() {return drive_basisfunctions[0]->getNSplines();};
 
     /**
      * @brief Retrieves the rotating frame frequency.
@@ -163,6 +170,7 @@ class Oscillator {
      * @return int Number of parameters for this parameterization
      */
     int getNSegParams(int parameterizationID);
+    int getNFluxSegParams(int parameterizationID);
 
     /**
      * @brief Sets control parameters from a global storage.
@@ -183,22 +191,46 @@ class Oscillator {
      *
      * Makes this oscillator non-controllable by removing all parameters.
      */
-    void clearParams() { params.clear(); };
+    void clearParams() { drive_params.clear(); flux_params.clear(); };
 
     /**
-     * @brief Evaluates the rotating-frame control functions.
+     * @brief Evaluates the rotating-frame drives p,q and flux control functions.
      *
-     * Computes the real and imaginary parts of the control function: Re = p(t), Im = q(t)
+     * Computes p(t), q(t), and f(t), where f(t) multiplies the number operator a^\dagger a, 
+     * p(t) multiplies (a+a^\dagger), and q(t) multiplies i(a-a^\dagger). 
+     * p(t) and q(t) are the real and imaginary parts of the drive control function.
      *
      * @param[in] t Time at which to evaluate
-     * @param[out] Re_ptr Pointer to store real part p(t)
-     * @param[out] Im_ptr Pointer to store imaginary part q(t)
+     * @param[out] p_ptr Pointer to store real part p(t)
+     * @param[out] q_ptr Pointer to store imaginary part q(t)
+     * @param[out] flux_ptr Pointer to store flux control f(t)
      * @return int Error code
      */
-    int evalControl(const double t, double* Re_ptr, double* Im_ptr);
+    int evalControl(const double t, double* p_ptr, double* q_ptr, double* flux_ptr);
+
+
 
     /**
-     * @brief Computes derivatives of control functions p(t) and q(t) with respect to the parameters.
+     * @brief Evaluates the rotating-frame drive control functions p(t), q(t).
+     *
+     * @param[in] t Time at which to evaluate
+     * @param[out] p_ptr Pointer to store real part p(t)
+     * @param[out] q_ptr Pointer to store imaginary part q(t)
+     * @return int Error code
+     */
+    int evalDriveControl(const double t, double* p_ptr, double* q_ptr);
+
+    /**
+     * @brief Evaluates the flux control function f(t).
+     *
+     * @param[in] t Time at which to evaluate
+     * @param[out] flux_ptr Pointer to store flux control f(t)
+     * @return int Error code
+     */
+    int evalFluxControl(const double t, double* flux_ptr);
+
+    /**
+     * @brief Computes derivatives of drive control functions p(t) and q(t) with respect to the parameters.
      *
      * @param[in] t Time at which to evaluate derivatives
      * @param[out] grad_for_this_oscillator Array to update the gradient
@@ -206,16 +238,19 @@ class Oscillator {
      * @param[in] qbar Adjoint scaling factor for the gradient of q (seed) 
      * @return int Error code
      */
-    int evalControl_diff(const double t, double* grad_for_this_oscillator, const double pbar, const double qbar);
+    int evalDriveControl_diff(const double t, double* grad_for_this_oscillator, const double pbar, const double qbar);
 
     /**
-     * @brief Evaluates lab-frame control function.
+     * @brief Computes derivatives of drive and flux control functions p(t), q(t), and f(t) with respect to parameters.
      *
-     * @param t Time at which to evaluate
-     * @param f_ptr Pointer to store lab-frame control value
+     * @param[in] t Time at which to evaluate derivatives
+     * @param[out] grad_for_this_oscillator Array to update the gradient
+     * @param[in] pbar Adjoint seed for p(t)
+     * @param[in] qbar Adjoint seed for q(t)
+     * @param[in] fbar Adjoint seed for f(t)
      * @return int Error code
      */
-    int evalControl_Labframe(const double t, double* f_ptr);
+    int evalControl_diff(const double t, double* grad_for_this_oscillator, const double pbar, const double qbar, const double fbar);
 
     /**
      * @brief Computes expected energy for this oscillator.

@@ -7,6 +7,7 @@ Output::Output(){
   mpirank_petsc = -1;
   mpirank_init  = -1;
   output_timestep_stride = 0;
+  control_flux_enabled = false;
   quietmode = false;
 }
 
@@ -14,6 +15,7 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
   quietmode = quietmode_;
   noscillators = config.getNumOsc();
   output_timestep_stride = config.getOutputTimestepStride();
+  control_flux_enabled = config.getControlFluxEnabled();
 
   /* Get communicator ranks */
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
@@ -164,18 +166,25 @@ void Output::writeControls(Vec params, MasterEq* mastereq, double total_time, do
       printf("ERROR: Could not open file %s\n", filename);
       exit(1);
     }
-    fprintf(file_c, "#\"time\"         \"p(t) (rotating)\"          \"q(t) (rotating)\"         \"f(t) (labframe)\"\n");
+    if (control_flux_enabled) {
+      fprintf(file_c, "#\"time\"         \"drive p(t)\"          \"drive q(t)\"         \"flux f(t) \"\n");
+    } else {
+      fprintf(file_c, "#\"time\"         \"drive p(t)\"          \"drive q(t)\"\n");
+    }
 
     /* Write every <num> timestep to file */
     int ntime = static_cast<int>(std::round(total_time/dt_sample));
     for (int i=0; i<=ntime; i+=output_timestep_stride) {
       double time = i*dt_sample; 
 
-      double ReI, ImI, LabI;
-      mastereq->getOscillator(ioscil)->evalControl(time, &ReI, &ImI);
-      mastereq->getOscillator(ioscil)->evalControl_Labframe(time, &LabI);
+      double p, q, flux;
+      mastereq->getOscillator(ioscil)->evalControl(time, &p, &q, &flux);
       // Write control drives
-      fprintf(file_c, "% 1.8f   % 1.14e   % 1.14e   % 1.14e \n", time, ReI/(2.0*M_PI), ImI/(2.0*M_PI), LabI/(2.0*M_PI));
+      if (control_flux_enabled) {
+        fprintf(file_c, "% 1.8f   % 1.14e   % 1.14e   % 1.14e \n", time, p/(2.0*M_PI), q/(2.0*M_PI), flux/(2.0*M_PI));
+      } else {
+        fprintf(file_c, "% 1.8f   % 1.14e   % 1.14e \n", time, p/(2.0*M_PI), q/(2.0*M_PI));
+      }
    } // end of time loop 
 
     fclose(file_c);
