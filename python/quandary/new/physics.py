@@ -667,7 +667,7 @@ def estimate_timestep_size(*, Hsys=None, Hc_re=None, Hc_im=None, control_amplitu
             K1 = K1 + 1j * est_radns * Hc_im[i]  # can't use += due to type!
 
     # Estimate time step
-    eigenvalues = np.linalg.eigvals(K1)
+    eigenvalues,_ = np.linalg.eigh(K1)
     maxeig = np.max(np.abs(eigenvalues))
     ctrl_fac = 1.0
     samplerate = ctrl_fac * maxeig * Pmin / (2 * np.pi)
