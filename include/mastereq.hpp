@@ -297,8 +297,9 @@ class MasterEq{
  * @param[in] nlevels Number of energy levels per subsystem 
  * @param[in] isu Index stride to access real parts of a state vector
  * @param[in] isv Index stride to access imaginar parts of a state vector
- * @param[in] Ac_vec Vector of real parts of control matrices per oscillator
- * @param[in] Bc_vec Vector of imaginary parts of control matrices per oscillator
+ * @param[in] Ac_vec Vector of real parts of control drive matrices Re(-i(a-a')) per oscillator
+ * @param[in] Bc_vec Vector of imaginary parts of control drive matrices Im(-i(a+a')) per oscillator
+ * @param[in] Bf_vec Vector of imaginary parts of flux control matrices Im(-ia'a) per oscillator (number operator channel)
  * @param[in] aux Auxiliary vector for computations 
  * @param[in] oscil_vec Vector of quantum oscilators
  */
@@ -569,6 +570,8 @@ inline int TensorGetIndex(const int nlevels0, const int nlevels1, const int nlev
  * @param res_p_im Pointer to store imaginary part of p result
  * @param res_q_re Pointer to store real part of q result
  * @param res_q_im Pointer to store imaginary part of q result
+ * @param res_f_re Pointer to store real part of flux result
+ * @param res_f_im Pointer to store imaginary part of flux result
  */
 inline void dRHSdp_getcoeffs(const PetscInt dim, const int it, const int n, const int np, const int i, const int ip, const int stridei, const int strideip, const double* xptr, double* res_p_re, double* res_p_im, double* res_q_re, double* res_q_im, double* res_f_re, double* res_f_im) {
 

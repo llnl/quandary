@@ -30,7 +30,7 @@
  *      It is parameterized with basis functions (no carrier waves) and its parameters are stored in @ref flux_params.
  *    - @ref expectedEnergy and @ref population for computing this oscillators expected Energy and level occupations
  *      given a current state
- *    - @ref evalDriveControlVariation for evaluating drive control parameter variations used as penalty term in the optimization
+ *    - @ref evalControlVariation for evaluating drive control parameter variations used as penalty term in the optimization
  * 
  * This class contains references to:
  *    - Vector of @ref ControlBasis for evaluating the oscillators control pulse envelop (e.g. Bspline) at a given
@@ -196,8 +196,8 @@ class Oscillator {
     /**
      * @brief Evaluates the rotating-frame drives p,q and flux control functions.
      *
-     * Computes p(t), q(t), and f(t), where f(t) multiplies the number operator a^\dagger a, 
-     * p(t) multiplies (a+a^\dagger), and q(t) multiplies i(a-a^\dagger). 
+     * Computes p(t), q(t), and f(t), where f(t) multiplies the number operator $a^\dagger a$, 
+     * p(t) multiplies $(a+a^\dagger)$, and q(t) multiplies $i(a-a^\dagger)$. 
      * p(t) and q(t) are the real and imaginary parts of the drive control function.
      *
      * @param[in] t Time at which to evaluate
