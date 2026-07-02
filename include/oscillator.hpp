@@ -196,19 +196,16 @@ class Oscillator {
     /**
      * @brief Evaluates the rotating-frame drives p,q and flux control functions.
      *
-     * Computes p(t), q(t), and f(t), where f(t) multiplies the number operator $a^\dagger a$, 
-     * p(t) multiplies $(a+a^\dagger)$, and q(t) multiplies $i(a-a^\dagger)$. 
-     * p(t) and q(t) are the real and imaginary parts of the drive control function.
+     * Computes p(t), q(t), and f(t), where p(t) and q(t) are the real and imaginary 
+     * parts of the drive control function and f(t) is the flux control function.
      *
      * @param[in] t Time at which to evaluate
-     * @param[out] p_ptr Pointer to store real part p(t)
-     * @param[out] q_ptr Pointer to store imaginary part q(t)
-     * @param[out] flux_ptr Pointer to store flux control f(t)
+     * @param[out] p_ptr Pointer to store real part, p(t)
+     * @param[out] q_ptr Pointer to store imaginary part, q(t)
+     * @param[out] flux_ptr Pointer to store flux control, f(t)
      * @return int Error code
      */
     int evalControl(const double t, double* p_ptr, double* q_ptr, double* flux_ptr);
-
-
 
     /**
      * @brief Evaluates the rotating-frame drive control functions p(t), q(t).
