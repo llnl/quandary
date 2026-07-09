@@ -64,6 +64,19 @@ def _infer_nproc_flag(mpi_exec: str) -> str:
     return "-n"
 
 
+def _launcher_name(mpi_exec: str) -> str:
+    """Return the basename of the launcher executable."""
+    return Path(shlex.split(_normalize_launcher_value(mpi_exec))[0]).name
+
+
+def _has_flux_allocation() -> bool:
+    """Detect whether the current process is already running inside a Flux allocation."""
+    return any(
+        os.environ.get(name)
+        for name in ("FLUX_URI", "FLUX_JOB_ID", "FLUX_HANDLE")
+    )
+
+
 def _resolve_host_config_path(repo_root: Path):
     """Locate a generated or explicitly selected host-config file."""
     host_config = os.environ.get("HOST_CONFIG", "").strip()
@@ -104,6 +117,12 @@ def resolve_mpi_launcher(request):
                 host_exec = _parse_host_config(host_config_path)
                 if host_exec:
                     mpi_exec = host_exec
+
+        if _launcher_name(mpi_exec) == "flux" and not _has_flux_allocation():
+            srun_path = shutil.which("srun")
+            if srun_path and (os.environ.get("SLURM_JOB_ID") or os.environ.get("SLURM_CLUSTER_NAME")):
+                mpi_exec = srun_path
+                nproc_flag = None
 
         if mpi_exec == "mpirun" and (os.environ.get("SLURM_JOB_ID") or os.environ.get("SLURM_CLUSTER_NAME")):
             srun_path = shutil.which("srun")
