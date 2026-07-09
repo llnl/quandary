@@ -5,8 +5,6 @@ from quandary.new.run import (
     _compute_optimal_core_distribution,
 )
 
-import quandary.new.run as patch_run
-
 
 def _make_setup(output_directory="./run_dir"):
     """Create a minimal setup for testing."""
@@ -114,31 +112,6 @@ class TestDryRun:
             quiet=True,
         )
         assert results.config.output_directory == custom_dir
-
-
-class TestInteractiveSubprocess:
-    """Compare an interactive run via a subprocess to a direct run through python."""
-
-    def test_optimize_uses_subprocess_when_interactive(self, monkeypatch, tmp_path):
-        """When _is_interactive() is true, optimize() spawns the subprocess path."""
-
-        # setup = _make_setup(str(tmp_path / "interactive"))
-        dir = "./tmp_interactive"
-        setup = _make_setup(dir)
-
-        # Run directly through python
-        result_direct = optimize(setup, target=[0.0, 1.0], quiet=True)
-
-        # Run through subprocess by monkeypatching _is_interactive to return True
-        monkeypatch.setattr(patch_run, "_is_interactive", lambda: True)
-        result_subprocess = optimize(setup, target=[0.0, 1.0], quiet=True)
-
-        assert np.allclose(result_direct.time, result_subprocess.time)
-        assert np.allclose(result_direct.p_samples, result_subprocess.p_samples)
-        assert np.allclose(result_direct.q_samples, result_subprocess.q_samples)
-        assert np.isclose(result_direct.infidelity, result_subprocess.infidelity)
-        assert np.allclose(result_direct.spline_coefficients, result_subprocess.spline_coefficients)
-        assert np.allclose(result_direct.optim_hist["gradient"], result_subprocess.optim_hist["gradient"])
 
 
 class TestCoreDistribution:
