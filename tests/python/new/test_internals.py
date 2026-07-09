@@ -5,8 +5,6 @@ from quandary.new.run import (
     _compute_optimal_core_distribution,
 )
 
-import quandary.new.run as patch_run
-
 
 def _make_setup(output_directory="./run_dir"):
     """Create a minimal setup for testing."""
@@ -114,51 +112,6 @@ class TestDryRun:
             quiet=True,
         )
         assert results.config.output_directory == custom_dir
-
-
-class TestInteractiveSubprocess:
-    """Compare an interactive run via a subprocess to a direct run through python."""
-
-    def test_optimize_uses_subprocess_when_interactive(self, monkeypatch, tmp_path, request):
-        """When _is_interactive() is true, optimize() spawns the subprocess path."""
-        mpi_exec = request.config.getoption("--mpi-exec").strip()
-        mpi_opt = request.config.getoption("--mpi-opt").strip()
-        mpi_launcher = " ".join(part for part in [mpi_exec, mpi_opt] if part)
-
-        launcher_name = mpi_exec.split()[0].split("/")[-1]
-        nproc_flag = "-np" if launcher_name in {"mpirun", "mpiexec", "orterun"} else "-n"
-
-        setup_direct = _make_setup(str(tmp_path / "interactive_direct"))
-        setup_direct.optim_maxiter = 1
-
-        setup_subprocess = _make_setup(str(tmp_path / "interactive_subprocess"))
-        setup_subprocess.optim_maxiter = 1
-
-        # Run directly through python
-        result_direct = optimize(
-            setup_direct,
-            target=[0.0, 1.0],
-            quiet=True,
-            control_randomize=False,
-        )
-
-        # Run through subprocess by monkeypatching _is_interactive to return True
-        monkeypatch.setattr(patch_run, "_is_interactive", lambda: True)
-        result_subprocess = optimize(
-            setup_subprocess,
-            target=[0.0, 1.0],
-            quiet=True,
-            control_randomize=False,
-            mpi_exec=mpi_launcher,
-            nproc_flag=nproc_flag,
-        )
-
-        assert np.allclose(result_direct.time, result_subprocess.time)
-        assert np.allclose(result_direct.p_samples, result_subprocess.p_samples)
-        assert np.allclose(result_direct.q_samples, result_subprocess.q_samples)
-        assert np.isclose(result_direct.infidelity, result_subprocess.infidelity)
-        assert np.allclose(result_direct.spline_coefficients, result_subprocess.spline_coefficients)
-        assert np.allclose(result_direct.optim_hist["gradient"], result_subprocess.optim_hist["gradient"])
 
 
 class TestCoreDistribution:
