@@ -9,6 +9,13 @@ from types import SimpleNamespace
 import pytest
 
 
+def _normalize_launcher_value(value: str | None):
+    """Convert CMake-style command lists into a shell-style launcher string."""
+    if not value:
+        return None
+    return value.replace(";", " ").strip() or None
+
+
 @pytest.fixture(scope="session", autouse=True)
 def quandary_on_path():
     """Make the repo-root quandary binary discoverable without manual PATH setup."""
@@ -27,7 +34,7 @@ def _parse_cmake_cache(cache_path: Path):
         for raw_line in handle:
             line = raw_line.strip()
             if line.startswith("MPIEXEC_EXECUTABLE:") or line.startswith("MPIEXEC:PATH=") or line.startswith("MPIEXEC:FILEPATH="):
-                mpi_exec = line.split("=", 1)[1].strip()
+                mpi_exec = _normalize_launcher_value(line.split("=", 1)[1].strip())
             elif line.startswith("MPIEXEC_NUMPROC_FLAG:"):
                 nproc_flag = line.split("=", 1)[1].strip()
     return mpi_exec or None, nproc_flag or None
@@ -45,13 +52,13 @@ def _parse_host_config(host_config_path: Path):
         if "MPIEXEC_EXECUTABLE" in line or line.startswith("set(MPIEXEC "):
             parts = line.split('"')
             if len(parts) >= 2 and parts[1].strip():
-                return parts[1].strip()
+                return _normalize_launcher_value(parts[1].strip())
     return None
 
 
 def _infer_nproc_flag(mpi_exec: str) -> str:
     """Infer the process-count flag from the launcher executable name."""
-    launcher_name = Path(shlex.split(mpi_exec)[0]).name
+    launcher_name = Path(shlex.split(_normalize_launcher_value(mpi_exec))[0]).name
     if launcher_name in {"mpirun", "mpiexec", "orterun"}:
         return "-np"
     return "-n"
@@ -79,7 +86,7 @@ def _resolve_host_config_path(repo_root: Path):
 
 def resolve_mpi_launcher(request):
     """Resolve MPI launcher settings from pytest options, build cache, or host-config."""
-    requested_exec = request.config.getoption("--mpi-exec").strip()
+    requested_exec = _normalize_launcher_value(request.config.getoption("--mpi-exec").strip()) or "mpirun"
     mpi_opt = request.config.getoption("--mpi-opt").strip()
 
     repo_root = Path(__file__).resolve().parents[2]
@@ -106,6 +113,7 @@ def resolve_mpi_launcher(request):
     if nproc_flag is None:
         nproc_flag = _infer_nproc_flag(mpi_exec)
 
+    mpi_exec = _normalize_launcher_value(mpi_exec) or "mpirun"
     mpi_launcher = " ".join(part for part in [mpi_exec, mpi_opt] if part)
     return SimpleNamespace(exec=mpi_launcher, nproc_flag=nproc_flag)
 
