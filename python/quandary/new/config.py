@@ -107,6 +107,7 @@ def create_config(
     hamiltonian_Hsys: Optional[np.ndarray] = None,
     hamiltonian_Hc: Optional[Sequence[np.ndarray]] = None,
     initial_condition: Optional[Sequence[complex]] = None,
+    cw_amp_thres: Optional[float] = 1e-7,
     output_directory: str = _DEFAULT_OUTPUT_DIR,
 ) -> Config:
     """Create a Config with physics parameters configured.
@@ -190,6 +191,8 @@ def create_config(
     initial_condition : sequence of complex or InitialConditionSettings, optional
         Either a state vector (arbitrary superposition), or direct struct specification (advanced). 
         Default: All basis states in the essential dimensions.
+    cw_amp_thres : float, optional
+        Minimum threshold on growth rate for each carrier. Default: 1e-7.
     output_directory : str
         Output directory for generated files (initial state, etc.).
         Default: "./data_out".
@@ -285,6 +288,7 @@ def create_config(
             Hc_re=Hc_re,
             Hc_im=Hc_im,
             rotation_frequency=rotation_frequency,
+            cw_amp_thres=cw_amp_thres,
         )
     
     # Validate spline_order
