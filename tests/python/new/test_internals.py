@@ -119,8 +119,14 @@ class TestDryRun:
 class TestInteractiveSubprocess:
     """Compare an interactive run via a subprocess to a direct run through python."""
 
-    def test_optimize_uses_subprocess_when_interactive(self, monkeypatch, tmp_path, mpi_launcher):
+    def test_optimize_uses_subprocess_when_interactive(self, monkeypatch, tmp_path, request):
         """When _is_interactive() is true, optimize() spawns the subprocess path."""
+        mpi_exec = request.config.getoption("--mpi-exec").strip()
+        mpi_opt = request.config.getoption("--mpi-opt").strip()
+        mpi_launcher = " ".join(part for part in [mpi_exec, mpi_opt] if part)
+
+        launcher_name = mpi_exec.split()[0].split("/")[-1]
+        nproc_flag = "-np" if launcher_name in {"mpirun", "mpiexec", "orterun"} else "-n"
 
         setup_direct = _make_setup(str(tmp_path / "interactive_direct"))
         setup_direct.optim_maxiter = 1
@@ -143,8 +149,8 @@ class TestInteractiveSubprocess:
             target=[0.0, 1.0],
             quiet=True,
             control_randomize=False,
-            mpi_exec=mpi_launcher.exec,
-            nproc_flag=mpi_launcher.nproc_flag,
+            mpi_exec=mpi_launcher,
+            nproc_flag=nproc_flag,
         )
 
         assert np.allclose(result_direct.time, result_subprocess.time)

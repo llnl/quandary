@@ -497,9 +497,8 @@ def _run_subprocess(
     python_code = "import sys; from quandary.new import run_from_file; run_from_file(sys.argv[1], quiet=bool(int(sys.argv[2])))"
     quiet_flag = "1" if quiet else "0"
 
-    # Allow mpi_exec to include wrapper arguments from host-config driven test environments
-    # and CMake-style semicolon-separated command lists.
-    mpi_cmd = shlex.split(mpi_exec.replace(";", " "))
+    # Allow mpi_exec to include wrapper arguments from host-config driven test environments.
+    mpi_cmd = shlex.split(mpi_exec)
     cmd = [*mpi_cmd, nproc_flag, str(total_cores), python_exec, "-c", python_code, config_file, quiet_flag]
 
     # Default subprocess cwd to caller's cwd (working_dir=".").
