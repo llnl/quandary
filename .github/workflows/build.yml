@@ -44,9 +44,7 @@ jobs:
     - name: Install with strict warnings
       run: |
         spack -e .spack_env rm quandary
-        # workaround gmake/ gcc 15 issue
-        spack -e .spack_env add 'gmake cflags="-std=gnu17"'
-        spack -e .spack_env add "quandary@develop +werror %${{ matrix.compiler }} ^openmpi"
+        spack -e .spack_env add "quandary@develop +werror %${{ matrix.compiler }} ^openmpi ^gmake%clang"
         spack -e .spack_env install -v --use-buildcache package:never
 
     - name: Push packages and update index
