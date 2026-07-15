@@ -43,9 +43,9 @@ jobs:
         packages_repository: "tdrwenski/spack-packages"
         packages_ref: fix-gmake-issue
 
-    - name: Configure Spack
-      run: |
-        spack mirror add --type binary --unsigned --oci-username GITHUB_USER --oci-password-variable GITHUB_TOKEN local-buildcache oci://ghcr.io/LLNL/quandary-spack-buildcache
+    # - name: Configure Spack
+    #   run: |
+    #     spack mirror add --type binary --unsigned --oci-username GITHUB_USER --oci-password-variable GITHUB_TOKEN local-buildcache oci://ghcr.io/LLNL/quandary-spack-buildcache
 
     - name: Add only use GCC/clang on macOS
       if: runner.os == 'macOS'
