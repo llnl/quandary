@@ -47,12 +47,14 @@ jobs:
       run: |
         spack mirror add --type binary --unsigned --oci-username GITHUB_USER --oci-password-variable GITHUB_TOKEN local-buildcache oci://ghcr.io/LLNL/quandary-spack-buildcache
 
-    - name: Add only use GCC/clang on macOS
+    - name: MacOS exteranl config
       if: runner.os == 'macOS'
       run: |
         ls $(brew --prefix llvm@18)/bin
         spack compiler find $(brew --prefix llvm@18)/bin
         spack compiler find /opt/homebrew/bin
+        spack external find cmake
+        spack external find gmake
 
     - name: Install
       # explicitly use openmpi, since mpich causes rpath problems in binary
