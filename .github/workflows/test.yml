@@ -39,26 +39,30 @@ jobs:
     - name: Set up Spack
       uses: spack/setup-spack@v3
       with:
-        spack_ref: v1.1.1
-        packages_ref: v2026.03.0
+        spack_ref: v1.2.1
+        packages_ref: v2026.06.0
 
     - name: Configure Spack
       run: |
         spack mirror add --type binary --unsigned --oci-username GITHUB_USER --oci-password-variable GITHUB_TOKEN local-buildcache oci://ghcr.io/LLNL/quandary-spack-buildcache
 
-    - name: Add only use GCC/clang on macOS
+    - name: MacOS external config
       if: runner.os == 'macOS'
       run: |
         ls $(brew --prefix llvm@18)/bin
         spack compiler find $(brew --prefix llvm@18)/bin
         spack compiler find /opt/homebrew/bin
+        spack compiler list
+        spack external find cmake
+        spack external find gmake
+        spack external find python
 
     - name: Install
       # explicitly use openmpi, since mpich causes rpath problems in binary
       run: |
         spack -e .spack_env rm quandary
-        spack -e .spack_env add quandary@develop+test^openmpi
-        spack -e .spack_env install --use-buildcache package:never
+        spack -e .spack_env add quandary@develop+test%gcc^openmpi@5:
+        spack -e .spack_env install --show-log-on-error --use-buildcache package:never
 
     - name: Run C++ unit tests
       shell: spack-sh {0}
@@ -85,9 +89,9 @@ jobs:
       run: |
         if [[ "${{ matrix.os }}" == "ubuntu-24.04" ]]; then
           # Force push quandary package
-          spack -e .spack_env buildcache push -f --base-image ubuntu:24.04 --update-index local-buildcache quandary
-          spack -e .spack_env buildcache push --base-image ubuntu:24.04 --update-index local-buildcache
+          spack -e .spack_env buildcache push -f --base-image ubuntu:24.04 --allow-missing --update-index local-buildcache quandary
+          spack -e .spack_env buildcache push --base-image ubuntu:24.04 --allow-missing --update-index local-buildcache
         else
-          spack -e .spack_env buildcache push --update-index local-buildcache
+          spack -e .spack_env buildcache push --allow-missing --update-index local-buildcache
         fi
       if: ${{ !cancelled() && github.event.pull_request.head.repo.full_name == github.repository }}
