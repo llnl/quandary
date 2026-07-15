@@ -47,7 +47,7 @@ jobs:
       run: |
         spack -e .spack_env rm quandary
         spack -e .spack_env add "quandary@develop +werror %${{ matrix.compiler }} ^openmpi"
-        spack -e .spack_env install -v --show-log-on-error --use-buildcache package:never
+        spack -e .spack_env install --show-log-on-error --use-buildcache package:never
 
     - name: Push packages and update index
       env:
