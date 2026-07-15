@@ -35,9 +35,7 @@ jobs:
       uses: spack/setup-spack@v3
       with:
         spack_ref: v1.2.1
-        # TODO use spack repo when gmake issue is merged
-        packages_repository: "tdrwenski/spack-packages"
-        packages_ref: fix-gmake-issue
+        packages_ref: v2026.06.0
 
     - name: Configure Spack
       run: |
