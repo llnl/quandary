@@ -86,9 +86,9 @@ jobs:
       run: |
         if [[ "${{ matrix.os }}" == "ubuntu-24.04" ]]; then
           # Force push quandary package
-          spack -d -e .spack_env buildcache push -f --base-image ubuntu:24.04 --allow-missing --update-index local-buildcache quandary
-          spack -d -e .spack_env buildcache push --base-image ubuntu:24.04 --allow-missing --update-index local-buildcache
+          spack -e .spack_env buildcache push -f --base-image ubuntu:24.04 --allow-missing --update-index local-buildcache quandary
+          spack -e .spack_env buildcache push --base-image ubuntu:24.04 --allow-missing --update-index local-buildcache
         else
-          spack -d -e .spack_env buildcache push --allow-missing --update-index local-buildcache
+          spack -e .spack_env buildcache push --allow-missing --update-index local-buildcache
         fi
       if: ${{ !cancelled() && github.event.pull_request.head.repo.full_name == github.repository }}

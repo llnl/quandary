@@ -55,5 +55,5 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         DOCKER_DEFAULT_PLATFORM: linux/amd64
       run: |
-        spack -d -e .spack_env buildcache push --base-image ubuntu:24.04 --allow-missing --update-index local-buildcache
+        spack -e .spack_env buildcache push --base-image ubuntu:24.04 --allow-missing --update-index local-buildcache
       if: ${{ !cancelled() && github.event.pull_request.head.repo.full_name == github.repository }}
