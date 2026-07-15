@@ -56,6 +56,7 @@ jobs:
         spack compiler list
         spack external find cmake
         spack external find gmake
+        spack external find python
 
     - name: Install
       # explicitly use openmpi, since mpich causes rpath problems in binary
