@@ -47,12 +47,13 @@ jobs:
       run: |
         spack mirror add --type binary --unsigned --oci-username GITHUB_USER --oci-password-variable GITHUB_TOKEN local-buildcache oci://ghcr.io/LLNL/quandary-spack-buildcache
 
-    - name: MacOS exteranl config
+    - name: MacOS external config
       if: runner.os == 'macOS'
       run: |
         ls $(brew --prefix llvm@18)/bin
         spack compiler find $(brew --prefix llvm@18)/bin
         spack compiler find /opt/homebrew/bin
+        spack compiler list
         spack external find cmake
         spack external find gmake
 
