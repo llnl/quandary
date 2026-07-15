@@ -44,8 +44,6 @@ jobs:
     - name: Install with strict warnings
       run: |
         spack -e .spack_env rm quandary
-        # workaround gmake/ macos issue
-        spack -e .spack_env add gmake cflags="-Wno-incompatible-function-pointer-types"
         spack -e .spack_env add "quandary@develop +werror %${{ matrix.compiler }} ^openmpi"
         spack -e .spack_env install -v --use-buildcache package:never
 
