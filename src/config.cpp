@@ -738,8 +738,13 @@ void Config::finalize() {
     usematfree = false;
   }
 
-  if ((hamiltonian_file_Hsys.has_value() || hamiltonian_file_Hc.has_value()) && control_flux_enabled) {
-    logger.exitWithError("Flux control is currently unsupported when Hamiltonian files are provided. Disable [control.flux] or remove hamiltonian_file_Hsys/hamiltonian_file_Hc.");
+  if (control_flux_enabled) {
+    if ((hamiltonian_file_Hsys.has_value() || hamiltonian_file_Hc.has_value())) {
+      logger.exitWithError("Flux control is currently unsupported when Hamiltonian files are provided. Disable [control.flux] or remove hamiltonian_file_Hsys/hamiltonian_file_Hc.");
+    }
+    if (usematfree) {
+      logger.exitWithError("Flux control is currently unsupported with matrix-free solver. Disable [control.flux] or set usematfree = false.");
+    }
   }
 
   if (usematfree && nlevels.size() > 5) {
