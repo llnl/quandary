@@ -67,7 +67,6 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   control_flux_zero_boundary_condition = config.getControlFluxZeroBoundaryCondition();
 
   // Initialize the control parameterization basis functions. Note: Currently only one control parameterization is supported. nsegments <= 1!
-  int nparams_per_seg = 0;
   // for (auto drive_parameterization : config.getControlParameterizations(id)) {
   const auto& drive_parameterization = config.getControlParameterizations(id);
   auto tstart = drive_parameterization.tstart.value_or(0.0);
@@ -76,22 +75,16 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   switch (drive_parameterization.type) {
     case ControlType::BSPLINE: {
       ControlBasis* mysplinebasis = new BSpline2nd(*drive_parameterization.nspline, tstart, tstop, control_zero_boundary_condition);
-      mysplinebasis->setSkip(nparams_per_seg);
-      nparams_per_seg += mysplinebasis->getNparams() * carrier_freq.size();
       drive_basisfunctions.push_back(mysplinebasis);
       break;
     }
     case ControlType::BSPLINE0: {
       ControlBasis* mysplinebasis = new BSpline0(*drive_parameterization.nspline, tstart, tstop, control_zero_boundary_condition);
-      mysplinebasis->setSkip(nparams_per_seg);
-      nparams_per_seg += mysplinebasis->getNparams() * carrier_freq.size();
       drive_basisfunctions.push_back(mysplinebasis);
       break;
     }
     case ControlType::BSPLINEAMP: {
       ControlBasis* mysplinebasis = new BSpline2ndAmplitude(*drive_parameterization.nspline, *drive_parameterization.scaling, tstart, tstop, control_zero_boundary_condition);
-      mysplinebasis->setSkip(nparams_per_seg);
-      nparams_per_seg += mysplinebasis->getNparams() * carrier_freq.size();
       drive_basisfunctions.push_back(mysplinebasis);
       break;
     }
@@ -103,22 +96,17 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   } // end switch
 
   // Initialize optional flux control parameterization. Independent from drive controls.
-  int nparams_flux = 0;
   const auto& flux_parameterization = config.getControlFluxParameterizations(id);
   auto flux_tstart = flux_parameterization.tstart.value_or(0.0);
   auto flux_tstop  = flux_parameterization.tstop.value_or(total_time);
   switch (flux_parameterization.type) {
     case ControlType::BSPLINE: {
       ControlBasis* fluxbasis = new BSpline2nd(*flux_parameterization.nspline, flux_tstart, flux_tstop, control_flux_zero_boundary_condition);
-      fluxbasis->setSkip(nparams_flux);
-      nparams_flux += fluxbasis->getNparams(); // flux has no carrier expansion
       flux_basisfunctions.push_back(fluxbasis);
       break;
     }
     case ControlType::BSPLINE0: {
       ControlBasis* fluxbasis = new BSpline0(*flux_parameterization.nspline, flux_tstart, flux_tstop, control_flux_zero_boundary_condition);
-      fluxbasis->setSkip(nparams_flux);
-      nparams_flux += fluxbasis->getNparams(); // flux has no carrier expansion
       flux_basisfunctions.push_back(fluxbasis);
       break;
     }
