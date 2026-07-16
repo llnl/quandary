@@ -76,7 +76,7 @@ class Oscillator {
      * @param param_offset Offset for global control parameter indexing
      * @param quietmode Flag for quiet mode operation
      */
-    Oscillator(const Config& config, size_t id, std::mt19937 rand_engine, int param_offset, bool quietmode);
+    Oscillator(const Config& config, size_t id, std::mt19937& rand_engine, int param_offset, bool quietmode);
 
     virtual ~Oscillator();
 

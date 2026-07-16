@@ -4,60 +4,6 @@
 #include "mpi_logger.hpp"
 #include <stdexcept>
 
-namespace {
-void initializeControlBasis(ControlBasis* basis, const ControlInitializationSettings& init_settings,  std::mt19937& rand_engine, int param_offset, bool quietmode, int mpirank_world, bool enforce_zero_boundary) {
-  if (!basis) {
-    return;
-  }
-
-  int skip = 0;
-  if (init_settings.type == ControlInitializationType::FILE) {
-    for (size_t f = 0;; f++) {
-      const int nparams_f = basis->getNparams(f);
-      if (nparams_f <= 0) {
-        break;
-      }
-      std::vector<double> local_params(static_cast<size_t>(nparams_f), 0.0);
-      if (mpirank_world == 0) {
-        read_vector(init_settings.filename.value().c_str(),
-                    local_params.data(),
-                    nparams_f,
-                    quietmode,
-                    param_offset + skip);
-      }
-      MPI_Bcast(local_params.data(), nparams_f, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-      basis->setParams(local_params.data(), static_cast<int>(f));
-      skip += nparams_f;
-    }
-  } else if (init_settings.type == ControlInitializationType::CONSTANT ||
-             init_settings.type == ControlInitializationType::RANDOM) {
-    const double initval = init_settings.amplitude.value_or(0.0) * 2.0 * M_PI;
-    std::uniform_real_distribution<double> uniform_dist(-initval, initval);
-    for (size_t f = 0;; f++) {
-      const int nparams_f = basis->getNparams(f);
-      if (nparams_f <= 0) {
-        break;
-      }
-      std::vector<double> local_params(static_cast<size_t>(nparams_f), 0.0);
-      for (int i = 0; i < nparams_f; i++) {
-        local_params[static_cast<size_t>(i)] =
-            (init_settings.type == ControlInitializationType::CONSTANT)
-                ? initval
-                : uniform_dist(rand_engine);
-      }
-      basis->setParams(local_params.data(), static_cast<int>(f));
-      skip += nparams_f;
-    }
-  } else {
-    MPILogger logger(mpirank_world);
-    logger.exitWithError("Unknown control initialization type.");
-  }
-
-  if (enforce_zero_boundary) {
-    basis->enforceBoundary();
-  }
-}
-}  // namespace
 
 Oscillator::Oscillator(){
   myid = 0;
@@ -73,16 +19,18 @@ Oscillator::Oscillator(){
   flux_basisfunctions = nullptr;
 }
 
-Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine, int param_offset, bool quietmode){
+Oscillator::Oscillator(const Config& config, size_t id, std::mt19937& rand_engine, int param_offset, bool quietmode){
+  MPI_Comm_rank(PETSC_COMM_WORLD, &mpirank_petsc);
+  MPI_Comm_size(PETSC_COMM_WORLD, &mpisize_petsc);
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
+  MPILogger logger(mpirank_world);
 
   myid = id;
 
   // Extract parameters from config
   const std::vector<size_t>& nlevels_all_ = config.getNLevels();
   nlevels = nlevels_all_[id];
-
   total_time = config.getTotalTime();
-
   const std::vector<double>& trans_freq = config.getTransitionFrequency();
   const std::vector<double>& rot_freq = config.getRotationFrequency();
   const std::vector<double>& selfkerr_config = config.getSelfKerr();
@@ -97,11 +45,10 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   decay_time = decay_time_config[id];
   dephase_time = dephase_time_config[id];
 
-  MPI_Comm_rank(PETSC_COMM_WORLD, &mpirank_petsc);
-  MPI_Comm_size(PETSC_COMM_WORLD, &mpisize_petsc);
-  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
-
-  MPILogger logger(mpirank_world);
+  carrier_freq = config.getCarrierFrequencies(id);
+  for (size_t i=0; i<carrier_freq.size(); i++) {
+    carrier_freq[i] *= 2.0*M_PI;
+  }
 
   // Get system dimension N (Schroedinger) or N^2 (Lindblad)
   PetscInt dim = 1;
@@ -115,20 +62,20 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   ilow = mpirank_petsc * localsize_u;
   iupp = ilow + localsize_u;         
 
-  // Get and scale carrier frequencies to radians
-  carrier_freq = config.getCarrierFrequencies(id);
-  for (size_t i=0; i<carrier_freq.size(); i++) {
-    carrier_freq[i] *= 2.0*M_PI;
+  /* Compute and store dimension of preceding and following oscillators */
+  dim_preOsc = 1;
+  dim_postOsc = 1;
+  for (size_t j=0; j<nlevels_all_.size(); j++) {
+    if (j < id) dim_preOsc  *= nlevels_all_[j];
+    if (j > id) dim_postOsc *= nlevels_all_[j];
   }
 
-  // Initialize control parameterization for p/q drives with carrier waves. 
+  // Create p/q drive control parameterization with carrier waves. 
   const auto& pq_drive_settings = config.getControlParameterizations(id);
   auto nspline = pq_drive_settings.nspline.value_or(0);
   auto tstart = pq_drive_settings.tstart.value_or(0.0);
   auto tstop  = pq_drive_settings.tstop.value_or(total_time);
   const bool drive_zero_bc = config.getControlZeroBoundaryCondition();
-  const auto& drive_init_settings = config.getControlInitializations(id);
-  
   switch (pq_drive_settings.type) {
     case ControlType::BSPLINE: {
       drive_basisfunctions_re = new BSpline2nd(static_cast<int>(nspline),static_cast<int>(carrier_freq.size()),tstart, tstop, drive_zero_bc);
@@ -146,9 +93,30 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
     }
   } 
 
-  // Initialize optional flux control parameterization. Independent from drive controls.
+  // Initialize parameters of the p/q drive 
+  const auto& drive_init_settings = config.getControlInitializations(id);
+  std::vector<double> params_drive(getNDriveParams(), 0.0);
+  if (drive_init_settings.type == ControlInitializationType::FILE) {
+    if (mpirank_world == 0) {
+      read_vector(drive_init_settings.filename.value().c_str(), params_drive.data(), params_drive.size(), quietmode, param_offset);
+    }
+    MPI_Bcast(params_drive.data(), getNDriveParams(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  } else if (drive_init_settings.type == ControlInitializationType::CONSTANT) {
+    const double initval = drive_init_settings.amplitude.value_or(0.0) * 2.0 * M_PI;
+    std::fill(params_drive.begin(), params_drive.end(), initval);
+  } else if (drive_init_settings.type == ControlInitializationType::RANDOM) {
+    const double initval = drive_init_settings.amplitude.value_or(0.0) * 2.0 * M_PI;
+    std::uniform_real_distribution<double> uniform_dist(-initval, initval);
+    for (double& param : params_drive) {
+      param = uniform_dist(rand_engine);
+    }
+  } else {
+    logger.exitWithError("Unknown control initialization type for drive controls.");
+  }
+  setControlParams(params_drive.data());
+
+  // Create flux control parameterization
   const auto& flux_settings= config.getControlFluxParameterizations(id);
-  const auto& flux_init_settings = config.getControlFluxInitializations(id);
   const bool flux_zero_bc = config.getControlFluxZeroBoundaryCondition();
   auto flux_tstart = flux_settings.tstart.value_or(0.0);
   auto flux_tstop  = flux_settings.tstop.value_or(total_time);
@@ -167,31 +135,38 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
     }
   }
 
-  const int drive_re_offset = param_offset;
-  const int drive_im_offset = drive_re_offset + (drive_basisfunctions_re ? drive_basisfunctions_re->getNparams() : 0);
-  const int flux_offset = drive_im_offset + (drive_basisfunctions_im ? drive_basisfunctions_im->getNparams() : 0);
-
-  initializeControlBasis(drive_basisfunctions_re, drive_init_settings, rand_engine, drive_re_offset, quietmode, mpirank_world, drive_zero_bc);
-  initializeControlBasis(drive_basisfunctions_im, drive_init_settings, rand_engine, drive_im_offset, quietmode, mpirank_world, drive_zero_bc);
-  initializeControlBasis(flux_basisfunctions, flux_init_settings, rand_engine, flux_offset, quietmode, mpirank_world, flux_zero_bc);
-
-  /* Compute and store dimension of preceding and following oscillators */
-  dim_preOsc = 1;
-  dim_postOsc = 1;
-  for (size_t j=0; j<nlevels_all_.size(); j++) {
-    if (j < id) dim_preOsc  *= nlevels_all_[j];
-    if (j > id) dim_postOsc *= nlevels_all_[j];
+  // Initialize flux control parameter
+  const auto& flux_init_settings = config.getControlFluxInitializations(id);
+  const int param_offset_flux = param_offset + getNDriveParams();
+  std::vector<double> params_flux(getNFluxParams(), 0.0);
+  if (flux_init_settings.type == ControlInitializationType::FILE) {
+    if (mpirank_world == 0) {
+      read_vector(flux_init_settings.filename.value().c_str(), params_flux.data(), params_flux.size(), quietmode, param_offset_flux);
+    }
+    MPI_Bcast(params_flux.data(), getNFluxParams(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  } else if (flux_init_settings.type == ControlInitializationType::CONSTANT) {
+    const double initval = flux_init_settings.amplitude.value_or(0.0) * 2.0 * M_PI;
+    std::fill(params_flux.begin(), params_flux.end(), initval);
+  } else if (flux_init_settings.type == ControlInitializationType::RANDOM) {
+    const double initval = flux_init_settings.amplitude.value_or(0.0) * 2.0 * M_PI;
+    std::uniform_real_distribution<double> uniform_dist(-initval, initval);
+    for (double& param : params_flux) {
+      param = uniform_dist(rand_engine);
+    }
+  } else {
+    logger.exitWithError("Unknown control initialization type for flux controls.");
   }
+  if (flux_basisfunctions) flux_basisfunctions->setParams(params_flux.data(), 0);
 }
 
 
 Oscillator::~Oscillator(){
-  delete drive_basisfunctions_re;
-  delete drive_basisfunctions_im;
-  delete flux_basisfunctions;
+  if (drive_basisfunctions_re) delete drive_basisfunctions_re;
+  if (drive_basisfunctions_im) delete drive_basisfunctions_im;
+  if (flux_basisfunctions) delete flux_basisfunctions;
 }
 
-void Oscillator::setControlParams(const double* x){
+void Oscillator::setControlParams(const double* x) {
 
   // copy x into p,q and flux parameterizations
   int skip = 0;
