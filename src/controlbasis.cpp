@@ -49,10 +49,6 @@ BSpline2nd::BSpline2nd(int nsplines, int ncarrier, double t0, double T, bool enf
     for (int i = 0; i < nsplines; i++){
         tcenter[i] = t0 + dtknot * ( (i+1) - 1.5 );
     }
-
-    if (enforceZeroBoundary) {
-        enforceBoundary();
-    }
 }
 
 BSpline2nd::~BSpline2nd(){
@@ -60,6 +56,11 @@ BSpline2nd::~BSpline2nd(){
 }
 
 void BSpline2nd::enforceBoundary(){
+
+    if (!enforceZeroBoundary) {
+        return;
+    }
+
     // For each carrier wave, set first and last two splines to zero so that spline starts and ends at zero 
     for (size_t f = 0; f < params.size(); f++) {
         const size_t nsplines = params[f].size();
@@ -150,10 +151,6 @@ BSpline0::BSpline0(int nbasisfunctions, int ncarrier, double t0, double T, bool 
 
     dtknot = (nbasisfunctions > 1) ? (T - t0) / (nbasisfunctions - 1.0) : 0.0;
 	width = dtknot;
-
-    if (enforceZeroBoundary) {
-        enforceBoundary();
-    }
 }
 
 BSpline0::~BSpline0(){}
@@ -264,6 +261,10 @@ void BSpline0::computeVariation_diff(double* grad, double var_bar){
 }
 
 void BSpline0::enforceBoundary(){
+
+    if (!enforceZeroBoundary) {
+        return;
+    }
 
     for (size_t f = 0; f < params.size(); f++) {
         if (params[f].empty()) {
