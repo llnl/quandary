@@ -164,15 +164,6 @@ class Oscillator {
     double getRotFreq() {return (ground_freq - detuning_freq) / (2.0*M_PI); };
 
     /**
-     * @brief Retrieves the number of parameters for a specific parameterization.
-     *
-     * @param parameterizationID Segment identifier // Currently always 0!
-     * @return int Number of parameters for this parameterization
-     */
-    int getNSegParams(int parameterizationID);
-    int getNFluxSegParams(int parameterizationID);
-
-    /**
      * @brief Sets control parameters from a global storage.
      *
      * @param x Array of control parameter values
@@ -185,13 +176,6 @@ class Oscillator {
      * @param x Array to store control parameter values
      */
     void getParams(double* x);
-
-    /**
-     * @brief Clears all control parameters.
-     *
-     * Makes this oscillator non-controllable by removing all parameters.
-     */
-    void clearParams() { drive_params.clear(); flux_params.clear(); };
 
     /**
      * @brief Evaluates the rotating-frame drives p,q and flux control functions.

@@ -263,23 +263,6 @@ void Oscillator::getParams(double* x){
   }
 }
 
-int Oscillator::getNSegParams(int parameterizationID){
-  int n = 0;
-  if (drive_params.size()>0) {
-    assert(drive_basisfunctions.size() > static_cast<size_t>(parameterizationID));
-    n = drive_basisfunctions[parameterizationID]->getNparams()*carrier_freq.size();
-  }
-  return n; 
-}
-
-int Oscillator::getNFluxSegParams(int parameterizationID) {
-  int n = 0;
-  if (flux_params.size() > 0) {
-    assert(flux_basisfunctions.size() > static_cast<size_t>(parameterizationID));
-    n = flux_basisfunctions[parameterizationID]->getNparams();
-  }
-  return n;
-}
 
 double Oscillator::evalControlVariation(){
   // NOTE: drive_params holds the relevant copy of the optimizers 'x' vector 
