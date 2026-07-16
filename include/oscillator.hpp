@@ -48,12 +48,11 @@ class Oscillator {
     double decay_time; ///< Characteristic time for T1 decay operations
     double dephase_time; ///< Characteristic time for T2 dephasing operations
 
-    std::vector<double> drive_params; ///< Drive control parameters for this oscillator
-    std::vector<double> flux_params; ///< Flux control parameters for this oscillator
     double total_time; ///< Final evolution time
-    std::vector<ControlBasis *> drive_basisfunctions; ///< Basis functions for drive control parameterization foreach time parameterization. Note: Currently only one parameterization is supported!
-    std::vector<ControlBasis *> flux_basisfunctions; ///< Basis functions for flux control parameterization
-    std::vector<double> carrier_freq; ///< Frequencies of the carrier waves
+    ControlBasis* drive_basisfunctions_re; ///< alpha1*Spline
+    ControlBasis* drive_basisfunctions_im; ///< alpha2*Spline 
+    ControlBasis* flux_basisfunctions; ///< Flux control parameterization
+    std::vector<double> carrier_freq; ///< Frequencies of the carrier waves for this oscillator
 
     int mpirank_world; ///< Rank of MPI_COMM_WORLD
     int mpirank_petsc; ///< Rank of PETSc's communicator
@@ -61,9 +60,6 @@ class Oscillator {
     PetscInt localsize_u; ///< Size of local sub vector u or v in state x=[u,v]
     PetscInt ilow; ///< First index of the local sub vector u,v
     PetscInt iupp; ///< Last index (+1) of the local sub vector u,v
-
-    bool control_zero_boundary_condition; ///< Flag to enforce boundary conditions on drive controls
-    bool control_flux_zero_boundary_condition; ///< Flag to enforce boundary conditions on flux controls
 
   public:
     PetscInt dim_preOsc; ///< Dimension of coupled subsystems preceding this oscillator
@@ -89,9 +85,14 @@ class Oscillator {
      *
      * @return size_t Number of control parameters
      */
-    size_t getNParams() { return drive_params.size() + flux_params.size(); };
-    size_t getNFluxParams() { return flux_params.size(); };
-    size_t getNDriveParams() { return drive_params.size(); };
+    size_t getNParams() { return getNDriveParams() + getNFluxParams(); };
+    size_t getNFluxParams() { return flux_basisfunctions ? static_cast<size_t>(flux_basisfunctions->getNparams()) : 0; };
+    size_t getNDriveParams() {
+      size_t nparams = 0;
+      if (drive_basisfunctions_re) nparams += static_cast<size_t>(drive_basisfunctions_re->getNparams());
+      if (drive_basisfunctions_im) nparams += static_cast<size_t>(drive_basisfunctions_im->getNparams());
+      return nparams;
+    };
 
     /**
      * @brief Retrieves the number of energy levels.
@@ -129,32 +130,11 @@ class Oscillator {
     double getDephaseTime() {return dephase_time; };
 
     /**
-     * @brief Retrieves the number of control parameterizations in this oscillator (currently always 1).
-     *
-     * @return size_t Number of time parameterizations (currently always returns 1)
-     */
-    size_t getNParameterizations() {return drive_basisfunctions.size(); };
-
-    /**
      * @brief Retrieves the number of carrier frequencies.
      *
      * @return size_t Number of carrier frequencies
      */
     size_t getNCarrierfrequencies() {return carrier_freq.size(); };
-
-    /**
-     * @brief Retrieves the type of drive-control parameterization.
-     *
-     * @return ControlType Type of drive-control parameterization
-     */
-    ControlType getControlType() {return drive_basisfunctions[0]->getType(); };
-
-    /**
-     * @brief Retrieves the number of splines used in the control parameterization
-     *
-     * @return int Number of splines
-     */
-    int getNSplines() {return drive_basisfunctions[0]->getNSplines();};
 
     /**
      * @brief Retrieves the rotating frame frequency.
@@ -168,14 +148,25 @@ class Oscillator {
      *
      * @param x Array of control parameter values
      */
-    void setParams(const double* x);
+    void setControlParams(const double* x);
+
+    // Backward-compatible alias used by legacy call sites.
+    void setParams(const double* x) { setControlParams(x); }
 
     /**
      * @brief Retrieves control parameters into a global storage.
      *
      * @param x Array to store control parameter values
      */
-    void getParams(double* x);
+    void getControlParams(double* x);
+
+    // Backward-compatible alias used by legacy call sites.
+    void getParams(double* x) { getControlParams(x); }
+
+    /**
+     * @brief Evaluates drive-only controls p(t), q(t).
+     */
+    int evalDriveControl(const double t, double* p_ptr, double* q_ptr);
 
     /**
      * @brief Evaluates the rotating-frame drives p,q and flux control functions.
@@ -190,25 +181,6 @@ class Oscillator {
      * @return int Error code
      */
     int evalControl(const double t, double* p_ptr, double* q_ptr, double* flux_ptr);
-
-    /**
-     * @brief Evaluates the rotating-frame drive control functions p(t), q(t).
-     *
-     * @param[in] t Time at which to evaluate
-     * @param[out] p_ptr Pointer to store real part p(t)
-     * @param[out] q_ptr Pointer to store imaginary part q(t)
-     * @return int Error code
-     */
-    int evalDriveControl(const double t, double* p_ptr, double* q_ptr);
-
-    /**
-     * @brief Evaluates the flux control function f(t).
-     *
-     * @param[in] t Time at which to evaluate
-     * @param[out] flux_ptr Pointer to store flux control f(t)
-     * @return int Error code
-     */
-    int evalFluxControl(const double t, double* flux_ptr);
 
     /**
      * @brief Computes derivatives of drive control functions p(t) and q(t) with respect to the parameters.

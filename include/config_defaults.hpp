@@ -104,8 +104,6 @@ struct ControlParameterizationSettings {
   std::optional<size_t> nspline = ConfigDefaults::CONTROL_SPLINE_COUNT; ///< Number of basis functions in this parameterization
   std::optional<double> tstart = std::nullopt; ///< Start time of the control parameterization
   std::optional<double> tstop = std::nullopt; ///< Stop time of the control parameterization
-  std::optional<double> scaling = std::nullopt; ///< Amplitude scaling factor, only for BSPLINEAMP
-
 };
 
 /**

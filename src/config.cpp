@@ -567,14 +567,13 @@ std::string toString(const std::vector<ControlParameterizationSettings>& control
     out += param.nspline.has_value() ? ", num = " + std::to_string(param.nspline.value()) : "";
     out += param.tstart.has_value() ? ", tstart = " + formatDouble(param.tstart.value()) : "";
     out += param.tstop.has_value() ? ", tstop = " + formatDouble(param.tstop.value()) : "";
-    out += param.scaling.has_value() ? ", scaling = " + formatDouble(param.scaling.value()) : "";
     return out;
   };
 
   // Helper function to compare two ControlParameterizationSettings items
   auto areEqual = [](const ControlParameterizationSettings& a, const ControlParameterizationSettings& b) {
     return a.type == b.type && a.nspline == b.nspline &&
-           a.tstart == b.tstart && a.tstop == b.tstop && a.scaling == b.scaling;
+           a.tstart == b.tstart && a.tstop == b.tstop;
   };
 
   return toStringWithOptionalPerSubsystem(control_parameterizations, printItems, areEqual);
@@ -805,13 +804,6 @@ void Config::finalize() {
     }
   }
 
-  // Unset control initialization phase paremeter, unless BSPLINEAMP parameterization is used
-  for (size_t i = 0; i < control_initializations.size(); i++) {
-    if (control_parameterizations[i].type != ControlType::BSPLINEAMP) {
-      control_initializations[i].phase = std::nullopt;
-    }
-  }
-
   // Disable flux channel by forcing NONE parameterization when explicitly disabled
   if (!control_flux_enabled) {
     for (size_t i = 0; i < control_flux_parameterizations.size(); i++) {
@@ -860,12 +852,6 @@ void Config::validate() const {
   for (size_t i = 0; i < control_flux_amplitude_bounds.size(); i++) {
     if (control_flux_amplitude_bounds[i] <= 0.0) {
       logger.exitWithError("control_flux_amplitude_bounds[" + std::to_string(i) + "] must be positive");
-    }
-  }
-
-  for (size_t i = 0; i < control_flux_parameterizations.size(); i++) {
-    if (control_flux_parameterizations[i].type == ControlType::BSPLINEAMP) {
-      logger.exitWithError("control.flux.parameterization does not support type 'spline_amplitude'. Use 'spline', 'spline0', or 'none'.");
     }
   }
 
@@ -990,13 +976,6 @@ ControlParameterizationSettings Config::parseControlParameterizationSpecs(const 
     case ControlType::BSPLINE:
     case ControlType::BSPLINE0:
       param.nspline = validators::field<size_t>(param_table, "num").value();
-      param.tstart = validators::getOptional<double>(param_table["tstart"]);
-      param.tstop = validators::getOptional<double>(param_table["tstop"]);
-      break;
-
-    case ControlType::BSPLINEAMP:
-      param.nspline = validators::field<size_t>(param_table, "num").value();
-      param.scaling = validators::field<double>(param_table, "scaling").value();
       param.tstart = validators::getOptional<double>(param_table["tstart"]);
       param.tstop = validators::getOptional<double>(param_table["tstop"]);
       break;

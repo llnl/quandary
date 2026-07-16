@@ -4,14 +4,73 @@
 #include "mpi_logger.hpp"
 #include <stdexcept>
 
-const double TOLERANCE = 1e-10; // Tolerance for avoiding numerical precision issues when comparing floating point numbers in evalControl.
+namespace {
+void initializeControlBasis(ControlBasis* basis, const ControlInitializationSettings& init_settings,  std::mt19937& rand_engine, int param_offset, bool quietmode, int mpirank_world, bool enforce_zero_boundary) {
+  if (!basis) {
+    return;
+  }
+
+  int skip = 0;
+  if (init_settings.type == ControlInitializationType::FILE) {
+    for (size_t f = 0;; f++) {
+      const int nparams_f = basis->getNparams(f);
+      if (nparams_f <= 0) {
+        break;
+      }
+      std::vector<double> local_params(static_cast<size_t>(nparams_f), 0.0);
+      if (mpirank_world == 0) {
+        read_vector(init_settings.filename.value().c_str(),
+                    local_params.data(),
+                    nparams_f,
+                    quietmode,
+                    param_offset + skip);
+      }
+      MPI_Bcast(local_params.data(), nparams_f, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      basis->setParams(local_params.data(), static_cast<int>(f));
+      skip += nparams_f;
+    }
+  } else if (init_settings.type == ControlInitializationType::CONSTANT ||
+             init_settings.type == ControlInitializationType::RANDOM) {
+    const double initval = init_settings.amplitude.value_or(0.0) * 2.0 * M_PI;
+    std::uniform_real_distribution<double> uniform_dist(-initval, initval);
+    for (size_t f = 0;; f++) {
+      const int nparams_f = basis->getNparams(f);
+      if (nparams_f <= 0) {
+        break;
+      }
+      std::vector<double> local_params(static_cast<size_t>(nparams_f), 0.0);
+      for (int i = 0; i < nparams_f; i++) {
+        local_params[static_cast<size_t>(i)] =
+            (init_settings.type == ControlInitializationType::CONSTANT)
+                ? initval
+                : uniform_dist(rand_engine);
+      }
+      basis->setParams(local_params.data(), static_cast<int>(f));
+      skip += nparams_f;
+    }
+  } else {
+    MPILogger logger(mpirank_world);
+    logger.exitWithError("Unknown control initialization type.");
+  }
+
+  if (enforce_zero_boundary) {
+    basis->enforceBoundary();
+  }
+}
+}  // namespace
 
 Oscillator::Oscillator(){
+  myid = 0;
   nlevels = 0;
   total_time = 0;
   ground_freq = 0.0;
-  control_zero_boundary_condition = true;
-  control_flux_zero_boundary_condition = true;
+  selfkerr = 0.0;
+  detuning_freq = 0.0;
+  decay_time = 0.0;
+  dephase_time = 0.0;
+  drive_basisfunctions_re = nullptr;
+  drive_basisfunctions_im = nullptr;
+  flux_basisfunctions = nullptr;
 }
 
 Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine, int param_offset, bool quietmode){
@@ -31,12 +90,6 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   ground_freq = trans_freq[id] * 2.0 * M_PI;
   selfkerr = selfkerr_config[id] * 2.0 * M_PI;
   detuning_freq = 2.0 * M_PI * (trans_freq[id] - rot_freq[id]);
-
-  const std::vector<double>& carrier_freq_config = config.getCarrierFrequencies(id);
-  carrier_freq = carrier_freq_config;
-  for (size_t i=0; i<carrier_freq.size(); i++) {
-    carrier_freq[i] *= 2.0*M_PI;
-  }
 
   decoherence_type = config.getDecoherenceType();
   const std::vector<double>& decay_time_config = config.getDecayTime();
@@ -62,56 +115,51 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
   ilow = mpirank_petsc * localsize_u;
   iupp = ilow + localsize_u;         
 
-  /* Check if boundary conditions for controls should be enfored (default: yes). */
-  control_zero_boundary_condition = config.getControlZeroBoundaryCondition();
-  control_flux_zero_boundary_condition = config.getControlFluxZeroBoundaryCondition();
+  // Get and scale carrier frequencies to radians
+  carrier_freq = config.getCarrierFrequencies(id);
+  for (size_t i=0; i<carrier_freq.size(); i++) {
+    carrier_freq[i] *= 2.0*M_PI;
+  }
 
-  // Initialize the control parameterization basis functions. Note: Currently only one control parameterization is supported. nsegments <= 1!
-  // for (auto drive_parameterization : config.getControlParameterizations(id)) {
-  const auto& drive_parameterization = config.getControlParameterizations(id);
-  auto tstart = drive_parameterization.tstart.value_or(0.0);
-  auto tstop  = drive_parameterization.tstop.value_or(total_time);
- 
-  switch (drive_parameterization.type) {
+  // Initialize control parameterization for p/q drives with carrier waves. 
+  const auto& pq_drive_settings = config.getControlParameterizations(id);
+  auto nspline = pq_drive_settings.nspline.value_or(0);
+  auto tstart = pq_drive_settings.tstart.value_or(0.0);
+  auto tstop  = pq_drive_settings.tstop.value_or(total_time);
+  const bool drive_zero_bc = config.getControlZeroBoundaryCondition();
+  const auto& drive_init_settings = config.getControlInitializations(id);
+  
+  switch (pq_drive_settings.type) {
     case ControlType::BSPLINE: {
-      ControlBasis* mysplinebasis = new BSpline2nd(*drive_parameterization.nspline, tstart, tstop, control_zero_boundary_condition);
-      drive_basisfunctions.push_back(mysplinebasis);
+      drive_basisfunctions_re = new BSpline2nd(static_cast<int>(nspline),static_cast<int>(carrier_freq.size()),tstart, tstop, drive_zero_bc);
+      drive_basisfunctions_im = new BSpline2nd(static_cast<int>(nspline), static_cast<int>(carrier_freq.size()), tstart, tstop, drive_zero_bc);
       break;
     }
     case ControlType::BSPLINE0: {
-      ControlBasis* mysplinebasis = new BSpline0(*drive_parameterization.nspline, tstart, tstop, control_zero_boundary_condition);
-      drive_basisfunctions.push_back(mysplinebasis);
-      break;
-    }
-    case ControlType::BSPLINEAMP: {
-      ControlBasis* mysplinebasis = new BSpline2ndAmplitude(*drive_parameterization.nspline, *drive_parameterization.scaling, tstart, tstop, control_zero_boundary_condition);
-      drive_basisfunctions.push_back(mysplinebasis);
+      drive_basisfunctions_re = new BSpline0(static_cast<int>(nspline), static_cast<int>(carrier_freq.size()), tstart, tstop, drive_zero_bc);
+      drive_basisfunctions_im = new BSpline0(static_cast<int>(nspline), static_cast<int>(carrier_freq.size()), tstart, tstop, drive_zero_bc);
       break;
     }
     case ControlType::NONE: {
-      // logger.exitWithError("Control type 'none' not supported.");
-      // Do nothing.
+      // Keep drive basis function pointers null.
+      break;
     }
-    // } 
-  } // end switch
+  } 
 
   // Initialize optional flux control parameterization. Independent from drive controls.
-  const auto& flux_parameterization = config.getControlFluxParameterizations(id);
-  auto flux_tstart = flux_parameterization.tstart.value_or(0.0);
-  auto flux_tstop  = flux_parameterization.tstop.value_or(total_time);
-  switch (flux_parameterization.type) {
+  const auto& flux_settings= config.getControlFluxParameterizations(id);
+  const auto& flux_init_settings = config.getControlFluxInitializations(id);
+  const bool flux_zero_bc = config.getControlFluxZeroBoundaryCondition();
+  auto flux_tstart = flux_settings.tstart.value_or(0.0);
+  auto flux_tstop  = flux_settings.tstop.value_or(total_time);
+  auto flux_nspline = flux_settings.nspline.value_or(0);
+  switch (flux_settings.type) {
     case ControlType::BSPLINE: {
-      ControlBasis* fluxbasis = new BSpline2nd(*flux_parameterization.nspline, flux_tstart, flux_tstop, control_flux_zero_boundary_condition);
-      flux_basisfunctions.push_back(fluxbasis);
+      flux_basisfunctions = new BSpline2nd(static_cast<int>(flux_nspline), 1, flux_tstart, flux_tstop, flux_zero_bc);
       break;
     }
     case ControlType::BSPLINE0: {
-      ControlBasis* fluxbasis = new BSpline0(*flux_parameterization.nspline, flux_tstart, flux_tstop, control_flux_zero_boundary_condition);
-      flux_basisfunctions.push_back(fluxbasis);
-      break;
-    }
-    case ControlType::BSPLINEAMP: {
-      logger.exitWithError("Flux control does not support 'spline_amplitude' parameterization.");
+      flux_basisfunctions = new BSpline0(static_cast<int>(flux_nspline), 1, flux_tstart, flux_tstop, flux_zero_bc);
       break;
     }
     case ControlType::NONE: {
@@ -119,96 +167,13 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
     }
   }
 
-  /* Initialization of the control parameters.  */
-  for (size_t iseg = 0; iseg < drive_basisfunctions.size(); iseg++) { // NOTE: Currently only one control parameterization supported: iseg = 0!
+  const int drive_re_offset = param_offset;
+  const int drive_im_offset = drive_re_offset + (drive_basisfunctions_re ? drive_basisfunctions_re->getNparams() : 0);
+  const int flux_offset = drive_im_offset + (drive_basisfunctions_im ? drive_basisfunctions_im->getNparams() : 0);
 
-    // const auto& drive_initialization = config.getControlInitializations(id)[seg];
-    const auto& drive_initialization = config.getControlInitializations(id);
-    if (drive_initialization.type == ControlInitializationType::FILE) { // read from file 
-
-      size_t nparams = drive_basisfunctions[iseg]->getNparams() * carrier_freq.size();
-      drive_params.resize(nparams);
-      if (mpirank_world == 0) {
-        read_vector(drive_initialization.filename.value().c_str(), drive_params.data(), nparams, quietmode, param_offset);
-      }
-      MPI_Bcast(drive_params.data(), nparams, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-    } else if (drive_initialization.type == ControlInitializationType::CONSTANT || drive_initialization.type == ControlInitializationType::RANDOM) {
-
-      // Note, the config amplitude is multiplied by 2pi here!!
-      double initval = drive_initialization.amplitude.value()*2.0*M_PI;
-      
-      for (size_t f = 0; f<carrier_freq.size(); f++) {
-        for (int i=0; i<drive_basisfunctions[iseg]->getNparams(); i++){
-
-          double val; 
-          if (drive_initialization.type == ControlInitializationType::CONSTANT) {
-            val = initval;
-          } else if (drive_initialization.type == ControlInitializationType::RANDOM) {
-            // Uniform distribution [-a,a)
-            std::uniform_real_distribution<double> uniform_dist(0.0, 1.0);
-            double randval = uniform_dist(rand_engine);  // random in [0,1)
-            // scale to chosen amplitude [-a,a]
-            val = initval*randval;
-            val = 2*val - initval;
-          } else {
-            logger.exitWithError("Unknown control initialization type.");
-          }
-
-          // Push the value to the parameter storage
-          drive_params.push_back(val);
-        }
-
-        // if BSPLINEAMP: Two values can be provided: First one for the amplitude (set above), second one for the phase which otherwise is set to 0.0 (overwrite here)
-        if (drive_basisfunctions[iseg]->getType() == ControlType::BSPLINEAMP) {
-          drive_params[drive_params.size()-1] = drive_initialization.phase.value();
-        }
-      }
-    }
-  }
-
-  // Flux parameter initialization (single channel, no carrier expansion)
-  for (size_t iseg = 0; iseg < flux_basisfunctions.size(); iseg++) {
-    const auto& flux_initialization = config.getControlFluxInitializations(id);
-    if (flux_initialization.type == ControlInitializationType::FILE) {
-      size_t nparams = flux_basisfunctions[iseg]->getNparams();
-      flux_params.resize(nparams);
-      if (mpirank_world == 0) {
-        read_vector(flux_initialization.filename.value().c_str(), flux_params.data(), nparams, quietmode, 0);
-      }
-      MPI_Bcast(flux_params.data(), nparams, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    } else if (flux_initialization.type == ControlInitializationType::CONSTANT || flux_initialization.type == ControlInitializationType::RANDOM) {
-      double initval = flux_initialization.amplitude.value() * 2.0 * M_PI;
-      for (int i = 0; i < flux_basisfunctions[iseg]->getNparams(); i++) {
-        double val;
-        if (flux_initialization.type == ControlInitializationType::CONSTANT) {
-          val = initval;
-        } else {
-          std::uniform_real_distribution<double> uniform_dist(0.0, 1.0);
-          double randval = uniform_dist(rand_engine);
-          val = initval * randval;
-          val = 2 * val - initval;
-        }
-        flux_params.push_back(val);
-      }
-    }
-  }
-
-  /* Make sure the initial guess satisfies the boundary conditions, if needed */
-  if (drive_params.size() > 0 && control_zero_boundary_condition){
-    for (size_t bs = 0; bs < drive_basisfunctions.size(); bs++){
-      for (size_t f=0; f < carrier_freq.size(); f++) {
-        drive_basisfunctions[bs]->enforceBoundary(drive_params.data(), f);
-      }
-    }
-  }
-
-  if (flux_params.size() > 0 && control_flux_zero_boundary_condition) {
-    for (size_t bs = 0; bs < flux_basisfunctions.size(); bs++) {
-      // Flux is a single channel with one logical carrier id (0)
-      flux_basisfunctions[bs]->enforceBoundary(flux_params.data(), 0);
-    }
-  }
+  initializeControlBasis(drive_basisfunctions_re, drive_init_settings, rand_engine, drive_re_offset, quietmode, mpirank_world, drive_zero_bc);
+  initializeControlBasis(drive_basisfunctions_im, drive_init_settings, rand_engine, drive_im_offset, quietmode, mpirank_world, drive_zero_bc);
+  initializeControlBasis(flux_basisfunctions, flux_init_settings, rand_engine, flux_offset, quietmode, mpirank_world, flux_zero_bc);
 
   /* Compute and store dimension of preceding and following oscillators */
   dim_preOsc = 1;
@@ -221,192 +186,135 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine
 
 
 Oscillator::~Oscillator(){
-  if (drive_params.size() > 0) {
-    for (size_t i=0; i<drive_basisfunctions.size(); i++) 
-      delete drive_basisfunctions[i];
-  }
-  if (flux_params.size() > 0) {
-    for (size_t i = 0; i < flux_basisfunctions.size(); i++)
-      delete flux_basisfunctions[i];
-  }
+  delete drive_basisfunctions_re;
+  delete drive_basisfunctions_im;
+  delete flux_basisfunctions;
 }
 
-void Oscillator::setParams(const double* x){
+void Oscillator::setControlParams(const double* x){
 
-  // copy x into the oscillators parameter storage
-  for (size_t i=0; i<drive_params.size(); i++) {
-    drive_params[i] = x[i]; 
+  // copy x into p,q and flux parameterizations
+  int skip = 0;
+  for (size_t f=0; f<carrier_freq.size(); f++) {
+    if (drive_basisfunctions_re) drive_basisfunctions_re->setParams(x + skip, f);
+    skip += drive_basisfunctions_re ? drive_basisfunctions_re->getNparams(f) : 0;
+    if (drive_basisfunctions_im) drive_basisfunctions_im->setParams(x + skip, f);
+    skip += drive_basisfunctions_im ? drive_basisfunctions_im->getNparams(f) : 0;
   }
-  for (size_t i = 0; i < flux_params.size(); i++) {
-    flux_params[i] = x[drive_params.size() + i];
-  }
+  if (flux_basisfunctions) flux_basisfunctions->setParams(x + getNDriveParams(), 0);
 }
 
-void Oscillator::getParams(double* x){
-  for (size_t i=0; i<drive_params.size(); i++) {
-    x[i] = drive_params[i]; 
+void Oscillator::getControlParams(double* x){
+
+  // copy p,q and flux parameterizations into x
+  int skip = 0;
+  for (size_t f=0; f<carrier_freq.size(); f++) {
+    if (drive_basisfunctions_re) drive_basisfunctions_re->getParams(x + skip, f);
+    skip += drive_basisfunctions_re ? drive_basisfunctions_re->getNparams(f) : 0;
+    if (drive_basisfunctions_im) drive_basisfunctions_im->getParams(x + skip, f);
+    skip += drive_basisfunctions_im ? drive_basisfunctions_im->getNparams(f) : 0;
   }
-  for (size_t i = 0; i < flux_params.size(); i++) {
-    x[drive_params.size() + i] = flux_params[i];
-  }
+  if (flux_basisfunctions) flux_basisfunctions->getParams(x + getNDriveParams(), 0);
+}
+
+int Oscillator::evalDriveControl(const double t, double* p_ptr, double* q_ptr) {
+  double flux_dummy = 0.0;
+  return evalControl(t, p_ptr, q_ptr, &flux_dummy);
 }
 
 
 double Oscillator::evalControlVariation(){
-  // NOTE: drive_params holds the relevant copy of the optimizers 'x' vector 
+
   double var_reg = 0.0;
-  if (drive_params.size()>0) {
-    // Iterate over control parameterizations. NOTE: Currently only one parameterization segment is supported. iseg = 0!
-    for (size_t iseg= 0; iseg< drive_basisfunctions.size(); iseg++){
-      /* Iterate over carrier frequencies */
-      for (size_t f=0; f < carrier_freq.size(); f++) {
-        var_reg += drive_basisfunctions[iseg]->computeVariation(drive_params, f);
-      }
-    }
-  } 
+  if (drive_basisfunctions_re) var_reg += drive_basisfunctions_re->computeVariation();
+  if (drive_basisfunctions_im) var_reg += drive_basisfunctions_im->computeVariation();
+  if (flux_basisfunctions) var_reg += flux_basisfunctions->computeVariation();
+
   return var_reg;
 }
 
 void Oscillator::evalControlVariationDiff(Vec G, double var_reg_bar, int skip_to_oscillator){
-  // NOTE: drive_params holds the relevant copy of the 'x' array
 
-  if (drive_params.size()>0) {
     PetscScalar* grad; 
     VecGetArray(G, &grad);
 
-    // Iterate over basis parameterizations??? 
-    for (size_t iseg = 0; iseg< drive_basisfunctions.size(); iseg++){
-      /* Iterate over carrier frequencies */
-      for (size_t f=0; f < carrier_freq.size(); f++) {
-        // pass the portion of the gradient that corresponds to this oscillator
-        drive_basisfunctions[iseg]->computeVariation_diff(grad+skip_to_oscillator, drive_params, var_reg_bar, f);
-     }
+    // pass the portion of the gradient that corresponds to this oscillator
+    int skip = skip_to_oscillator;
+    if (drive_basisfunctions_re) {
+      drive_basisfunctions_re->computeVariation_diff(grad + skip, var_reg_bar);
+      skip += drive_basisfunctions_re->getNparams();
+    }
+    if (drive_basisfunctions_im) {
+      drive_basisfunctions_im->computeVariation_diff(grad + skip, var_reg_bar);
+      skip += drive_basisfunctions_im->getNparams();
+    }
+    if (flux_basisfunctions) {
+      flux_basisfunctions->computeVariation_diff(grad + skip, var_reg_bar);
     }
     VecRestoreArray(G, &grad);
-  } 
-}
-
-int Oscillator::evalDriveControl(const double t, double* p_ptr, double* q_ptr){
-
-  // Default: Non controllable oscillator. Will typically be overwritten below. 
-  *p_ptr = 0.0;
-  *q_ptr = 0.0;
-
-  /* Evaluate p(t) and q(t) using the parameters */
-  if (drive_params.size()>0) {
-    // Iterate over control parameterizations. Only one will be used, see the break-statement. 
-    for (size_t bs = 0; bs < drive_basisfunctions.size(); bs++){ 
-     if (drive_basisfunctions[bs]->getTstart() - TOLERANCE <= t && 
-          drive_basisfunctions[bs]->getTstop() + TOLERANCE >= t ) {
-        /* Iterate over carrier frequencies */
-        double sum_p = 0.0;
-        double sum_q = 0.0;
-        for (size_t f=0; f < carrier_freq.size(); f++) {
-          /* Evaluate the Bspline for this carrier wave */
-          double Blt1 = 0.0; // Sums over alpha^1 * basisfunction(t) (real)
-          double Blt2 = 0.0; // Sums over alpha^2 * basisfunction(t) (imag)
-          drive_basisfunctions[bs]->evaluate(t, drive_params, f, &Blt1, &Blt2);
-          if (drive_basisfunctions[bs]->getType() == ControlType::BSPLINEAMP) {
-            double cos_omt = cos(carrier_freq[f]*t + Blt2);
-            double sin_omt = sin(carrier_freq[f]*t + Blt2);
-            sum_p += cos_omt * Blt1; 
-            sum_q += sin_omt * Blt1;
-          } else {
-            double cos_omt = cos(carrier_freq[f]*t);
-            double sin_omt = sin(carrier_freq[f]*t);
-            sum_p += cos_omt * Blt1 - sin_omt * Blt2; 
-            sum_q += sin_omt * Blt1 + cos_omt * Blt2;
-          }
-        }
-        *p_ptr = sum_p;
-        *q_ptr = sum_q;
-        break;
-      }
-    }
-  } 
-
-  return 0;
-}
-
-int Oscillator::evalFluxControl(const double t, double* flux_ptr) {
-  *flux_ptr = 0.0;
-
-  if (flux_params.size() > 0) {
-    for (size_t bs = 0; bs < flux_basisfunctions.size(); bs++) {
-      if (flux_basisfunctions[bs]->getTstart() - TOLERANCE <= t &&
-          flux_basisfunctions[bs]->getTstop() + TOLERANCE >= t) {
-        double Blt1 = 0.0;
-        double Blt2 = 0.0;
-        // Flux uses a single scalar channel. We take the first basis channel.
-        flux_basisfunctions[bs]->evaluate(t, flux_params, 0, &Blt1, &Blt2);
-        *flux_ptr = Blt1;
-        break;
-      }
-    }
-  }
-
-  return 0;
 }
 
 int Oscillator::evalControl(const double t, double* p_ptr, double* q_ptr, double* flux_ptr) {
-  evalDriveControl(t, p_ptr, q_ptr);
-  evalFluxControl(t, flux_ptr);
-  return 0;
-}
+  
+  // Evaluate p/q drives
+  double p_drive = 0.0;
+  double q_drive = 0.0;
+  // Iterate over carrier frequencies 
+  for (size_t f=0; f < carrier_freq.size(); f++) {
+    // Evaluate the spline functions. Blt1= sum_i alpha_i^1 B_i(t), Blt2 = sum_i alpha_i^2 B_i(t)
+    double Blt1 = drive_basisfunctions_re ? drive_basisfunctions_re->evaluate(t, static_cast<int>(f)) : 0.0;
+    double Blt2 = drive_basisfunctions_im ? drive_basisfunctions_im->evaluate(t, static_cast<int>(f)) : 0.0;
+    /* Mix in the carrier waves */
+    double cos_omt = cos(carrier_freq[f]*t);
+    double sin_omt = sin(carrier_freq[f]*t);
+    p_drive += cos_omt * Blt1 - sin_omt * Blt2; 
+    q_drive += sin_omt * Blt1 + cos_omt * Blt2;
+  }
+  *p_ptr = p_drive;
+  *q_ptr = q_drive;
 
-int Oscillator::evalDriveControl_diff(const double t, double* grad, const double pbar, const double qbar) {
 
-  if (drive_params.size()>0) {
-
-    // Iterate over control parameterizations. Only one is active, see break statement.
-    for (size_t bs = 0; bs < drive_basisfunctions.size(); bs++){
-      if (drive_basisfunctions[bs]->getTstart() - TOLERANCE <= t && 
-          drive_basisfunctions[bs]->getTstop() + TOLERANCE >= t ) {
-        /* Iterate over carrier frequencies */
-        for (size_t f=0; f < carrier_freq.size(); f++) {
-
-          if (drive_basisfunctions[bs]->getType() == ControlType::BSPLINEAMP) {
-            // drive_basisfunctions[bs]->derivative(t, drive_params, dpdalpha, carrier_freq[f], 1.0, f);  // +/-1.0 is used as a flag inside Bsline2ndAmplitude->evaluate() to determine whether this is for p (1.0) or for q (-1.0)
-            // drive_basisfunctions[bs]->derivative(t, drive_params, dqdalpha, carrier_freq[f], -1.0, f);
-            // drive_basisfunctions[bs]->derivative(t, drive_params, dpdalpha, carrier_freq[f], 1.0, f);  // +/-1.0 is used as a flag inside Bsline2ndAmplitude->evaluate() to determine whether this is for p (1.0) or for q (-1.0)
-            printf("Gradient for BsplineAmp parameterization is currently not implemented. Reach out to guenther5@llnl.gov if you need this. TODO.\n");
-            exit(1);
-          } else {
-
-            double cos_omt = cos(carrier_freq[f]*t);
-            double sin_omt = sin(carrier_freq[f]*t);
-            double Blt1bar = sin_omt*qbar + cos_omt*pbar;
-            double Blt2bar = cos_omt*qbar - sin_omt*pbar;
-
-            /* Derivative wrt control alpha */
-            drive_basisfunctions[bs]->derivative(t, drive_params, grad, Blt1bar, Blt2bar, f); // dp(t) / dalpha
-          }
-        }
-        break;
-      }
-    }
-  } 
+  // Evaluate flux control
+  *flux_ptr = flux_basisfunctions ? flux_basisfunctions->evaluate(t, 0) : 0.0;
 
   return 0;
 }
 
 int Oscillator::evalControl_diff(const double t, double* grad, const double pbar, const double qbar, const double fbar) {
-  // First, accumulate drive-channel sensitivity
-  evalDriveControl_diff(t, grad, pbar, qbar);
 
-  // Then, accumulate flux-channel sensitivity in the flux parameter block
-  if (flux_params.size() > 0) {
-    double* flux_grad = grad + drive_params.size();
-    for (size_t bs = 0; bs < flux_basisfunctions.size(); bs++) {
-      if (flux_basisfunctions[bs]->getTstart() - TOLERANCE <= t &&
-          flux_basisfunctions[bs]->getTstop() + TOLERANCE >= t) {
-        flux_basisfunctions[bs]->derivative(t, flux_params, flux_grad, fbar, 0.0, 0);
-        break;
-      }
+  // First, accumulate drive-channel sensitivity
+  int skip = 0;
+  for (size_t f = 0; f < carrier_freq.size(); f++) {
+
+    double cos_omt = cos(carrier_freq[f]*t);
+    double sin_omt = sin(carrier_freq[f]*t);
+    double Blt1bar = sin_omt*qbar + cos_omt*pbar;
+    double Blt2bar = cos_omt*qbar - sin_omt*pbar;
+
+    /* Derivative wrt control alpha */
+    if (drive_basisfunctions_re) {
+      drive_basisfunctions_re->derivative(t, static_cast<int>(f), grad + skip, Blt1bar);
+      skip += drive_basisfunctions_re->getNparams(f);
+    }
+    if (drive_basisfunctions_im) {
+      drive_basisfunctions_im->derivative(t, static_cast<int>(f), grad + skip, Blt2bar);
+      skip += drive_basisfunctions_im->getNparams(f);
     }
   }
 
+  // Then, accumulate flux-channel sensitivity in the flux parameter block
+  if (flux_basisfunctions) {
+    int skip = 0;
+    if (drive_basisfunctions_re) skip += drive_basisfunctions_re->getNparams();
+    if (drive_basisfunctions_im) skip += drive_basisfunctions_im->getNparams();
+    flux_basisfunctions->derivative(t, 0, grad + skip, fbar);
+  }
+
   return 0;
+}
+
+int Oscillator::evalDriveControl_diff(const double t, double* grad_for_this_oscillator, const double pbar, const double qbar) {
+  return evalControl_diff(t, grad_for_this_oscillator, pbar, qbar, 0.0);
 }
 
 double Oscillator::expectedEnergy(const Vec x) {

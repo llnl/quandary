@@ -149,14 +149,12 @@ const std::map<std::string, RunType> RUN_TYPE_MAP = {
 enum class ControlType {
   NONE,       ///< Non-controllable
   BSPLINE,    ///< Control pulses are parameterized with 2nd order BSpline basis functions with carrier waves
-  BSPLINEAMP, ///< Paramerizes only the amplitudes of the control pulse with 2nd order BSpline basis functions 
   BSPLINE0    ///< Control pulses are parameterized with Zeroth order Bspline (piece-wise constant)
 };
 
 const std::map<std::string, ControlType> CONTROL_TYPE_MAP = {
     {"none", ControlType::NONE},
     {"spline", ControlType::BSPLINE},
-    {"spline_amplitude", ControlType::BSPLINEAMP},
     {"spline0", ControlType::BSPLINE0}
 };
 

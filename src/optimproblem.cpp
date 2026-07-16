@@ -83,15 +83,6 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
       VecSetValue(xupper, col + i, drive_bound, INSERT_VALUES);
       VecSetValue(xlower, col + i, -1.0 * drive_bound, INSERT_VALUES);
     }
-    // Disable bound for phase if this is spline_amplitude control
-    if (mastereq->getOscillator(iosc)->getControlType() == ControlType::BSPLINEAMP) {
-      for (size_t f = 0; f < mastereq->getOscillator(iosc)->getNCarrierfrequencies(); f++) {
-        int nsplines = mastereq->getOscillator(iosc)->getNSplines();
-        double phase_bound = 1e+10;
-        VecSetValue(xupper, col + f * (nsplines + 1) + nsplines, phase_bound, INSERT_VALUES);
-        VecSetValue(xlower, col + f * (nsplines + 1) + nsplines, -1.0 * phase_bound, INSERT_VALUES);
-      }
-    }
     col += mastereq->getOscillator(iosc)->getNDriveParams();
 
     // Flux bounds (independent f controls)
@@ -447,7 +438,7 @@ void OptimProblem::getStartingPoint(Vec xinit){
   VecGetArray(xinit, &xptr);
   int shift = 0;
   for (size_t ioscil = 0; ioscil<mastereq->getNOscillators(); ioscil++){
-    mastereq->getOscillator(ioscil)->getParams(xptr + shift);
+    mastereq->getOscillator(ioscil)->getControlParams(xptr + shift);
     shift += mastereq->getOscillator(ioscil)->getNParams();
   }
   VecRestoreArray(xinit, &xptr);

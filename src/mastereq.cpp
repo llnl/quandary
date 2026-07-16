@@ -474,7 +474,7 @@ void MasterEq::setControlAmplitudes(const Vec x) {
   int shift=0;
   for (size_t ioscil = 0; ioscil < getNOscillators(); ioscil++) {
     /* Copy x into the oscillators parameter array. */
-    getOscillator(ioscil)->setParams(ptr + shift);
+    getOscillator(ioscil)->setControlParams(ptr + shift);
     shift += getOscillator(ioscil)->getNParams();
   }
   VecRestoreArrayRead(x, &ptr);
