@@ -216,6 +216,7 @@ It is therefore recommended to utilize the python interface only for smaller sys
     # General options
     rand_seed            # Set a fixed random number generator seed. Default: None (non-reproducable)
     print_frequency_iter # Output frequency for optimization iterations. (Print every &lt;x&gt; iterations). Default: 1
+    output_frequency     # Frequency (in number of timesteps) to store intermediate results during propagation. Default: 1 (write every time step)
     usematfree           # Switch to use matrix-free (rather than sparse-matrix) solver. Default: True
     verbose              # Switch to turn on more screen output for debugging. Default: False
 
@@ -232,7 +233,6 @@ It is therefore recommended to utilize the python interface only for smaller sys
 
     Output parameters, available after Quandary has been executed (simulate or optimze)
     -----------------------------------------------------
-    popt         # Optimized control palamters (Bspline coefficients). List[float]
 </code></pre></div>
             </div>
         </div>
@@ -248,7 +248,6 @@ It is therefore recommended to utilize the python interface only for smaller sys
         </script>
         <script src="../js/base.js"></script>
         <script src="../javascripts/mathjax.js"></script>
-        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
         <script src="../search/main.js"></script>
 

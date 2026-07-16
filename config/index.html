@@ -136,10 +136,11 @@ For a complete cross-reference of all parameters, see the <a href="../parameter_
 nlevels = [2, 2]
 # Number of essential levels per subsystem. Either a single value (same for all) or one per subsystem. (Default: same as nlevels)
 nessential = [2, 2]
-# Number of time steps used for time-integration
-ntime = 1000
-# Time step size (ns). Determines final time: T=ntime*dt
+# Final time of the dynamical evolution (ns)
+total_time = 100.0
+# Provide either the time step size (dt=...) or the number of time steps (ntime=...), unless Petsc's adaptive timestepper is used which adaptively changes the timestep size, see below. 
 dt = 0.1
+# ntime = 1000
 # Fundamental transition frequencies (|0&gt; to |1&gt; transition) for each subsystem (&quot;\omega_k&quot;, multiplying a_k^d a_k, GHz).
 # Either a single value (same for all) or one per subsystem.
 transition_frequency = [4.10595, 4.81526]
@@ -317,6 +318,7 @@ linearsolver = { type = &quot;gmres&quot;, maxiter = 20 }
 # &quot;IMR&quot; - Implicit Midpoint Rule (IMR) of 2nd order,
 # &quot;IMR4&quot; - Compositional IMR of order 2 using 3 stages,
 # &quot;IMR8&quot; - Compositional IMR of order 8 using 15 stages,
+# &quot;PETSCTS&quot; - Petsc's adaptive timestepping (5th order explicit RK). Note: This ignores the setting for dt and ntime. 
 # &quot;EE&quot; - Explicit Euler (EE) of 1st order, (for debugging only)
 timestepper = &quot;IMR&quot;
 # Fixed seed for the random number generator. Comment out, or set negative if seed should be random (non-reproducable)
@@ -337,7 +339,6 @@ rand_seed = 1234
         </script>
         <script src="../js/base.js"></script>
         <script src="../javascripts/mathjax.js"></script>
-        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
         <script src="../search/main.js"></script>
 
