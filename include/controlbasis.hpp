@@ -75,20 +75,6 @@ class ControlBasis {
         ControlType getType() {return controltype;};
 
         /**
-         * @brief Sets the offset for the starting location in the global control vector.
-         *
-         * @param skip_ Offset value.
-         */
-        void setSkip(int skip_) {skip = skip_;};
-
-        /**
-         * @brief Retrieves the offset for the starting location in the global control vector.
-         *
-         * @return int Offset value.
-         */
-        int getSkip(){return skip;};
-
-        /**
          * @brief Retrieves the number of splines (default implementation returns 0).
          *
          * @return int Number of splines.
