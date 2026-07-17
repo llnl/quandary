@@ -114,6 +114,9 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937& rand_engin
     logger.exitWithError("Unknown control initialization type for drive controls.");
   }
   setControlParams(params_drive.data());
+  // Make sure initial parameters satisfy boundaries conditions.
+  if (drive_basisfunctions_re) drive_basisfunctions_re->enforceBoundary();
+  if (drive_basisfunctions_im) drive_basisfunctions_im->enforceBoundary();
 
   // Create flux control parameterization
   const auto& flux_settings= config.getControlFluxParameterizations(id);
@@ -181,10 +184,6 @@ void Oscillator::setControlParams(const double* x) {
   }
   if (flux_basisfunctions) flux_basisfunctions->setParams(x + getNDriveParams(), 0);
 
-  // Make sure parameter boundaries are set correctly.
-  if (drive_basisfunctions_re) drive_basisfunctions_re->enforceBoundary();
-  if (drive_basisfunctions_im) drive_basisfunctions_im->enforceBoundary();
-  if (flux_basisfunctions) flux_basisfunctions->enforceBoundary();
 }
 
 void Oscillator::getControlParams(double* x){
