@@ -38,10 +38,10 @@ class ControlBasis {
          *
          * @param nbasisfunctions Number of basis functions for the control parameterization.
          * @param ncarrier Number of carrier waves for the control parameterization.
-         * @param tstart Start time of the interval.
-         * @param tstop Stop time of the interval.
-         * @param control_zero_boundary_condition Flag to enforce zero boundary conditions. If true, ensures that the controls start and end at zero.
-         * @param control_initialization_settings Pointer to the control initialization settings.
+         * @param tstart_ Start time of the interval.
+         * @param tstop_ Stop time of the interval.
+         * @param control_zero_boundary_condition_ Flag to enforce zero boundary conditions. If true,
+         * ensures that the controls start and end at zero.
          */
         ControlBasis(int nbasisfunctions, int ncarrier, double tstart_, double tstop_, bool control_zero_boundary_condition_);
 
@@ -135,7 +135,7 @@ class ControlBasis {
          *
          * @param[in] t Time at which to evaluate.
          * @param[in] carrier_freq_id ID of the carrier frequency, provided by the oscillator.
-         * @param[out] val_out Pointer to store the evaluated control basis value.
+         * @return Evaluated basis expansion value at time t.
          */
         virtual double evaluate(const double t, int carrier_freq_id) = 0;
 
@@ -176,6 +176,7 @@ class BSpline2nd : public ControlBasis {
          * @brief Constructor for quadratic Bsplines.
          *
          * @param nsplines Number of splines.
+         * @param ncarrier Number of carrier frequencies represented by this basis object.
          * @param tstart Start time of the interval.
          * @param tstop Stop time of the interval.
          * @param enforceZeroBoundary Flag to enforce zero boundary conditions.
@@ -185,11 +186,8 @@ class BSpline2nd : public ControlBasis {
         ~BSpline2nd();
         
         /**
-         * @brief Sets the first and last two spline coefficients in x to zero for this carrier wave, 
+         * @brief Sets the first and last two spline coefficients to zero for each carrier wave,
          * so that the controls start and end at zero.
-         *
-         * @param x Pointer to the control parameters.
-         * @param carrier_id ID of the carrier wave.
          */
         void enforceBoundary();
 
@@ -233,7 +231,6 @@ class BSpline0 : public ControlBasis {
          *
          * @param grad Pointer to gradient array to update
          * @param var_bar Adjoint of variation term
-         * @param carrierfreqID ID of the carrier frequency
          */
         virtual void computeVariation_diff(double* grad, double var_bar);
 

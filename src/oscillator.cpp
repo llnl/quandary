@@ -57,7 +57,7 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937& rand_engin
   }
   if (decoherence_type != DecoherenceType::NONE) dim *= dim; // Lindblad: N^2
 
-  // Set local sizes of subvectors u,v in state x=[u,v]
+  // Set local sizes of subvectors u,v in real-valued state x=[u,v]
   localsize_u = dim / mpisize_petsc; 
   ilow = mpirank_petsc * localsize_u;
   iupp = ilow + localsize_u;         
@@ -70,7 +70,7 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937& rand_engin
     if (j > id) dim_postOsc *= nlevels_all_[j];
   }
 
-  // Create p/q drive control parameterization with carrier waves. 
+  // Create p/q drive control parameterizations with carrier waves.
   const auto& pq_drive_settings = config.getControlParameterizations(id);
   auto nspline = pq_drive_settings.nspline.value_or(0);
   auto tstart = pq_drive_settings.tstart.value_or(0.0);
@@ -114,7 +114,7 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937& rand_engin
     logger.exitWithError("Unknown control initialization type for drive controls.");
   }
   setControlParams(params_drive.data());
-  // Make sure initial parameters satisfy boundaries conditions.
+  // Make sure initial parameters satisfy boundary conditions.
   if (drive_basisfunctions_re) drive_basisfunctions_re->enforceBoundary();
   if (drive_basisfunctions_im) drive_basisfunctions_im->enforceBoundary();
 
@@ -174,7 +174,7 @@ Oscillator::~Oscillator(){
 
 void Oscillator::setControlParams(const double* x) {
 
-  // copy x into p,q and flux parameterizations
+  // Copy global parameter block x into p/q and flux parameterizations.
   int skip = 0;
   for (size_t f=0; f<carrier_freq.size(); f++) {
     if (drive_basisfunctions_re) drive_basisfunctions_re->setParams(x + skip, f);
@@ -188,7 +188,7 @@ void Oscillator::setControlParams(const double* x) {
 
 void Oscillator::getControlParams(double* x){
 
-  // copy p,q and flux parameterizations into x
+  // Copy p/q and flux parameterizations into the global parameter block x.
   int skip = 0;
   for (size_t f=0; f<carrier_freq.size(); f++) {
     if (drive_basisfunctions_re) drive_basisfunctions_re->getParams(x + skip, f);
@@ -238,10 +238,10 @@ void Oscillator::evalControlVariationDiff(Vec G, double var_reg_bar, int skip_to
 
 int Oscillator::evalControl(const double t, double* p_ptr, double* q_ptr, double* flux_ptr) {
   
-  // Evaluate p/q drives
+  // Evaluate p/q drives.
   double p_drive = 0.0;
   double q_drive = 0.0;
-  // Iterate over carrier frequencies 
+  // Iterate over carrier frequencies.
   for (size_t f=0; f < carrier_freq.size(); f++) {
     // Evaluate the spline functions. Blt1= sum_i alpha_i^1 B_i(t), Blt2 = sum_i alpha_i^2 B_i(t)
     double Blt1 = drive_basisfunctions_re ? drive_basisfunctions_re->evaluate(t, static_cast<int>(f)) : 0.0;
@@ -273,7 +273,7 @@ int Oscillator::evalControl_diff(const double t, double* grad, const double pbar
     double Blt1bar = sin_omt*qbar + cos_omt*pbar;
     double Blt2bar = cos_omt*qbar - sin_omt*pbar;
 
-    /* Derivative wrt control alpha */
+    /* Derivative with respect to control coefficients. */
     if (drive_basisfunctions_re) {
       drive_basisfunctions_re->derivative(t, static_cast<int>(f), grad + skip, Blt1bar);
       skip += drive_basisfunctions_re->getNparams(f);
@@ -325,7 +325,7 @@ double Oscillator::expectedEnergy(const Vec x) {
       }
       expected += num_diag * xdiag;
     }
-    else { // Schoedinger solver: += i * | psi_i |^2
+    else { // Schroedinger solver: += i * |psi_i|^2
       if (ilow <= idx_diag && idx_diag < iupp) {
         PetscInt id_global_x = idx_diag + mpirank_petsc*localsize_u; 
         VecGetValues(x, 1, &id_global_x, &xdiag);
@@ -357,7 +357,7 @@ void Oscillator::expectedEnergy_diff(const Vec x, Vec x_bar, const double obj_ba
   for (PetscInt i=0; i<dimmat; i++) {
     PetscInt num_diag = i % (nlevels*dim_postOsc);
     num_diag = num_diag / dim_postOsc;
-    if (decoherence_type != DecoherenceType::NONE) { // Lindblas solver
+    if (decoherence_type != DecoherenceType::NONE) { // Lindblad solver
       val = num_diag * obj_bar;
       PetscInt idx_diag = getVecID(i, i, dimmat);
       if (ilow <= idx_diag && idx_diag < iupp) {
@@ -432,7 +432,7 @@ void Oscillator::population(const Vec x, std::vector<double> &pop) {
     mypop[i] = sum;
   } 
 
-  /* Gather poppulation from all Petsc processors */
+  /* Gather population from all PETSc processors. */
   for (size_t i=0; i<mypop.size(); i++) {pop[i] = mypop[i];}
   MPI_Allreduce(mypop.data(), pop.data(), static_cast<int>(nlevels), MPI_DOUBLE, MPI_SUM, PETSC_COMM_WORLD);
 }

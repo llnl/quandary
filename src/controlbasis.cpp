@@ -174,7 +174,7 @@ double BSpline0::evaluate(const double t, int carrier_freq_id){
     // Figure out which basis function is active at this time point 
     int splineID = static_cast<int>(ceil((t-tstart)/dtknot - 0.5));
 
-    // Ctrl function defined to be zero outside [tstart, tend]
+    // Control function is defined to be zero outside [tstart, tstop].
     if (splineID < 0 || splineID >= static_cast<int>(params[carrier_freq_id].size())){
         return 0.0;
     } else {

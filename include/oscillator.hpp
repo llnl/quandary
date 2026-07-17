@@ -24,17 +24,14 @@
  * 
  * Main functionality:
  *    - @ref evalControl computes the rotating-frame drive pulses p(t) & q(t) as well as the flux control f(t) at a given time t. 
- *      The drive pulses are products of fixed-frequency carrier waves multiplied with an outer envelop (spline) whose shape is 
- *      defined through the drive control parameters (@ref drive_params) and their corresponding basis functions defined in 
- *      the @ref ControlBasis. The flux control is a single scalar channel that multiplies the number operator term in the Hamiltonian.
- *      It is parameterized with basis functions (no carrier waves) and its parameters are stored in @ref flux_params.
+ *      The drive pulses are products of fixed-frequency carrier waves multiplied with an outer envelope
+ *      (e.g. spline) represented by @ref drive_basisfunctions_re and @ref drive_basisfunctions_im, for the coefficients alpha^1 and alpha^2, respectively.
+ *      The flux control is a single scalar channel represented by @ref flux_basisfunctions.
  *    - @ref expectedEnergy and @ref population for computing this oscillators expected Energy and level occupations
  *      given a current state
- *    - @ref evalControlVariation for evaluating drive control parameter variations used as penalty term in the optimization
+ *    - @ref evalControlVariation for evaluating control-variation penalties used in optimization
  * 
- * This class contains references to:
- *    - Vector of @ref ControlBasis for evaluating the oscillators control pulse envelop (e.g. Bspline) at a given
- *      time t
+ * This class stores @ref ControlBasis objects for evaluating control pulse envelopes at runtime.
  */
 class Oscillator {
   protected:
@@ -49,8 +46,8 @@ class Oscillator {
     double dephase_time; ///< Characteristic time for T2 dephasing operations
 
     double total_time; ///< Final evolution time
-    ControlBasis* drive_basisfunctions_re; ///< alpha1*Spline
-    ControlBasis* drive_basisfunctions_im; ///< alpha2*Spline 
+    ControlBasis* drive_basisfunctions_re; ///< Real part of drive envelope basis (per carrier), alpha^1
+    ControlBasis* drive_basisfunctions_im; ///< Imaginary part of drive envelope basis (per carrier), alpha^2
     ControlBasis* flux_basisfunctions; ///< Flux control parameterization
     std::vector<double> carrier_freq; ///< Frequencies of the carrier waves for this oscillator
 
@@ -165,6 +162,11 @@ class Oscillator {
 
     /**
      * @brief Evaluates drive-only controls p(t), q(t).
+      *
+      * @param[in] t Time at which to evaluate
+      * @param[out] p_ptr Pointer to store p(t)
+      * @param[out] q_ptr Pointer to store q(t)
+      * @return int Error code
      */
     int evalDriveControl(const double t, double* p_ptr, double* q_ptr);
 
