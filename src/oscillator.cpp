@@ -19,7 +19,8 @@ Oscillator::Oscillator(){
   flux_basisfunctions = nullptr;
 }
 
-Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine, int param_offset, bool quietmode){
+Oscillator::Oscillator(const Config& config, size_t id, std::mt19937& rand_engine, int param_offset, bool quietmode){
+  
   MPI_Comm_rank(PETSC_COMM_WORLD, &mpirank_petsc);
   MPI_Comm_size(PETSC_COMM_WORLD, &mpisize_petsc);
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);

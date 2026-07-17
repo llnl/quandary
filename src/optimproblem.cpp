@@ -519,16 +519,9 @@ PetscErrorCode TaoMonitor(Tao tao,void*ptr){
     }
   }
 
-  /* Last iteration: Print solution, controls and trajectory data to files */
-  if (lastIter) {
-    // do one last forward evaluation while writing trajectory files
-    ctx->getTimeStepper()->setWriteTrajectoryDataFiles(true);
-    ctx->evalF(params); 
-
-    // Print stopping reason to screen
-    if (ctx->getMPIrank_world() == 0){
-      std::cout<< finalReason_str << std::endl;
-    }
+  /* Print last iteration stopping reason */
+  if (lastIter && ctx->getMPIrank_world() == 0) {
+    std::cout<< finalReason_str << std::endl;
   }
 
 
