@@ -234,7 +234,7 @@ void BSpline0::computeVariation_diff(double* grad, double var_bar){
     double fact = 2.0*var_bar;
 
     for (size_t f=0; f < params.size(); f++) {
-        int nsplines = static_cast<int>(params[f].size());
+        int nsplines = params[f].size();
         if (nsplines == 0) {
             continue;
         }
@@ -244,13 +244,13 @@ void BSpline0::computeVariation_diff(double* grad, double var_bar){
             }
             continue;
         }
-                int lc = 0;
-                grad[f*nsplines + lc] += fact * (params[f][lc] - params[f][lc + 1]);
+        int lc = 0;
+        grad[f*nsplines + lc] += fact * (params[f][lc] - params[f][lc + 1]);
         // interior lc
-                for (size_t l = 1; l < params[f].size() - 1; l++){
-                    grad[f*nsplines + static_cast<int>(l)] += fact * (2*params[f][l] - params[f][l - 1] - params[f][l + 1]);
+        for (size_t l = 1; l < params[f].size() - 1; l++){
+            grad[f*nsplines + l] += fact * (2*params[f][l] - params[f][l - 1] - params[f][l + 1]);
         }
-                lc = static_cast<int>(params[f].size()) - 1;
+        lc = params[f].size() - 1;
         grad[f*nsplines + lc] += fact * (params[f][lc] - params[f][lc - 1]);
         
         if (enforceZeroBoundary) {
