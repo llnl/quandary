@@ -65,7 +65,6 @@ initial_condition = {type = "basis"}
 # Available control types:
 # "spline" - 2nd order B-spline basis functions (recommended).
 # "spline0" - piecewise constant control parameterization (0th order B-splines)
-# "spline_amplitude" - amplitude-only parameterization
 # For each type, specify number of basis functions (num), and optionally start and stop times (tstart, tstop)
 # Option 1: Parameterization that applies to all subsystems
 parameterization = { type = "spline", num = 150}

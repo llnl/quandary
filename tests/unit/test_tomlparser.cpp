@@ -693,9 +693,9 @@ TEST_F(TomlParserTest, ControlInitializationSettings) {
         ]
 
         parameterization = [
-          { subsystem = 0, type = "spline_amplitude", num = 10, scaling = 1.0 },
-          { subsystem = 2, type = "spline_amplitude", num = 10, scaling = 1.0 },
-          { subsystem = 4, type = "spline_amplitude", num = 10, scaling = 1.0 }
+          { subsystem = 0, type = "spline", num = 10},
+          { subsystem = 2, type = "spline", num = 10},
+          { subsystem = 4, type = "spline", num = 10}
         ]
       )",
       logger);
