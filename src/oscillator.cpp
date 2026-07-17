@@ -13,7 +13,7 @@ Oscillator::Oscillator(){
   control_zero_boundary_condition = true;
 }
 
-Oscillator::Oscillator(const Config& config, size_t id, std::mt19937 rand_engine, int param_offset, bool quietmode){
+Oscillator::Oscillator(const Config& config, size_t id, std::mt19937& rand_engine, int param_offset, bool quietmode){
 
   myid = id;
 
