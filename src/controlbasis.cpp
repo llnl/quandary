@@ -10,6 +10,7 @@ ControlBasis::ControlBasis() {
     tstop = 0.0;
     controltype = ControlType::NONE;
     enforceZeroBoundary = false;
+    params.resize(0);
 }
 
 ControlBasis::ControlBasis(int nbasisfunctions, int ncarrier, double tstart_, double tstop_, bool control_zero_boundary_condition_) : ControlBasis() {
@@ -27,12 +28,18 @@ ControlBasis::ControlBasis(int nbasisfunctions, int ncarrier, double tstart_, do
 ControlBasis::~ControlBasis(){}
 
 void ControlBasis::setParams(const double* x, int carrier_freq_id) {
+    if (static_cast<size_t>(carrier_freq_id) >= params.size()) {
+        return;
+    }
     for (size_t i = 0; i < params[carrier_freq_id].size(); i++){
         params[carrier_freq_id][i] = x[i];
     }
 }
 
 void ControlBasis::getParams(double* x, int carrier_freq_id) {
+    if (static_cast<size_t>(carrier_freq_id) >= params.size()) {
+        return;
+    }
     for (size_t i = 0; i < params[carrier_freq_id].size(); i++){
         x[i] = params[carrier_freq_id][i];
     }

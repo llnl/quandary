@@ -9,13 +9,15 @@
 
 
 /**
- * @brief Abstract base class for control parameterizations.
+ * @brief Control parameterization interface and empty fallback implementation.
  *
  * The `ControlBasis` class defines the interface for various parameterizations of 
  * the control pulse envelopes, which are multiplied by carrier waves
  * in the Oscillator class. Derived classes implement specific control parameterizations, 
  * such as the most standard parameterization via 2nd order Bsplines. Specific control 
  * parameterizations are initialized in the constructor of the oscillator. 
+ * The base class itself is also usable as a concrete empty basis that stores no
+ * parameters and evaluates to zero.
  * 
  * Main functionality:
  *      - @ref evaluate        for computing the outer envelop shape of the pulses at given time t
@@ -137,7 +139,7 @@ class ControlBasis {
          * @param[in] carrier_freq_id ID of the carrier frequency, provided by the oscillator.
          * @return Evaluated basis expansion value at time t.
          */
-        virtual double evaluate(const double t, int carrier_freq_id) = 0;
+        virtual double evaluate(const double t, int carrier_freq_id) { (void)t; (void)carrier_freq_id; return 0.0; }
 
         /**
          * @brief Evaluates the derivative of the control basis at a given time.
@@ -147,7 +149,7 @@ class ControlBasis {
          * @param grad Pointer to the derivative coefficients.
          * @param valbar Multiplier for the derivative term.
          */
-        virtual void derivative(const double t, int carrier_freq_id, double* grad, const double valbar)= 0;
+        virtual void derivative(const double t, int carrier_freq_id, double* grad, const double valbar) { (void)t; (void)carrier_freq_id; (void)grad; (void)valbar; }
 };
 
 /**
