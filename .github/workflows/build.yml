@@ -34,8 +34,8 @@ jobs:
     - name: Set up Spack
       uses: spack/setup-spack@v3
       with:
-        spack_ref: v1.1.1
-        packages_ref: v2026.03.0
+        spack_ref: v1.2.1
+        packages_ref: v2026.06.0
 
     - name: Configure Spack
       run: |
@@ -46,7 +46,7 @@ jobs:
       run: |
         spack -e .spack_env rm quandary
         spack -e .spack_env add "quandary@develop +werror %${{ matrix.compiler }} ^openmpi"
-        spack -e .spack_env install -v --use-buildcache package:never
+        spack -e .spack_env install --show-log-on-error --use-buildcache package:never
 
     - name: Push packages and update index
       env:
@@ -54,5 +54,5 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         DOCKER_DEFAULT_PLATFORM: linux/amd64
       run: |
-        spack -e .spack_env buildcache push --base-image ubuntu:24.04 --update-index local-buildcache
+        spack -e .spack_env buildcache push --base-image ubuntu:24.04 --allow-missing --update-index local-buildcache
       if: ${{ !cancelled() && github.event.pull_request.head.repo.full_name == github.repository }}
