@@ -201,12 +201,12 @@
         "simulation_name": "single_qubit_flux",
         "files_to_compare": [
             "control0.dat",
-            "population0.iinit0000.dat",
-            "rho_Re.iinit0000.dat",
-            "rho_Im.iinit0000.dat"
+            "expected*.dat",
+            "population*.dat",
+            "grad.dat"
         ],
         "number_of_processes": [
-            1
+            1, 4
         ]
     }
 

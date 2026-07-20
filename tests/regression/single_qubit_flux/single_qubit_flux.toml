@@ -33,13 +33,13 @@ penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedco
 
 [output]
 directory = "./data_out"
-observables = ["population", "fullstate"]
+observables = ["expectedEnergy", "population"]
 timestep_stride = 1
 optimization_stride = 1
 
 [solver]
-runtype = "simulation"
-usematfree = true 
+runtype = "gradient"
+usematfree = false
 linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"
 rand_seed = 1234
