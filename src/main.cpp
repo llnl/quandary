@@ -277,7 +277,9 @@ int runQuandary(const Config& config, bool quietmode, int argc, char** argv, int
     output->writeControlParams(opt);
     output->writeControls(opt, mastereq, config.getTotalTime(), config.getDt(), timestepper->getMinTimestepSize());
 
-
+    // Do one last forward evaluation while writing trajectory files
+    optimctx->getTimeStepper()->setWriteTrajectoryDataFiles(true);
+    optimctx->evalF(opt); 
   }
 
   /* Only evaluate and write control pulses (no propagation) */
