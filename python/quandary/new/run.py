@@ -11,6 +11,7 @@ MPI Lifecycle Management:
 from __future__ import annotations
 import logging
 import os
+import shlex
 import subprocess
 import sys
 from typing import Optional
@@ -289,6 +290,10 @@ def evaluate_controls(
 
 def _is_interactive():
     """Detect if running in an interactive Python session (Jupyter, IPython, or plain REPL)."""
+    # python -i script.py sets this flag during script execution.
+    if sys.flags.interactive:
+        return True
+
     # Check for IPython/Jupyter
     try:
         from IPython import get_ipython
@@ -482,27 +487,65 @@ def _run_subprocess(
     with open(config_file, "w") as f:
         f.write(toml_content)
 
-    # Python code to run Quandary from the TOML file
-    python_code = f'from quandary.new import run_from_file; run_from_file("{config_file}", quiet={quiet})'
+    # Python code to run Quandary from the TOML file.
+    # Dynamic values are passed via argv to avoid quoting edge cases.
+    python_code = "import sys; from quandary.new import run_from_file; run_from_file(sys.argv[1], quiet=bool(int(sys.argv[2])))"
+    quiet_flag = "1" if quiet else "0"
 
-    # Build the command with optimized core count
-    cmd = [mpi_exec, nproc_flag, str(total_cores), python_exec, "-c", python_code]
+    # Build command: 
+    cmd = [mpi_exec, nproc_flag, str(total_cores), python_exec, "-c", python_code, config_file, quiet_flag]
+
+    # Default subprocess cwd to caller's cwd (working_dir=".").
+    subprocess_cwd = os.path.abspath(working_dir)
+
+    # Sanitize inherited MPI runtime environment before launching a new MPI job. This avoids pre-launch failures when parent Python already has MPI-related vars.
+    child_env = os.environ.copy()
+    mpi_env_prefixes = (
+        "OMPI_",
+        "PMI_",
+        "PMIX_",
+        "MPI_",
+        "MPICH_",
+        "HYDRA_",
+        "I_MPI_",
+        "SLURM_MPI_",
+    )
+    removed_mpi_env = sorted(
+        k for k in list(child_env.keys()) if k.startswith(mpi_env_prefixes)
+    )
+    for k in removed_mpi_env:
+        child_env.pop(k, None)
 
     # Run the subprocess
     logger.info(f"Spawning subprocess with {total_cores} processes using {mpi_exec}")
-    logger.debug(f"Subprocess command: {' '.join(cmd)}")
+    logger.debug(f"Subprocess command: {shlex.join(cmd)}")
+    logger.debug(f"Subprocess cwd: {subprocess_cwd}")
+    if removed_mpi_env:
+        logger.debug("Removed MPI env vars for child launch: %s", ", ".join(removed_mpi_env))
     result = subprocess.run(
         cmd,
-        cwd=working_dir,
+        cwd=subprocess_cwd,
+        env=child_env,
         stdout=subprocess.PIPE if quiet else None,
         stderr=subprocess.PIPE,
         text=True,
     )
 
     if result.returncode != 0:
-        if result.stderr:
-            raise RuntimeError(f"Quandary failed:\n{result.stderr.strip()}")
-        raise RuntimeError("Quandary failed (see output above)")
+        message_lines = [
+            f"Quandary failed with return code {result.returncode}.",
+            f"Command: {shlex.join(cmd)}",
+            f"CWD: {subprocess_cwd}",
+        ]
+        if removed_mpi_env:
+            message_lines.append(
+                "Removed MPI env vars for child launch:\n" + "\n".join(removed_mpi_env)
+            )
+        if result.stderr and result.stderr.strip():
+            message_lines.append(f"stderr:\n{result.stderr.strip()}")
+        if result.stdout and result.stdout.strip():
+            message_lines.append(f"stdout:\n{result.stdout.strip()}")
+        raise RuntimeError("\n\n".join(message_lines))
 
     # Load results with validated config
     results = get_results(validated_config.output_directory)
