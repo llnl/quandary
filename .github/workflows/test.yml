@@ -40,7 +40,8 @@ jobs:
       uses: spack/setup-spack@v3
       with:
         spack_ref: v1.2.1
-        packages_ref: v2026.06.0
+        packages_repository: tdrwenski/spack-packages
+        packages_ref: 847904d68c93d979b3ba81486298d571b70fad2c
 
     - name: Configure Spack
       run: |
@@ -57,12 +58,13 @@ jobs:
         spack external find cmake
         spack external find gmake
         spack external find python
+        spack external find git
 
     - name: Install
       # explicitly use openmpi, since mpich causes rpath problems in binary
       run: |
         spack -e .spack_env rm quandary
-        spack -e .spack_env add quandary@develop+test%gcc^openmpi@5:
+        spack -e .spack_env add quandary@develop+test+python%gcc^openmpi@5:
         spack -e .spack_env install --show-log-on-error --use-buildcache package:never
 
     - name: Run C++ unit tests
