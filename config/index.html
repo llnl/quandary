@@ -198,7 +198,6 @@ initial_condition = {type = &quot;basis&quot;}
 # Available control types:
 # &quot;spline&quot; - 2nd order B-spline basis functions (recommended).
 # &quot;spline0&quot; - piecewise constant control parameterization (0th order B-splines)
-# &quot;spline_amplitude&quot; - amplitude-only parameterization
 # For each type, specify number of basis functions (num), and optionally start and stop times (tstart, tstop)
 # Option 1: Parameterization that applies to all subsystems
 parameterization = { type = &quot;spline&quot;, num = 150}
@@ -243,6 +242,18 @@ amplitude_bound = 0.008
 
 ## Decide whether control pulses should start and end at zero.
 zero_boundary_condition = false
+
+## Optional flux control: adds f(t) * a^\dagger a per oscillator.
+# Flux parameterization is independent from drive parameterization and has its own time window. Example usage:
+# [control.flux]
+# enabled = true
+# parameterization = { type = &quot;spline&quot;, num = 150, tstart = 0.0, tstop = 50.0 }
+# initialization = [
+#   { subsystem = 0, type = &quot;constant&quot;, amplitude = 0.2 },
+#   { subsystem = 1, type = &quot;constant&quot;, amplitude = 0.1 }
+# ]
+# amplitude_bound = [1.0, 0.5]
+# zero_boundary_condition = false
 
 [optimization]
 # Optimization target options:

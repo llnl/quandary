@@ -106,6 +106,10 @@
               <ul class="nav flex-column">
               </ul>
             </li>
+            <li class="nav-item" data-bs-level="2"><a href="#flux-control-parameters" class="nav-link">Flux Control Parameters</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
             <li class="nav-item" data-bs-level="2"><a href="#optimization-parameters" class="nav-link">Optimization Parameters</a>
               <ul class="nav flex-column">
               </ul>
@@ -238,6 +242,43 @@
 <td><code>zero_boundary_condition</code></td>
 <td><code>control_enforce_BC</code></td>
 <td>Control boundary condition</td>
+</tr>
+</tbody>
+</table>
+<h2 id="flux-control-parameters">Flux Control Parameters</h2>
+<table>
+<thead>
+<tr>
+<th>TOML Setting</th>
+<th>Python Interface</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>control.flux.enabled</code></td>
+<td>N/A</td>
+<td>Enable the independent flux control channel</td>
+</tr>
+<tr>
+<td><code>control.flux.parameterization</code></td>
+<td>N/A</td>
+<td>Flux control parameterization</td>
+</tr>
+<tr>
+<td><code>control.flux.initialization</code></td>
+<td>N/A</td>
+<td>Flux control initialization</td>
+</tr>
+<tr>
+<td><code>control.flux.amplitude_bound</code></td>
+<td>N/A</td>
+<td>Flux control amplitude bounds</td>
+</tr>
+<tr>
+<td><code>control.flux.zero_boundary_condition</code></td>
+<td>N/A</td>
+<td>Flux control boundary condition</td>
 </tr>
 </tbody>
 </table>
