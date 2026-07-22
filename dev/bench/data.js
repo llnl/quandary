@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784318368984,
+  "lastUpdate": 1784747556716,
   "repoUrl": "https://github.com/llnl/quandary",
   "entries": {
     "Benchmark": [
@@ -3761,6 +3761,72 @@ window.BENCHMARK_DATA = {
           {
             "name": "test_eval[nlevels_2_2_gradient_lindblad_nproc_4] - Memory",
             "value": 176.69,
+            "unit": "MB"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Stefanie Guenther",
+            "username": "steffi7574",
+            "email": "guenther5@llnl.gov"
+          },
+          "committer": {
+            "name": "GitHub",
+            "username": "web-flow",
+            "email": "noreply@github.com"
+          },
+          "id": "eb7f3b483f9954e6a5f691a92d6ec6d8bc18e9a4",
+          "message": "Adding flux control. (#144)\n\n* Adding flux control, both on sparsematrix and matrix-free solver. Only available through the C++ interface, not through python. C++ configuration table: [control.flux]\n\n* Restructure storage of params in control basis functions: one vector for each carrier wave.\n\n* Removing deprecated Bspline2ndAmplitude control basis functions. \n\n* Initialize drive and flux parameters in oscillator constructor.\n\n* Fix boundary condition of control parameters.\n\n* Add gradient test for flux control.",
+          "timestamp": "2026-07-22T18:41:36Z",
+          "url": "https://github.com/llnl/quandary/commit/eb7f3b483f9954e6a5f691a92d6ec6d8bc18e9a4"
+        },
+        "date": 1784747553267,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Time",
+            "value": 0.665319811902009,
+            "range": "0.6546533288002234",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_simulation_nproc_2] - Memory",
+            "value": 85.3,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Time",
+            "value": 5.49254316999577,
+            "range": "0.6125561041154375",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_32_32_32_32_simulation_nproc_32] - Memory",
+            "value": 4302.23,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_gradient_schroed_nproc_8] - Time",
+            "value": 1.522395460633561,
+            "range": "0.5752825202927634",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_4_4_4_4_gradient_schroed_nproc_8] - Memory",
+            "value": 315.76,
+            "unit": "MB"
+          },
+          {
+            "name": "test_eval[nlevels_2_2_gradient_lindblad_nproc_4] - Time",
+            "value": 0.9380597125273198,
+            "range": "0.6361966529900198",
+            "unit": "seconds"
+          },
+          {
+            "name": "test_eval[nlevels_2_2_gradient_lindblad_nproc_4] - Memory",
+            "value": 176.07,
             "unit": "MB"
           }
         ]
