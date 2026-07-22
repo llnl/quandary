@@ -109,7 +109,7 @@ class MasterEq{
 
     std::vector<Mat> Ac_vec;  // Vector of constant mats for time-varying control term (real). One for each oscillators. 
     std::vector<Mat> Bc_vec;  // Vector of constant mats for time-varying control term (imag). One for each oscillators. 
-    std::vector<Mat> Bf_vec;  // Vector of constant mats for time-varying flux control term (imag). One for each oscillator.
+    std::vector<Mat> Bf_vec;  // Vector of constant mats for time-varying flux control term. One for each oscillator.
     Mat  Ad, Bd;  // Real and imaginary part of constant system matrix
     std::vector<Mat> Ad_vec;  // Vector of constant mats for Dipole-Dipole coupling term in drift Hamiltonian (real)
     std::vector<Mat> Bd_vec;  // Vector of constant mats for Dipole-Dipole coupling term in drift Hamiltonian (imag)
@@ -180,7 +180,7 @@ class MasterEq{
     void initStdControlMats(int iosc, int nk, int npostk);
 
     /**
-     * @brief Initializes decoherence contributions for the sparse solver.
+     * @brief Initializes decoherences matrices for the sparse solver.
      */
     void initStdDecoherenceMats();
 

@@ -83,11 +83,11 @@ class Oscillator {
      * @return size_t Number of control parameters
      */
     size_t getNParams() { return getNDriveParams() + getNFluxParams(); };
-    size_t getNFluxParams() { return flux_basisfunctions ? static_cast<size_t>(flux_basisfunctions->getNparams()) : 0; };
+    size_t getNFluxParams() { return static_cast<size_t>(flux_basisfunctions->getNparams()); };
     size_t getNDriveParams() {
       size_t nparams = 0;
-      if (drive_basisfunctions_re) nparams += static_cast<size_t>(drive_basisfunctions_re->getNparams());
-      if (drive_basisfunctions_im) nparams += static_cast<size_t>(drive_basisfunctions_im->getNparams());
+      nparams += static_cast<size_t>(drive_basisfunctions_re->getNparams());
+      nparams += static_cast<size_t>(drive_basisfunctions_im->getNparams());
       return nparams;
     };
 
