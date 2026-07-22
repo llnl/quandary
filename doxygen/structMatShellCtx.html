@@ -92,13 +92,15 @@ Collaboration diagram for MatShellCtx:</div>
 <div class="dyncontent">
 <div class="center"><img src="structMatShellCtx__coll__graph.png" border="0" usemap="#aMatShellCtx_coll__map" alt="Collaboration graph"/></div>
 <map name="aMatShellCtx_coll__map" id="aMatShellCtx_coll__map">
-<area shape="rect" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="11,93,112,119"/>
-<area shape="rect" href="classMasterEq.html" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="32,181,115,207"/>
-<area shape="poly" title=" " alt="" coords="24,128,10,142,8,149,10,156,22,169,38,179,35,184,19,173,6,159,3,149,5,139,20,124"/>
-<area shape="poly" title=" " alt="" coords="67,168,60,119,66,118,72,167"/>
-<area shape="rect" href="classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="69,5,153,31"/>
-<area shape="poly" title=" " alt="" coords="89,42,78,56,70,75,66,94,60,93,65,74,74,53,85,39"/>
-<area shape="poly" title=" " alt="" coords="136,40,143,53,154,67,166,82,168,94,166,110,142,159,129,173,112,184,109,179,125,169,138,156,161,108,163,94,161,84,150,71,139,56,131,42"/>
+<area shape="rect" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="9,240,111,265"/>
+<area shape="rect" href="classMasterEq.html" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="31,328,113,353"/>
+<area shape="poly" title=" " alt="" coords="24,274,10,288,8,295,10,303,22,316,38,326,35,330,19,320,6,305,3,295,5,286,20,270"/>
+<area shape="poly" title=" " alt="" coords="66,315,59,266,64,265,71,314"/>
+<area shape="rect" href="classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="67,152,151,177"/>
+<area shape="poly" title=" " alt="" coords="88,189,77,203,69,222,64,241,59,239,64,220,72,200,83,185"/>
+<area shape="poly" title=" " alt="" coords="134,186,142,200,153,229,157,254,155,278,142,305,129,320,112,330,109,326,125,316,138,303,150,277,152,254,147,231,137,202,130,189"/>
+<area shape="rect" href="classControlBasis.html" title="Control parameterization interface and empty fallback implementation." alt="" coords="57,5,161,31"/>
+<area shape="poly" title=" " alt="" coords="112,45,112,152,107,152,107,45"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
@@ -138,18 +140,24 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a27ee90289fa1207870f90c3caca92692" id="r_a27ee90289fa1207870f90c3caca92692"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMatShellCtx.html#a27ee90289fa1207870f90c3caca92692">addT2</a></td></tr>
 <tr class="memdesc:a27ee90289fa1207870f90c3caca92692"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flags for T1 decay and T2 dephasing.  <br /></td></tr>
 <tr class="separator:a27ee90289fa1207870f90c3caca92692"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9ba1788479840f371c24f631cc988f87" id="r_a9ba1788479840f371c24f631cc988f87"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMatShellCtx.html#a9ba1788479840f371c24f631cc988f87">control_Re</a></td></tr>
-<tr class="memdesc:a9ba1788479840f371c24f631cc988f87"><td class="mdescLeft">&#160;</td><td class="mdescRight">Real parts of control pulse \(p(t)\).  <br /></td></tr>
-<tr class="separator:a9ba1788479840f371c24f631cc988f87"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a905421e3d386aeb7dbf2d33f29b4faca" id="r_a905421e3d386aeb7dbf2d33f29b4faca"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMatShellCtx.html#a905421e3d386aeb7dbf2d33f29b4faca">control_Im</a></td></tr>
-<tr class="memdesc:a905421e3d386aeb7dbf2d33f29b4faca"><td class="mdescLeft">&#160;</td><td class="mdescRight">Imaginary parts of control pulse \(q(t)\).  <br /></td></tr>
-<tr class="separator:a905421e3d386aeb7dbf2d33f29b4faca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa3accf09d1987def5ca7b80ac7f3aa6b" id="r_aa3accf09d1987def5ca7b80ac7f3aa6b"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMatShellCtx.html#aa3accf09d1987def5ca7b80ac7f3aa6b">control_p</a></td></tr>
+<tr class="memdesc:aa3accf09d1987def5ca7b80ac7f3aa6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Real drive-control component \(p(t)\).  <br /></td></tr>
+<tr class="separator:aa3accf09d1987def5ca7b80ac7f3aa6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a20ed53917f3915033d31a01b35a1c837" id="r_a20ed53917f3915033d31a01b35a1c837"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMatShellCtx.html#a20ed53917f3915033d31a01b35a1c837">control_q</a></td></tr>
+<tr class="memdesc:a20ed53917f3915033d31a01b35a1c837"><td class="mdescLeft">&#160;</td><td class="mdescRight">Imaginary drive-control component \(q(t)\).  <br /></td></tr>
+<tr class="separator:a20ed53917f3915033d31a01b35a1c837"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a31dc077463b25c0a805ee58b84284e38" id="r_a31dc077463b25c0a805ee58b84284e38"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMatShellCtx.html#a31dc077463b25c0a805ee58b84284e38">control_flux</a></td></tr>
+<tr class="memdesc:a31dc077463b25c0a805ee58b84284e38"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flux control \(f(t)\) for number operator term.  <br /></td></tr>
+<tr class="separator:a31dc077463b25c0a805ee58b84284e38"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab5de01663fc3402b60fde1868073b33d" id="r_ab5de01663fc3402b60fde1868073b33d"><td class="memItemLeft" align="right" valign="top">std::vector&lt; Mat &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMatShellCtx.html#ab5de01663fc3402b60fde1868073b33d">Ac_vec</a></td></tr>
 <tr class="memdesc:ab5de01663fc3402b60fde1868073b33d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Vector of real parts of control matrices per oscillator.  <br /></td></tr>
 <tr class="separator:ab5de01663fc3402b60fde1868073b33d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af642a8e235a41ff9e672d784620a05d2" id="r_af642a8e235a41ff9e672d784620a05d2"><td class="memItemLeft" align="right" valign="top">std::vector&lt; Mat &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMatShellCtx.html#af642a8e235a41ff9e672d784620a05d2">Bc_vec</a></td></tr>
 <tr class="memdesc:af642a8e235a41ff9e672d784620a05d2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Vector of imaginary parts of control matrices per oscillator.  <br /></td></tr>
 <tr class="separator:af642a8e235a41ff9e672d784620a05d2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aee86910d6130cddf4750180a958198f9" id="r_aee86910d6130cddf4750180a958198f9"><td class="memItemLeft" align="right" valign="top">std::vector&lt; Mat &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMatShellCtx.html#aee86910d6130cddf4750180a958198f9">Bf_vec</a></td></tr>
+<tr class="memdesc:aee86910d6130cddf4750180a958198f9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Vector of imaginary parts of flux control matrices per oscillator (number operator channel)  <br /></td></tr>
+<tr class="separator:aee86910d6130cddf4750180a958198f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a877b20ea0213d60200aa2a6c829851f1" id="r_a877b20ea0213d60200aa2a6c829851f1"><td class="memItemLeft" align="right" valign="top">Mat *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structMatShellCtx.html#a877b20ea0213d60200aa2a6c829851f1">Ad</a></td></tr>
 <tr class="memdesc:a877b20ea0213d60200aa2a6c829851f1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Real parts of time-independent system matrix.  <br /></td></tr>
 <tr class="separator:a877b20ea0213d60200aa2a6c829851f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -363,35 +371,67 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a905421e3d386aeb7dbf2d33f29b4faca" name="a905421e3d386aeb7dbf2d33f29b4faca"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a905421e3d386aeb7dbf2d33f29b4faca">&#9670;&#160;</a></span>control_Im</h2>
+<a id="aee86910d6130cddf4750180a958198f9" name="aee86910d6130cddf4750180a958198f9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aee86910d6130cddf4750180a958198f9">&#9670;&#160;</a></span>Bf_vec</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::vector&lt;double&gt; MatShellCtx::control_Im</td>
+          <td class="memname">std::vector&lt;Mat&gt; MatShellCtx::Bf_vec</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Imaginary parts of control pulse \(q(t)\). </p>
+<p>Vector of imaginary parts of flux control matrices per oscillator (number operator channel) </p>
 
 </div>
 </div>
-<a id="a9ba1788479840f371c24f631cc988f87" name="a9ba1788479840f371c24f631cc988f87"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9ba1788479840f371c24f631cc988f87">&#9670;&#160;</a></span>control_Re</h2>
+<a id="a31dc077463b25c0a805ee58b84284e38" name="a31dc077463b25c0a805ee58b84284e38"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a31dc077463b25c0a805ee58b84284e38">&#9670;&#160;</a></span>control_flux</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">std::vector&lt;double&gt; MatShellCtx::control_Re</td>
+          <td class="memname">std::vector&lt;double&gt; MatShellCtx::control_flux</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Real parts of control pulse \(p(t)\). </p>
+<p>Flux control \(f(t)\) for number operator term. </p>
+
+</div>
+</div>
+<a id="aa3accf09d1987def5ca7b80ac7f3aa6b" name="aa3accf09d1987def5ca7b80ac7f3aa6b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa3accf09d1987def5ca7b80ac7f3aa6b">&#9670;&#160;</a></span>control_p</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;double&gt; MatShellCtx::control_p</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Real drive-control component \(p(t)\). </p>
+
+</div>
+</div>
+<a id="a20ed53917f3915033d31a01b35a1c837" name="a20ed53917f3915033d31a01b35a1c837"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a20ed53917f3915033d31a01b35a1c837">&#9670;&#160;</a></span>control_q</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;double&gt; MatShellCtx::control_q</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Imaginary drive-control component \(q(t)\). </p>
 
 </div>
 </div>

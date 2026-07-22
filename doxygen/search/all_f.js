@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['params_0',['params',['../classOscillator.html#aa0f4328787ff7d8bdc06dac4fbd9abc9',1,'Oscillator']]],
+  ['params_0',['params',['../classControlBasis.html#a5fea55dc24dce4fbdb87db0acaa78388',1,'ControlBasis']]],
   ['parsearguments_1',['parsearguments',['../util_8hpp.html#aaf622fe2fe275ed0a19accf9d61d1f62',1,'parseArguments(int argc, char **argv):&#160;util.cpp'],['../util_8cpp.html#aaf622fe2fe275ed0a19accf9d61d1f62',1,'parseArguments(int argc, char **argv):&#160;util.cpp']]],
   ['parsedargs_2',['ParsedArgs',['../structParsedArgs.html',1,'']]],
   ['parseenum_3',['parseenum',['../util_8hpp.html#af70fa2be3c43460cb50791ef5de35f07',1,'parseEnum(const std::optional&lt; std::string &gt; &amp;opt_str, const std::map&lt; std::string, T &gt; &amp;enum_map, const T &amp;default_value):&#160;util.hpp'],['../util_8hpp.html#a58fd694e0b817f34f3656cfca4eb3034',1,'parseEnum(const std::string &amp;str, const std::map&lt; std::string, T &gt; &amp;enum_map):&#160;util.hpp']]],
@@ -9,17 +9,16 @@ var searchData=
   ['petsc_5fargv_6',['petsc_argv',['../structParsedArgs.html#a9b1d81cf01cf3307949e71b5c47cc912',1,'ParsedArgs']]],
   ['petsc_5ftokens_7',['petsc_tokens',['../structParsedArgs.html#a74ccd0034e2da786655099f8f9a81a4c',1,'ParsedArgs']]],
   ['petscts_8',['petscts',['../classPetscTS.html',1,'PetscTS'],['../defs_8hpp.html#ab8793c9117a2093d80e47ae2c77b94cca617b0f30189fe020f2c5c4a5b33b46af',1,'PETSCTS:&#160;defs.hpp'],['../classPetscTS.html#a13e711f4cac6d483d66a78e98dc4abd1',1,'PetscTS::PetscTS()']]],
-  ['phase_9',['phase',['../structControlInitializationSettings.html#a1c9619dd01bc6ffdc56f1fdf283cc904',1,'ControlInitializationSettings']]],
-  ['population_10',['population',['../defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3a29be0fe08815f7d081b57f4781e3848e',1,'POPULATION:&#160;defs.hpp'],['../classOscillator.html#a8b2aad8df5555fff65a458ce745f9004',1,'Oscillator::population()'],['../classMasterEq.html#a9308372d3f1aa99517dd313d5d2a4cd9',1,'MasterEq::population()']]],
-  ['population_5fcomposite_11',['POPULATION_COMPOSITE',['../defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3a8440acc539289f75a22de69670ae4d23',1,'defs.hpp']]],
-  ['populationfile_12',['populationfile',['../classOutput.html#af5cecbdd746abaf4288b4b05ea51274d',1,'Output']]],
-  ['populationfile_5fcomp_13',['populationfile_comp',['../classOutput.html#a61d5d34b19b88a30c1a0d9dcc19cb2a8',1,'Output']]],
-  ['positive_14',['positive',['../classvalidators_1_1Validator.html#a9743616b4b47ecbe7a262e79883b8835',1,'validators::Validator::positive()'],['../classvalidators_1_1VectorValidator.html#a2324886ad5e3a0479569f16e33fa0a89',1,'validators::VectorValidator::positive()']]],
-  ['preconditioner_15',['preconditioner',['../classImplMidpoint.html#a42b9d47152740692f88b4e222f1fb8a3',1,'ImplMidpoint']]],
-  ['prepareinitialandtargetstate_16',['prepareInitialAndTargetState',['../classOptimTarget.html#ae75be3d3da7b4845cae7f5158d8e644b',1,'OptimTarget']]],
-  ['printconfig_17',['printConfig',['../classConfig.html#aa3b487804df5f269c9c86f5556ec2bb2',1,'Config']]],
-  ['printhelp_18',['printhelp',['../util_8cpp.html#a0d20b69b0ad703df78459e1033d5c1d4',1,'printHelp():&#160;util.cpp'],['../util_8hpp.html#a0d20b69b0ad703df78459e1033d5c1d4',1,'printHelp():&#160;util.cpp']]],
-  ['product_5fstate_19',['PRODUCT_STATE',['../defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35ac4e5ce66437febcb2c9b1d33328dfa3e',1,'defs.hpp']]],
-  ['purestateid_20',['purestateID',['../classOptimTarget.html#a633585f6dccf774666142b3434063dee',1,'OptimTarget']]],
-  ['purity_5frho0_21',['purity_rho0',['../classOptimTarget.html#a821937fbbb90e0149ef0604e0296ded7',1,'OptimTarget']]]
+  ['population_9',['population',['../defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3a29be0fe08815f7d081b57f4781e3848e',1,'POPULATION:&#160;defs.hpp'],['../classOscillator.html#a8b2aad8df5555fff65a458ce745f9004',1,'Oscillator::population()'],['../classMasterEq.html#a9308372d3f1aa99517dd313d5d2a4cd9',1,'MasterEq::population()']]],
+  ['population_5fcomposite_10',['POPULATION_COMPOSITE',['../defs_8hpp.html#a4e0517338e6c4a31a2addafc06d4f3a3a8440acc539289f75a22de69670ae4d23',1,'defs.hpp']]],
+  ['populationfile_11',['populationfile',['../classOutput.html#af5cecbdd746abaf4288b4b05ea51274d',1,'Output']]],
+  ['populationfile_5fcomp_12',['populationfile_comp',['../classOutput.html#a61d5d34b19b88a30c1a0d9dcc19cb2a8',1,'Output']]],
+  ['positive_13',['positive',['../classvalidators_1_1VectorValidator.html#a2324886ad5e3a0479569f16e33fa0a89',1,'validators::VectorValidator::positive()'],['../classvalidators_1_1Validator.html#a9743616b4b47ecbe7a262e79883b8835',1,'validators::Validator::positive()']]],
+  ['preconditioner_14',['preconditioner',['../classImplMidpoint.html#a42b9d47152740692f88b4e222f1fb8a3',1,'ImplMidpoint']]],
+  ['prepareinitialandtargetstate_15',['prepareInitialAndTargetState',['../classOptimTarget.html#ae75be3d3da7b4845cae7f5158d8e644b',1,'OptimTarget']]],
+  ['printconfig_16',['printConfig',['../classConfig.html#aa3b487804df5f269c9c86f5556ec2bb2',1,'Config']]],
+  ['printhelp_17',['printhelp',['../util_8cpp.html#a0d20b69b0ad703df78459e1033d5c1d4',1,'printHelp():&#160;util.cpp'],['../util_8hpp.html#a0d20b69b0ad703df78459e1033d5c1d4',1,'printHelp():&#160;util.cpp']]],
+  ['product_5fstate_18',['PRODUCT_STATE',['../defs_8hpp.html#a83753afdf4b4b0d70f2a478cfba82d35ac4e5ce66437febcb2c9b1d33328dfa3e',1,'defs.hpp']]],
+  ['purestateid_19',['purestateID',['../classOptimTarget.html#a633585f6dccf774666142b3434063dee',1,'OptimTarget']]],
+  ['purity_5frho0_20',['purity_rho0',['../classOptimTarget.html#a821937fbbb90e0149ef0604e0296ded7',1,'OptimTarget']]]
 ];

@@ -1,9 +1,7 @@
 <map id="ControlBasis" name="ControlBasis">
-<area shape="rect" id="Node000001" title="Abstract base class for control parameterizations." alt="" coords="103,5,207,31"/>
+<area shape="rect" id="Node000001" title="Control parameterization interface and empty fallback implementation." alt="" coords="47,5,151,31"/>
 <area shape="rect" id="Node000002" href="$classBSpline0.html" title="Discretization of the Controls using piece&#45;wise constant (0&#45;th order) Bsplines." alt="" coords="5,79,84,104"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="127,40,64,81,61,76,125,36"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="84,43,56,80,51,77,80,40"/>
 <area shape="rect" id="Node000003" href="$classBSpline2nd.html" title="Control parameterization using quadratic (2nd order) Bspline basis functions." alt="" coords="108,79,203,104"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="158,44,158,79,153,79,153,44"/>
-<area shape="rect" id="Node000004" href="$classBSpline2ndAmplitude.html" title="Control parameterization where only the pulse amplitude is parameterized by Bsplines,..." alt="" coords="227,79,390,104"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="193,34,285,76,282,81,191,39"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="119,40,148,77,144,80,115,43"/>
 </map>

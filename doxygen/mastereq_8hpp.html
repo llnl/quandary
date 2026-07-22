@@ -316,9 +316,9 @@ Functions</h2></td></tr>
 <tr class="memitem:aeaaf83cf2c38deabfb4f076b5e013b4d" id="r_aeaaf83cf2c38deabfb4f076b5e013b4d"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="mastereq_8hpp.html#aeaaf83cf2c38deabfb4f076b5e013b4d">applyRHS_sparsemat_transpose</a> (Mat RHS, Vec x, Vec y)</td></tr>
 <tr class="memdesc:aeaaf83cf2c38deabfb4f076b5e013b4d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Transpose sparse matrix MatMult.  <br /></td></tr>
 <tr class="separator:aeaaf83cf2c38deabfb4f076b5e013b4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3540dc45b5f689860c2ad0d44c90e2f3" id="r_a3540dc45b5f689860c2ad0d44c90e2f3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="mastereq_8hpp.html#a3540dc45b5f689860c2ad0d44c90e2f3">compute_dRHS_dParams_sparsemat</a> (const double t, const Vec x, const Vec x_bar, const double alpha, Vec grad, std::vector&lt; size_t &gt; &amp;nlevels, IS isu, IS isv, std::vector&lt; Mat &gt; &amp;Ac_vec, std::vector&lt; Mat &gt; &amp;Bc_vec, Vec aux, <a class="el" href="classOscillator.html">Oscillator</a> **oscil_vec)</td></tr>
-<tr class="memdesc:a3540dc45b5f689860c2ad0d44c90e2f3"><td class="mdescLeft">&#160;</td><td class="mdescRight">: Sparse-matrix version to compute gradient of RHS with respect to parameters  <br /></td></tr>
-<tr class="separator:a3540dc45b5f689860c2ad0d44c90e2f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4706ba305077025028993dfe88584f72" id="r_a4706ba305077025028993dfe88584f72"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="mastereq_8hpp.html#a4706ba305077025028993dfe88584f72">compute_dRHS_dParams_sparsemat</a> (const double t, const Vec x, const Vec x_bar, const double alpha, Vec grad, std::vector&lt; size_t &gt; &amp;nlevels, IS isu, IS isv, std::vector&lt; Mat &gt; &amp;Ac_vec, std::vector&lt; Mat &gt; &amp;Bc_vec, std::vector&lt; Mat &gt; &amp;Bf_vec, Vec aux, <a class="el" href="classOscillator.html">Oscillator</a> **oscil_vec)</td></tr>
+<tr class="memdesc:a4706ba305077025028993dfe88584f72"><td class="mdescLeft">&#160;</td><td class="mdescRight">: Sparse-matrix version to compute gradient of RHS with respect to parameters  <br /></td></tr>
+<tr class="separator:a4706ba305077025028993dfe88584f72"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4a082d2e6597fb21d99f771a10983dac" id="r_a4a082d2e6597fb21d99f771a10983dac"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="mastereq_8hpp.html#a4a082d2e6597fb21d99f771a10983dac">compute_dRHS_dParams_matfree</a> (const PetscInt dim, const double t, const Vec x, const Vec x_bar, const double alpha, Vec grad, std::vector&lt; size_t &gt; &amp;nlevels, <a class="el" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cb">DecoherenceType</a> decoherence_type, <a class="el" href="classOscillator.html">Oscillator</a> **oscil_vec)</td></tr>
 <tr class="memdesc:a4a082d2e6597fb21d99f771a10983dac"><td class="mdescLeft">&#160;</td><td class="mdescRight">: Matrix free version to compute gradient of RHS with respect to parameters  <br /></td></tr>
 <tr class="separator:a4a082d2e6597fb21d99f771a10983dac"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -391,9 +391,9 @@ Functions</h2></td></tr>
 <tr class="separator:ab9db8a05c90cfaa114286dafd95ee61b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a418d121bd4b2619395278c41978fa9eb" id="r_a418d121bd4b2619395278c41978fa9eb"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="mastereq_8hpp.html#a418d121bd4b2619395278c41978fa9eb">TensorGetIndex</a> (const int nlevels0, const int nlevels1, const int nlevels2, const int nlevels3, const int nlevels4, const int i0, const int i1, const int i2, const int i3, const int i4, const int i0p, const int i1p, const int i2p, const int i3p, const int i4p)</td></tr>
 <tr class="separator:a418d121bd4b2619395278c41978fa9eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8f077a3b08eaffd2721784b5e8aded1c" id="r_a8f077a3b08eaffd2721784b5e8aded1c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="mastereq_8hpp.html#a8f077a3b08eaffd2721784b5e8aded1c">dRHSdp_getcoeffs</a> (const PetscInt dim, const int it, const int n, const int np, const int i, const int ip, const int stridei, const int strideip, const double *xptr, double *res_p_re, double *res_p_im, double *res_q_re, double *res_q_im)</td></tr>
-<tr class="memdesc:a8f077a3b08eaffd2721784b5e8aded1c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Inline for Matrix-free RHS for gradient updates.  <br /></td></tr>
-<tr class="separator:a8f077a3b08eaffd2721784b5e8aded1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ade898e0cd717f2162a96a85ff348b88d" id="r_ade898e0cd717f2162a96a85ff348b88d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="mastereq_8hpp.html#ade898e0cd717f2162a96a85ff348b88d">dRHSdp_getcoeffs</a> (const PetscInt dim, const int it, const int n, const int np, const int i, const int ip, const int stridei, const int strideip, const double *xptr, double *res_p_re, double *res_p_im, double *res_q_re, double *res_q_im, double *res_f_re, double *res_f_im)</td></tr>
+<tr class="memdesc:ade898e0cd717f2162a96a85ff348b88d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Inline for Matrix-free RHS for gradient updates.  <br /></td></tr>
+<tr class="separator:ade898e0cd717f2162a96a85ff348b88d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a91a476485ea7a73ce5ad12e4888af677" id="r_a91a476485ea7a73ce5ad12e4888af677"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="mastereq_8hpp.html#a91a476485ea7a73ce5ad12e4888af677">Jkl_coupling</a> (const PetscInt dim, const int it, const int ni, const int nj, const int nip, const int njp, const int i, const int ip, const int j, const int jp, const int stridei, const int strideip, const int stridej, const int stridejp, const double *xptr, const double Jij, const double cosij, const double sinij, double *yre, double *yim)</td></tr>
 <tr class="memdesc:a91a476485ea7a73ce5ad12e4888af677"><td class="mdescLeft">&#160;</td><td class="mdescRight">Matrix-free solver inline for dipole-dipole coupling between oscillators.  <br /></td></tr>
 <tr class="separator:a91a476485ea7a73ce5ad12e4888af677"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -409,9 +409,13 @@ Functions</h2></td></tr>
 <tr class="memitem:ab1f1874266f7eb3e45894ba2dd4a8a79" id="r_ab1f1874266f7eb3e45894ba2dd4a8a79"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="mastereq_8hpp.html#ab1f1874266f7eb3e45894ba2dd4a8a79">control</a> (const PetscInt dim, const int it, const int n, const int i, const int np, const int ip, const int stridei, const int strideip, const double *xptr, const double pt, const double qt, double *yre, double *yim)</td></tr>
 <tr class="memdesc:ab1f1874266f7eb3e45894ba2dd4a8a79"><td class="mdescLeft">&#160;</td><td class="mdescRight">Matrix-free solver inline for control terms.  <br /></td></tr>
 <tr class="separator:ab1f1874266f7eb3e45894ba2dd4a8a79"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a19b4e2b9242803811a664feb633da8fb" id="r_a19b4e2b9242803811a664feb633da8fb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="mastereq_8hpp.html#a19b4e2b9242803811a664feb633da8fb">control_flux</a> (const PetscInt dim, const int it, const int i, const int ip, const double *xptr, const double ft, double *yre, double *yim)</td></tr>
+<tr class="separator:a19b4e2b9242803811a664feb633da8fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad7a20cf2e9a78242ffcd72c87032b29b" id="r_ad7a20cf2e9a78242ffcd72c87032b29b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="mastereq_8hpp.html#ad7a20cf2e9a78242ffcd72c87032b29b">control_T</a> (const PetscInt dim, const int it, const int n, const int i, const int np, const int ip, const int stridei, const int strideip, const double *xptr, const double pt, const double qt, double *yre, double *yim)</td></tr>
 <tr class="memdesc:ad7a20cf2e9a78242ffcd72c87032b29b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Matrix-free Transpose of control terms for adjoint computations.  <br /></td></tr>
 <tr class="separator:ad7a20cf2e9a78242ffcd72c87032b29b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a24b0c238d28b0f456c8943f208361cd8" id="r_a24b0c238d28b0f456c8943f208361cd8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="mastereq_8hpp.html#a24b0c238d28b0f456c8943f208361cd8">control_flux_T</a> (const PetscInt dim, const int it, const int i, const int ip, const double *xptr, const double ft, double *yre, double *yim)</td></tr>
+<tr class="separator:a24b0c238d28b0f456c8943f208361cd8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="a4bbcb17d81ad9a2ed8c929a3d474fd76" name="a4bbcb17d81ad9a2ed8c929a3d474fd76"></a>
@@ -916,7 +920,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>: Matrix free version to compute gradient of RHS with respect to parameters </p>
-<p>Updates grad += alpha * x^T * (d RHS / d params)^T * x_bar in a matrix-free manner. See <a class="el" href="mastereq_8cpp.html#a4c243742ac5547b195eb31e7614a5bb7">compute_dRHS_dParams_sparsemat</a> for the sparse-matrix version of this routine.</p>
+<p>Updates grad += alpha * x^T * (d RHS / d params)^T * x_bar in a matrix-free manner. See <a class="el" href="mastereq_8cpp.html#ae9c04ef82d327b4d8dc0a9937046f693">compute_dRHS_dParams_sparsemat</a> for the sparse-matrix version of this routine.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">dim</td><td>Dimension of full vectorized system: N^2 if Lindblad, N if Schroedinger </td></tr>
@@ -934,8 +938,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a3540dc45b5f689860c2ad0d44c90e2f3" name="a3540dc45b5f689860c2ad0d44c90e2f3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3540dc45b5f689860c2ad0d44c90e2f3">&#9670;&#160;</a></span>compute_dRHS_dParams_sparsemat()</h2>
+<a id="a4706ba305077025028993dfe88584f72" name="a4706ba305077025028993dfe88584f72"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4706ba305077025028993dfe88584f72">&#9670;&#160;</a></span>compute_dRHS_dParams_sparsemat()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1003,6 +1007,12 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">std::vector&lt; Mat &gt; &amp;&#160;</td>
+          <td class="paramname"><em>Bf_vec</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">Vec&#160;</td>
           <td class="paramname"><em>aux</em>, </td>
         </tr>
@@ -1032,8 +1042,9 @@ Functions</h2></td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">nlevels</td><td>Number of energy levels per subsystem </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">isu</td><td>Index stride to access real parts of a state vector </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">isv</td><td>Index stride to access imaginar parts of a state vector </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ac_vec</td><td>Vector of real parts of control matrices per oscillator </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">Bc_vec</td><td>Vector of imaginary parts of control matrices per oscillator </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ac_vec</td><td>Vector of real parts of control drive matrices Re(-i(a-a')) per oscillator </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Bc_vec</td><td>Vector of imaginary parts of control drive matrices Im(-i(a+a')) per oscillator </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Bf_vec</td><td>Vector of imaginary parts of flux control matrices Im(-ia'a) per oscillator (number operator channel) </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">aux</td><td>Auxiliary vector for computations </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">oscil_vec</td><td>Vector of quantum oscilators </td></tr>
   </table>
@@ -1165,6 +1176,150 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a19b4e2b9242803811a664feb633da8fb" name="a19b4e2b9242803811a664feb633da8fb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a19b4e2b9242803811a664feb633da8fb">&#9670;&#160;</a></span>control_flux()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void control_flux </td>
+          <td>(</td>
+          <td class="paramtype">const PetscInt&#160;</td>
+          <td class="paramname"><em>dim</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const int&#160;</td>
+          <td class="paramname"><em>it</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const int&#160;</td>
+          <td class="paramname"><em>i</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const int&#160;</td>
+          <td class="paramname"><em>ip</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const double *&#160;</td>
+          <td class="paramname"><em>xptr</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const double&#160;</td>
+          <td class="paramname"><em>ft</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double *&#160;</td>
+          <td class="paramname"><em>yre</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double *&#160;</td>
+          <td class="paramname"><em>yim</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a24b0c238d28b0f456c8943f208361cd8" name="a24b0c238d28b0f456c8943f208361cd8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a24b0c238d28b0f456c8943f208361cd8">&#9670;&#160;</a></span>control_flux_T()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void control_flux_T </td>
+          <td>(</td>
+          <td class="paramtype">const PetscInt&#160;</td>
+          <td class="paramname"><em>dim</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const int&#160;</td>
+          <td class="paramname"><em>it</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const int&#160;</td>
+          <td class="paramname"><em>i</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const int&#160;</td>
+          <td class="paramname"><em>ip</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const double *&#160;</td>
+          <td class="paramname"><em>xptr</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const double&#160;</td>
+          <td class="paramname"><em>ft</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double *&#160;</td>
+          <td class="paramname"><em>yre</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double *&#160;</td>
+          <td class="paramname"><em>yim</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="ad7a20cf2e9a78242ffcd72c87032b29b" name="ad7a20cf2e9a78242ffcd72c87032b29b"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ad7a20cf2e9a78242ffcd72c87032b29b">&#9670;&#160;</a></span>control_T()</h2>
 
@@ -1287,8 +1442,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a8f077a3b08eaffd2721784b5e8aded1c" name="a8f077a3b08eaffd2721784b5e8aded1c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8f077a3b08eaffd2721784b5e8aded1c">&#9670;&#160;</a></span>dRHSdp_getcoeffs()</h2>
+<a id="ade898e0cd717f2162a96a85ff348b88d" name="ade898e0cd717f2162a96a85ff348b88d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ade898e0cd717f2162a96a85ff348b88d">&#9670;&#160;</a></span>dRHSdp_getcoeffs()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1372,7 +1527,19 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">double *&#160;</td>
-          <td class="paramname"><em>res_q_im</em>&#160;</td>
+          <td class="paramname"><em>res_q_im</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double *&#160;</td>
+          <td class="paramname"><em>res_f_re</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double *&#160;</td>
+          <td class="paramname"><em>res_f_im</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -1404,6 +1571,8 @@ Functions</h2></td></tr>
     <tr><td class="paramname">res_p_im</td><td>Pointer to store imaginary part of p result </td></tr>
     <tr><td class="paramname">res_q_re</td><td>Pointer to store real part of q result </td></tr>
     <tr><td class="paramname">res_q_im</td><td>Pointer to store imaginary part of q result </td></tr>
+    <tr><td class="paramname">res_f_re</td><td>Pointer to store real part of flux result </td></tr>
+    <tr><td class="paramname">res_f_im</td><td>Pointer to store imaginary part of flux result </td></tr>
   </table>
   </dd>
 </dl>

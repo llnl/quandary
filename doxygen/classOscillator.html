@@ -89,6 +89,16 @@ $(function() {
  <a href="classOscillator.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="oscillator_8hpp_source.html">oscillator.hpp</a>&gt;</code></p>
+<div class="dynheader">
+Collaboration diagram for Oscillator:</div>
+<div class="dyncontent">
+<div class="center"><img src="classOscillator__coll__graph.png" border="0" usemap="#aOscillator_coll__map" alt="Collaboration graph"/></div>
+<map name="aOscillator_coll__map" id="aOscillator_coll__map">
+<area shape="rect" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="15,152,99,177"/>
+<area shape="rect" href="classControlBasis.html" title="Control parameterization interface and empty fallback implementation." alt="" coords="5,5,109,31"/>
+<area shape="poly" title=" " alt="" coords="60,45,60,152,55,152,55,45"/>
+</map>
+<center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
@@ -102,6 +112,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aee2b84d3889ff76408152dae66d8ecd5" id="r_aee2b84d3889ff76408152dae66d8ecd5"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#aee2b84d3889ff76408152dae66d8ecd5">getNParams</a> ()</td></tr>
 <tr class="memdesc:aee2b84d3889ff76408152dae66d8ecd5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the number of control parameters.  <br /></td></tr>
 <tr class="separator:aee2b84d3889ff76408152dae66d8ecd5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a019a57f61850b4418f9f9c04273980e3" id="r_a019a57f61850b4418f9f9c04273980e3"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a019a57f61850b4418f9f9c04273980e3">getNFluxParams</a> ()</td></tr>
+<tr class="separator:a019a57f61850b4418f9f9c04273980e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aec517b0a050d54312a56fc3eda220c22" id="r_aec517b0a050d54312a56fc3eda220c22"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#aec517b0a050d54312a56fc3eda220c22">getNDriveParams</a> ()</td></tr>
+<tr class="separator:aec517b0a050d54312a56fc3eda220c22"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5b47ab00b35ecd5a79b3202dc37fdd8f" id="r_a5b47ab00b35ecd5a79b3202dc37fdd8f"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a5b47ab00b35ecd5a79b3202dc37fdd8f">getNLevels</a> ()</td></tr>
 <tr class="memdesc:a5b47ab00b35ecd5a79b3202dc37fdd8f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the number of energy levels.  <br /></td></tr>
 <tr class="separator:a5b47ab00b35ecd5a79b3202dc37fdd8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -117,42 +131,34 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a10fc8f521b3263c227f81a4f8f259d86" id="r_a10fc8f521b3263c227f81a4f8f259d86"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a10fc8f521b3263c227f81a4f8f259d86">getDephaseTime</a> ()</td></tr>
 <tr class="memdesc:a10fc8f521b3263c227f81a4f8f259d86"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the T2 dephasing time.  <br /></td></tr>
 <tr class="separator:a10fc8f521b3263c227f81a4f8f259d86"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adb0bba46929bea69230dc23801b3bd64" id="r_adb0bba46929bea69230dc23801b3bd64"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#adb0bba46929bea69230dc23801b3bd64">getNParameterizations</a> ()</td></tr>
-<tr class="memdesc:adb0bba46929bea69230dc23801b3bd64"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the number of control parameterizations in this oscillator (currently always 1).  <br /></td></tr>
-<tr class="separator:adb0bba46929bea69230dc23801b3bd64"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a86e6075424e5adfb690bd36e975c484b" id="r_a86e6075424e5adfb690bd36e975c484b"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a86e6075424e5adfb690bd36e975c484b">getNCarrierfrequencies</a> ()</td></tr>
 <tr class="memdesc:a86e6075424e5adfb690bd36e975c484b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the number of carrier frequencies.  <br /></td></tr>
 <tr class="separator:a86e6075424e5adfb690bd36e975c484b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aae35a43a87241613d14657a7c04bbaa9" id="r_aae35a43a87241613d14657a7c04bbaa9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4">ControlType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#aae35a43a87241613d14657a7c04bbaa9">getControlType</a> ()</td></tr>
-<tr class="memdesc:aae35a43a87241613d14657a7c04bbaa9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the type of control parameterization.  <br /></td></tr>
-<tr class="separator:aae35a43a87241613d14657a7c04bbaa9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7f3e6be83c024d95d3f7d47456f529fc" id="r_a7f3e6be83c024d95d3f7d47456f529fc"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a7f3e6be83c024d95d3f7d47456f529fc">getNSplines</a> ()</td></tr>
-<tr class="memdesc:a7f3e6be83c024d95d3f7d47456f529fc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the number of splines used in the control parameterization.  <br /></td></tr>
-<tr class="separator:a7f3e6be83c024d95d3f7d47456f529fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4067cbd157e33d13c140efc8a6e67d7e" id="r_a4067cbd157e33d13c140efc8a6e67d7e"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a4067cbd157e33d13c140efc8a6e67d7e">getRotFreq</a> ()</td></tr>
 <tr class="memdesc:a4067cbd157e33d13c140efc8a6e67d7e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the rotating frame frequency.  <br /></td></tr>
 <tr class="separator:a4067cbd157e33d13c140efc8a6e67d7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a430bac75451bd17fe689c9aa29b5ea91" id="r_a430bac75451bd17fe689c9aa29b5ea91"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a430bac75451bd17fe689c9aa29b5ea91">getNSegParams</a> (int parameterizationID)</td></tr>
-<tr class="memdesc:a430bac75451bd17fe689c9aa29b5ea91"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the number of parameters for a specific parameterization.  <br /></td></tr>
-<tr class="separator:a430bac75451bd17fe689c9aa29b5ea91"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac2cb2631fe6837d01a53906efd063391" id="r_ac2cb2631fe6837d01a53906efd063391"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#ac2cb2631fe6837d01a53906efd063391">setControlParams</a> (const double *x)</td></tr>
+<tr class="memdesc:ac2cb2631fe6837d01a53906efd063391"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets control parameters from a global storage.  <br /></td></tr>
+<tr class="separator:ac2cb2631fe6837d01a53906efd063391"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac9de47930cb8adf8c34280ec9720ee8c" id="r_ac9de47930cb8adf8c34280ec9720ee8c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#ac9de47930cb8adf8c34280ec9720ee8c">setParams</a> (const double *x)</td></tr>
-<tr class="memdesc:ac9de47930cb8adf8c34280ec9720ee8c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets control parameters from a global storage.  <br /></td></tr>
 <tr class="separator:ac9de47930cb8adf8c34280ec9720ee8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad31f54bdf23ee1579f6447769cc2b695" id="r_ad31f54bdf23ee1579f6447769cc2b695"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#ad31f54bdf23ee1579f6447769cc2b695">getControlParams</a> (double *x)</td></tr>
+<tr class="memdesc:ad31f54bdf23ee1579f6447769cc2b695"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves control parameters into a global storage.  <br /></td></tr>
+<tr class="separator:ad31f54bdf23ee1579f6447769cc2b695"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afd4c234d01e5aaec144f1b7976c107e9" id="r_afd4c234d01e5aaec144f1b7976c107e9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#afd4c234d01e5aaec144f1b7976c107e9">getParams</a> (double *x)</td></tr>
-<tr class="memdesc:afd4c234d01e5aaec144f1b7976c107e9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves control parameters into a global storage.  <br /></td></tr>
 <tr class="separator:afd4c234d01e5aaec144f1b7976c107e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac11241f9fdaf1ee725e3cca7c66afa10" id="r_ac11241f9fdaf1ee725e3cca7c66afa10"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#ac11241f9fdaf1ee725e3cca7c66afa10">clearParams</a> ()</td></tr>
-<tr class="memdesc:ac11241f9fdaf1ee725e3cca7c66afa10"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clears all control parameters.  <br /></td></tr>
-<tr class="separator:ac11241f9fdaf1ee725e3cca7c66afa10"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac96812d204d02d2965f6c59a7b9d2493" id="r_ac96812d204d02d2965f6c59a7b9d2493"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#ac96812d204d02d2965f6c59a7b9d2493">evalControl</a> (const double t, double *Re_ptr, double *Im_ptr)</td></tr>
-<tr class="memdesc:ac96812d204d02d2965f6c59a7b9d2493"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates the rotating-frame control functions.  <br /></td></tr>
-<tr class="separator:ac96812d204d02d2965f6c59a7b9d2493"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a839e78047f0eaa0ce4c1db6b7c3f9360" id="r_a839e78047f0eaa0ce4c1db6b7c3f9360"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a839e78047f0eaa0ce4c1db6b7c3f9360">evalControl_diff</a> (const double t, double *grad_for_this_oscillator, const double pbar, const double qbar)</td></tr>
-<tr class="memdesc:a839e78047f0eaa0ce4c1db6b7c3f9360"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes derivatives of control functions p(t) and q(t) with respect to the parameters.  <br /></td></tr>
-<tr class="separator:a839e78047f0eaa0ce4c1db6b7c3f9360"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a51b18bd9d159de0cfbd908407365cf5e" id="r_a51b18bd9d159de0cfbd908407365cf5e"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a51b18bd9d159de0cfbd908407365cf5e">evalControl_Labframe</a> (const double t, double *f_ptr)</td></tr>
-<tr class="memdesc:a51b18bd9d159de0cfbd908407365cf5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates lab-frame control function.  <br /></td></tr>
-<tr class="separator:a51b18bd9d159de0cfbd908407365cf5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a577c070a4c9b4fd07bc5c2c782c99283" id="r_a577c070a4c9b4fd07bc5c2c782c99283"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a577c070a4c9b4fd07bc5c2c782c99283">evalDriveControl</a> (const double t, double *p_ptr, double *q_ptr)</td></tr>
+<tr class="memdesc:a577c070a4c9b4fd07bc5c2c782c99283"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates drive-only controls p(t), q(t).  <br /></td></tr>
+<tr class="separator:a577c070a4c9b4fd07bc5c2c782c99283"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab81db255fe1f1a6c562f4432a079fc23" id="r_ab81db255fe1f1a6c562f4432a079fc23"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#ab81db255fe1f1a6c562f4432a079fc23">evalControl</a> (const double t, double *p_ptr, double *q_ptr, double *flux_ptr)</td></tr>
+<tr class="memdesc:ab81db255fe1f1a6c562f4432a079fc23"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates the rotating-frame drives p,q and flux control functions.  <br /></td></tr>
+<tr class="separator:ab81db255fe1f1a6c562f4432a079fc23"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6010248865e1640ccb547d59309b8dbf" id="r_a6010248865e1640ccb547d59309b8dbf"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a6010248865e1640ccb547d59309b8dbf">evalDriveControl_diff</a> (const double t, double *grad_for_this_oscillator, const double pbar, const double qbar)</td></tr>
+<tr class="memdesc:a6010248865e1640ccb547d59309b8dbf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes derivatives of drive control functions p(t) and q(t) with respect to the parameters.  <br /></td></tr>
+<tr class="separator:a6010248865e1640ccb547d59309b8dbf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2f61a254f56b9e6cdc0a5bfc71ecd817" id="r_a2f61a254f56b9e6cdc0a5bfc71ecd817"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a2f61a254f56b9e6cdc0a5bfc71ecd817">evalControl_diff</a> (const double t, double *grad_for_this_oscillator, const double pbar, const double qbar, const double fbar)</td></tr>
+<tr class="memdesc:a2f61a254f56b9e6cdc0a5bfc71ecd817"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes derivatives of drive and flux control functions p(t), q(t), and f(t) with respect to parameters.  <br /></td></tr>
+<tr class="separator:a2f61a254f56b9e6cdc0a5bfc71ecd817"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3382fadf8efb599c9757e6f273084237" id="r_a3382fadf8efb599c9757e6f273084237"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a3382fadf8efb599c9757e6f273084237">expectedEnergy</a> (const Vec x)</td></tr>
 <tr class="memdesc:a3382fadf8efb599c9757e6f273084237"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes expected energy for this oscillator.  <br /></td></tr>
 <tr class="separator:a3382fadf8efb599c9757e6f273084237"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -204,17 +210,20 @@ Protected Attributes</h2></td></tr>
 <tr class="memitem:a8f5b23b7b1c158f086e724fe7627135b" id="r_a8f5b23b7b1c158f086e724fe7627135b"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a8f5b23b7b1c158f086e724fe7627135b">dephase_time</a></td></tr>
 <tr class="memdesc:a8f5b23b7b1c158f086e724fe7627135b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Characteristic time for T2 dephasing operations.  <br /></td></tr>
 <tr class="separator:a8f5b23b7b1c158f086e724fe7627135b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa0f4328787ff7d8bdc06dac4fbd9abc9" id="r_aa0f4328787ff7d8bdc06dac4fbd9abc9"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#aa0f4328787ff7d8bdc06dac4fbd9abc9">params</a></td></tr>
-<tr class="memdesc:aa0f4328787ff7d8bdc06dac4fbd9abc9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Control parameters for this oscillator.  <br /></td></tr>
-<tr class="separator:aa0f4328787ff7d8bdc06dac4fbd9abc9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4c7f5e9c55db0fb1efaea80c7e7bce4b" id="r_a4c7f5e9c55db0fb1efaea80c7e7bce4b"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a4c7f5e9c55db0fb1efaea80c7e7bce4b">total_time</a></td></tr>
 <tr class="memdesc:a4c7f5e9c55db0fb1efaea80c7e7bce4b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Final evolution time.  <br /></td></tr>
 <tr class="separator:a4c7f5e9c55db0fb1efaea80c7e7bce4b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7558ddcd836cc610f2e1a560edf366d0" id="r_a7558ddcd836cc610f2e1a560edf366d0"><td class="memItemLeft" align="right" valign="top">std::vector&lt; <a class="el" href="classControlBasis.html">ControlBasis</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a7558ddcd836cc610f2e1a560edf366d0">basisfunctions</a></td></tr>
-<tr class="memdesc:a7558ddcd836cc610f2e1a560edf366d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Basis functions for control parameterization foreach time parameterization. Note: Currently only one parameterization is supported!  <br /></td></tr>
-<tr class="separator:a7558ddcd836cc610f2e1a560edf366d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7d70f7d47e81a7dcacbdf21429985c0d" id="r_a7d70f7d47e81a7dcacbdf21429985c0d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classControlBasis.html">ControlBasis</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a7d70f7d47e81a7dcacbdf21429985c0d">drive_basisfunctions_re</a></td></tr>
+<tr class="memdesc:a7d70f7d47e81a7dcacbdf21429985c0d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Real part of drive envelope basis (per carrier), alpha^1.  <br /></td></tr>
+<tr class="separator:a7d70f7d47e81a7dcacbdf21429985c0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a99942fa4c0426f51c2a946b5dbd3550e" id="r_a99942fa4c0426f51c2a946b5dbd3550e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classControlBasis.html">ControlBasis</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a99942fa4c0426f51c2a946b5dbd3550e">drive_basisfunctions_im</a></td></tr>
+<tr class="memdesc:a99942fa4c0426f51c2a946b5dbd3550e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Imaginary part of drive envelope basis (per carrier), alpha^2.  <br /></td></tr>
+<tr class="separator:a99942fa4c0426f51c2a946b5dbd3550e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a98160da8d2d337f8c1e5b6f5d44dee91" id="r_a98160da8d2d337f8c1e5b6f5d44dee91"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classControlBasis.html">ControlBasis</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a98160da8d2d337f8c1e5b6f5d44dee91">flux_basisfunctions</a></td></tr>
+<tr class="memdesc:a98160da8d2d337f8c1e5b6f5d44dee91"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flux control parameterization.  <br /></td></tr>
+<tr class="separator:a98160da8d2d337f8c1e5b6f5d44dee91"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acf6134e3003b15eba18569f2b29d7834" id="r_acf6134e3003b15eba18569f2b29d7834"><td class="memItemLeft" align="right" valign="top">std::vector&lt; double &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#acf6134e3003b15eba18569f2b29d7834">carrier_freq</a></td></tr>
-<tr class="memdesc:acf6134e3003b15eba18569f2b29d7834"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frequencies of the carrier waves.  <br /></td></tr>
+<tr class="memdesc:acf6134e3003b15eba18569f2b29d7834"><td class="mdescLeft">&#160;</td><td class="mdescRight">Frequencies of the carrier waves for this oscillator.  <br /></td></tr>
 <tr class="separator:acf6134e3003b15eba18569f2b29d7834"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a60f21a24f232900b09fdcfeedd662d0b" id="r_a60f21a24f232900b09fdcfeedd662d0b"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a60f21a24f232900b09fdcfeedd662d0b">mpirank_world</a></td></tr>
 <tr class="memdesc:a60f21a24f232900b09fdcfeedd662d0b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Rank of MPI_COMM_WORLD.  <br /></td></tr>
@@ -234,22 +243,17 @@ Protected Attributes</h2></td></tr>
 <tr class="memitem:a187209ffd542912e8918530b79fdafcd" id="r_a187209ffd542912e8918530b79fdafcd"><td class="memItemLeft" align="right" valign="top">PetscInt&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a187209ffd542912e8918530b79fdafcd">iupp</a></td></tr>
 <tr class="memdesc:a187209ffd542912e8918530b79fdafcd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Last index (+1) of the local sub vector u,v.  <br /></td></tr>
 <tr class="separator:a187209ffd542912e8918530b79fdafcd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a98e679242ba73fb23ca07038fc6abd07" id="r_a98e679242ba73fb23ca07038fc6abd07"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classOscillator.html#a98e679242ba73fb23ca07038fc6abd07">control_zero_boundary_condition</a></td></tr>
-<tr class="memdesc:a98e679242ba73fb23ca07038fc6abd07"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flag to enforce boundary conditions on controls.  <br /></td></tr>
-<tr class="separator:a98e679242ba73fb23ca07038fc6abd07"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Quantum oscillator (multi-level qubit) with control capabilities. </p>
 <p>This class represents a single quantum oscillator that is controlled by external control pulses. It stores the oscillator parameters, such as number of energy levels, frequency detuning, anharmonicity and Lindblad decay and dephasing times. <br  />
  It also manages this oscillator's control pulse parameterization and carrier wave frequencies.</p>
 <p>Main functionality:</p><ul>
-<li><a class="el" href="classOscillator.html#ac96812d204d02d2965f6c59a7b9d2493">evalControl</a> computes the rotating-frame pulses p(t) &amp; q(t) at a given time t. Those pulses are products of fixed-frequency carrier waves multiplied with an outer envelop (spline) whose shape is defined through the control parameters (<a class="el" href="classOscillator.html#aa0f4328787ff7d8bdc06dac4fbd9abc9">params</a>) and their corresponding basis functions defined in the <a class="el" href="classControlBasis.html">ControlBasis</a>.</li>
+<li><a class="el" href="classOscillator.html#ab81db255fe1f1a6c562f4432a079fc23">evalControl</a> computes the rotating-frame drive pulses p(t) &amp; q(t) as well as the flux control f(t) at a given time t. The drive pulses are products of fixed-frequency carrier waves multiplied with an outer envelope (e.g. spline) represented by <a class="el" href="classOscillator.html#a7d70f7d47e81a7dcacbdf21429985c0d">drive_basisfunctions_re</a> and <a class="el" href="classOscillator.html#a99942fa4c0426f51c2a946b5dbd3550e">drive_basisfunctions_im</a>, for the coefficients alpha^1 and alpha^2, respectively. The flux control is a single scalar channel represented by <a class="el" href="classOscillator.html#a98160da8d2d337f8c1e5b6f5d44dee91">flux_basisfunctions</a>.</li>
 <li><a class="el" href="classOscillator.html#a3382fadf8efb599c9757e6f273084237">expectedEnergy</a> and <a class="el" href="classOscillator.html#a8b2aad8df5555fff65a458ce745f9004">population</a> for computing this oscillators expected Energy and level occupations given a current state</li>
-<li><a class="el" href="classOscillator.html#a38c27fb9e2811b938ec40e2ca9068bc7">evalControlVariation</a> for evaluating control parameter variations used as penalty term in the optimization</li>
+<li><a class="el" href="classOscillator.html#a38c27fb9e2811b938ec40e2ca9068bc7">evalControlVariation</a> for evaluating control-variation penalties used in optimization</li>
 </ul>
-<p>This class contains references to:</p><ul>
-<li>Vector of <a class="el" href="classControlBasis.html">ControlBasis</a> for evaluating the oscillators control pulse envelop (e.g. Bspline) at a given time t </li>
-</ul>
+<p>This class stores <a class="el" href="classControlBasis.html">ControlBasis</a> objects for evaluating control pulse envelopes at runtime. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a99fd3a4a9ef26a4f8025ac7a519d900b" name="a99fd3a4a9ef26a4f8025ac7a519d900b"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a99fd3a4a9ef26a4f8025ac7a519d900b">&#9670;&#160;</a></span>Oscillator() <span class="overload">[1/2]</span></h2>
@@ -352,36 +356,8 @@ Protected Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="ac11241f9fdaf1ee725e3cca7c66afa10" name="ac11241f9fdaf1ee725e3cca7c66afa10"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac11241f9fdaf1ee725e3cca7c66afa10">&#9670;&#160;</a></span>clearParams()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void Oscillator::clearParams </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Clears all control parameters. </p>
-<p>Makes this oscillator non-controllable by removing all parameters. </p>
-
-</div>
-</div>
-<a id="ac96812d204d02d2965f6c59a7b9d2493" name="ac96812d204d02d2965f6c59a7b9d2493"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac96812d204d02d2965f6c59a7b9d2493">&#9670;&#160;</a></span>evalControl()</h2>
+<a id="ab81db255fe1f1a6c562f4432a079fc23" name="ab81db255fe1f1a6c562f4432a079fc23"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab81db255fe1f1a6c562f4432a079fc23">&#9670;&#160;</a></span>evalControl()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -396,13 +372,19 @@ Protected Attributes</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">double *&#160;</td>
-          <td class="paramname"><em>Re_ptr</em>, </td>
+          <td class="paramname"><em>p_ptr</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">double *&#160;</td>
-          <td class="paramname"><em>Im_ptr</em>&#160;</td>
+          <td class="paramname"><em>q_ptr</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double *&#160;</td>
+          <td class="paramname"><em>flux_ptr</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -412,13 +394,14 @@ Protected Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Evaluates the rotating-frame control functions. </p>
-<p>Computes the real and imaginary parts of the control function: Re = p(t), Im = q(t)</p>
+<p>Evaluates the rotating-frame drives p,q and flux control functions. </p>
+<p>Computes p(t), q(t), and f(t), where p(t) and q(t) are the real and imaginary parts of the drive control function and f(t) is the flux control function.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">t</td><td>Time at which to evaluate </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Re_ptr</td><td>Pointer to store real part p(t) </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Im_ptr</td><td>Pointer to store imaginary part q(t) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">p_ptr</td><td>Pointer to store real part, p(t) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">q_ptr</td><td>Pointer to store imaginary part, q(t) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">flux_ptr</td><td>Pointer to store flux control, f(t) </td></tr>
   </table>
   </dd>
 </dl>
@@ -426,8 +409,8 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a839e78047f0eaa0ce4c1db6b7c3f9360" name="a839e78047f0eaa0ce4c1db6b7c3f9360"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a839e78047f0eaa0ce4c1db6b7c3f9360">&#9670;&#160;</a></span>evalControl_diff()</h2>
+<a id="a2f61a254f56b9e6cdc0a5bfc71ecd817" name="a2f61a254f56b9e6cdc0a5bfc71ecd817"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2f61a254f56b9e6cdc0a5bfc71ecd817">&#9670;&#160;</a></span>evalControl_diff()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -454,47 +437,13 @@ Protected Attributes</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const double&#160;</td>
-          <td class="paramname"><em>qbar</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Computes derivatives of control functions p(t) and q(t) with respect to the parameters. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">t</td><td>Time at which to evaluate derivatives </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">grad_for_this_oscillator</td><td>Array to update the gradient </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">pbar</td><td>Adjoint scaling factor for the gradient of p (seed) </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">qbar</td><td>Adjoint scaling factor for the gradient of q (seed) </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>int Error code </dd></dl>
-
-</div>
-</div>
-<a id="a51b18bd9d159de0cfbd908407365cf5e" name="a51b18bd9d159de0cfbd908407365cf5e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a51b18bd9d159de0cfbd908407365cf5e">&#9670;&#160;</a></span>evalControl_Labframe()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int Oscillator::evalControl_Labframe </td>
-          <td>(</td>
-          <td class="paramtype">const double&#160;</td>
-          <td class="paramname"><em>t</em>, </td>
+          <td class="paramname"><em>qbar</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">double *&#160;</td>
-          <td class="paramname"><em>f_ptr</em>&#160;</td>
+          <td class="paramtype">const double&#160;</td>
+          <td class="paramname"><em>fbar</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -504,11 +453,14 @@ Protected Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Evaluates lab-frame control function. </p>
+<p>Computes derivatives of drive and flux control functions p(t), q(t), and f(t) with respect to parameters. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">t</td><td>Time at which to evaluate </td></tr>
-    <tr><td class="paramname">f_ptr</td><td>Pointer to store lab-frame control value </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">t</td><td>Time at which to evaluate derivatives </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">grad_for_this_oscillator</td><td>Array to update the gradient </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">pbar</td><td>Adjoint seed for p(t) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">qbar</td><td>Adjoint seed for q(t) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">fbar</td><td>Adjoint seed for f(t) </td></tr>
   </table>
   </dd>
 </dl>
@@ -578,6 +530,103 @@ Protected Attributes</h2></td></tr>
   </table>
   </dd>
 </dl>
+
+</div>
+</div>
+<a id="a577c070a4c9b4fd07bc5c2c782c99283" name="a577c070a4c9b4fd07bc5c2c782c99283"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a577c070a4c9b4fd07bc5c2c782c99283">&#9670;&#160;</a></span>evalDriveControl()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int Oscillator::evalDriveControl </td>
+          <td>(</td>
+          <td class="paramtype">const double&#160;</td>
+          <td class="paramname"><em>t</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double *&#160;</td>
+          <td class="paramname"><em>p_ptr</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double *&#160;</td>
+          <td class="paramname"><em>q_ptr</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Evaluates drive-only controls p(t), q(t). </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">t</td><td>Time at which to evaluate </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">p_ptr</td><td>Pointer to store p(t) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">q_ptr</td><td>Pointer to store q(t) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>int Error code </dd></dl>
+
+</div>
+</div>
+<a id="a6010248865e1640ccb547d59309b8dbf" name="a6010248865e1640ccb547d59309b8dbf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6010248865e1640ccb547d59309b8dbf">&#9670;&#160;</a></span>evalDriveControl_diff()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int Oscillator::evalDriveControl_diff </td>
+          <td>(</td>
+          <td class="paramtype">const double&#160;</td>
+          <td class="paramname"><em>t</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double *&#160;</td>
+          <td class="paramname"><em>grad_for_this_oscillator</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const double&#160;</td>
+          <td class="paramname"><em>pbar</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const double&#160;</td>
+          <td class="paramname"><em>qbar</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Computes derivatives of drive control functions p(t) and q(t) with respect to the parameters. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">t</td><td>Time at which to evaluate derivatives </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">grad_for_this_oscillator</td><td>Array to update the gradient </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">pbar</td><td>Adjoint scaling factor for the gradient of p (seed) </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">qbar</td><td>Adjoint scaling factor for the gradient of q (seed) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>int Error code </dd></dl>
 
 </div>
 </div>
@@ -653,31 +702,29 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="aae35a43a87241613d14657a7c04bbaa9" name="aae35a43a87241613d14657a7c04bbaa9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aae35a43a87241613d14657a7c04bbaa9">&#9670;&#160;</a></span>getControlType()</h2>
+<a id="ad31f54bdf23ee1579f6447769cc2b695" name="ad31f54bdf23ee1579f6447769cc2b695"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad31f54bdf23ee1579f6447769cc2b695">&#9670;&#160;</a></span>getControlParams()</h2>
 
 <div class="memitem">
 <div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4">ControlType</a> Oscillator::getControlType </td>
+          <td class="memname">void Oscillator::getControlParams </td>
           <td>(</td>
-          <td class="paramname"></td><td>)</td>
+          <td class="paramtype">double *&#160;</td>
+          <td class="paramname"><em>x</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 
-<p>Retrieves the type of control parameterization. </p>
-<dl class="section return"><dt>Returns</dt><dd>ControlType Type of control parameterization </dd></dl>
+<p>Retrieves control parameters into a global storage. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">x</td><td>Array to store control parameter values </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -793,6 +840,56 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="aec517b0a050d54312a56fc3eda220c22" name="aec517b0a050d54312a56fc3eda220c22"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aec517b0a050d54312a56fc3eda220c22">&#9670;&#160;</a></span>getNDriveParams()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t Oscillator::getNDriveParams </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a019a57f61850b4418f9f9c04273980e3" name="a019a57f61850b4418f9f9c04273980e3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a019a57f61850b4418f9f9c04273980e3">&#9670;&#160;</a></span>getNFluxParams()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t Oscillator::getNFluxParams </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
 <a id="a5b47ab00b35ecd5a79b3202dc37fdd8f" name="a5b47ab00b35ecd5a79b3202dc37fdd8f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5b47ab00b35ecd5a79b3202dc37fdd8f">&#9670;&#160;</a></span>getNLevels()</h2>
 
@@ -818,34 +915,6 @@ Protected Attributes</h2></td></tr>
 
 <p>Retrieves the number of energy levels. </p>
 <dl class="section return"><dt>Returns</dt><dd>size_t Number of energy levels </dd></dl>
-
-</div>
-</div>
-<a id="adb0bba46929bea69230dc23801b3bd64" name="adb0bba46929bea69230dc23801b3bd64"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adb0bba46929bea69230dc23801b3bd64">&#9670;&#160;</a></span>getNParameterizations()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">size_t Oscillator::getNParameterizations </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Retrieves the number of control parameterizations in this oscillator (currently always 1). </p>
-<dl class="section return"><dt>Returns</dt><dd>size_t Number of time parameterizations (currently always returns 1) </dd></dl>
 
 </div>
 </div>
@@ -877,66 +946,14 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a430bac75451bd17fe689c9aa29b5ea91" name="a430bac75451bd17fe689c9aa29b5ea91"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a430bac75451bd17fe689c9aa29b5ea91">&#9670;&#160;</a></span>getNSegParams()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int Oscillator::getNSegParams </td>
-          <td>(</td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>parameterizationID</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Retrieves the number of parameters for a specific parameterization. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">parameterizationID</td><td>Segment identifier // Currently always 0! </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>int Number of parameters for this parameterization </dd></dl>
-
-</div>
-</div>
-<a id="a7f3e6be83c024d95d3f7d47456f529fc" name="a7f3e6be83c024d95d3f7d47456f529fc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7f3e6be83c024d95d3f7d47456f529fc">&#9670;&#160;</a></span>getNSplines()</h2>
+<a id="afd4c234d01e5aaec144f1b7976c107e9" name="afd4c234d01e5aaec144f1b7976c107e9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afd4c234d01e5aaec144f1b7976c107e9">&#9670;&#160;</a></span>getParams()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">int Oscillator::getNSplines </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Retrieves the number of splines used in the control parameterization. </p>
-<dl class="section return"><dt>Returns</dt><dd>int Number of splines </dd></dl>
-
-</div>
-</div>
-<a id="afd4c234d01e5aaec144f1b7976c107e9" name="afd4c234d01e5aaec144f1b7976c107e9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afd4c234d01e5aaec144f1b7976c107e9">&#9670;&#160;</a></span>getParams()</h2>
-
-<div class="memitem">
-<div class="memproto">
       <table class="memname">
         <tr>
           <td class="memname">void Oscillator::getParams </td>
@@ -946,15 +963,12 @@ Protected Attributes</h2></td></tr>
           <td></td>
         </tr>
       </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
 </div><div class="memdoc">
-
-<p>Retrieves control parameters into a global storage. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">x</td><td>Array to store control parameter values </td></tr>
-  </table>
-  </dd>
-</dl>
 
 </div>
 </div>
@@ -1052,14 +1066,14 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="ac9de47930cb8adf8c34280ec9720ee8c" name="ac9de47930cb8adf8c34280ec9720ee8c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac9de47930cb8adf8c34280ec9720ee8c">&#9670;&#160;</a></span>setParams()</h2>
+<a id="ac2cb2631fe6837d01a53906efd063391" name="ac2cb2631fe6837d01a53906efd063391"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac2cb2631fe6837d01a53906efd063391">&#9670;&#160;</a></span>setControlParams()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">void Oscillator::setParams </td>
+          <td class="memname">void Oscillator::setControlParams </td>
           <td>(</td>
           <td class="paramtype">const double *&#160;</td>
           <td class="paramname"><em>x</em></td><td>)</td>
@@ -1078,9 +1092,8 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<h2 class="groupheader">Member Data Documentation</h2>
-<a id="a7558ddcd836cc610f2e1a560edf366d0" name="a7558ddcd836cc610f2e1a560edf366d0"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7558ddcd836cc610f2e1a560edf366d0">&#9670;&#160;</a></span>basisfunctions</h2>
+<a id="ac9de47930cb8adf8c34280ec9720ee8c" name="ac9de47930cb8adf8c34280ec9720ee8c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac9de47930cb8adf8c34280ec9720ee8c">&#9670;&#160;</a></span>setParams()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1089,20 +1102,23 @@ Protected Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">std::vector&lt;<a class="el" href="classControlBasis.html">ControlBasis</a> *&gt; Oscillator::basisfunctions</td>
+          <td class="memname">void Oscillator::setParams </td>
+          <td>(</td>
+          <td class="paramtype">const double *&#160;</td>
+          <td class="paramname"><em>x</em></td><td>)</td>
+          <td></td>
         </tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
 
-<p>Basis functions for control parameterization foreach time parameterization. Note: Currently only one parameterization is supported! </p>
-
 </div>
 </div>
+<h2 class="groupheader">Member Data Documentation</h2>
 <a id="acf6134e3003b15eba18569f2b29d7834" name="acf6134e3003b15eba18569f2b29d7834"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#acf6134e3003b15eba18569f2b29d7834">&#9670;&#160;</a></span>carrier_freq</h2>
 
@@ -1123,31 +1139,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Frequencies of the carrier waves. </p>
-
-</div>
-</div>
-<a id="a98e679242ba73fb23ca07038fc6abd07" name="a98e679242ba73fb23ca07038fc6abd07"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a98e679242ba73fb23ca07038fc6abd07">&#9670;&#160;</a></span>control_zero_boundary_condition</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool Oscillator::control_zero_boundary_condition</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Flag to enforce boundary conditions on controls. </p>
+<p>Frequencies of the carrier waves for this oscillator. </p>
 
 </div>
 </div>
@@ -1276,6 +1268,78 @@ Protected Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Dimension of coupled subsystems preceding this oscillator. </p>
+
+</div>
+</div>
+<a id="a99942fa4c0426f51c2a946b5dbd3550e" name="a99942fa4c0426f51c2a946b5dbd3550e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a99942fa4c0426f51c2a946b5dbd3550e">&#9670;&#160;</a></span>drive_basisfunctions_im</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classControlBasis.html">ControlBasis</a>* Oscillator::drive_basisfunctions_im</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Imaginary part of drive envelope basis (per carrier), alpha^2. </p>
+
+</div>
+</div>
+<a id="a7d70f7d47e81a7dcacbdf21429985c0d" name="a7d70f7d47e81a7dcacbdf21429985c0d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7d70f7d47e81a7dcacbdf21429985c0d">&#9670;&#160;</a></span>drive_basisfunctions_re</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classControlBasis.html">ControlBasis</a>* Oscillator::drive_basisfunctions_re</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Real part of drive envelope basis (per carrier), alpha^1. </p>
+
+</div>
+</div>
+<a id="a98160da8d2d337f8c1e5b6f5d44dee91" name="a98160da8d2d337f8c1e5b6f5d44dee91"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a98160da8d2d337f8c1e5b6f5d44dee91">&#9670;&#160;</a></span>flux_basisfunctions</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classControlBasis.html">ControlBasis</a>* Oscillator::flux_basisfunctions</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Flux control parameterization. </p>
 
 </div>
 </div>
@@ -1492,30 +1556,6 @@ Protected Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Number of energy levels for this oscillator. </p>
-
-</div>
-</div>
-<a id="aa0f4328787ff7d8bdc06dac4fbd9abc9" name="aa0f4328787ff7d8bdc06dac4fbd9abc9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa0f4328787ff7d8bdc06dac4fbd9abc9">&#9670;&#160;</a></span>params</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::vector&lt;double&gt; Oscillator::params</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Control parameters for this oscillator. </p>
 
 </div>
 </div>

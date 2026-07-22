@@ -252,7 +252,6 @@ Enumerations</h2></td></tr>
 <tr class="separator:a192d9029b78da393fe9a628ccbd7fab4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8005f1f182fd0248a710ca64f72508d4" id="r_a8005f1f182fd0248a710ca64f72508d4"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4">ControlType</a> { <a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4ab50339a10e1de285ac99d4c3990b8693">NONE</a>
 , <a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4a123732cee284ea8ed914cfe1bb999a8d">BSPLINE</a>
-, <a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4ad0dc6d420f3760744adb8558bb03486b">BSPLINEAMP</a>
 , <a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4a7c5e020fa98e315c72eebf2df572b530">BSPLINE0</a>
  }</td></tr>
 <tr class="memdesc:a8005f1f182fd0248a710ca64f72508d4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Types of control parameterizations.  <a href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4">More...</a><br /></td></tr>
@@ -424,8 +423,6 @@ Variables</h2></td></tr>
 <tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a8005f1f182fd0248a710ca64f72508d4ab50339a10e1de285ac99d4c3990b8693" name="a8005f1f182fd0248a710ca64f72508d4ab50339a10e1de285ac99d4c3990b8693"></a>NONE&#160;</td><td class="fielddoc"><p>Non-controllable. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="a8005f1f182fd0248a710ca64f72508d4a123732cee284ea8ed914cfe1bb999a8d" name="a8005f1f182fd0248a710ca64f72508d4a123732cee284ea8ed914cfe1bb999a8d"></a>BSPLINE&#160;</td><td class="fielddoc"><p>Control pulses are parameterized with 2nd order BSpline basis functions with carrier waves. </p>
-</td></tr>
-<tr><td class="fieldname"><a id="a8005f1f182fd0248a710ca64f72508d4ad0dc6d420f3760744adb8558bb03486b" name="a8005f1f182fd0248a710ca64f72508d4ad0dc6d420f3760744adb8558bb03486b"></a>BSPLINEAMP&#160;</td><td class="fielddoc"><p>Paramerizes only the amplitudes of the control pulse with 2nd order BSpline basis functions. </p>
 </td></tr>
 <tr><td class="fieldname"><a id="a8005f1f182fd0248a710ca64f72508d4a7c5e020fa98e315c72eebf2df572b530" name="a8005f1f182fd0248a710ca64f72508d4a7c5e020fa98e315c72eebf2df572b530"></a>BSPLINE0&#160;</td><td class="fielddoc"><p>Control pulses are parameterized with Zeroth order Bspline (piece-wise constant) </p>
 </td></tr>
@@ -804,13 +801,11 @@ Variables</h2></td></tr>
 <b>Initial value:</b><div class="fragment"><div class="line">= {</div>
 <div class="line">    {<span class="stringliteral">&quot;none&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4ab50339a10e1de285ac99d4c3990b8693">ControlType::NONE</a>},</div>
 <div class="line">    {<span class="stringliteral">&quot;spline&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4a123732cee284ea8ed914cfe1bb999a8d">ControlType::BSPLINE</a>},</div>
-<div class="line">    {<span class="stringliteral">&quot;spline_amplitude&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4ad0dc6d420f3760744adb8558bb03486b">ControlType::BSPLINEAMP</a>},</div>
 <div class="line">    {<span class="stringliteral">&quot;spline0&quot;</span>, <a class="code hl_enumvalue" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4a7c5e020fa98e315c72eebf2df572b530">ControlType::BSPLINE0</a>}</div>
 <div class="line">}</div>
 <div class="ttc" id="adefs_8hpp_html_a8005f1f182fd0248a710ca64f72508d4a123732cee284ea8ed914cfe1bb999a8d"><div class="ttname"><a href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4a123732cee284ea8ed914cfe1bb999a8d">ControlType::BSPLINE</a></div><div class="ttdeci">@ BSPLINE</div><div class="ttdoc">Control pulses are parameterized with 2nd order BSpline basis functions with carrier waves.</div></div>
 <div class="ttc" id="adefs_8hpp_html_a8005f1f182fd0248a710ca64f72508d4a7c5e020fa98e315c72eebf2df572b530"><div class="ttname"><a href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4a7c5e020fa98e315c72eebf2df572b530">ControlType::BSPLINE0</a></div><div class="ttdeci">@ BSPLINE0</div><div class="ttdoc">Control pulses are parameterized with Zeroth order Bspline (piece-wise constant)</div></div>
 <div class="ttc" id="adefs_8hpp_html_a8005f1f182fd0248a710ca64f72508d4ab50339a10e1de285ac99d4c3990b8693"><div class="ttname"><a href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4ab50339a10e1de285ac99d4c3990b8693">ControlType::NONE</a></div><div class="ttdeci">@ NONE</div><div class="ttdoc">Non-controllable.</div></div>
-<div class="ttc" id="adefs_8hpp_html_a8005f1f182fd0248a710ca64f72508d4ad0dc6d420f3760744adb8558bb03486b"><div class="ttname"><a href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4ad0dc6d420f3760744adb8558bb03486b">ControlType::BSPLINEAMP</a></div><div class="ttdeci">@ BSPLINEAMP</div><div class="ttdoc">Paramerizes only the amplitudes of the control pulse with 2nd order BSpline basis functions.</div></div>
 </div><!-- fragment -->
 </div>
 </div>

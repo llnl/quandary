@@ -1,5 +1,5 @@
 <map id="BSpline2nd" name="BSpline2nd">
 <area shape="rect" id="Node000001" title="Control parameterization using quadratic (2nd order) Bspline basis functions." alt="" coords="10,79,105,104"/>
-<area shape="rect" id="Node000002" href="$classControlBasis.html" title="Abstract base class for control parameterizations." alt="" coords="5,5,109,31"/>
+<area shape="rect" id="Node000002" href="$classControlBasis.html" title="Control parameterization interface and empty fallback implementation." alt="" coords="5,5,109,31"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="60,44,60,79,55,79,55,44"/>
 </map>

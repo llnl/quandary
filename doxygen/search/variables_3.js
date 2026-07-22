@@ -17,6 +17,8 @@ var searchData=
   ['dpdm_5fstates_14',['dpdm_states',['../classTimeStepper.html#a33769128e30e615ac6527991392554e1',1,'TimeStepper']]],
   ['drhsdp_15',['dRHSdp',['../classPetscTS.html#a19a36172b1f1f422ac6d9c746f15617a',1,'PetscTS']]],
   ['drhsdp_5ftime_16',['dRHSdp_time',['../classPetscTS.html#ae698394d2142aa1e98d3f708b92196a5',1,'PetscTS']]],
-  ['dt_17',['dt',['../classTimeStepper.html#ad261faaaa2066bfaa7ca7d9af834e61e',1,'TimeStepper']]],
-  ['dtknot_18',['dtknot',['../classBSpline2nd.html#a4521f6f50bc1001b7911d03c5130721d',1,'BSpline2nd::dtknot'],['../classBSpline2ndAmplitude.html#ac076d8f50877b4bd6e6e8ca4e5057500',1,'BSpline2ndAmplitude::dtknot'],['../classBSpline0.html#a98ae1e5b0046d603ca7951ecbab61583',1,'BSpline0::dtknot']]]
+  ['drive_5fbasisfunctions_5fim_17',['drive_basisfunctions_im',['../classOscillator.html#a99942fa4c0426f51c2a946b5dbd3550e',1,'Oscillator']]],
+  ['drive_5fbasisfunctions_5fre_18',['drive_basisfunctions_re',['../classOscillator.html#a7d70f7d47e81a7dcacbdf21429985c0d',1,'Oscillator']]],
+  ['dt_19',['dt',['../classTimeStepper.html#ad261faaaa2066bfaa7ca7d9af834e61e',1,'TimeStepper']]],
+  ['dtknot_20',['dtknot',['../classBSpline2nd.html#a4521f6f50bc1001b7911d03c5130721d',1,'BSpline2nd::dtknot'],['../classBSpline0.html#a98ae1e5b0046d603ca7951ecbab61583',1,'BSpline0::dtknot']]]
 ];

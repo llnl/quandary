@@ -233,9 +233,9 @@ Functions</h2></td></tr>
 <tr class="memitem:aeaaf83cf2c38deabfb4f076b5e013b4d" id="r_aeaaf83cf2c38deabfb4f076b5e013b4d"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="mastereq_8cpp.html#aeaaf83cf2c38deabfb4f076b5e013b4d">applyRHS_sparsemat_transpose</a> (Mat RHS, Vec x, Vec y)</td></tr>
 <tr class="memdesc:aeaaf83cf2c38deabfb4f076b5e013b4d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Transpose sparse matrix MatMult.  <br /></td></tr>
 <tr class="separator:aeaaf83cf2c38deabfb4f076b5e013b4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4c243742ac5547b195eb31e7614a5bb7" id="r_a4c243742ac5547b195eb31e7614a5bb7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="mastereq_8cpp.html#a4c243742ac5547b195eb31e7614a5bb7">compute_dRHS_dParams_sparsemat</a> (const double t, const Vec x, const Vec xbar, const double alpha, Vec grad, std::vector&lt; size_t &gt; &amp;nlevels, IS isu, IS isv, std::vector&lt; Mat &gt; &amp;Ac_vec, std::vector&lt; Mat &gt; &amp;Bc_vec, Vec aux, <a class="el" href="classOscillator.html">Oscillator</a> **oscil_vec)</td></tr>
-<tr class="memdesc:a4c243742ac5547b195eb31e7614a5bb7"><td class="mdescLeft">&#160;</td><td class="mdescRight">: Sparse-matrix version to compute gradient of RHS with respect to parameters  <br /></td></tr>
-<tr class="separator:a4c243742ac5547b195eb31e7614a5bb7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae9c04ef82d327b4d8dc0a9937046f693" id="r_ae9c04ef82d327b4d8dc0a9937046f693"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="mastereq_8cpp.html#ae9c04ef82d327b4d8dc0a9937046f693">compute_dRHS_dParams_sparsemat</a> (const double t, const Vec x, const Vec xbar, const double alpha, Vec grad, std::vector&lt; size_t &gt; &amp;nlevels, IS isu, IS isv, std::vector&lt; Mat &gt; &amp;Ac_vec, std::vector&lt; Mat &gt; &amp;Bc_vec, std::vector&lt; Mat &gt; &amp;Bf_vec, Vec aux, <a class="el" href="classOscillator.html">Oscillator</a> **oscil_vec)</td></tr>
+<tr class="memdesc:ae9c04ef82d327b4d8dc0a9937046f693"><td class="mdescLeft">&#160;</td><td class="mdescRight">: Sparse-matrix version to compute gradient of RHS with respect to parameters  <br /></td></tr>
+<tr class="separator:ae9c04ef82d327b4d8dc0a9937046f693"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acb4fd3654ddb14b4339f8334df366441" id="r_acb4fd3654ddb14b4339f8334df366441"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="mastereq_8cpp.html#acb4fd3654ddb14b4339f8334df366441">compute_dRHS_dParams_matfree</a> (const PetscInt dim, const double t, const Vec x, const Vec xbar, const double alpha, Vec grad, std::vector&lt; size_t &gt; &amp;nlevels, <a class="el" href="defs_8hpp.html#a2c10384f9c7e0b9428cb24549ca471cb">DecoherenceType</a> decoherence_type, <a class="el" href="classOscillator.html">Oscillator</a> **oscil_vec)</td></tr>
 <tr class="memdesc:acb4fd3654ddb14b4339f8334df366441"><td class="mdescLeft">&#160;</td><td class="mdescRight">: Matrix free version to compute gradient of RHS with respect to parameters  <br /></td></tr>
 <tr class="separator:acb4fd3654ddb14b4339f8334df366441"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -1163,7 +1163,7 @@ template&lt;int n0, int n1, int n2, int n3, int n4&gt; </div>
 </div><div class="memdoc">
 
 <p>: Matrix free version to compute gradient of RHS with respect to parameters </p>
-<p>Updates grad += alpha * x^T * (d RHS / d params)^T * x_bar in a matrix-free manner. See <a class="el" href="mastereq_8cpp.html#a4c243742ac5547b195eb31e7614a5bb7">compute_dRHS_dParams_sparsemat</a> for the sparse-matrix version of this routine.</p>
+<p>Updates grad += alpha * x^T * (d RHS / d params)^T * x_bar in a matrix-free manner. See <a class="el" href="mastereq_8cpp.html#ae9c04ef82d327b4d8dc0a9937046f693">compute_dRHS_dParams_sparsemat</a> for the sparse-matrix version of this routine.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">dim</td><td>Dimension of full vectorized system: N^2 if Lindblad, N if Schroedinger </td></tr>
@@ -1181,8 +1181,8 @@ template&lt;int n0, int n1, int n2, int n3, int n4&gt; </div>
 
 </div>
 </div>
-<a id="a4c243742ac5547b195eb31e7614a5bb7" name="a4c243742ac5547b195eb31e7614a5bb7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4c243742ac5547b195eb31e7614a5bb7">&#9670;&#160;</a></span>compute_dRHS_dParams_sparsemat()</h2>
+<a id="ae9c04ef82d327b4d8dc0a9937046f693" name="ae9c04ef82d327b4d8dc0a9937046f693"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae9c04ef82d327b4d8dc0a9937046f693">&#9670;&#160;</a></span>compute_dRHS_dParams_sparsemat()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1250,6 +1250,12 @@ template&lt;int n0, int n1, int n2, int n3, int n4&gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">std::vector&lt; Mat &gt; &amp;&#160;</td>
+          <td class="paramname"><em>Bf_vec</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
           <td class="paramtype">Vec&#160;</td>
           <td class="paramname"><em>aux</em>, </td>
         </tr>
@@ -1279,8 +1285,9 @@ template&lt;int n0, int n1, int n2, int n3, int n4&gt; </div>
     <tr><td class="paramdir">[in]</td><td class="paramname">nlevels</td><td>Number of energy levels per subsystem </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">isu</td><td>Index stride to access real parts of a state vector </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">isv</td><td>Index stride to access imaginar parts of a state vector </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">Ac_vec</td><td>Vector of real parts of control matrices per oscillator </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">Bc_vec</td><td>Vector of imaginary parts of control matrices per oscillator </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Ac_vec</td><td>Vector of real parts of control drive matrices Re(-i(a-a')) per oscillator </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Bc_vec</td><td>Vector of imaginary parts of control drive matrices Im(-i(a+a')) per oscillator </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">Bf_vec</td><td>Vector of imaginary parts of flux control matrices Im(-ia'a) per oscillator (number operator channel) </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">aux</td><td>Auxiliary vector for computations </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">oscil_vec</td><td>Vector of quantum oscilators </td></tr>
   </table>

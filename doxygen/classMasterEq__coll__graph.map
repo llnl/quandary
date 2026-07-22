@@ -1,9 +1,11 @@
 <map id="MasterEq" name="MasterEq">
-<area shape="rect" id="Node000001" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="31,93,114,119"/>
-<area shape="rect" id="Node000003" href="$structMatShellCtx.html" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="39,181,140,207"/>
-<area shape="poly" id="edge3_Node000003_Node000001" title=" " alt="" coords="27,127,10,141,8,148,11,156,24,169,41,179,38,184,20,174,6,159,3,148,6,138,24,123"/>
-<area shape="rect" id="Node000002" href="$classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="76,5,160,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="91,41,80,56,75,75,74,93,69,93,69,74,75,53,87,38"/>
-<area shape="poly" id="edge4_Node000003_Node000002" title=" " alt="" coords="139,41,145,53,154,68,164,84,163,111,143,159,131,173,117,183,114,179,128,169,138,156,158,110,159,86,150,71,141,56,134,43"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="82,168,72,119,77,118,87,167"/>
+<area shape="rect" id="Node000001" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="31,240,114,265"/>
+<area shape="rect" id="Node000004" href="$structMatShellCtx.html" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="39,328,140,353"/>
+<area shape="poly" id="edge4_Node000004_Node000001" title=" " alt="" coords="27,273,10,287,8,295,11,303,24,316,41,326,38,330,20,320,6,305,3,295,6,284,24,269"/>
+<area shape="rect" id="Node000002" href="$classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="76,152,160,177"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="91,188,80,203,75,222,74,240,69,240,69,221,75,200,87,185"/>
+<area shape="poly" id="edge5_Node000004_Node000002" title=" " alt="" coords="139,187,145,200,154,215,164,231,163,258,143,305,131,319,117,330,114,326,128,316,138,303,158,257,159,232,150,218,141,203,134,190"/>
+<area shape="rect" id="Node000003" href="$classControlBasis.html" title="Control parameterization interface and empty fallback implementation." alt="" coords="66,5,170,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="120,45,120,152,115,152,115,45"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="82,315,72,266,77,265,87,314"/>
 </map>

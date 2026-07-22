@@ -1,11 +1,11 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
 <area shape="rect" id="Node000000" href="$classTimeStepper.html" title="Base class for time integration schemes to evolve the quantum dynamics." alt="" coords="5,55,111,80"/>
 <area shape="rect" id="Node000001" href="$classExplEuler.html" title="Explicit Euler time integration scheme." alt="" coords="171,5,254,31"/>
-<area shape="poly" id="edge15_Node000000_Node000001" title=" " alt="" coords="111,48,171,28,173,33,112,53"/>
+<area shape="poly" id="edge14_Node000000_Node000001" title=" " alt="" coords="111,48,171,28,173,33,112,53"/>
 <area shape="rect" id="Node000002" href="$classImplMidpoint.html" title="Implicit midpoint rule time integration scheme." alt="" coords="159,55,267,80"/>
-<area shape="poly" id="edge16_Node000000_Node000002" title=" " alt="" coords="124,65,158,65,158,70,124,70"/>
+<area shape="poly" id="edge15_Node000000_Node000002" title=" " alt="" coords="124,65,158,65,158,70,124,70"/>
 <area shape="rect" id="Node000004" href="$classPetscTS.html" title="Petsc&#39;s adaptive timestepper." alt="" coords="176,104,249,129"/>
-<area shape="poly" id="edge18_Node000000_Node000004" title=" " alt="" coords="112,82,177,103,175,108,110,87"/>
+<area shape="poly" id="edge17_Node000000_Node000004" title=" " alt="" coords="112,82,177,103,175,108,110,87"/>
 <area shape="rect" id="Node000003" href="$classCompositionalImplMidpoint.html" title="Compositional implicit midpoint rule for higher&#45;order accuracy." alt="" coords="315,55,517,80"/>
-<area shape="poly" id="edge17_Node000002_Node000003" title=" " alt="" coords="280,65,315,65,315,70,280,70"/>
+<area shape="poly" id="edge16_Node000002_Node000003" title=" " alt="" coords="280,65,315,65,315,70,280,70"/>
 </map>

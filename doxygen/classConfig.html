@@ -147,6 +147,16 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a88ec8ff8dc89f02c4448cf3842ce83c4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9fd77f5f3d936efe953beba88058d27e" id="r_a9fd77f5f3d936efe953beba88058d27e"><td class="memItemLeft" align="right" valign="top">const std::vector&lt; double &gt; &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a9fd77f5f3d936efe953beba88058d27e">getCarrierFrequencies</a> (size_t i_osc) const</td></tr>
 <tr class="separator:a9fd77f5f3d936efe953beba88058d27e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2655f11b9b41eca898f6bf9895166e63" id="r_a2655f11b9b41eca898f6bf9895166e63"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a2655f11b9b41eca898f6bf9895166e63">getControlFluxEnabled</a> () const</td></tr>
+<tr class="separator:a2655f11b9b41eca898f6bf9895166e63"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a20ced08080e79a48498badf700bedb3c" id="r_a20ced08080e79a48498badf700bedb3c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a20ced08080e79a48498badf700bedb3c">getControlFluxZeroBoundaryCondition</a> () const</td></tr>
+<tr class="separator:a20ced08080e79a48498badf700bedb3c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aca63d2898dbf9f0156ac1710793397d7" id="r_aca63d2898dbf9f0156ac1710793397d7"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structControlParameterizationSettings.html">ControlParameterizationSettings</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#aca63d2898dbf9f0156ac1710793397d7">getControlFluxParameterizations</a> (size_t i_osc) const</td></tr>
+<tr class="separator:aca63d2898dbf9f0156ac1710793397d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac97c08461253a2e0cb0d709d742be622" id="r_ac97c08461253a2e0cb0d709d742be622"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structControlInitializationSettings.html">ControlInitializationSettings</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#ac97c08461253a2e0cb0d709d742be622">getControlFluxInitializations</a> (size_t i_osc) const</td></tr>
+<tr class="separator:ac97c08461253a2e0cb0d709d742be622"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3d579dfc1e9bc311cadebe97ba411762" id="r_a3d579dfc1e9bc311cadebe97ba411762"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a3d579dfc1e9bc311cadebe97ba411762">getControlFluxAmplitudeBound</a> (size_t i_osc) const</td></tr>
+<tr class="separator:a3d579dfc1e9bc311cadebe97ba411762"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1a228d5c2f4354530b0617e7fab94163" id="r_a1a228d5c2f4354530b0617e7fab94163"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structOptimTargetSettings.html">OptimTargetSettings</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a1a228d5c2f4354530b0617e7fab94163">getOptimTarget</a> () const</td></tr>
 <tr class="separator:a1a228d5c2f4354530b0617e7fab94163"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a80da4e2ca7a30f99c4ae70078cf9f660" id="r_a80da4e2ca7a30f99c4ae70078cf9f660"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defs_8hpp.html#a45660f9909187129a953fa05e664576e">ObjectiveType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classConfig.html#a80da4e2ca7a30f99c4ae70078cf9f660">getOptimObjective</a> () const</td></tr>
@@ -394,6 +404,134 @@ Static Public Member Functions</h2></td></tr>
           <td>(</td>
           <td class="paramtype">size_t&#160;</td>
           <td class="paramname"><em>i_osc</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a3d579dfc1e9bc311cadebe97ba411762" name="a3d579dfc1e9bc311cadebe97ba411762"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3d579dfc1e9bc311cadebe97ba411762">&#9670;&#160;</a></span>getControlFluxAmplitudeBound()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double Config::getControlFluxAmplitudeBound </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>i_osc</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a2655f11b9b41eca898f6bf9895166e63" name="a2655f11b9b41eca898f6bf9895166e63"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2655f11b9b41eca898f6bf9895166e63">&#9670;&#160;</a></span>getControlFluxEnabled()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Config::getControlFluxEnabled </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="ac97c08461253a2e0cb0d709d742be622" name="ac97c08461253a2e0cb0d709d742be622"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac97c08461253a2e0cb0d709d742be622">&#9670;&#160;</a></span>getControlFluxInitializations()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="structControlInitializationSettings.html">ControlInitializationSettings</a> &amp; Config::getControlFluxInitializations </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>i_osc</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aca63d2898dbf9f0156ac1710793397d7" name="aca63d2898dbf9f0156ac1710793397d7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aca63d2898dbf9f0156ac1710793397d7">&#9670;&#160;</a></span>getControlFluxParameterizations()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">const <a class="el" href="structControlParameterizationSettings.html">ControlParameterizationSettings</a> &amp; Config::getControlFluxParameterizations </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>i_osc</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a20ced08080e79a48498badf700bedb3c" name="a20ced08080e79a48498badf700bedb3c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a20ced08080e79a48498badf700bedb3c">&#9670;&#160;</a></span>getControlFluxZeroBoundaryCondition()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Config::getControlFluxZeroBoundaryCondition </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
           <td> const</td>
         </tr>
       </table>

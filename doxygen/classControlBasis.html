@@ -80,11 +80,11 @@ $(function() {
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pro-attribs">Protected Attributes</a> &#124;
 <a href="classControlBasis-members.html">List of all members</a>  </div>
-  <div class="headertitle"><div class="title">ControlBasis Class Reference<span class="mlabels"><span class="mlabel">abstract</span></span></div></div>
+  <div class="headertitle"><div class="title">ControlBasis Class Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p>Abstract base class for control parameterizations.  
+<p>Control parameterization interface and empty fallback implementation.  
  <a href="classControlBasis.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="controlbasis_8hpp_source.html">controlbasis.hpp</a>&gt;</code></p>
@@ -93,13 +93,11 @@ Inheritance diagram for ControlBasis:</div>
 <div class="dyncontent">
 <div class="center"><img src="classControlBasis__inherit__graph.png" border="0" usemap="#aControlBasis_inherit__map" alt="Inheritance graph"/></div>
 <map name="aControlBasis_inherit__map" id="aControlBasis_inherit__map">
-<area shape="rect" title="Abstract base class for control parameterizations." alt="" coords="103,5,207,31"/>
+<area shape="rect" title="Control parameterization interface and empty fallback implementation." alt="" coords="47,5,151,31"/>
 <area shape="rect" href="classBSpline0.html" title="Discretization of the Controls using piece&#45;wise constant (0&#45;th order) Bsplines." alt="" coords="5,79,84,104"/>
-<area shape="poly" title=" " alt="" coords="127,40,64,81,61,76,125,36"/>
+<area shape="poly" title=" " alt="" coords="84,43,56,80,51,77,80,40"/>
 <area shape="rect" href="classBSpline2nd.html" title="Control parameterization using quadratic (2nd order) Bspline basis functions." alt="" coords="108,79,203,104"/>
-<area shape="poly" title=" " alt="" coords="158,44,158,79,153,79,153,44"/>
-<area shape="rect" href="classBSpline2ndAmplitude.html" title="Control parameterization where only the pulse amplitude is parameterized by Bsplines,..." alt="" coords="227,79,390,104"/>
-<area shape="poly" title=" " alt="" coords="193,34,285,76,282,81,191,39"/>
+<area shape="poly" title=" " alt="" coords="119,40,148,77,144,80,115,43"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
@@ -107,14 +105,23 @@ Inheritance diagram for ControlBasis:</div>
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a716baae5e56466c8edba3f646c900efd" id="r_a716baae5e56466c8edba3f646c900efd"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a716baae5e56466c8edba3f646c900efd">ControlBasis</a> ()</td></tr>
 <tr class="separator:a716baae5e56466c8edba3f646c900efd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3942889265eab2353dcef37c63ce856b" id="r_a3942889265eab2353dcef37c63ce856b"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a3942889265eab2353dcef37c63ce856b">ControlBasis</a> (int nparams_, double <a class="el" href="classControlBasis.html#a1f1820a85ad416f02245084619ffb720">tstart</a>, double <a class="el" href="classControlBasis.html#af89673125f7918b75b723b7589e4b19f">tstop</a>, bool <a class="el" href="classControlBasis.html#ad88d2345b9f9df57685c12e2dbda419d">enforceZeroBoundary</a>)</td></tr>
-<tr class="memdesc:a3942889265eab2353dcef37c63ce856b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor with parameters.  <br /></td></tr>
-<tr class="separator:a3942889265eab2353dcef37c63ce856b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a74196ceb9bcdaf32299347db1fa5b925" id="r_a74196ceb9bcdaf32299347db1fa5b925"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a74196ceb9bcdaf32299347db1fa5b925">ControlBasis</a> (int nbasisfunctions, int ncarrier, double tstart_, double tstop_, bool control_zero_boundary_condition_)</td></tr>
+<tr class="memdesc:a74196ceb9bcdaf32299347db1fa5b925"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor with parameters.  <br /></td></tr>
+<tr class="separator:a74196ceb9bcdaf32299347db1fa5b925"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a81b0caa30a036c04c4a1d9875255dc0e" id="r_a81b0caa30a036c04c4a1d9875255dc0e"><td class="memItemLeft" align="right" valign="top">virtual&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a81b0caa30a036c04c4a1d9875255dc0e">~ControlBasis</a> ()</td></tr>
 <tr class="separator:a81b0caa30a036c04c4a1d9875255dc0e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8b33a918ba140a5e79c3ed79adba6c9b" id="r_a8b33a918ba140a5e79c3ed79adba6c9b"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a8b33a918ba140a5e79c3ed79adba6c9b">getNparams</a> ()</td></tr>
-<tr class="memdesc:a8b33a918ba140a5e79c3ed79adba6c9b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the number of parameters defining the controls.  <br /></td></tr>
+<tr class="memdesc:a8b33a918ba140a5e79c3ed79adba6c9b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the total number of parameters defining the controls.  <br /></td></tr>
 <tr class="separator:a8b33a918ba140a5e79c3ed79adba6c9b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a59d576e6d94dc50c7e5eaf6bf1401b09" id="r_a59d576e6d94dc50c7e5eaf6bf1401b09"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a59d576e6d94dc50c7e5eaf6bf1401b09">getNparams</a> (size_t f)</td></tr>
+<tr class="memdesc:a59d576e6d94dc50c7e5eaf6bf1401b09"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the number of parameters for a specific carrier wave.  <br /></td></tr>
+<tr class="separator:a59d576e6d94dc50c7e5eaf6bf1401b09"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9eee0d8f0917010bea00419cbc167a13" id="r_a9eee0d8f0917010bea00419cbc167a13"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a9eee0d8f0917010bea00419cbc167a13">setParams</a> (const double *x, int carrier_freq_id)</td></tr>
+<tr class="memdesc:a9eee0d8f0917010bea00419cbc167a13"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set parameter coefficients.  <br /></td></tr>
+<tr class="separator:a9eee0d8f0917010bea00419cbc167a13"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a31e183f6dfdfc0a992048e5be82e9d7b" id="r_a31e183f6dfdfc0a992048e5be82e9d7b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a31e183f6dfdfc0a992048e5be82e9d7b">getParams</a> (double *x, int carrier_freq_id)</td></tr>
+<tr class="memdesc:a31e183f6dfdfc0a992048e5be82e9d7b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get parameter coefficients.  <br /></td></tr>
+<tr class="separator:a31e183f6dfdfc0a992048e5be82e9d7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aae8e90bcf64e025484a12cfd7494956c" id="r_aae8e90bcf64e025484a12cfd7494956c"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#aae8e90bcf64e025484a12cfd7494956c">getTstart</a> ()</td></tr>
 <tr class="memdesc:aae8e90bcf64e025484a12cfd7494956c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the start time of the interval.  <br /></td></tr>
 <tr class="separator:aae8e90bcf64e025484a12cfd7494956c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -124,45 +131,33 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a8ad1ac99e9a6b4748ceaa803141745b4" id="r_a8ad1ac99e9a6b4748ceaa803141745b4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4">ControlType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a8ad1ac99e9a6b4748ceaa803141745b4">getType</a> ()</td></tr>
 <tr class="memdesc:a8ad1ac99e9a6b4748ceaa803141745b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the type of control parameterization.  <br /></td></tr>
 <tr class="separator:a8ad1ac99e9a6b4748ceaa803141745b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab1b24c656aec7d1eef58f173620d0135" id="r_ab1b24c656aec7d1eef58f173620d0135"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#ab1b24c656aec7d1eef58f173620d0135">setSkip</a> (int skip_)</td></tr>
-<tr class="memdesc:ab1b24c656aec7d1eef58f173620d0135"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the offset for the starting location in the global control vector.  <br /></td></tr>
-<tr class="separator:ab1b24c656aec7d1eef58f173620d0135"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a008d98e3fe892fbf3f86cce64e7e5b07" id="r_a008d98e3fe892fbf3f86cce64e7e5b07"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a008d98e3fe892fbf3f86cce64e7e5b07">getSkip</a> ()</td></tr>
-<tr class="memdesc:a008d98e3fe892fbf3f86cce64e7e5b07"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the offset for the starting location in the global control vector.  <br /></td></tr>
-<tr class="separator:a008d98e3fe892fbf3f86cce64e7e5b07"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5c95a686ca2774a926966fd6a261d150" id="r_a5c95a686ca2774a926966fd6a261d150"><td class="memItemLeft" align="right" valign="top">virtual int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a5c95a686ca2774a926966fd6a261d150">getNSplines</a> ()</td></tr>
-<tr class="memdesc:a5c95a686ca2774a926966fd6a261d150"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the number of splines (default implementation returns 0).  <br /></td></tr>
-<tr class="separator:a5c95a686ca2774a926966fd6a261d150"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a64a982ce0148a1dec17f17d4c5d4933b" id="r_a64a982ce0148a1dec17f17d4c5d4933b"><td class="memItemLeft" align="right" valign="top">virtual double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a64a982ce0148a1dec17f17d4c5d4933b">computeVariation</a> (std::vector&lt; double &gt; &amp;, int)</td></tr>
-<tr class="memdesc:a64a982ce0148a1dec17f17d4c5d4933b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the variation of control parameters (default implementation returns 0.0).  <br /></td></tr>
-<tr class="separator:a64a982ce0148a1dec17f17d4c5d4933b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3ec29a7da110bbb3c31beb454d765ed6" id="r_a3ec29a7da110bbb3c31beb454d765ed6"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a3ec29a7da110bbb3c31beb454d765ed6">computeVariation_diff</a> (double *, std::vector&lt; double &gt; &amp;, double, int)</td></tr>
-<tr class="memdesc:a3ec29a7da110bbb3c31beb454d765ed6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the gradient of the variation (default implementation does nothing).  <br /></td></tr>
-<tr class="separator:a3ec29a7da110bbb3c31beb454d765ed6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1a7af0cff9c754a8a8ed9e6d774d39c1" id="r_a1a7af0cff9c754a8a8ed9e6d774d39c1"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a1a7af0cff9c754a8a8ed9e6d774d39c1">enforceBoundary</a> (double *, int)</td></tr>
-<tr class="memdesc:a1a7af0cff9c754a8a8ed9e6d774d39c1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enforces boundary conditions for controls (default implementation does nothing).  <br /></td></tr>
-<tr class="separator:a1a7af0cff9c754a8a8ed9e6d774d39c1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aeb2d8ad2ff4f4b253e45adaa5b0d02c6" id="r_aeb2d8ad2ff4f4b253e45adaa5b0d02c6"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#aeb2d8ad2ff4f4b253e45adaa5b0d02c6">evaluate</a> (const double t, const std::vector&lt; double &gt; &amp;coeff, int carrier_freq_id, double *Blt1, double *Blt2)=0</td></tr>
-<tr class="memdesc:aeb2d8ad2ff4f4b253e45adaa5b0d02c6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates the control basis at a given time using the provided coefficients.  <br /></td></tr>
-<tr class="separator:aeb2d8ad2ff4f4b253e45adaa5b0d02c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1b50dc6c86c6c3d3061954491da05cea" id="r_a1b50dc6c86c6c3d3061954491da05cea"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a1b50dc6c86c6c3d3061954491da05cea">derivative</a> (const double t, const std::vector&lt; double &gt; &amp;coeff, double *coeff_diff, const double valbar1, const double valbar2, int carrier_freq_id)=0</td></tr>
-<tr class="memdesc:a1b50dc6c86c6c3d3061954491da05cea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates the derivative of the control basis at a given time.  <br /></td></tr>
-<tr class="separator:a1b50dc6c86c6c3d3061954491da05cea"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3f70574561f731d2e5d744ea1143ebe4" id="r_a3f70574561f731d2e5d744ea1143ebe4"><td class="memItemLeft" align="right" valign="top">virtual double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a3f70574561f731d2e5d744ea1143ebe4">computeVariation</a> ()</td></tr>
+<tr class="memdesc:a3f70574561f731d2e5d744ea1143ebe4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the variation of control parameters (default implementation returns 0.0).  <br /></td></tr>
+<tr class="separator:a3f70574561f731d2e5d744ea1143ebe4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2a156a5be3bfa6f7b102975143e73ae7" id="r_a2a156a5be3bfa6f7b102975143e73ae7"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a2a156a5be3bfa6f7b102975143e73ae7">computeVariation_diff</a> (double *, double)</td></tr>
+<tr class="memdesc:a2a156a5be3bfa6f7b102975143e73ae7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Computes the gradient of the variation (default implementation does nothing).  <br /></td></tr>
+<tr class="separator:a2a156a5be3bfa6f7b102975143e73ae7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a42e81de3f9c1d54712ae0495fd52e9ac" id="r_a42e81de3f9c1d54712ae0495fd52e9ac"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a42e81de3f9c1d54712ae0495fd52e9ac">enforceBoundary</a> ()</td></tr>
+<tr class="memdesc:a42e81de3f9c1d54712ae0495fd52e9ac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Enforces boundary conditions for controls (default implementation does nothing).  <br /></td></tr>
+<tr class="separator:a42e81de3f9c1d54712ae0495fd52e9ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a926fd0a73543e43401d68b496ea6272a" id="r_a926fd0a73543e43401d68b496ea6272a"><td class="memItemLeft" align="right" valign="top">virtual double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a926fd0a73543e43401d68b496ea6272a">evaluate</a> (const double t, int carrier_freq_id)</td></tr>
+<tr class="memdesc:a926fd0a73543e43401d68b496ea6272a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates the control basis at a given time using the provided coefficients.  <br /></td></tr>
+<tr class="separator:a926fd0a73543e43401d68b496ea6272a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a40e9f0d7f5999dcd07e68da89b99240d" id="r_a40e9f0d7f5999dcd07e68da89b99240d"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a40e9f0d7f5999dcd07e68da89b99240d">derivative</a> (const double t, int carrier_freq_id, double *grad, const double valbar)</td></tr>
+<tr class="memdesc:a40e9f0d7f5999dcd07e68da89b99240d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Evaluates the derivative of the control basis at a given time.  <br /></td></tr>
+<tr class="separator:a40e9f0d7f5999dcd07e68da89b99240d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-attribs" name="pro-attribs"></a>
 Protected Attributes</h2></td></tr>
-<tr class="memitem:a93075af8399c469e87ea9b2a7afd1f8b" id="r_a93075af8399c469e87ea9b2a7afd1f8b"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a93075af8399c469e87ea9b2a7afd1f8b">nparams</a></td></tr>
-<tr class="memdesc:a93075af8399c469e87ea9b2a7afd1f8b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of parameters that define the control pulse.  <br /></td></tr>
-<tr class="separator:a93075af8399c469e87ea9b2a7afd1f8b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5fea55dc24dce4fbdb87db0acaa78388" id="r_a5fea55dc24dce4fbdb87db0acaa78388"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::vector&lt; double &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a5fea55dc24dce4fbdb87db0acaa78388">params</a></td></tr>
+<tr class="memdesc:a5fea55dc24dce4fbdb87db0acaa78388"><td class="mdescLeft">&#160;</td><td class="mdescRight">Coefficients of the control parameterizations, one vector for each carrier wave.  <br /></td></tr>
+<tr class="separator:a5fea55dc24dce4fbdb87db0acaa78388"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1f1820a85ad416f02245084619ffb720" id="r_a1f1820a85ad416f02245084619ffb720"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a1f1820a85ad416f02245084619ffb720">tstart</a></td></tr>
 <tr class="memdesc:a1f1820a85ad416f02245084619ffb720"><td class="mdescLeft">&#160;</td><td class="mdescRight">Start time of the interval where the control basis is applied.  <br /></td></tr>
 <tr class="separator:a1f1820a85ad416f02245084619ffb720"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af89673125f7918b75b723b7589e4b19f" id="r_af89673125f7918b75b723b7589e4b19f"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#af89673125f7918b75b723b7589e4b19f">tstop</a></td></tr>
 <tr class="memdesc:af89673125f7918b75b723b7589e4b19f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stop time of the interval where the control basis is applied.  <br /></td></tr>
 <tr class="separator:af89673125f7918b75b723b7589e4b19f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9c5c1e7f7c06a9ad55dd550e8886ca4c" id="r_a9c5c1e7f7c06a9ad55dd550e8886ca4c"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#a9c5c1e7f7c06a9ad55dd550e8886ca4c">skip</a></td></tr>
-<tr class="memdesc:a9c5c1e7f7c06a9ad55dd550e8886ca4c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Offset to the starting location for this basis inside the global control vector.  <br /></td></tr>
-<tr class="separator:a9c5c1e7f7c06a9ad55dd550e8886ca4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa47f10d7033e83b174a97d6cc7e91d89" id="r_aa47f10d7033e83b174a97d6cc7e91d89"><td class="memItemLeft" align="right" valign="top"><a class="el" href="defs_8hpp.html#a8005f1f182fd0248a710ca64f72508d4">ControlType</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classControlBasis.html#aa47f10d7033e83b174a97d6cc7e91d89">controltype</a></td></tr>
 <tr class="memdesc:aa47f10d7033e83b174a97d6cc7e91d89"><td class="mdescLeft">&#160;</td><td class="mdescRight">Type of control parameterization.  <br /></td></tr>
 <tr class="separator:aa47f10d7033e83b174a97d6cc7e91d89"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -171,12 +166,12 @@ Protected Attributes</h2></td></tr>
 <tr class="separator:ad88d2345b9f9df57685c12e2dbda419d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Abstract base class for control parameterizations. </p>
-<p>The <code><a class="el" href="classControlBasis.html" title="Abstract base class for control parameterizations.">ControlBasis</a></code> class defines the interface for various parameterizations of the control pulse envelopes, which are multiplied by carrier waves in the <a class="el" href="classOscillator.html" title="Quantum oscillator (multi-level qubit) with control capabilities.">Oscillator</a> class. Derived classes implement specific control parameterizations, such as the most standard parameterization via 2nd order Bsplines. Specific control parameterizations are initialized in the constructor of the oscillator.</p>
+<div class="textblock"><p>Control parameterization interface and empty fallback implementation. </p>
+<p>The <code><a class="el" href="classControlBasis.html" title="Control parameterization interface and empty fallback implementation.">ControlBasis</a></code> class defines the interface for various parameterizations of the control pulse envelopes, which are multiplied by carrier waves in the <a class="el" href="classOscillator.html" title="Quantum oscillator (multi-level qubit) with control capabilities.">Oscillator</a> class. Derived classes implement specific control parameterizations, such as the most standard parameterization via 2nd order Bsplines. Specific control parameterizations are initialized in the constructor of the oscillator. The base class itself is also usable as a concrete empty basis that stores no parameters and evaluates to zero.</p>
 <p>Main functionality:</p><ul>
-<li><a class="el" href="classControlBasis.html#aeb2d8ad2ff4f4b253e45adaa5b0d02c6">evaluate</a> for computing the outer envelop shape of the pulses at given time t</li>
-<li><a class="el" href="classControlBasis.html#a1b50dc6c86c6c3d3061954491da05cea">derivative</a> for updating the local gradient of the <a class="el" href="classControlBasis.html#aeb2d8ad2ff4f4b253e45adaa5b0d02c6">evaluate</a> function</li>
-<li><a class="el" href="classControlBasis.html#a1a7af0cff9c754a8a8ed9e6d774d39c1">enforceBoundary</a> for setting pulse shape envelopes to zero at initial and final time </li>
+<li><a class="el" href="classControlBasis.html#a926fd0a73543e43401d68b496ea6272a">evaluate</a> for computing the outer envelop shape of the pulses at given time t</li>
+<li><a class="el" href="classControlBasis.html#a40e9f0d7f5999dcd07e68da89b99240d">derivative</a> for updating the local gradient of the <a class="el" href="classControlBasis.html#a926fd0a73543e43401d68b496ea6272a">evaluate</a> function</li>
+<li><a class="el" href="classControlBasis.html#a42e81de3f9c1d54712ae0495fd52e9ac">enforceBoundary</a> for setting pulse shape envelopes to zero at initial and final time </li>
 </ul>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a716baae5e56466c8edba3f646c900efd" name="a716baae5e56466c8edba3f646c900efd"></a>
@@ -196,8 +191,8 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a3942889265eab2353dcef37c63ce856b" name="a3942889265eab2353dcef37c63ce856b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3942889265eab2353dcef37c63ce856b">&#9670;&#160;</a></span>ControlBasis() <span class="overload">[2/2]</span></h2>
+<a id="a74196ceb9bcdaf32299347db1fa5b925" name="a74196ceb9bcdaf32299347db1fa5b925"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a74196ceb9bcdaf32299347db1fa5b925">&#9670;&#160;</a></span>ControlBasis() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -206,25 +201,31 @@ Protected Attributes</h2></td></tr>
           <td class="memname">ControlBasis::ControlBasis </td>
           <td>(</td>
           <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>nparams_</em>, </td>
+          <td class="paramname"><em>nbasisfunctions</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>ncarrier</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>tstart</em>, </td>
+          <td class="paramname"><em>tstart_</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">double&#160;</td>
-          <td class="paramname"><em>tstop</em>, </td>
+          <td class="paramname"><em>tstop_</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>enforceZeroBoundary</em>&#160;</td>
+          <td class="paramname"><em>control_zero_boundary_condition_</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -237,10 +238,11 @@ Protected Attributes</h2></td></tr>
 <p>Constructor with parameters. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">nparams_</td><td>Number of parameters defining the controls. </td></tr>
-    <tr><td class="paramname">tstart</td><td>Start time of the interval. </td></tr>
-    <tr><td class="paramname">tstop</td><td>Stop time of the interval. </td></tr>
-    <tr><td class="paramname">enforceZeroBoundary</td><td>Flag to enforce zero boundary conditions. If true, ensures that the controls start and end at zero. </td></tr>
+    <tr><td class="paramname">nbasisfunctions</td><td>Number of basis functions for the control parameterization. </td></tr>
+    <tr><td class="paramname">ncarrier</td><td>Number of carrier waves for the control parameterization. </td></tr>
+    <tr><td class="paramname">tstart_</td><td>Start time of the interval. </td></tr>
+    <tr><td class="paramname">tstop_</td><td>Stop time of the interval. </td></tr>
+    <tr><td class="paramname">control_zero_boundary_condition_</td><td>Flag to enforce zero boundary conditions. If true, ensures that the controls start and end at zero. </td></tr>
   </table>
   </dd>
 </dl>
@@ -273,8 +275,8 @@ Protected Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a64a982ce0148a1dec17f17d4c5d4933b" name="a64a982ce0148a1dec17f17d4c5d4933b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a64a982ce0148a1dec17f17d4c5d4933b">&#9670;&#160;</a></span>computeVariation()</h2>
+<a id="a3f70574561f731d2e5d744ea1143ebe4" name="a3f70574561f731d2e5d744ea1143ebe4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3f70574561f731d2e5d744ea1143ebe4">&#9670;&#160;</a></span>computeVariation()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -285,19 +287,8 @@ Protected Attributes</h2></td></tr>
         <tr>
           <td class="memname">virtual double ControlBasis::computeVariation </td>
           <td>(</td>
-          <td class="paramtype">std::vector&lt; double &gt; &amp;&#160;</td>
-          <td class="paramname">, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
+          <td class="paramname"></td><td>)</td>
           <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname">&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
         </tr>
       </table>
   </td>
@@ -311,12 +302,12 @@ Protected Attributes</h2></td></tr>
 <p>Default implementation ignores all input parameters.</p>
 <dl class="section return"><dt>Returns</dt><dd>double Variation value. </dd></dl>
 
-<p>Reimplemented in <a class="el" href="classBSpline0.html#a86de3718cec83e570037a309e55fb36a">BSpline0</a>.</p>
+<p>Reimplemented in <a class="el" href="classBSpline0.html#a5e1afb6ac2f65bfa5d311485c057f867">BSpline0</a>.</p>
 
 </div>
 </div>
-<a id="a3ec29a7da110bbb3c31beb454d765ed6" name="a3ec29a7da110bbb3c31beb454d765ed6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3ec29a7da110bbb3c31beb454d765ed6">&#9670;&#160;</a></span>computeVariation_diff()</h2>
+<a id="a2a156a5be3bfa6f7b102975143e73ae7" name="a2a156a5be3bfa6f7b102975143e73ae7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2a156a5be3bfa6f7b102975143e73ae7">&#9670;&#160;</a></span>computeVariation_diff()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -333,19 +324,7 @@ Protected Attributes</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">std::vector&lt; double &gt; &amp;&#160;</td>
-          <td class="paramname">, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
           <td class="paramtype">double&#160;</td>
-          <td class="paramname">, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
           <td class="paramname">&#160;</td>
         </tr>
         <tr>
@@ -364,12 +343,12 @@ Protected Attributes</h2></td></tr>
 <p>Computes the gradient of the variation (default implementation does nothing). </p>
 <p>Default implementation ignores all input parameters. </p>
 
-<p>Reimplemented in <a class="el" href="classBSpline0.html#a548a6d275d3d12ddb00a6b9a111aff0c">BSpline0</a>.</p>
+<p>Reimplemented in <a class="el" href="classBSpline0.html#a419466acd2e2f9a9cc3e7a3c80e7cb0d">BSpline0</a>.</p>
 
 </div>
 </div>
-<a id="a1b50dc6c86c6c3d3061954491da05cea" name="a1b50dc6c86c6c3d3061954491da05cea"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1b50dc6c86c6c3d3061954491da05cea">&#9670;&#160;</a></span>derivative()</h2>
+<a id="a40e9f0d7f5999dcd07e68da89b99240d" name="a40e9f0d7f5999dcd07e68da89b99240d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a40e9f0d7f5999dcd07e68da89b99240d">&#9670;&#160;</a></span>derivative()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -386,26 +365,94 @@ Protected Attributes</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const std::vector&lt; double &gt; &amp;&#160;</td>
-          <td class="paramname"><em>coeff</em>, </td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>carrier_freq_id</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">double *&#160;</td>
-          <td class="paramname"><em>coeff_diff</em>, </td>
+          <td class="paramname"><em>grad</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const double&#160;</td>
-          <td class="paramname"><em>valbar1</em>, </td>
+          <td class="paramname"><em>valbar</em>&#160;</td>
         </tr>
         <tr>
-          <td class="paramkey"></td>
           <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Evaluates the derivative of the control basis at a given time. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">t</td><td>Time at which to evaluate. </td></tr>
+    <tr><td class="paramname">carrier_freq_id</td><td>ID of the carrier frequency. </td></tr>
+    <tr><td class="paramname">grad</td><td>Pointer to the derivative coefficients. </td></tr>
+    <tr><td class="paramname">valbar</td><td>Multiplier for the derivative term. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p>Reimplemented in <a class="el" href="classBSpline2nd.html#a42d243c8ea885827fce70cbfeb9a0453">BSpline2nd</a>, and <a class="el" href="classBSpline0.html#a290952cc6aeea2e810b7ba9947bb3fa0">BSpline0</a>.</p>
+
+</div>
+</div>
+<a id="a42e81de3f9c1d54712ae0495fd52e9ac" name="a42e81de3f9c1d54712ae0495fd52e9ac"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a42e81de3f9c1d54712ae0495fd52e9ac">&#9670;&#160;</a></span>enforceBoundary()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual void ControlBasis::enforceBoundary </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Enforces boundary conditions for controls (default implementation does nothing). </p>
+<p>For some control parameterizations, this can be used to enforce that the controls start and end at zero. For example, the 2nd order Bspline parameterization will overwrite the parameters of the first and last two splines by zero, ensuring that the resulting control pulses start and end at zero.</p>
+<p>Default implementation ignores all input parameters. </p>
+
+<p>Reimplemented in <a class="el" href="classBSpline2nd.html#a7cf24fc71a96c0e518f4fe88983e926e">BSpline2nd</a>, and <a class="el" href="classBSpline0.html#a81dc7f52240058a5af7d8545f4dd6d1a">BSpline0</a>.</p>
+
+</div>
+</div>
+<a id="a926fd0a73543e43401d68b496ea6272a" name="a926fd0a73543e43401d68b496ea6272a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a926fd0a73543e43401d68b496ea6272a">&#9670;&#160;</a></span>evaluate()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">virtual double ControlBasis::evaluate </td>
+          <td>(</td>
           <td class="paramtype">const double&#160;</td>
-          <td class="paramname"><em>valbar2</em>, </td>
+          <td class="paramname"><em>t</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -421,118 +468,7 @@ Protected Attributes</h2></td></tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Evaluates the derivative of the control basis at a given time. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">t</td><td>Time at which to evaluate. </td></tr>
-    <tr><td class="paramname">coeff</td><td>Vector of coefficients. </td></tr>
-    <tr><td class="paramname">coeff_diff</td><td>Pointer to the derivative coefficients. </td></tr>
-    <tr><td class="paramname">valbar1</td><td>Multiplier for the real derivative term. </td></tr>
-    <tr><td class="paramname">valbar2</td><td>Multiplier for the imaginary derivative term. </td></tr>
-    <tr><td class="paramname">carrier_freq_id</td><td>ID of the carrier frequency. </td></tr>
-  </table>
-  </dd>
-</dl>
-
-<p>Implemented in <a class="el" href="classBSpline2nd.html#a4f43e62618771faa4ae3d77fddb61224">BSpline2nd</a>, <a class="el" href="classBSpline2ndAmplitude.html#a3616ef11be3874d380deba9ee48f3b24">BSpline2ndAmplitude</a>, and <a class="el" href="classBSpline0.html#a6daba2ef8670bd474b77861a60d7aacd">BSpline0</a>.</p>
-
-</div>
-</div>
-<a id="a1a7af0cff9c754a8a8ed9e6d774d39c1" name="a1a7af0cff9c754a8a8ed9e6d774d39c1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1a7af0cff9c754a8a8ed9e6d774d39c1">&#9670;&#160;</a></span>enforceBoundary()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void ControlBasis::enforceBoundary </td>
-          <td>(</td>
-          <td class="paramtype">double *&#160;</td>
-          <td class="paramname">, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname">&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
 <span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Enforces boundary conditions for controls (default implementation does nothing). </p>
-<p>For some control parameterizations, this can be used to enforce that the controls start and end at zero. For example, the 2nd order Bspline parameterization will overwrite the parameters of the first and last two splines by zero, ensuring that the resulting control pulses start and end at zero.</p>
-<p>Default implementation ignores all input parameters. </p>
-
-<p>Reimplemented in <a class="el" href="classBSpline2nd.html#a38141df7d51b2628566669b984029596">BSpline2nd</a>, <a class="el" href="classBSpline2ndAmplitude.html#a92279a237e12b1ca345af7c9faeeded2">BSpline2ndAmplitude</a>, and <a class="el" href="classBSpline0.html#aca83c16e4f2dca78973a990dcfae8e59">BSpline0</a>.</p>
-
-</div>
-</div>
-<a id="aeb2d8ad2ff4f4b253e45adaa5b0d02c6" name="aeb2d8ad2ff4f4b253e45adaa5b0d02c6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aeb2d8ad2ff4f4b253e45adaa5b0d02c6">&#9670;&#160;</a></span>evaluate()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void ControlBasis::evaluate </td>
-          <td>(</td>
-          <td class="paramtype">const double&#160;</td>
-          <td class="paramname"><em>t</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const std::vector&lt; double &gt; &amp;&#160;</td>
-          <td class="paramname"><em>coeff</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>carrier_freq_id</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">double *&#160;</td>
-          <td class="paramname"><em>Blt1</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">double *&#160;</td>
-          <td class="paramname"><em>Blt2</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
@@ -541,20 +477,18 @@ Protected Attributes</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramdir">[in]</td><td class="paramname">t</td><td>Time at which to evaluate. </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">coeff</td><td>Vector of parameters (coefficients of the basis parameterization). </td></tr>
     <tr><td class="paramdir">[in]</td><td class="paramname">carrier_freq_id</td><td>ID of the carrier frequency, provided by the oscillator. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Blt1</td><td>Pointer to store the real part of the control parameterization. </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">Blt2</td><td>Pointer to store the imaginary part of the control parameterization. </td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section return"><dt>Returns</dt><dd>Evaluated basis expansion value at time t. </dd></dl>
 
-<p>Implemented in <a class="el" href="classBSpline2nd.html#a7dc9c7e73aa9db61b60ad2c9be22972e">BSpline2nd</a>, <a class="el" href="classBSpline2ndAmplitude.html#ab3d4531d46af3760161580abb295e5bc">BSpline2ndAmplitude</a>, and <a class="el" href="classBSpline0.html#aaa817cf659712877ae0735b299f5dca9">BSpline0</a>.</p>
+<p>Reimplemented in <a class="el" href="classBSpline2nd.html#aa4ab22b2e004aee9ad01149119a6b5d6">BSpline2nd</a>, and <a class="el" href="classBSpline0.html#a46dffd701e904423e3160b86c27fb48e">BSpline0</a>.</p>
 
 </div>
 </div>
 <a id="a8b33a918ba140a5e79c3ed79adba6c9b" name="a8b33a918ba140a5e79c3ed79adba6c9b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8b33a918ba140a5e79c3ed79adba6c9b">&#9670;&#160;</a></span>getNparams()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a8b33a918ba140a5e79c3ed79adba6c9b">&#9670;&#160;</a></span>getNparams() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -576,13 +510,13 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Retrieves the number of parameters defining the controls. </p>
+<p>Retrieves the total number of parameters defining the controls. </p>
 <dl class="section return"><dt>Returns</dt><dd>int Number of parameters. </dd></dl>
 
 </div>
 </div>
-<a id="a5c95a686ca2774a926966fd6a261d150" name="a5c95a686ca2774a926966fd6a261d150"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5c95a686ca2774a926966fd6a261d150">&#9670;&#160;</a></span>getNSplines()</h2>
+<a id="a59d576e6d94dc50c7e5eaf6bf1401b09" name="a59d576e6d94dc50c7e5eaf6bf1401b09"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a59d576e6d94dc50c7e5eaf6bf1401b09">&#9670;&#160;</a></span>getNparams() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -591,39 +525,10 @@ Protected Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">virtual int ControlBasis::getNSplines </td>
+          <td class="memname">int ControlBasis::getNparams </td>
           <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Retrieves the number of splines (default implementation returns 0). </p>
-<dl class="section return"><dt>Returns</dt><dd>int Number of splines. </dd></dl>
-
-<p>Reimplemented in <a class="el" href="classBSpline2nd.html#a15d6d09ed4cd7c3f3789882e01a1d8a9">BSpline2nd</a>, <a class="el" href="classBSpline2ndAmplitude.html#abf50ce68cfccee035d2681d6c7f6dfed">BSpline2ndAmplitude</a>, and <a class="el" href="classBSpline0.html#a65024112892da5c571843909ed201202">BSpline0</a>.</p>
-
-</div>
-</div>
-<a id="a008d98e3fe892fbf3f86cce64e7e5b07" name="a008d98e3fe892fbf3f86cce64e7e5b07"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a008d98e3fe892fbf3f86cce64e7e5b07">&#9670;&#160;</a></span>getSkip()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">int ControlBasis::getSkip </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>f</em></td><td>)</td>
           <td></td>
         </tr>
       </table>
@@ -634,8 +539,51 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Retrieves the offset for the starting location in the global control vector. </p>
-<dl class="section return"><dt>Returns</dt><dd>int Offset value. </dd></dl>
+<p>Retrieves the number of parameters for a specific carrier wave. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">f</td><td>Index of the carrier wave. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>int Number of parameters for the specified carrier wave. </dd></dl>
+
+</div>
+</div>
+<a id="a31e183f6dfdfc0a992048e5be82e9d7b" name="a31e183f6dfdfc0a992048e5be82e9d7b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a31e183f6dfdfc0a992048e5be82e9d7b">&#9670;&#160;</a></span>getParams()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void ControlBasis::getParams </td>
+          <td>(</td>
+          <td class="paramtype">double *&#160;</td>
+          <td class="paramname"><em>x</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>carrier_freq_id</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get parameter coefficients. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">x</td><td>Pointer to the array to store parameter coefficients. </td></tr>
+    <tr><td class="paramname">carrier_freq_id</td><td>ID of the carrier frequency for which to get the parameters. </td></tr>
+  </table>
+  </dd>
+</dl>
 
 </div>
 </div>
@@ -723,34 +671,37 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="ab1b24c656aec7d1eef58f173620d0135" name="ab1b24c656aec7d1eef58f173620d0135"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab1b24c656aec7d1eef58f173620d0135">&#9670;&#160;</a></span>setSkip()</h2>
+<a id="a9eee0d8f0917010bea00419cbc167a13" name="a9eee0d8f0917010bea00419cbc167a13"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9eee0d8f0917010bea00419cbc167a13">&#9670;&#160;</a></span>setParams()</h2>
 
 <div class="memitem">
 <div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void ControlBasis::setSkip </td>
+          <td class="memname">void ControlBasis::setParams </td>
           <td>(</td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>skip_</em></td><td>)</td>
+          <td class="paramtype">const double *&#160;</td>
+          <td class="paramname"><em>x</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>carrier_freq_id</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 
-<p>Sets the offset for the starting location in the global control vector. </p>
+<p>Set parameter coefficients. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">skip_</td><td>Offset value. </td></tr>
+    <tr><td class="paramname">x</td><td>Pointer to the array of parameter coefficients. </td></tr>
+    <tr><td class="paramname">carrier_freq_id</td><td>ID of the carrier frequency for which to set the parameters. </td></tr>
   </table>
   </dd>
 </dl>
@@ -806,8 +757,8 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
-<a id="a93075af8399c469e87ea9b2a7afd1f8b" name="a93075af8399c469e87ea9b2a7afd1f8b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a93075af8399c469e87ea9b2a7afd1f8b">&#9670;&#160;</a></span>nparams</h2>
+<a id="a5fea55dc24dce4fbdb87db0acaa78388" name="a5fea55dc24dce4fbdb87db0acaa78388"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5fea55dc24dce4fbdb87db0acaa78388">&#9670;&#160;</a></span>params</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -816,7 +767,7 @@ Protected Attributes</h2></td></tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">int ControlBasis::nparams</td>
+          <td class="memname">std::vector&lt;std::vector&lt;double&gt; &gt; ControlBasis::params</td>
         </tr>
       </table>
   </td>
@@ -826,31 +777,7 @@ Protected Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Number of parameters that define the control pulse. </p>
-
-</div>
-</div>
-<a id="a9c5c1e7f7c06a9ad55dd550e8886ca4c" name="a9c5c1e7f7c06a9ad55dd550e8886ca4c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9c5c1e7f7c06a9ad55dd550e8886ca4c">&#9670;&#160;</a></span>skip</h2>
-
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">int ControlBasis::skip</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Offset to the starting location for this basis inside the global control vector. </p>
+<p>Coefficients of the control parameterizations, one vector for each carrier wave. </p>
 
 </div>
 </div>

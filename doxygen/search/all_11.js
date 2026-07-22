@@ -16,5 +16,5 @@ var searchData=
   ['rhsmatrixupdate_13',['RHSMatrixUpdate',['../classPetscTS.html#a7bc8f58da5c0c940568f0ca745a4d37f',1,'PetscTS']]],
   ['rotation_5ffrequency_14',['ROTATION_FREQUENCY',['../namespaceConfigDefaults.html#adaee66137fbcf0d8a18dba2d61ca2d95',1,'ConfigDefaults']]],
   ['run_5ftype_5fmap_15',['RUN_TYPE_MAP',['../defs_8hpp.html#af201133d829c305c13eb6cd4edf6aece',1,'defs.hpp']]],
-  ['runtype_16',['runtype',['../namespaceConfigDefaults.html#ad27bbffaad91b2f8af5b6a9f91846391',1,'ConfigDefaults::RUNTYPE'],['../defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4',1,'RunType:&#160;defs.hpp']]]
+  ['runtype_16',['runtype',['../defs_8hpp.html#a192d9029b78da393fe9a628ccbd7fab4',1,'RunType:&#160;defs.hpp'],['../namespaceConfigDefaults.html#ad27bbffaad91b2f8af5b6a9f91846391',1,'ConfigDefaults::RUNTYPE']]]
 ];

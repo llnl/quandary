@@ -94,13 +94,15 @@ Collaboration diagram for MasterEq:</div>
 <div class="dyncontent">
 <div class="center"><img src="classMasterEq__coll__graph.png" border="0" usemap="#aMasterEq_coll__map" alt="Collaboration graph"/></div>
 <map name="aMasterEq_coll__map" id="aMasterEq_coll__map">
-<area shape="rect" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="31,93,114,119"/>
-<area shape="rect" href="structMatShellCtx.html" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="39,181,140,207"/>
-<area shape="poly" title=" " alt="" coords="27,127,10,141,8,148,11,156,24,169,41,179,38,184,20,174,6,159,3,148,6,138,24,123"/>
-<area shape="rect" href="classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="76,5,160,31"/>
-<area shape="poly" title=" " alt="" coords="91,41,80,56,75,75,74,93,69,93,69,74,75,53,87,38"/>
-<area shape="poly" title=" " alt="" coords="139,41,145,53,154,68,164,84,163,111,143,159,131,173,117,183,114,179,128,169,138,156,158,110,159,86,150,71,141,56,134,43"/>
-<area shape="poly" title=" " alt="" coords="82,168,72,119,77,118,87,167"/>
+<area shape="rect" title="Implementation of the real&#45;valued right&#45;hand&#45;side (RHS) system matrix of the quantum dynamical equati..." alt="" coords="31,240,114,265"/>
+<area shape="rect" href="structMatShellCtx.html" title="Matrix shell context containing data needed for applying the right&#45;hand&#45;side (RHS) system matrix to a..." alt="" coords="39,328,140,353"/>
+<area shape="poly" title=" " alt="" coords="27,273,10,287,8,295,11,303,24,316,41,326,38,330,20,320,6,305,3,295,6,284,24,269"/>
+<area shape="rect" href="classOscillator.html" title="Quantum oscillator (multi&#45;level qubit) with control capabilities." alt="" coords="76,152,160,177"/>
+<area shape="poly" title=" " alt="" coords="91,188,80,203,75,222,74,240,69,240,69,221,75,200,87,185"/>
+<area shape="poly" title=" " alt="" coords="139,187,145,200,154,215,164,231,163,258,143,305,131,319,117,330,114,326,128,316,138,303,158,257,159,232,150,218,141,203,134,190"/>
+<area shape="rect" href="classControlBasis.html" title="Control parameterization interface and empty fallback implementation." alt="" coords="66,5,170,31"/>
+<area shape="poly" title=" " alt="" coords="120,45,120,152,115,152,115,45"/>
+<area shape="poly" title=" " alt="" coords="82,315,72,266,77,265,87,314"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
@@ -119,6 +121,15 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aad34fc836f709483b81b724d8ec9f94c" id="r_aad34fc836f709483b81b724d8ec9f94c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classMasterEq.html#aad34fc836f709483b81b724d8ec9f94c">initSparseMatSolver</a> ()</td></tr>
 <tr class="memdesc:aad34fc836f709483b81b724d8ec9f94c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initializes matrices needed for the sparse matrix solver.  <br /></td></tr>
 <tr class="separator:aad34fc836f709483b81b724d8ec9f94c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af808d71720b9bf6e97dc5097413eb7e0" id="r_af808d71720b9bf6e97dc5097413eb7e0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classMasterEq.html#af808d71720b9bf6e97dc5097413eb7e0">initStdHamiltonianMats</a> ()</td></tr>
+<tr class="memdesc:af808d71720b9bf6e97dc5097413eb7e0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initializes the standard Hamiltonian matrices for the sparse solver.  <br /></td></tr>
+<tr class="separator:af808d71720b9bf6e97dc5097413eb7e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2193335d6b7f4cc4ede436cf3e00dfc4" id="r_a2193335d6b7f4cc4ede436cf3e00dfc4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classMasterEq.html#a2193335d6b7f4cc4ede436cf3e00dfc4">initStdControlMats</a> (int iosc, int nk, int npostk)</td></tr>
+<tr class="memdesc:a2193335d6b7f4cc4ede436cf3e00dfc4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initializes the standard control matrices for one oscillator.  <br /></td></tr>
+<tr class="separator:a2193335d6b7f4cc4ede436cf3e00dfc4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a925f8ad2ff369a3227a09a7f442a37be" id="r_a925f8ad2ff369a3227a09a7f442a37be"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classMasterEq.html#a925f8ad2ff369a3227a09a7f442a37be">initStdDecoherenceMats</a> ()</td></tr>
+<tr class="memdesc:a925f8ad2ff369a3227a09a7f442a37be"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initializes decoherences matrices for the sparse solver.  <br /></td></tr>
+<tr class="separator:a925f8ad2ff369a3227a09a7f442a37be"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7e880910441b27fde4ff1aef4de2aac4" id="r_a7e880910441b27fde4ff1aef4de2aac4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classOscillator.html">Oscillator</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classMasterEq.html#a7e880910441b27fde4ff1aef4de2aac4">getOscillator</a> (const size_t i)</td></tr>
 <tr class="memdesc:a7e880910441b27fde4ff1aef4de2aac4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the i-th oscillator.  <br /></td></tr>
 <tr class="separator:a7e880910441b27fde4ff1aef4de2aac4"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -197,6 +208,8 @@ Protected Attributes</h2></td></tr>
 <tr class="separator:a0d6120b5a9fbbf9321ae897ea463d6be"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af01d9bc120f37351713381245939945f" id="r_af01d9bc120f37351713381245939945f"><td class="memItemLeft" align="right" valign="top">std::vector&lt; Mat &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classMasterEq.html#af01d9bc120f37351713381245939945f">Bc_vec</a></td></tr>
 <tr class="separator:af01d9bc120f37351713381245939945f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aba436885375bad91fc200ab3eb3f0e1e" id="r_aba436885375bad91fc200ab3eb3f0e1e"><td class="memItemLeft" align="right" valign="top">std::vector&lt; Mat &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classMasterEq.html#aba436885375bad91fc200ab3eb3f0e1e">Bf_vec</a></td></tr>
+<tr class="separator:aba436885375bad91fc200ab3eb3f0e1e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7aa65ae612c591230c41eec8454936ee" id="r_a7aa65ae612c591230c41eec8454936ee"><td class="memItemLeft" align="right" valign="top">Mat&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classMasterEq.html#a7aa65ae612c591230c41eec8454936ee">Ad</a></td></tr>
 <tr class="separator:a7aa65ae612c591230c41eec8454936ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2afd1529a3b1793aa87ad1c008ef212a" id="r_a2afd1529a3b1793aa87ad1c008ef212a"><td class="memItemLeft" align="right" valign="top">Mat&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classMasterEq.html#a2afd1529a3b1793aa87ad1c008ef212a">Bd</a></td></tr>
@@ -666,6 +679,88 @@ Protected Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="a2193335d6b7f4cc4ede436cf3e00dfc4" name="a2193335d6b7f4cc4ede436cf3e00dfc4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2193335d6b7f4cc4ede436cf3e00dfc4">&#9670;&#160;</a></span>initStdControlMats()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void MasterEq::initStdControlMats </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>iosc</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>nk</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>npostk</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Initializes the standard control matrices for one oscillator. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">iosc</td><td>Index of the oscillator </td></tr>
+    <tr><td class="paramname">nk</td><td>Number of levels for this oscillator </td></tr>
+    <tr><td class="paramname">npostk</td><td>Number of levels for the coupled subsystems following this oscillator </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a925f8ad2ff369a3227a09a7f442a37be" name="a925f8ad2ff369a3227a09a7f442a37be"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a925f8ad2ff369a3227a09a7f442a37be">&#9670;&#160;</a></span>initStdDecoherenceMats()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void MasterEq::initStdDecoherenceMats </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Initializes decoherences matrices for the sparse solver. </p>
+
+</div>
+</div>
+<a id="af808d71720b9bf6e97dc5097413eb7e0" name="af808d71720b9bf6e97dc5097413eb7e0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af808d71720b9bf6e97dc5097413eb7e0">&#9670;&#160;</a></span>initStdHamiltonianMats()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void MasterEq::initStdHamiltonianMats </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Initializes the standard Hamiltonian matrices for the sparse solver. </p>
+
+</div>
+</div>
 <a id="a9308372d3f1aa99517dd313d5d2a4cd9" name="a9308372d3f1aa99517dd313d5d2a4cd9"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a9308372d3f1aa99517dd313d5d2a4cd9">&#9670;&#160;</a></span>population()</h2>
 
@@ -941,6 +1036,28 @@ Protected Attributes</h2></td></tr>
       <table class="memname">
         <tr>
           <td class="memname">std::vector&lt;Mat&gt; MasterEq::Bd_vec</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="aba436885375bad91fc200ab3eb3f0e1e" name="aba436885375bad91fc200ab3eb3f0e1e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aba436885375bad91fc200ab3eb3f0e1e">&#9670;&#160;</a></span>Bf_vec</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;Mat&gt; MasterEq::Bf_vec</td>
         </tr>
       </table>
   </td>
