@@ -29,7 +29,6 @@ const ControlType CONTROL_TYPE = ControlType::BSPLINE; ///< Default drive-contro
 const size_t CONTROL_SPLINE_COUNT = 10; ///< Default number of B-spline basis functions for drive control
 const ControlInitializationType CONTROL_INIT_TYPE = ControlInitializationType::CONSTANT; ///< Default drive-control initialization type
 const double CONTROL_INIT_AMPLITUDE = 0.0; ///< Default drive-control initialization amplitude
-const double CONTROL_INIT_PHASE = 0.0; ///< Default drive-control initialization phase
 const double CONTROL_AMPLITUDE_BOUND = 1e12; ///< Default amplitude bound for drive controls
 const double CARRIER_FREQ = 0.0; ///< Default carrier frequency
 
@@ -112,6 +111,5 @@ struct ControlParameterizationSettings {
 struct ControlInitializationSettings {
   ControlInitializationType type = ConfigDefaults::CONTROL_INIT_TYPE; ///< Initialization type
   std::optional<double> amplitude = ConfigDefaults::CONTROL_INIT_AMPLITUDE; ///< Initial control pulse amplitude
-  std::optional<double> phase = std::nullopt; ///< Initial control pulse phase
   std::optional<std::string> filename = std::nullopt; ///< Filename for FILE type
 };

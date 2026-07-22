@@ -547,13 +547,12 @@ std::string toString(const std::vector<ControlInitializationSettings>& control_i
     out += "type = \"" + enumToString(init.type, CONTROL_INITIALIZATION_TYPE_MAP) + "\"";
     out += init.filename.has_value() ? ", filename = \"" + init.filename.value() + "\"" : "";
     out += init.amplitude.has_value() ? ", amplitude = " + formatDouble(init.amplitude.value()) : "";
-    out += init.phase.has_value() ? ", phase = " + formatDouble(init.phase.value()) : "";
     return out;
   };
 
   // Helper function to compare two ControlInitializationSettings items
   auto areEqual = [](const ControlInitializationSettings& a, const ControlInitializationSettings& b) {
-    return a.type == b.type && a.amplitude == b.amplitude && a.phase == b.phase;
+    return a.type == b.type && a.amplitude == b.amplitude;
   };
 
   return toStringWithOptionalPerSubsystem(control_initializations, printItems, areEqual);
@@ -808,11 +807,6 @@ void Config::finalize() {
   if (!control_flux_enabled) {
     for (size_t i = 0; i < control_flux_parameterizations.size(); i++) {
       control_flux_parameterizations[i].type = ControlType::NONE;
-      control_flux_initializations[i].phase = std::nullopt;
-    }
-  } else {
-    for (size_t i = 0; i < control_flux_initializations.size(); i++) {
-      control_flux_initializations[i].phase = std::nullopt;
     }
   }
 }
@@ -1001,13 +995,11 @@ ControlInitializationSettings Config::parseControlInitializationSpecs(const toml
   if (init.type == ControlInitializationType::FILE) {
     init.filename = validators::field<std::string>(init_table, "filename").value();
     init.amplitude = std::nullopt;
-    init.phase = std::nullopt;
     if (!init.filename.has_value()) {
       logger.exitWithError("control_initialization of type 'file' must have a 'filename' parameter");
     }
   } else {
     init.amplitude = validators::field<double>(init_table, "amplitude").valueOr(ConfigDefaults::CONTROL_INIT_AMPLITUDE);
-    init.phase = validators::field<double>(init_table, "phase").greaterThanEqual(0.0).valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
   }
 
   return init;
