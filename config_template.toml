@@ -110,33 +110,17 @@ amplitude_bound = 0.008
 ## Decide whether control pulses should start and end at zero.
 zero_boundary_condition = false
 
-# Optional flux control: adds f(t) * a^\dagger a per oscillator.
-[control.flux]
-# Enable/disable flux channel independently from drive controls above.
-enabled = false
-# Flux parameterization is independent from drive parameterization and has its own time window.
-parameterization = { type = "none" }
-# Example:
+## Optional flux control: adds f(t) * a^\dagger a per oscillator.
+# Flux parameterization is independent from drive parameterization and has its own time window. Example usage:
+# [control.flux]
+# enabled = true
 # parameterization = { type = "spline", num = 150, tstart = 0.0, tstop = 50.0 }
-# parameterization = [
-#   { subsystem = 0, type = "spline", num = 150, tstart = 0.0, tstop = 50.0 },
-#   { subsystem = 1, type = "spline0", num = 300 }
-# ]
-
-# Flux initialization options: "constant", "random", or "file"
-initialization = { type = "constant", amplitude = 0.0 }
 # initialization = [
-#   { subsystem = 0, type = "random", amplitude = 0.002 },
-#   { subsystem = 1, type = "constant", amplitude = 0.0 }
+#   { subsystem = 0, type = "constant", amplitude = 0.2 },
+#   { subsystem = 1, type = "constant", amplitude = 0.1 }
 # ]
-
-# Flux amplitude bound (GHz), separate from drive amplitude_bound.
-amplitude_bound = 0.008
-# Option 2: one bound per subsystem
-# amplitude_bound = [0.008, 0.010]
-
-# Optional zero boundary condition for flux controls (defaults to [control].zero_boundary_condition)
-zero_boundary_condition = false
+# amplitude_bound = [1.0, 0.5]
+# zero_boundary_condition = false
 
 [optimization]
 # Optimization target options:
