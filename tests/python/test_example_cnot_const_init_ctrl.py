@@ -151,8 +151,8 @@ def test_example_cnot_const_init_ctrl(mpi_exec, tmp_path, request):
 
     assert_results_equal(
         t=t,
-        pt=pt,
-        qt=qt,
+        p_samples=pt,
+        q_samples=qt,
         infidelity=infidelity,
         energy=energy,
         population=population,

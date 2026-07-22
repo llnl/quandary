@@ -6,7 +6,7 @@ ABS_TOL = 1.0e-10
 
 
 def assert_results_equal(
-        t, pt, qt, infidelity, energy, population, T, n_osc, n_levels, sample_indices,
+        t, p_samples, q_samples, infidelity, energy, population, T, n_osc, n_levels, sample_indices,
         expected_length, expected_infidelity, expected_pt, expected_qt, expected_energy, expected_population):
     """
     Utility function to assert that the results of quantum run match the expected values within given tolerances.
@@ -15,12 +15,12 @@ def assert_results_equal(
     assert len(t) == expected_length
     assert infidelity == approx(expected_infidelity, rel=REL_TOL, abs=ABS_TOL)
 
-    assert len(pt) == n_osc
-    assert len(qt) == n_osc
+    assert len(p_samples) == n_osc
+    assert len(q_samples) == n_osc
 
     for i in range(n_osc):
-        pt_samples = [pt[i][idx] for idx in sample_indices]
-        qt_samples = [qt[i][idx] for idx in sample_indices]
+        pt_samples = [p_samples[i][idx] for idx in sample_indices]
+        qt_samples = [q_samples[i][idx] for idx in sample_indices]
         np.testing.assert_allclose(pt_samples, expected_pt[i], rtol=REL_TOL, atol=ABS_TOL)
         np.testing.assert_allclose(qt_samples, expected_qt[i], rtol=REL_TOL, atol=ABS_TOL)
 
@@ -41,19 +41,19 @@ def assert_results_equal(
             np.testing.assert_allclose(pop_samples, expected_population[i][j], rtol=REL_TOL, atol=ABS_TOL)
 
 
-def print_expected_values(infidelity, pt, qt, energy, population, sample_indices, n_osc):
+def print_expected_values(infidelity, p_samples, q_samples, energy, population, sample_indices, n_osc):
     """
     Utility function to print actual values in the format needed for EXPECTED arrays.
     Call this function with actual test results to get copy-pasteable expected values.
     """
     print()
-    print(f"EXPECTED_LENGTH = {len(pt[0])}")
+    print(f"EXPECTED_LENGTH = {len(p_samples[0])}")
     print(f"EXPECTED_INFIDELITY = {infidelity}")
     print()
 
     print("EXPECTED_PT = [")
     for i in range(n_osc):
-        pt_samples = [pt[i][idx] for idx in sample_indices]
+        pt_samples = [p_samples[i][idx] for idx in sample_indices]
         print("    [")
         # Format with max 5 values per line for readability
         for j in range(0, len(pt_samples), 5):
@@ -68,7 +68,7 @@ def print_expected_values(infidelity, pt, qt, energy, population, sample_indices
 
     print("EXPECTED_QT = [")
     for i in range(n_osc):
-        qt_samples = [qt[i][idx] for idx in sample_indices]
+        qt_samples = [q_samples[i][idx] for idx in sample_indices]
         print("    [")
         for j in range(0, len(qt_samples), 5):
             chunk = qt_samples[j:j+5]
