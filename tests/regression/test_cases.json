@@ -196,6 +196,18 @@
         "number_of_processes": [
             1, 8
         ]
+    },
+    {
+        "simulation_name": "single_qubit_flux",
+        "files_to_compare": [
+            "control0.dat",
+            "expected*.dat",
+            "population*.dat",
+            "grad.dat"
+        ],
+        "number_of_processes": [
+            1, 4
+        ]
     }
 
 ]

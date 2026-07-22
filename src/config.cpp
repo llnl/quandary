@@ -207,6 +207,36 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       }
     }
 
+    // Parse optional flux control settings from [control.flux]
+    control_flux_enabled = ConfigDefaults::CONTROL_FLUX_ENABLED;
+    control_flux_zero_boundary_condition = ConfigDefaults::CONTROL_ZERO_BOUNDARY_CONDITION;
+    ControlParameterizationSettings default_flux_param;
+    default_flux_param.type = ControlType::NONE;
+    control_flux_parameterizations.assign(num_osc, default_flux_param);
+    ControlInitializationSettings default_flux_init;
+    control_flux_initializations.assign(num_osc, default_flux_init);
+    control_flux_amplitude_bounds = std::vector<double>(num_osc, ConfigDefaults::CONTROL_FLUX_AMPLITUDE_BOUND);
+
+    if (control_table.contains("flux")) {
+      auto* flux_table = control_table["flux"].as_table();
+      if (!flux_table) {
+        logger.exitWithError("control.flux must be a table");
+      }
+
+      control_flux_enabled = validators::field<bool>(*flux_table, "enabled").valueOr(ConfigDefaults::CONTROL_FLUX_ENABLED);
+      control_flux_zero_boundary_condition = validators::field<bool>(*flux_table, "zero_boundary_condition").valueOr(ConfigDefaults::CONTROL_ZERO_BOUNDARY_CONDITION);
+
+      if (flux_table->contains("parameterization")) {
+        auto parseParamFunc = [this](const toml::table& t) { return parseControlParameterizationSpecs(t); };
+        control_flux_parameterizations = parsePerSubsystemSettings<ControlParameterizationSettings>(*flux_table, "parameterization", num_osc, default_flux_param, parseParamFunc, logger);
+      }
+      if (flux_table->contains("initialization")) {
+        auto parseInitFunc = [this](const toml::table& t) { return parseControlInitializationSpecs(t); };
+        control_flux_initializations = parsePerSubsystemSettings<ControlInitializationSettings>(*flux_table, "initialization", num_osc, default_flux_init, parseInitFunc, logger);
+      }
+      control_flux_amplitude_bounds = validators::scalarOrVectorOr<double>(*flux_table, "amplitude_bound", num_osc, std::vector<double>(num_osc, ConfigDefaults::CONTROL_FLUX_AMPLITUDE_BOUND));
+    }
+
     // Parse optimization options from [optimization] table
     optim_target = parseOptimTarget(optimization_table, num_osc);
 
@@ -517,13 +547,12 @@ std::string toString(const std::vector<ControlInitializationSettings>& control_i
     out += "type = \"" + enumToString(init.type, CONTROL_INITIALIZATION_TYPE_MAP) + "\"";
     out += init.filename.has_value() ? ", filename = \"" + init.filename.value() + "\"" : "";
     out += init.amplitude.has_value() ? ", amplitude = " + formatDouble(init.amplitude.value()) : "";
-    out += init.phase.has_value() ? ", phase = " + formatDouble(init.phase.value()) : "";
     return out;
   };
 
   // Helper function to compare two ControlInitializationSettings items
   auto areEqual = [](const ControlInitializationSettings& a, const ControlInitializationSettings& b) {
-    return a.type == b.type && a.amplitude == b.amplitude && a.phase == b.phase;
+    return a.type == b.type && a.amplitude == b.amplitude;
   };
 
   return toStringWithOptionalPerSubsystem(control_initializations, printItems, areEqual);
@@ -537,14 +566,13 @@ std::string toString(const std::vector<ControlParameterizationSettings>& control
     out += param.nspline.has_value() ? ", num = " + std::to_string(param.nspline.value()) : "";
     out += param.tstart.has_value() ? ", tstart = " + formatDouble(param.tstart.value()) : "";
     out += param.tstop.has_value() ? ", tstop = " + formatDouble(param.tstop.value()) : "";
-    out += param.scaling.has_value() ? ", scaling = " + formatDouble(param.scaling.value()) : "";
     return out;
   };
 
   // Helper function to compare two ControlParameterizationSettings items
   auto areEqual = [](const ControlParameterizationSettings& a, const ControlParameterizationSettings& b) {
     return a.type == b.type && a.nspline == b.nspline &&
-           a.tstart == b.tstart && a.tstop == b.tstop && a.scaling == b.scaling;
+           a.tstart == b.tstart && a.tstop == b.tstop;
   };
 
   return toStringWithOptionalPerSubsystem(control_parameterizations, printItems, areEqual);
@@ -618,6 +646,14 @@ void Config::printConfig(std::stringstream& log) const {
   log << "initialization = " << toString(control_initializations) << "\n";
   log << "amplitude_bound = " << toString(control_amplitude_bounds) << "\n";
   log << "zero_boundary_condition = " << (control_zero_boundary_condition ? "true" : "false") << "\n";
+
+  log << "\n";
+  log << "[control.flux]\n";
+  log << "enabled = " << (control_flux_enabled ? "true" : "false") << "\n";
+  log << "parameterization = " << toString(control_flux_parameterizations) << "\n";
+  log << "initialization = " << toString(control_flux_initializations) << "\n";
+  log << "amplitude_bound = " << toString(control_flux_amplitude_bounds) << "\n";
+  log << "zero_boundary_condition = " << (control_flux_zero_boundary_condition ? "true" : "false") << "\n";
 
   log << "\n";
   log << "[optimization]\n";
@@ -700,6 +736,10 @@ void Config::finalize() {
     usematfree = false;
   }
 
+  if (control_flux_enabled && (hamiltonian_file_Hsys.has_value() || hamiltonian_file_Hc.has_value())) {
+    logger.exitWithError("Flux control is currently unsupported when Hamiltonian files are provided. Disable [control.flux] or remove hamiltonian_file_Hsys/hamiltonian_file_Hc.");
+  }
+
   if (usematfree && nlevels.size() > 5) {
     logger.log(
         "Warning: Matrix free solver is only implemented for systems with 2, 3, 4, or 5 oscillators."
@@ -763,10 +803,10 @@ void Config::finalize() {
     }
   }
 
-  // Unset control initialization phase paremeter, unless BSPLINEAMP parameterization is used
-  for (size_t i = 0; i < control_initializations.size(); i++) {
-    if (control_parameterizations[i].type != ControlType::BSPLINEAMP) {
-      control_initializations[i].phase = std::nullopt;
+  // Disable flux channel by forcing NONE parameterization when explicitly disabled
+  if (!control_flux_enabled) {
+    for (size_t i = 0; i < control_flux_parameterizations.size(); i++) {
+      control_flux_parameterizations[i].type = ControlType::NONE;
     }
   }
 }
@@ -800,6 +840,12 @@ void Config::validate() const {
   for (size_t i = 0; i < control_amplitude_bounds.size(); i++) {
     if (control_amplitude_bounds[i] <= 0.0) {
       logger.exitWithError("control_amplitude_bounds[" + std::to_string(i) + "] must be positive");
+    }
+  }
+
+  for (size_t i = 0; i < control_flux_amplitude_bounds.size(); i++) {
+    if (control_flux_amplitude_bounds[i] <= 0.0) {
+      logger.exitWithError("control_flux_amplitude_bounds[" + std::to_string(i) + "] must be positive");
     }
   }
 
@@ -928,13 +974,6 @@ ControlParameterizationSettings Config::parseControlParameterizationSpecs(const 
       param.tstop = validators::getOptional<double>(param_table["tstop"]);
       break;
 
-    case ControlType::BSPLINEAMP:
-      param.nspline = validators::field<size_t>(param_table, "num").value();
-      param.scaling = validators::field<double>(param_table, "scaling").value();
-      param.tstart = validators::getOptional<double>(param_table["tstart"]);
-      param.tstop = validators::getOptional<double>(param_table["tstop"]);
-      break;
-
     case ControlType::NONE:
       break;
   }
@@ -956,13 +995,11 @@ ControlInitializationSettings Config::parseControlInitializationSpecs(const toml
   if (init.type == ControlInitializationType::FILE) {
     init.filename = validators::field<std::string>(init_table, "filename").value();
     init.amplitude = std::nullopt;
-    init.phase = std::nullopt;
     if (!init.filename.has_value()) {
       logger.exitWithError("control_initialization of type 'file' must have a 'filename' parameter");
     }
   } else {
     init.amplitude = validators::field<double>(init_table, "amplitude").valueOr(ConfigDefaults::CONTROL_INIT_AMPLITUDE);
-    init.phase = validators::field<double>(init_table, "phase").greaterThanEqual(0.0).valueOr(ConfigDefaults::CONTROL_INIT_PHASE);
   }
 
   return init;

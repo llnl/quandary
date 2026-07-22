@@ -685,17 +685,17 @@ TEST_F(TomlParserTest, ControlInitializationSettings) {
 
         [control]
         initialization = [
-          { subsystem = 0, type = "constant", amplitude = 1.0, phase = 1.1 },
+          { subsystem = 0, type = "constant", amplitude = 1.0 },
           { subsystem = 1, type = "constant", amplitude = 2.0 },
-          { subsystem = 2, type = "random", amplitude = 3.0, phase = 3.1 },
+          { subsystem = 2, type = "random", amplitude = 3.0 },
           { subsystem = 3, type = "random", amplitude = 4.0 },
-          { subsystem = 4, type = "random", amplitude = 5.0, phase = 5.1 }
+          { subsystem = 4, type = "random", amplitude = 5.0 }
         ]
 
         parameterization = [
-          { subsystem = 0, type = "spline_amplitude", num = 10, scaling = 1.0 },
-          { subsystem = 2, type = "spline_amplitude", num = 10, scaling = 1.0 },
-          { subsystem = 4, type = "spline_amplitude", num = 10, scaling = 1.0 }
+          { subsystem = 0, type = "spline", num = 10},
+          { subsystem = 2, type = "spline", num = 10},
+          { subsystem = 4, type = "spline", num = 10}
         ]
       )",
       logger);
@@ -704,7 +704,6 @@ TEST_F(TomlParserTest, ControlInitializationSettings) {
   const auto& control_init0 = config.getControlInitializations(0);
   EXPECT_EQ(control_init0.type, ControlInitializationType::CONSTANT);
   EXPECT_DOUBLE_EQ(control_init0.amplitude.value(), 1.0);
-  EXPECT_DOUBLE_EQ(control_init0.phase.value(), 1.1);
 
   // Check second oscillator
   const auto& control_init1 = config.getControlInitializations(1);
@@ -715,7 +714,6 @@ TEST_F(TomlParserTest, ControlInitializationSettings) {
   const auto& control_init2 = config.getControlInitializations(2);
   EXPECT_EQ(control_init2.type, ControlInitializationType::RANDOM);
   EXPECT_DOUBLE_EQ(control_init2.amplitude.value(), 3.0);
-  EXPECT_DOUBLE_EQ(control_init2.phase.value(), 3.1);
 
   // Check fourth oscillator
   const auto& control_init3 = config.getControlInitializations(3);
@@ -726,7 +724,6 @@ TEST_F(TomlParserTest, ControlInitializationSettings) {
   const auto& control_init4 = config.getControlInitializations(4);
   EXPECT_EQ(control_init4.type, ControlInitializationType::RANDOM);
   EXPECT_DOUBLE_EQ(control_init4.amplitude.value(), 5.0);
-  EXPECT_DOUBLE_EQ(control_init4.phase.value(), 5.1);
 }
 
 TEST_F(TomlParserTest, ControlInitialization_File) {
@@ -1251,7 +1248,7 @@ carrier_frequency = [
   {subsystem = 1, value = [1.5, 2.0, 2.5]}
 ]
 initialization = [
-  {subsystem = 0, type = "random", amplitude = 1.5, phase = 0.5},
+  {subsystem = 0, type = "random", amplitude = 1.5},
   {subsystem = 1, type = "constant", amplitude = 0.1}
 ]
 amplitude_bound = [5.0, 6.0]

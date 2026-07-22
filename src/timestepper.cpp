@@ -469,7 +469,7 @@ double TimeStepper::evalEnergy(double time){
   /* Loop over oscillators */
   for (size_t iosc = 0; iosc < mastereq->getNOscillators(); iosc++) {
     double p,q;
-    mastereq->getOscillator(iosc)->evalControl(time, &p, &q); 
+    mastereq->getOscillator(iosc)->evalDriveControl(time, &p, &q); 
     pen += p*p + q*q;
   }
 
@@ -487,12 +487,12 @@ void TimeStepper::evalEnergy_diff(double time, double Jbar, Vec redgrad){
 
     /* Reevaluate the controls to set pbar, qbar */
     double p,q;
-    mastereq->getOscillator(iosc)->evalControl(time, &p, &q); 
+    mastereq->getOscillator(iosc)->evalDriveControl(time, &p, &q); 
     double pbar = Jbar * 2.0 * p;
     double qbar = Jbar * 2.0 * q;
-    /* Derivative of evalControls */
+    /* Derivative of evalDriveControls */
     double* grad_for_this_oscillator = grad_ptr + col_shift;
-    mastereq->getOscillator(iosc)->evalControl_diff(time, grad_for_this_oscillator, pbar, qbar);
+    mastereq->getOscillator(iosc)->evalDriveControl_diff(time, grad_for_this_oscillator, pbar, qbar);
 
     // Skip in gradient for next oscillator
     col_shift += mastereq->getOscillator(iosc)->getNParams();

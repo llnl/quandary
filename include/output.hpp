@@ -32,6 +32,7 @@ class Output{
   bool writeExpectedEnergy_comp; ///< Flag to determine if evolution of expected energy of the full composite system should be written to file
   bool writePopulation; ///< Flag to determine if the evolution of the energy level occupations per oscillator should be written to files
   bool writePopulation_comp; ///< Flag to determine if the evolution of the energy level occupations of the full composite system should be written to file
+  bool control_flux_enabled; ///< Whether flux control output should be written
   FILE *ufile; ///< File for writing real part of fullstate evolution
   FILE *vfile; ///< File for writing imaginary part of fullstate evolution
   std::vector<FILE *>expectedfile; ///< Files for expected energy evolution per oscillator

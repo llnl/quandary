@@ -75,26 +75,23 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   VecDuplicate(xlower, &xupper);
   int col = 0;
   for (size_t iosc = 0; iosc < mastereq->getNOscillators(); iosc++){
-    for (size_t iseg = 0; iseg < mastereq->getOscillator(iosc)->getNParameterizations(); iseg++){ // Note: Currently only one parameterization is supported! iseg=0!
-      double boundval = config.getControlAmplitudeBound(iosc);
-      // Scale bounds by the number of carrier waves, and convert to radians */
-      boundval = boundval / (sqrt(2) * mastereq->getOscillator(iosc)->getNCarrierfrequencies());
-      boundval = boundval * 2.0*M_PI;
-      for (int i=0; i<mastereq->getOscillator(iosc)->getNSegParams(iseg); i++){
-        VecSetValue(xupper, col + i, boundval, INSERT_VALUES);
-        VecSetValue(xlower, col + i, -1. * boundval, INSERT_VALUES);
-      }
-      // Disable bound for phase if this is spline_amplitude control
-      if (mastereq->getOscillator(iosc)->getControlType() == ControlType::BSPLINEAMP) {
-        for (size_t f = 0; f < mastereq->getOscillator(iosc)->getNCarrierfrequencies(); f++){
-          int nsplines = mastereq->getOscillator(iosc)->getNSplines();
-          boundval = 1e+10;
-          VecSetValue(xupper, col + f*(nsplines+1) + nsplines, boundval, INSERT_VALUES);
-          VecSetValue(xlower, col + f*(nsplines+1) + nsplines, -1.*boundval, INSERT_VALUES);
-        }
-      }
-      col = col + mastereq->getOscillator(iosc)->getNSegParams(iseg);
+    // Drive bounds (existing p/q controls)
+    double drive_bound = config.getControlAmplitudeBound(iosc);
+    drive_bound = drive_bound / (sqrt(2) * mastereq->getOscillator(iosc)->getNCarrierfrequencies());
+    drive_bound = drive_bound * 2.0 * M_PI;
+    for (size_t i = 0; i < mastereq->getOscillator(iosc)->getNDriveParams(); i++) {
+      VecSetValue(xupper, col + i, drive_bound, INSERT_VALUES);
+      VecSetValue(xlower, col + i, -1.0 * drive_bound, INSERT_VALUES);
     }
+    col += mastereq->getOscillator(iosc)->getNDriveParams();
+
+    // Flux bounds (independent f controls)
+    double flux_bound = config.getControlFluxAmplitudeBound(iosc) * 2.0 * M_PI;
+    for (size_t i = 0; i < mastereq->getOscillator(iosc)->getNFluxParams(); i++) {
+      VecSetValue(xupper, col + i, flux_bound, INSERT_VALUES);
+      VecSetValue(xlower, col + i, -1.0 * flux_bound, INSERT_VALUES);
+    }
+    col += mastereq->getOscillator(iosc)->getNFluxParams();
   }
   VecAssemblyBegin(xlower); VecAssemblyEnd(xlower);
   VecAssemblyBegin(xupper); VecAssemblyEnd(xupper);
@@ -441,7 +438,7 @@ void OptimProblem::getStartingPoint(Vec xinit){
   VecGetArray(xinit, &xptr);
   int shift = 0;
   for (size_t ioscil = 0; ioscil<mastereq->getNOscillators(); ioscil++){
-    mastereq->getOscillator(ioscil)->getParams(xptr + shift);
+    mastereq->getOscillator(ioscil)->getControlParams(xptr + shift);
     shift += mastereq->getOscillator(ioscil)->getNParams();
   }
   VecRestoreArray(xinit, &xptr);
