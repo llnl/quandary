@@ -26,7 +26,7 @@
  */
 class ControlBasis {
     protected:
-        std::vector<std::vector<double>> params; ///< Coefficients of the control parameterizations, one for each carrier wave
+        std::vector<std::vector<double>> params; ///< Coefficients of the control parameterizations, one vector for each carrier wave
         double tstart; ///< Start time of the interval where the control basis is applied.
         double tstop; ///< Stop time of the interval where the control basis is applied.
         ControlType controltype; ///< Type of control parameterization.

@@ -685,6 +685,7 @@ TEST_F(TomlParserTest, ControlInitializationSettings) {
 
         [control]
         initialization = [
+          { subsystem = 0, type = "constant", amplitude = 1.0 },
           { subsystem = 1, type = "constant", amplitude = 2.0 },
           { subsystem = 2, type = "random", amplitude = 3.0 },
           { subsystem = 3, type = "random", amplitude = 4.0 },
