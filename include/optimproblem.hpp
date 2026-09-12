@@ -168,6 +168,7 @@ class OptimProblem {
   int getMaxIter()     { return maxiter; };
   OptimTarget* getOptimTarget() { return optim_target; };
   Mat getGaussNewtonMatShell() { return GaussNewtonMatShell; };
+  bool getQuietmode() { return quietmode; };
 
   int getOutputOptimizationStride() { return output_optimization_stride; };
   Output* getOutput() { return output; };
