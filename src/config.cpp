@@ -308,6 +308,8 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     // Parse optimization solver type
     optim_solver_type = parseEnum(optimization_table["solver_type"].value<std::string>(), OPTIM_SOLVER_TYPE_MAP, ConfigDefaults::OPTIM_SOLVER_TYPE);
+    optim_ksp_rtol = validators::field<double>(optimization_table, "ksp_rtol").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_KSP_RTOL);
+    optim_ksp_maxiter = validators::field<int>(optimization_table, "ksp_maxiter").greaterThanEqual(0).valueOr(ConfigDefaults::OPTIM_KSP_MAXITER);
 
     // Parse output options from [output] table
     output_directory = output_table["directory"].value_or(ConfigDefaults::OUTPUT_DIRECTORY);
@@ -689,6 +691,10 @@ void Config::printConfig(std::stringstream& log) const {
       << ", riemannian_phasefree = " << (optim_penalty_riemannian_phasefree ? "true" : "false")
       << " }\n";
   log << "solver_type = \"" << enumToString(optim_solver_type, OPTIM_SOLVER_TYPE_MAP) << "\"\n";
+  if (optim_solver_type == OptimSolverType::GAUSS_NEWTON) {
+    log << "ksp_rtol = " << optim_ksp_rtol << "\n";
+    log << "ksp_maxiter = " << optim_ksp_maxiter << "\n";
+  }
 
   log << "\n";
   log << "[output]\n";

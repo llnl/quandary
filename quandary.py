@@ -90,6 +90,8 @@ class Quandary:
     gamma_riemannian     # Parameter for Riemannian distance penalty term. Default: 0.0 (no Riemannian penalty)
     riemannian_phasefree # Switch to use phase-invariant Riemannian objective. Default: False
     optim_solver_type    # Type of optimization solver ("tao_lbfgs" or "gauss_newton"). Default: "tao_lbfgs"
+    optim_ksp_rtol          # Relative tolerance for the KSP solver. Default: 1e-3
+    optim_ksp_maxiter       # Maximum number of iterations for the KSP solver. Default: 100
 
     # General options
     rand_seed            # Set a fixed random number generator seed. Default: None (non-reproducable)
@@ -185,6 +187,8 @@ class Quandary:
     gamma_riemannian       : float = 0.0
     riemannian_phasefree   : bool = False
     optim_solver_type      : str   = "tao_lbfgs"
+    optim_ksp_rtol         : float = 1e-3
+    optim_ksp_maxiter      : int   = 100
     # General options
     rand_seed              : int  = None
     print_frequency_iter   : int  = 1
@@ -887,7 +891,9 @@ class Quandary:
         else:
             lines.append(f"tikhonov = {{ coeff = {self.gamma_tik0}, use_x0 = false }}")
         lines.append("penalty = { leakage = " + str(self.gamma_leakage) + ", energy = " + str(self.gamma_energy) + ", dpdm = " + str(self.gamma_dpdm) + ", variation = " + str(self.gamma_variation) + ", weightedcost = 0.0, weightedcost_width = 0.0, riemannian = " + str(self.gamma_riemannian) + ", riemannian_phasefree = " + _toml_bool(self.riemannian_phasefree) + " }")
-        lines.append(f"optim_solver_type = {_toml_str(self.optim_solver_type)}")
+        lines.append(f"solver_type = {_toml_str(self.optim_solver_type)}")
+        lines.append(f"ksp_rtol = {self.optim_ksp_rtol}")
+        lines.append(f"ksp_maxiter = {self.optim_ksp_maxiter}")
 
         # [output]
         lines.append("\n[output]")

@@ -59,6 +59,8 @@ const double OPTIM_PENALTY_VARIATION = 0.01; ///< Default amplitude variation pe
 const double OPTIM_PENALTY_RIEMANNIAN = 0.0; ///< Default Riemannian distance penalty coefficient
 const bool OPTIM_PENALTY_RIEMANNIAN_PHASEFREE = false; ///< Default switch to use phase-free Riemannian distance measure
 const OptimSolverType OPTIM_SOLVER_TYPE = OptimSolverType::TAO_LBFGS; ///< Default optimization solver type
+const double OPTIM_KSP_RTOL = 1e-3; ///< Default relative tolerance for the KSP solver
+const int OPTIM_KSP_MAXITER = 100; ///< Default maximum iterations for the KSP solver
 
 inline const std::string OUTPUT_DIRECTORY = "./data_out"; ///< Default output directory
 

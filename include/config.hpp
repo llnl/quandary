@@ -108,6 +108,8 @@ class Config {
   double optim_penalty_riemannian; ///< Riemannian distance penalty coefficient
   bool optim_penalty_riemannian_phasefree; ///< Switch to use phase-free Riemannian distance measure
   OptimSolverType optim_solver_type; ///< Type of optimization solver to use
+  double optim_ksp_rtol; ///< Relative tolerance for the KSP solver
+  int optim_ksp_maxiter; ///< Maximum iterations for the KSP solver
 
   // Output and runtypes
   std::string output_directory; ///< Directory for output files
@@ -186,6 +188,8 @@ class Config {
   double getOptimPenaltyRiemannian() const { return optim_penalty_riemannian; }
   bool getOptimPenaltyRiemannianPhaseFree() const { return optim_penalty_riemannian_phasefree; }
   OptimSolverType getOptimSolverType() const { return optim_solver_type; }
+  double getOptimKSPRtol() const { return optim_ksp_rtol; }
+  int getOptimKSPMaxiter() const { return optim_ksp_maxiter; }
 
   const std::string& getOutputDirectory() const { return output_directory; }
   const std::vector<OutputType>& getOutputObservables() const { return output_observables; }

@@ -116,8 +116,6 @@ class OptimProblem {
 
   // KSP linear solver
   KSP ksp_GN;  ///< Linear solver for Gauss-Newton system
-  PetscReal ksp_rtol = 1.e-3; ///< Relative tolerance for KSP solver
-  PetscInt  ksp_maxit = 100; ///< Maximum number of iterations for KSP solver
   double ksp_damping = 1e-3; ///< Damping parameter for Gauss-Newton matrix shift
 
   // EPS eigenvalue solver

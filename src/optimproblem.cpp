@@ -176,7 +176,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   KSPGetPC(ksp_GN, &pc);
   PCSetType(pc, PCNONE); // Disable preconditioner
   KSPSetNormType(ksp_GN, KSP_NORM_UNPRECONDITIONED); // Unconditioned ressidual norm
-  KSPSetTolerances(ksp_GN,ksp_rtol,PETSC_DEFAULT,PETSC_DEFAULT,ksp_maxit);
+  KSPSetTolerances(ksp_GN,config.getOptimKSPRtol(),PETSC_DEFAULT,PETSC_DEFAULT,config.getOptimKSPMaxiter());
 
   /* Create eigenvalues solver for Gauss-Newton Ax=b */
   EPSCreate(PETSC_COMM_SELF, &eps_GN);
