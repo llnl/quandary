@@ -517,9 +517,8 @@ void MasterEq::apply_linearized_RHS(const double t, const Vec v, const Vec xhalf
     VecRestoreSubVector(xout, isv, &vout);
     VecRestoreArrayRead(v, &v_ptr);
   }
-  else {
-    printf("ERROR: Matrix-free version of linearized RHS not implemented yet.\n");
-    exit(1);
+  else {  // matrix-free application of the linearized RHS
+    apply_linearized_RHS_matfree(dim, t, v, xhalf, xout, nlevels, decoherence_type, oscil_vec);
   }
 }
 
@@ -1145,6 +1144,235 @@ void compute_dRHS_dParams_matfree(const PetscInt dim, const double t,const Vec x
   delete [] coeff_p;
   delete [] coeff_q;
   delete [] coeff_f;
+}
+
+/* Matrix-free version to apply the linearized RHS: xout = (d RHS / d params) * v, at state xhalf */
+void apply_linearized_RHS_matfree(const PetscInt dim, const double t, const Vec v, const Vec xhalf, Vec xout, std::vector<size_t>& nlevels, DecoherenceType decoherence_type, Oscillator** oscil_vec){
+
+  int noscillators = nlevels.size();
+
+  /* Evaluate linearized control amplitudes dpv, dqv for each oscillator, from direction v */
+  const double* v_ptr;
+  VecGetArrayRead(v, &v_ptr);
+  std::vector<double> dpv(noscillators, 0.0);
+  std::vector<double> dqv(noscillators, 0.0);
+  int skip = 0;
+  for (int iosc = 0; iosc < noscillators; iosc++){
+    int nparams_osc = oscil_vec[iosc]->getNParams();
+    std::vector<double> vdir(nparams_osc);
+    for (int i = 0; i < nparams_osc; i++){
+      vdir[i] = v_ptr[i + skip];
+    }
+    oscil_vec[iosc]->evalControl_linearized(t, vdir, &dpv[iosc], &dqv[iosc]);
+    skip += nparams_osc;
+  }
+  VecRestoreArrayRead(v, &v_ptr);
+
+  const double* xptr;
+  double* yptr;
+  VecGetArrayRead(xhalf, &xptr);
+  VecGetArray(xout, &yptr);
+
+  if (noscillators == 1) {
+    int n0 = nlevels[0];
+    int stridei0  = TensorGetIndex(n0, 1,0);
+    int stridei0p = TensorGetIndex(n0, 0,1);
+    int n0p = n0;
+    if (decoherence_type == DecoherenceType::NONE) n0p = 1;
+
+    int it = 0;
+    for (int i0p = 0; i0p < n0p; i0p++)  {
+      for (int i0 = 0; i0 < n0; i0++)  {
+        double yre = 0.0, yim = 0.0;
+        control(dim, it, n0, i0, n0p, i0p, stridei0, stridei0p, xptr, dpv[0], dqv[0], &yre, &yim);
+        yptr[it]       = yre;
+        yptr[it + dim] = yim;
+        it++;
+      }
+    }
+  } else if (noscillators == 2) {
+    int n0 = nlevels[0];
+    int n1 = nlevels[1];
+    int stridei0  = TensorGetIndex(n0,n1, 1,0,0,0);
+    int stridei1  = TensorGetIndex(n0,n1, 0,1,0,0);
+    int stridei0p = TensorGetIndex(n0,n1, 0,0,1,0);
+    int stridei1p = TensorGetIndex(n0,n1, 0,0,0,1);
+    int n0p = n0;
+    int n1p = n1;
+    if (decoherence_type == DecoherenceType::NONE) {
+      n0p = 1;
+      n1p = 1;
+    }
+
+    int it = 0;
+    for (int i0p = 0; i0p < n0p; i0p++)  {
+      for (int i1p = 0; i1p < n1p; i1p++)  {
+        for (int i0 = 0; i0 < n0; i0++)  {
+          for (int i1 = 0; i1 < n1; i1++)  {
+            double yre = 0.0, yim = 0.0;
+            control(dim, it, n0, i0, n0p, i0p, stridei0, stridei0p, xptr, dpv[0], dqv[0], &yre, &yim);
+            control(dim, it, n1, i1, n1p, i1p, stridei1, stridei1p, xptr, dpv[1], dqv[1], &yre, &yim);
+            yptr[it]       = yre;
+            yptr[it + dim] = yim;
+            it++;
+          }
+        }
+      }
+    }
+  } else if (noscillators == 3) {
+    int n0 = nlevels[0];
+    int n1 = nlevels[1];
+    int n2 = nlevels[2];
+    int stridei0  = TensorGetIndex(n0,n1,n2, 1,0,0,0,0,0);
+    int stridei1  = TensorGetIndex(n0,n1,n2, 0,1,0,0,0,0);
+    int stridei2  = TensorGetIndex(n0,n1,n2, 0,0,1,0,0,0);
+    int stridei0p = TensorGetIndex(n0,n1,n2, 0,0,0,1,0,0);
+    int stridei1p = TensorGetIndex(n0,n1,n2, 0,0,0,0,1,0);
+    int stridei2p = TensorGetIndex(n0,n1,n2, 0,0,0,0,0,1);
+    int n0p = n0;
+    int n1p = n1;
+    int n2p = n2;
+    if (decoherence_type == DecoherenceType::NONE) {
+      n0p = 1;
+      n1p = 1;
+      n2p = 1;
+    }
+
+    int it = 0;
+    for (int i0p = 0; i0p < n0p; i0p++)  {
+      for (int i1p = 0; i1p < n1p; i1p++)  {
+        for (int i2p = 0; i2p < n2p; i2p++)  {
+          for (int i0 = 0; i0 < n0; i0++)  {
+            for (int i1 = 0; i1 < n1; i1++)  {
+              for (int i2 = 0; i2 < n2; i2++)  {
+                double yre = 0.0, yim = 0.0;
+                control(dim, it, n0, i0, n0p, i0p, stridei0, stridei0p, xptr, dpv[0], dqv[0], &yre, &yim);
+                control(dim, it, n1, i1, n1p, i1p, stridei1, stridei1p, xptr, dpv[1], dqv[1], &yre, &yim);
+                control(dim, it, n2, i2, n2p, i2p, stridei2, stridei2p, xptr, dpv[2], dqv[2], &yre, &yim);
+                yptr[it]       = yre;
+                yptr[it + dim] = yim;
+                it++;
+              }
+            }
+          }
+        }
+      }
+    }
+  } else if (noscillators == 4) {
+    int n0 = nlevels[0];
+    int n1 = nlevels[1];
+    int n2 = nlevels[2];
+    int n3 = nlevels[3];
+    int stridei0  = TensorGetIndex(n0,n1,n2,n3, 1,0,0,0,0,0,0,0);
+    int stridei1  = TensorGetIndex(n0,n1,n2,n3, 0,1,0,0,0,0,0,0);
+    int stridei2  = TensorGetIndex(n0,n1,n2,n3, 0,0,1,0,0,0,0,0);
+    int stridei3  = TensorGetIndex(n0,n1,n2,n3, 0,0,0,1,0,0,0,0);
+    int stridei0p = TensorGetIndex(n0,n1,n2,n3, 0,0,0,0,1,0,0,0);
+    int stridei1p = TensorGetIndex(n0,n1,n2,n3, 0,0,0,0,0,1,0,0);
+    int stridei2p = TensorGetIndex(n0,n1,n2,n3, 0,0,0,0,0,0,1,0);
+    int stridei3p = TensorGetIndex(n0,n1,n2,n3, 0,0,0,0,0,0,0,1);
+    int n0p = n0;
+    int n1p = n1;
+    int n2p = n2;
+    int n3p = n3;
+    if (decoherence_type == DecoherenceType::NONE) {
+      n0p = 1;
+      n1p = 1;
+      n2p = 1;
+      n3p = 1;
+    }
+
+    int it = 0;
+    for (int i0p = 0; i0p < n0p; i0p++)  {
+      for (int i1p = 0; i1p < n1p; i1p++)  {
+        for (int i2p = 0; i2p < n2p; i2p++)  {
+          for (int i3p = 0; i3p < n3p; i3p++)  {
+            for (int i0 = 0; i0 < n0; i0++)  {
+              for (int i1 = 0; i1 < n1; i1++)  {
+                for (int i2 = 0; i2 < n2; i2++)  {
+                  for (int i3 = 0; i3 < n3; i3++)  {
+                    double yre = 0.0, yim = 0.0;
+                    control(dim, it, n0, i0, n0p, i0p, stridei0, stridei0p, xptr, dpv[0], dqv[0], &yre, &yim);
+                    control(dim, it, n1, i1, n1p, i1p, stridei1, stridei1p, xptr, dpv[1], dqv[1], &yre, &yim);
+                    control(dim, it, n2, i2, n2p, i2p, stridei2, stridei2p, xptr, dpv[2], dqv[2], &yre, &yim);
+                    control(dim, it, n3, i3, n3p, i3p, stridei3, stridei3p, xptr, dpv[3], dqv[3], &yre, &yim);
+                    yptr[it]       = yre;
+                    yptr[it + dim] = yim;
+                    it++;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } else if (noscillators == 5) {
+    int n0 = nlevels[0];
+    int n1 = nlevels[1];
+    int n2 = nlevels[2];
+    int n3 = nlevels[3];
+    int n4 = nlevels[4];
+    int stridei0  = TensorGetIndex(n0,n1,n2,n3,n4, 1,0,0,0,0,0,0,0,0,0);
+    int stridei1  = TensorGetIndex(n0,n1,n2,n3,n4, 0,1,0,0,0,0,0,0,0,0);
+    int stridei2  = TensorGetIndex(n0,n1,n2,n3,n4, 0,0,1,0,0,0,0,0,0,0);
+    int stridei3  = TensorGetIndex(n0,n1,n2,n3,n4, 0,0,0,1,0,0,0,0,0,0);
+    int stridei4  = TensorGetIndex(n0,n1,n2,n3,n4, 0,0,0,0,1,0,0,0,0,0);
+    int stridei0p = TensorGetIndex(n0,n1,n2,n3,n4, 0,0,0,0,0,1,0,0,0,0);
+    int stridei1p = TensorGetIndex(n0,n1,n2,n3,n4, 0,0,0,0,0,0,1,0,0,0);
+    int stridei2p = TensorGetIndex(n0,n1,n2,n3,n4, 0,0,0,0,0,0,0,1,0,0);
+    int stridei3p = TensorGetIndex(n0,n1,n2,n3,n4, 0,0,0,0,0,0,0,0,1,0);
+    int stridei4p = TensorGetIndex(n0,n1,n2,n3,n4, 0,0,0,0,0,0,0,0,0,1);
+    int n0p = n0;
+    int n1p = n1;
+    int n2p = n2;
+    int n3p = n3;
+    int n4p = n4;
+    if (decoherence_type == DecoherenceType::NONE) {
+      n0p = 1;
+      n1p = 1;
+      n2p = 1;
+      n3p = 1;
+      n4p = 1;
+    }
+
+    int it = 0;
+    for (int i0p = 0; i0p < n0p; i0p++)  {
+      for (int i1p = 0; i1p < n1p; i1p++)  {
+        for (int i2p = 0; i2p < n2p; i2p++)  {
+          for (int i3p = 0; i3p < n3p; i3p++)  {
+            for (int i4p = 0; i4p < n4p; i4p++)  {
+              for (int i0 = 0; i0 < n0; i0++)  {
+                for (int i1 = 0; i1 < n1; i1++)  {
+                  for (int i2 = 0; i2 < n2; i2++)  {
+                    for (int i3 = 0; i3 < n3; i3++)  {
+                      for (int i4 = 0; i4 < n4; i4++)  {
+                        double yre = 0.0, yim = 0.0;
+                        control(dim, it, n0, i0, n0p, i0p, stridei0, stridei0p, xptr, dpv[0], dqv[0], &yre, &yim);
+                        control(dim, it, n1, i1, n1p, i1p, stridei1, stridei1p, xptr, dpv[1], dqv[1], &yre, &yim);
+                        control(dim, it, n2, i2, n2p, i2p, stridei2, stridei2p, xptr, dpv[2], dqv[2], &yre, &yim);
+                        control(dim, it, n3, i3, n3p, i3p, stridei3, stridei3p, xptr, dpv[3], dqv[3], &yre, &yim);
+                        control(dim, it, n4, i4, n4p, i4p, stridei4, stridei4p, xptr, dpv[4], dqv[4], &yre, &yim);
+                        yptr[it]       = yre;
+                        yptr[it + dim] = yim;
+                        it++;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } else {
+    printf("ERROR. Matrix-free linearized RHS only supported for up to 5 oscillators. This should never happen! %d\n", noscillators);
+    exit(1);
+  }
+
+  VecRestoreArrayRead(xhalf, &xptr);
+  VecRestoreArray(xout, &yptr);
 }
 
 /* Matfree-solver for 1 Oscillator: Define the action of RHS on a vector x */

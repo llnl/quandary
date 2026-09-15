@@ -337,6 +337,25 @@ void compute_dRHS_dParams_sparsemat(const double t,const Vec x,const Vec x_bar, 
  */
 void compute_dRHS_dParams_matfree(const PetscInt dim, const double t,const Vec x,const Vec x_bar, const double alpha, Vec grad, std::vector<size_t>& nlevels, DecoherenceType decoherence_type, Oscillator** oscil_vec);
 
+/**
+ * @brief: Matrix-free version to apply the linearized RHS (derivative of RHS wrt control
+ * parameters, contracted with a direction vector v) to a state.
+ *
+ * Computes xout = (d RHS / d params) * v, evaluated at state xhalf, in a matrix-free
+ * manner. Compare to the sparse-matrix version implemented directly in
+ * @ref MasterEq::apply_linearized_RHS.
+ *
+ * @param[in] dim Dimension of full vectorized system: N^2 if Lindblad, N if Schroedinger
+ * @param[in] t Current time
+ * @param[in] v Direction vector in control parameter space
+ * @param[in] xhalf State vector at which the linearized RHS is evaluated
+ * @param[out] xout Output vector to be set to (d RHS / d params) * v
+ * @param[in] nlevels Number of energy levels per subsystem
+ * @param[in] decoherence_type Type of Lindblad decoherence operators, or NONE
+ * @param[in] oscil_vec Vector of quantum oscillators
+ */
+void apply_linearized_RHS_matfree(const PetscInt dim, const double t, const Vec v, const Vec xhalf, Vec xout, std::vector<size_t>& nlevels, DecoherenceType decoherence_type, Oscillator** oscil_vec);
+
 
 
 // Inline functions for the Matrix-free RHS application
