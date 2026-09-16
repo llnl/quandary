@@ -79,7 +79,7 @@ class Quandary:
     tol_costfunc        # Optimization stopping criterion based on the objective function value. Default 1e-4
     tol_gnorm_abs       # Optimization stopping criterion based on absolute gradient norm drop. Default 1e-4
     tol_gnorm_rel       # Optimization stopping criterion based on relative gradient norm drop. Default 1e-4
-    costfunction        # Cost function measure: "Jtrace", "Jfrobenius", "JRiemannDistance", or "JRiemannDistance_Phasefree". Default: "Jtrace"
+    costfunction        # Cost function measure: "Jtrace", "Jfrobenius", "JGeodesic", or "JGeodesic_phasefree". Default: "Jtrace"
     optim_target        # Optional: Set other optimization target string, if not specified through the targetgate or targetstate. 
     gamma_tik0          # Parameter for Tikhonov regularization ||alpha||^2. Default 1e-4
     gamma_tik0_interpolate # Switch to use ||alpha-alpha_0||^2 instead, where alpha_0 is the initial guess. Default: False
@@ -978,6 +978,8 @@ class Quandary:
             "Penalty-StateVariation" : optim_hist_tmp[:,9],
             "Penalty-TotalEnergy"    : optim_hist_tmp[:,10],
         }
+        if optim_hist_tmp.shape[1] > 11:
+            optim_hist["KSPIters"] = optim_hist_tmp[:,11]
 
 
         # Number of colums to be returned. If Schroedinger: all. If Lindblad: Only diagonals. 

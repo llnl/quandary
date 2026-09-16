@@ -13,6 +13,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
 
   /* Reset */
   objective = 0.0;
+  ksp_iters_last = 0;
 
   /* Store communicators */
   comm_init = comm_init_;
@@ -588,6 +589,7 @@ void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b){
   KSPGetConvergedReason(ksp_GN, &reason);
   KSPGetIterationNumber(ksp_GN, &iters);
   KSPGetResidualNorm(ksp_GN, &rnorm);
+  ksp_iters_last = iters;
   if (mpirank_world == 0 && !quietmode) {
     printf("Gauss-Newton CG stats: iterations = %d, MatVec counter = %d, residual norm = %1.14e\n", iters, GN_MatVec_counter, rnorm);
   }
@@ -884,7 +886,7 @@ bool OptimProblem::monitor(int iter, double f, double gnorm, double deltax){
   /* Every <output_optimization_stride> iterations: Output of optimization history */
   if (iter % getOutputOptimizationStride() == 0 || lastIter) {
     // Add to optimization history file 
-    getOutput()->writeOptimFile(iter, f, gnorm, deltax, F_avg, obj_cost, obj_regul, obj_penal_leakage, obj_penal_dpdm, obj_penal_energy, obj_penal_variation, obj_penal_weightedcost);
+    getOutput()->writeOptimFile(iter, f, gnorm, deltax, F_avg, obj_cost, obj_regul, obj_penal_leakage, obj_penal_dpdm, obj_penal_energy, obj_penal_variation, obj_penal_weightedcost, ksp_iters_last);
     // Screen output 
     if (getMPIrank_world() == 0) {
       std::cout<< iter <<  "  " << std::scientific<<std::setprecision(14) << obj_cost << " + " << obj_regul << " + " << obj_penal_leakage << " + " << obj_penal_dpdm << " + " << obj_penal_energy << " + " << obj_penal_variation << " + " << obj_penal_weightedcost;

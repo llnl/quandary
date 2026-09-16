@@ -101,6 +101,7 @@ class OptimProblem {
   Vec xeval_GN; ///< Point of evaluation for Gauss-Newtonapply A 
   int GN_MatVec_counter; ///< Counter for Gauss-Newton MatVec multiplications
   Vec x_GN; ///< Current iterate for the GN optimization. Holds solution after finished. 
+  int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton linear solve
 
   // Options for the Armijo line search 
   const double c1 = 1e-4;    //< Sufficient decrease parameter
