@@ -109,8 +109,8 @@ enum class ObjectiveType {
   JFROBENIUS, ///< Weighted Frobenius norm: \f$\frac{1}{2} \frac{\|\rho_{\text{target}} - \rho(T)\|_F^2}{w}\f$, where \f$w\f$ = purity of \f$\rho_{\text{target}}\f$
   JTRACE,     ///< Weighted Hilbert-Schmidt overlap: \f$1 - \frac{\text{Tr}(\rho_{\text{target}}^\dagger \rho(T))}{w}\f$, where \f$w\f$ = purity of \f$\rho_{\text{target}}\f$
   JMEASURE,   ///< Pure state measurement: \f$\text{Tr}(O_m \rho(T))\f$ for observable \f$O_m\f$
-  JRIEMANNDISTANCE, ///< Riemann distance: \f$d(\rho_{\text{target}}, \rho(T))\f$
-  JRIEMANNDISTANCE_PHASEFREE ///< Phase-free Riemann distance: \f$d(\rho_{\text{target}}, \rho(T))\f$ ignoring global phase
+  JGEODESIC, ///< Length of the Geodesic on the Riemannian manifold: \f$d(\rho_{\text{target}}, \rho(T))\f$
+  JGEODESIC_PHASEFREE ///< Phase-free Riemann distance: \f$d(\rho_{\text{target}}, \rho(T))\f$ ignoring global phase
   
 };
 
@@ -118,8 +118,8 @@ const std::map<std::string, ObjectiveType> OBJECTIVE_TYPE_MAP = {
     {"jfrobenius", ObjectiveType::JFROBENIUS},
     {"jtrace", ObjectiveType::JTRACE},
     {"jmeasure", ObjectiveType::JMEASURE},
-    {"jriemanndistance", ObjectiveType::JRIEMANNDISTANCE},
-    {"jriemanndistance_phasefree", ObjectiveType::JRIEMANNDISTANCE_PHASEFREE}
+    {"jgeodesic", ObjectiveType::JGEODESIC},
+    {"jgeodesic_phasefree", ObjectiveType::JGEODESIC_PHASEFREE}
 };
 
 /**

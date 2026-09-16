@@ -822,10 +822,10 @@ void Config::finalize() {
     }
   }
 
-  // Turn off Riemannian distance if Lindblad solver
+  // Turn off Geodesic Riemannian distance objective if Lindblad solver
   if (decoherence_type != DecoherenceType::NONE && 
-     (optim_objective == ObjectiveType::JRIEMANNDISTANCE || optim_objective == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) ) {
-    logger.exitWithError( "# ERROR: Riemannian distance objective function is not implemented for Lindblad solver.\n");
+     (optim_objective == ObjectiveType::JGEODESIC || optim_objective == ObjectiveType::JGEODESIC_PHASEFREE) ) {
+    logger.exitWithError( "# ERROR: Geodesic Riemannian distance objective function is not implemented for Lindblad solver.\n");
   }
 }
 

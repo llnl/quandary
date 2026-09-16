@@ -47,7 +47,7 @@ class OptimTarget{
 
     Vec eigvals_UdV_re; ///< Storage for eigenvalues log(U^\dagger V)
     Vec eigvals_UdV_im; ///< Storage for eigenvalues log(U^\dagger V)
-    double theta_avg; ///< Frechet mean of eigenvalue angles for phase-invariant Riemannian distance
+    double theta_avg; ///< Frechet mean of eigenvalue angles for phase-invariant Riemannian geodesic distance
 
     Mat eigvecs_UdV_re; ///< Eigenvectors of log(U^\dagger V) (real part)
     Mat eigvecs_UdV_im; ///< Eigenvectors of log(U^\dagger V) (imaginary part)
@@ -111,7 +111,7 @@ class OptimTarget{
      * Returns both real and imaginary parts of the final-time measure. The imaginary part
      * is generally zero except for Schroedinger solver with the trace objective 
      * function measure. 
-     * NOTE: Does not evaluate the Riemannian distance objective, which instead is computed in finalizeJ().
+     * NOTE: Does not evaluate the Riemannian geodesic distance objective, which instead is computed in finalizeJ().
      *
      * @param[in] state Current state vector
      * @param[out] J_re_ptr Pointer to store real part of objective
@@ -143,15 +143,15 @@ class OptimTarget{
     double finalizeJ(const double obj_cost_re, const double obj_cost_im, MPI_Comm comm_init); 
 
     /**
-     * @brief Computes the Riemannian distance between target and current unitary: J(U) = 1/2 || log(U^\dagger V) ||^2_F, or its trace invariant version. 
-     * @return double Riemannian distance objective value
+     * @brief Computes the Riemannian geodesic distance between target and current unitary: J(U) = 1/2 || log(U^\dagger V) ||^2_F, or its trace invariant version. 
+     * @return double Riemannian geodesic distance objective value
      */
-    double RiemannianDistance();
+    double GeodesicDistance();
 
     /**
-     * @brief Derivative of Riemannian distance computation.
+     * @brief Derivative of Riemannian geodesic distance computation.
      */
-    void RiemannianDistance_diff();
+    void GeodesicDistance_diff();
 
     /**
      * @brief Derivative of objective function finalization.

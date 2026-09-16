@@ -49,8 +49,8 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, bool quietmod
   VecZeroEntries(initialstate);
   VecAssemblyBegin(initialstate); VecAssemblyEnd(initialstate);
 
-  // Allocate storage for final-time unitary if Riemannian distance objective function is used
-  if (objective_type == ObjectiveType::JRIEMANNDISTANCE || objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) {
+  // Allocate storage for final-time unitary if Geodesic distance objective function is used
+  if (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE) {
     PetscInt globalsize_rows = dim;
     PetscInt globalsize_cols = config.getNInitialConditions();;
     PetscInt localsize_rows = globalsize_rows / mpisize_petsc;
@@ -288,7 +288,7 @@ OptimTarget::~OptimTarget(){
   MatDestroy(&eigvecs_UdV_re);
   MatDestroy(&eigvecs_UdV_im);
 
-  if (objective_type == ObjectiveType::JRIEMANNDISTANCE || objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) {
+  if (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE) {
     MatDestroy(&U_final_re);
     MatDestroy(&U_final_im);
     MatDestroy(&U_final_re_bar);
@@ -655,7 +655,7 @@ int OptimTarget::prepareInitialAndTargetState(const int iinit, const int ninit, 
 
 
 void OptimTarget::resetFinalStates(){
-  if (objective_type == ObjectiveType::JRIEMANNDISTANCE || objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) {
+  if (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE) {
     MatZeroEntries(U_final_re); 
     MatZeroEntries(U_final_im);
     MatZeroEntries(U_final_re_bar);
@@ -669,7 +669,7 @@ void OptimTarget::resetFinalStates(){
 
 
 void OptimTarget::storeFinalUnitaryColumn(const int col, const Vec finalstate){
-  if (objective_type == ObjectiveType::JRIEMANNDISTANCE || objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) {
+  if (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE) {
     const PetscScalar *finalstate_array;
     VecGetArrayRead(finalstate, &finalstate_array);
     for (size_t row = 0; row < dim; row++) {
@@ -683,7 +683,7 @@ void OptimTarget::storeFinalUnitaryColumn(const int col, const Vec finalstate){
 }
 
 void OptimTarget::storeFinalUnitaryColumn_diff(const int col, const Vec finalstate_bar){
-  if (objective_type == ObjectiveType::JRIEMANNDISTANCE || objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) {
+  if (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE) {
     // NOT SURE IF THIS IS RIGHT. 
     // VecZeroEntries(finalstate_bar);
 
@@ -751,10 +751,11 @@ void OptimTarget::evalJ(const Vec state, double* J_re_ptr, double* J_im_ptr){
       HilbertSchmidtOverlap(state, true, &J_re, &J_im); // is real if Lindblad solver. 
       break; // case J_Trace
 
-    /* Riemannian distance is handled in finalizeJ. */
-    case ObjectiveType::JRIEMANNDISTANCE:
+    case ObjectiveType::JGEODESIC:
+      /* Riemannian geodesic distance is handled in finalizeJ. */
       break;
-    case ObjectiveType::JRIEMANNDISTANCE_PHASEFREE:
+    case ObjectiveType::JGEODESIC_PHASEFREE:
+      /* Riemannian geodesic distance is handled in finalizeJ. */
       break;
 
     /* J_Measure = Tr(O_m rho(T)) = \sum_i |i-m| rho_ii(T) if Lindblad and \sum_i |i-m| |phi_i(T)|^2  if Schroedinger */
@@ -835,10 +836,10 @@ void OptimTarget::evalJ_diff(const Vec state, Vec statebar, const double J_re_ba
       HilbertSchmidtOverlap_diff(statebar, true, J_re_bar, J_im_bar);
     break;
 
-    case ObjectiveType::JRIEMANNDISTANCE:
+    case ObjectiveType::JGEODESIC:
       // Riemannian distance is handled in finalizeJ, no derivative needed here.
       break;
-    case ObjectiveType::JRIEMANNDISTANCE_PHASEFREE:
+    case ObjectiveType::JGEODESIC_PHASEFREE:
       // Riemannian distance phase-free is handled in finalizeJ, no derivative needed here.
       break;
 
@@ -888,7 +889,7 @@ double OptimTarget::finalizeJ(const double obj_cost_re, const double obj_cost_im
     } else {
       obj_cost = 1.0 - obj_cost_re;
     }
-  } else if (objective_type == ObjectiveType::JRIEMANNDISTANCE || objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) {
+  } else if (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE) {
 
     // Assemble the final-time unitary matrices.
     MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
@@ -909,8 +910,8 @@ double OptimTarget::finalizeJ(const double obj_cost_re, const double obj_cost_im
     MPI_Allreduce(MPI_IN_PLACE, data, size * size, MPIU_SCALAR, MPI_SUM, comm_init);
     MatDenseRestoreArray(U_final_im, &data);
 
-    // Evaluate the Riemannian distance
-    obj_cost = RiemannianDistance();
+    // Evaluate the Geodesic distance
+    obj_cost = GeodesicDistance();
   } else {
     obj_cost = obj_cost_re;
     assert(obj_cost_im <= 1e-14);
@@ -936,9 +937,9 @@ void OptimTarget::finalizeJ_diff(const double obj_cost_re, const double obj_cost
       *obj_cost_re_bar = -1.0;
       *obj_cost_im_bar = 0.0;
     }
-  } else if (objective_type == ObjectiveType::JRIEMANNDISTANCE || objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) {
+  } else if (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE) {
 
-    RiemannianDistance_diff();
+    GeodesicDistance_diff();
     MatScale(U_final_re_bar, 1.0);
     MatScale(U_final_im_bar, 1.0);
 
@@ -949,7 +950,8 @@ void OptimTarget::finalizeJ_diff(const double obj_cost_re, const double obj_cost
 }
 
 
-double OptimTarget::RiemannianDistance(){
+double OptimTarget::GeodesicDistance(){
+  assert(objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE);
 
   /* Set up A = U^\dagger V */
   Mat UdagV_re, UdagV_im;
@@ -1022,7 +1024,7 @@ double OptimTarget::RiemannianDistance(){
   VecRestoreArrayRead(eigvals_UdV_im, &eigvals_UdV_im_ptr);
 
   // For phase invariance, compute Frechet mean theta_avg
-  if (objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) {
+  if (objective_type == ObjectiveType::JGEODESIC_PHASEFREE) {
     // Compute Frechet mean
     if (!freeze_theta_avg)
       theta_avg = FrechetMin(evals_theta);
@@ -1049,7 +1051,7 @@ double OptimTarget::RiemannianDistance(){
 }
 
 
-void OptimTarget::RiemannianDistance_diff(){
+void OptimTarget::GeodesicDistance_diff(){
 /* Compute derivative of the Riemannian distance:
  *      U_final_bar = 1/dim *(- U_final * log(U_final^\dagger V) 
  *                    + (tr log(U^† V))/d * U  (if phase_invariant) )
@@ -1057,7 +1059,7 @@ void OptimTarget::RiemannianDistance_diff(){
 
   // Reconstruct log(U^\dagger V) from eigen decomposition of UdagV
   Mat logUdagV_re, logUdagV_im;
-  double do_log_frechetmean = (objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) ? theta_avg : 0.0;
+  double do_log_frechetmean = (objective_type == ObjectiveType::JGEODESIC_PHASEFREE) ? theta_avg : 0.0;
   int ierr = reconstructMatrixFromEigenComplex(eigvals_UdV_re, eigvals_UdV_im, eigvecs_UdV_re, eigvecs_UdV_im, logUdagV_re, logUdagV_im, do_log_frechetmean);
   if (ierr > 0){
     printf("Computing the log failed.\n");
