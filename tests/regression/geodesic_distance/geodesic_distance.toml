@@ -26,11 +26,11 @@ zero_boundary_condition = false
 
 [optimization]
 target = { type = "gate", filename = "targetgate.dat", gate_rot_freq = [0.0, 0.0] }
-objective = "Jtrace"
+objective = "Jgeodesic_phasefree"
 tolerance = { grad_abs = 0.0001, grad_rel = 1e-05, final_cost = 0.0001, infidelity = 0.0001 }
-maxiter = 5
+maxiter = 10
 tikhonov = { coeff = 1e-05, use_x0 = false }
-penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0, riemannian = 0.1, riemannian_phasefree = true }
+penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0 }
 
 [output]
 directory = "./data_out"

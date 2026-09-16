@@ -198,7 +198,7 @@
         ]
     },
     {
-        "simulation_name": "riemannian_distance",
+        "simulation_name": "geodesic_distance",
         "files_to_compare": [
             "optim_history.dat"
         ],
