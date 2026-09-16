@@ -14,6 +14,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   /* Reset */
   objective = 0.0;
   ksp_iters_last = 0;
+  nonlinear_forward_valid = false;
 
   /* Store communicators */
   comm_init = comm_init_;
@@ -505,16 +506,19 @@ void OptimProblem::evalLinearizedForward(const Vec x, const Vec v){
 
     int initid = optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
 
-    // Solve Forward ODE while storing trajectory states
-    bool writeTrajectoryDataFiles = false;
-    bool storeStates = true;
-    timestepper->solveODE(initid, iinit, optim_target->getInitialState(), writeTrajectoryDataFiles, storeStates);
-
+    // Nonlinear forward at x is identical for every MatVec within the same KSP/EPS solve, so only
+    // (re-)solve and store it once per xeval_GN; reuse the stored trajectory_states otherwise.
+    if (!nonlinear_forward_valid) {
+      bool writeTrajectoryDataFiles = false;
+      bool storeStates = true;
+      timestepper->solveODE(initid, iinit, optim_target->getInitialState(), writeTrajectoryDataFiles, storeStates);
+    }
 
     // Solve linearized forward ODE in direction v while storing linearized states
     bool storeLinearizedStates = true;
     timestepper->solveLinearizedODE(iinit, v, storeLinearizedStates); 
   }
+  nonlinear_forward_valid = true;
 }
 
 void OptimProblem::applyGaussNewtonMatShell(Mat A, const Vec v, Vec Av){
@@ -561,6 +565,7 @@ void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b){
 
   // Store the point of evaluation for the Gauss-Newton matrix shell A(xinit)
   VecCopy(xinit, xeval_GN);
+  nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
 
   // Set the matrix again, just in case, for reset. 
   KSPSetOperators(ksp_GN, GaussNewtonMatShell, GaussNewtonMatShell);
@@ -650,6 +655,7 @@ std::vector<double> OptimProblem::computeGaussNewtonEvals(Vec xinit, Mat* evecs_
 
   // Store xinit so the MatShell can use it as point of evaluation.
   VecCopy(xinit, xeval_GN);
+  nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
 
   // CAREFUL: EPS solver might need a reset if called multiple times!?
 

@@ -102,6 +102,7 @@ class OptimProblem {
   int GN_MatVec_counter; ///< Counter for Gauss-Newton MatVec multiplications
   Vec x_GN; ///< Current iterate for the GN optimization. Holds solution after finished. 
   int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton linear solve
+  bool nonlinear_forward_valid; ///< True once the nonlinear forward has been solved and stored for the current xeval_GN, reset whenever xeval_GN changes
 
   // Options for the Armijo line search 
   const double c1 = 1e-4;    //< Sufficient decrease parameter
@@ -188,7 +189,9 @@ class OptimProblem {
   /**
    * @brief Evaluate linearized forward operator: Lv = \sum_k dU/dv_k v_k. 
    * 
-   * This does one ODE solve followed by one linearized ODE solve. After this, the timesteppers trajectory_states and lin_trajectory_states will be set.
+   * This does one linearized ODE solve, preceded by a nonlinear ODE solve only if the nonlinear
+   * trajectory for x has not already been computed and stored (see nonlinear_forward_valid). After
+   * this, the timesteppers trajectory_states and lin_trajectory_states will be set.
    * 
    * @param[in] x Point of evaluation
    * @param[in] v Direction vector 
