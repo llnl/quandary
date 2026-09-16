@@ -288,8 +288,6 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       optim_penalty_dpdm = ConfigDefaults::OPTIM_PENALTY_DPDM;
       optim_penalty_energy = ConfigDefaults::OPTIM_PENALTY_ENERGY;
       optim_penalty_variation = ConfigDefaults::OPTIM_PENALTY_VARIATION;
-      optim_penalty_riemannian = ConfigDefaults::OPTIM_PENALTY_RIEMANNIAN;
-      optim_penalty_riemannian_phasefree = ConfigDefaults::OPTIM_PENALTY_RIEMANNIAN_PHASEFREE;
     } else {
       // Parse penalty table
       auto penalty_table = optimization_table["penalty"].as_table();
@@ -302,8 +300,6 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
       optim_penalty_dpdm = validators::field<double>(*penalty_table, "dpdm").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_DPDM);
       optim_penalty_energy = validators::field<double>(*penalty_table, "energy").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_ENERGY);
       optim_penalty_variation = validators::field<double>(*penalty_table, "variation").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_VARIATION);
-      optim_penalty_riemannian = validators::field<double>(*penalty_table, "riemannian").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_PENALTY_RIEMANNIAN);
-      optim_penalty_riemannian_phasefree = validators::field<bool>(*penalty_table, "riemannian_phasefree").valueOr(ConfigDefaults::OPTIM_PENALTY_RIEMANNIAN_PHASEFREE);
     }
 
     // Parse optimization solver type
@@ -687,8 +683,6 @@ void Config::printConfig(std::stringstream& log) const {
       << ", variation = " << optim_penalty_variation
       << ", weightedcost = " << optim_penalty_weightedcost
       << ", weightedcost_width = " << optim_penalty_weightedcost_width 
-      << ", riemannian = " << optim_penalty_riemannian
-      << ", riemannian_phasefree = " << (optim_penalty_riemannian_phasefree ? "true" : "false")
       << " }\n";
   log << "solver_type = \"" << enumToString(optim_solver_type, OPTIM_SOLVER_TYPE_MAP) << "\"\n";
   if (optim_solver_type == OptimSolverType::GAUSS_NEWTON) {
@@ -828,10 +822,10 @@ void Config::finalize() {
     }
   }
 
-  // Turn off Riemannian penalty if Lindblad solver, or if using gate levels
-  if (decoherence_type != DecoherenceType::NONE) {
-    logger.log( "# Warning: Riemannian penalty is not implemented for Lindblad solver. Disabling it.\n");
-    optim_penalty_riemannian = false;
+  // Turn off Riemannian distance if Lindblad solver
+  if (decoherence_type != DecoherenceType::NONE && 
+     (optim_objective == ObjectiveType::JRIEMANNDISTANCE || optim_objective == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) ) {
+    logger.exitWithError( "# ERROR: Riemannian distance objective function is not implemented for Lindblad solver.\n");
   }
 }
 

@@ -27,39 +27,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   MPI_Comm_size(comm_optim, &mpisize_optim);
 
   /* Store number of initial conditions per init-processor group */
-  ninit_local = ninit / mpisize_init; 
-
-  
-  // Allocate storage for final-time unitary if new objective function is used
-  optim_penalty_riemannian = config.getOptimPenaltyRiemannian();
-  phase_invariant = config.getOptimPenaltyRiemannianPhaseFree();
-  if (optim_penalty_riemannian > 0.0) {
-    PetscInt globalsize_rows = mastereq->getDim();
-    PetscInt globalsize_cols = ninit;;
-    PetscInt localsize_rows = globalsize_rows / mpisize_petsc;
-    PetscInt localsize_cols = globalsize_cols / mpisize_petsc;
-    MatCreateDense(PETSC_COMM_WORLD, localsize_rows, localsize_cols, globalsize_rows, globalsize_cols, NULL, &U_final_re);
-    MatCreateDense(PETSC_COMM_WORLD, localsize_rows, localsize_cols, globalsize_rows, globalsize_cols, NULL, &U_final_im);
-    MatCreateDense(PETSC_COMM_WORLD, localsize_rows, localsize_cols, globalsize_rows, globalsize_cols, NULL, &U_final_re_bar);
-    MatCreateDense(PETSC_COMM_WORLD, localsize_rows, localsize_cols, globalsize_rows, globalsize_cols, NULL, &U_final_im_bar);
-    MatSetUp(U_final_re);
-    MatSetUp(U_final_im);
-    MatSetUp(U_final_re_bar);
-    MatSetUp(U_final_im_bar);
-    MatZeroEntries(U_final_re);
-    MatZeroEntries(U_final_im);
-    MatZeroEntries(U_final_re_bar);
-    MatZeroEntries(U_final_im_bar);
-    MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(U_final_re_bar, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(U_final_im_bar, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(U_final_re_bar, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(U_final_im_bar, MAT_FINAL_ASSEMBLY);
-  }
-
+  ninit_local = ninit / mpisize_init;
 
   /* Store number of design parameters */
   int n = 0;
@@ -202,12 +170,6 @@ OptimProblem::~OptimProblem() {
   VecDestroy(&x_GN);
   VecDestroy(&xprev);
 
-  if (optim_penalty_riemannian > 0.0) {
-    MatDestroy(&U_final_re);
-    MatDestroy(&U_final_im);
-    MatDestroy(&U_final_re_bar);
-    MatDestroy(&U_final_im_bar);
-  }
   MatDestroy(&GaussNewtonMatShell);
   VecDestroy(&xeval_GN);
   KSPDestroy(&ksp_GN);
@@ -223,19 +185,11 @@ double OptimProblem::evalF(const Vec x, bool writeTrajectoryDataFiles) {
   /* Pass design vector x to oscillators */
   mastereq->setControlAmplitudes(x); 
 
-  // Reset U_final
-  if (optim_penalty_riemannian > 0.0) {
-    MatZeroEntries(U_final_re);
-    MatZeroEntries(U_final_im);
-    MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
-  }
+  // Reset storage of final states in the target
+  optim_target->resetFinalStates();
 
   /*  Iterate over initial condition */
   obj_cost  = 0.0;
-  obj_riemann = 0.0;
   obj_regul = 0.0;
   obj_penal_leakage = 0.0;
   obj_penal_weightedcost = 0.0;
@@ -258,17 +212,7 @@ double OptimProblem::evalF(const Vec x, bool writeTrajectoryDataFiles) {
     Vec finalstate = timestepper->solveODE(initid, iinit, optim_target->getInitialState(), writeTrajectoryDataFiles, false);
 
     /* Store the final state for Riemannian objective function */
-    if (optim_penalty_riemannian > 0.0) {
-      const PetscScalar *finalstate_array;
-      VecGetArrayRead(finalstate, &finalstate_array);
-      for (size_t row = 0; row < mastereq->getDim(); row++) {
-        int id_re = row;
-        int id_im = row + mastereq->getDim();
-        MatSetValue(U_final_re, row, iinit_global, finalstate_array[id_re], INSERT_VALUES);
-        MatSetValue(U_final_im, row, iinit_global, finalstate_array[id_im], INSERT_VALUES);
-      }
-      VecRestoreArrayRead(finalstate, &finalstate_array);
-    }
+    optim_target->storeFinalUnitaryColumn(iinit_global, finalstate);
 
     /* Add to leakage penalty term */
     obj_penal_leakage += obj_weights[iinit_global] * gamma_penalty_leakage * timestepper->getLeakageIntegral();
@@ -298,12 +242,6 @@ double OptimProblem::evalF(const Vec x, bool writeTrajectoryDataFiles) {
 
     // printf("%d, %d: iinit obj_iinit: %f * (%1.14e + i %1.14e, Overlap=%1.14e + i %1.14e\n", mpirank_world, mpirank_init, obj_weights[iinit_global], obj_iinit_re, obj_iinit_im, fidelity_iinit_re, fidelity_iinit_im);
   }
-  if (optim_penalty_riemannian > 0.0) {
-    MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
-  }
 
   /* Sum up from initial conditions processors */
   double mypen_leak = obj_penal_leakage;
@@ -331,33 +269,7 @@ double OptimProblem::evalF(const Vec x, bool writeTrajectoryDataFiles) {
   }
  
   /* Finalize the objective function */
-  obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im);
-
-  /* Penalty: Riemannian distance */
-  if (optim_penalty_riemannian > 0.0) {
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    /* allreduce the U_final matrix */
-    PetscScalar *data;
-    MatDenseGetArray(U_final_re, &data);
-    int size = mastereq->getDim();
-    MPI_Allreduce(MPI_IN_PLACE, data, size * size, MPIU_SCALAR, MPI_SUM, comm_init);
-    MatDenseRestoreArray(U_final_re, &data);
-
-    MatDenseGetArray(U_final_im, &data);
-    MPI_Allreduce(MPI_IN_PLACE, data, size * size, MPIU_SCALAR, MPI_SUM, comm_init);
-    MatDenseRestoreArray(U_final_im, &data);
-
-    double obj_riemannian = optim_target->RiemannianDistance(U_final_re, U_final_im, phase_invariant);
-
-    // if (mpirank_world == 0) printf("\nRiemannian distance objective: %1.14e\n\n", obj_riemannian);
-    // obj_cost = obj_riemannian;
-    obj_riemann = optim_penalty_riemannian * obj_riemannian;
-    obj_cost = 0.0; // Set to zero, so that riemannian objective is used. Choose optim_penalty_riemannian =1.0. 
-    obj_cost_re = 0.0;
-    obj_cost_im = 0.0;
-  }
+  obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im, comm_init);
 
   /* Evaluate Tikhonov regularization term: gamma/2 * ||x-x0||^2*/
   double xnorm;
@@ -378,11 +290,11 @@ double OptimProblem::evalF(const Vec x, bool writeTrajectoryDataFiles) {
   obj_penal_variation = 0.5*gamma_penalty_variation*var_reg; 
 
   /* Sum, store and return objective value */
-  objective = obj_cost + obj_regul + obj_penal_leakage + obj_penal_dpdm + obj_penal_energy + obj_penal_variation + obj_penal_weightedcost + obj_riemann;
+  objective = obj_cost + obj_regul + obj_penal_leakage + obj_penal_dpdm + obj_penal_energy + obj_penal_variation + obj_penal_weightedcost;
 
   /* Output */
   if (mpirank_world == 0 && !quietmode) {
-    std::cout<< "Objective = " << std::scientific<<std::setprecision(14) << obj_cost << " + " << obj_regul << " + " << obj_penal_leakage << " + " << obj_penal_dpdm << " + " << obj_penal_energy << " + " << obj_penal_variation << " + " << obj_penal_weightedcost << " + " << obj_riemann << std::endl;
+    std::cout<< "Objective = " << std::scientific<<std::setprecision(14) << obj_cost << " + " << obj_regul << " + " << obj_penal_leakage << " + " << obj_penal_dpdm << " + " << obj_penal_energy << " + " << obj_penal_variation << " + " << obj_penal_weightedcost << std::endl;
     std::cout<< "Fidelity = " << fidelity  << std::endl;
   }
 
@@ -405,20 +317,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles){
   VecZeroEntries(G);
 
   // Reset U_final
-  if (optim_penalty_riemannian > 0.0) {
-    MatZeroEntries(U_final_re);
-    MatZeroEntries(U_final_im);
-    MatZeroEntries(U_final_re_bar);
-    MatZeroEntries(U_final_im_bar);
-    MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(U_final_re_bar, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(U_final_im_bar, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(U_final_re_bar, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(U_final_im_bar, MAT_FINAL_ASSEMBLY);
-  }
+  optim_target->resetFinalStates();
 
   /* Derivative of regulatization terms (ADD ON ONE PROC ONLY!) */
   // if (mpirank_init == 0 && mpirank_optim == 0) { // TODO: Which one?? 
@@ -442,7 +341,6 @@ void OptimProblem::evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles){
 
   /*  Iterate over initial condition */
   obj_cost = 0.0;
-  obj_riemann = 0.0;
   obj_regul = 0.0;
   obj_penal_leakage = 0.0;
   obj_penal_weightedcost = 0.0;
@@ -468,23 +366,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles){
     Vec finalstate = timestepper->solveODE(initid, iinit, optim_target->getInitialState(), writeTrajectoryDataFiles, true);
 
     /* Store the final state for Riemannian objective function */
-    if (optim_penalty_riemannian > 0.0) {
-      const PetscScalar *finalstate_array;
-      VecGetArrayRead(finalstate, &finalstate_array);
-      for (size_t row = 0; row < mastereq->getDim(); row++) {
-        int id_re = row;
-        int id_im = row + mastereq->getDim();
-        MatSetValue(U_final_re, row, iinit_global, finalstate_array[id_re], INSERT_VALUES);
-        MatSetValue(U_final_im, row, iinit_global, finalstate_array[id_im], INSERT_VALUES);
-      }
-      VecRestoreArrayRead(finalstate, &finalstate_array);
-      
-      // Assembly here, or could be after the loop over iinit. 
-      MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
-      MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
-      MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
-      MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
-    }
+    optim_target->storeFinalUnitaryColumn(iinit_global, finalstate);
 
     /* Add to leakage penalty term */
     obj_penal_leakage += obj_weights[iinit_global] * gamma_penalty_leakage * timestepper->getLeakageIntegral();
@@ -539,33 +421,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles){
  
   /* Finalize the objective function Jtrace to get the infidelity. 
      If Schroedingers solver, need to take the absolute value */
-  obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im);
-
-  /* Penalty: Riemannian distance */
-  if (optim_penalty_riemannian > 0.0) {
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    /* allreduce the U_final matrix */
-    PetscScalar *data;
-    MatDenseGetArray(U_final_re, &data);
-    int size = mastereq->getDim();
-    MPI_Allreduce(MPI_IN_PLACE, data, size * size, MPIU_SCALAR, MPI_SUM, comm_init);
-    MatDenseRestoreArray(U_final_re, &data);
-
-    MatDenseGetArray(U_final_im, &data);
-    MPI_Allreduce(MPI_IN_PLACE, data, size * size, MPIU_SCALAR, MPI_SUM, comm_init);
-    MatDenseRestoreArray(U_final_im, &data);
-
-    double obj_riemannian = optim_target->RiemannianDistance(U_final_re, U_final_im, phase_invariant);
-
-    // if (mpirank_world == 0) printf("\nRiemannian distance objective: %1.14e\n\n", obj_riemannian);
-    // obj_cost = obj_riemannian;
-    obj_riemann = optim_penalty_riemannian * obj_riemannian;
-    obj_cost = 0.0; 
-    obj_cost_re = 0.0;
-    obj_cost_im = 0.0;
-  }
+  obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im, comm_init);
 
   /* Evaluate Tikhonov regularization term += gamma/2 * ||x||^2*/
   double xnorm;
@@ -586,15 +442,10 @@ void OptimProblem::evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles){
   obj_penal_variation = 0.5*gamma_penalty_variation*var_reg; 
 
   /* Sum, store and return objective value */
-  objective = obj_cost + obj_regul + obj_penal_leakage + obj_penal_dpdm + obj_penal_energy + obj_penal_variation + obj_penal_weightedcost + obj_riemann;
+  objective = obj_cost + obj_regul + obj_penal_leakage + obj_penal_dpdm + obj_penal_energy + obj_penal_variation + obj_penal_weightedcost;
 
-  /* Derivative of new objective function */
-  if (optim_penalty_riemannian > 0.0) {
-    optim_target->RiemannianDistance_diff(U_final_re, U_final_im, U_final_re_bar, U_final_im_bar, phase_invariant);
-    MatScale(U_final_re_bar, optim_penalty_riemannian);
-    MatScale(U_final_im_bar, optim_penalty_riemannian);
-  }
-
+  double obj_cost_re_bar, obj_cost_im_bar;
+  optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
 
   /* Solve adjoint equations for all initial conditions . */
   for (int iinit = 0; iinit < ninit_local; iinit++) {
@@ -607,29 +458,10 @@ void OptimProblem::evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles){
     VecZeroEntries(rho_t0_bar);
 
     /* Terminal condition for adjoint variable: Derivative of final time objective J */
-    double obj_cost_re_bar, obj_cost_im_bar;
-    optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
     optim_target->evalJ_diff(timestepper->getFinalState(iinit), rho_t0_bar, obj_weights[iinit_global]*obj_cost_re_bar, obj_weights[iinit_global]*obj_cost_im_bar);
 
-    // Derivative of Riemannian penalty
-    if (optim_penalty_riemannian > 0.0) {
-
-      // NOT SURE IF THIS IS RIGHT. 
-      // VecZeroEntries(rho_t0_bar);
-
-      // Pass i-th column of U_final_bar into rho_t0_bar
-      for (size_t row = 0; row < mastereq->getDim(); row++) {
-        int id_re = row;
-        int id_im = row + mastereq->getDim();
-        double val_ufinal_re_bar, val_ufinal_im_bar;
-        MatGetValue(U_final_re_bar, row, iinit_global, &val_ufinal_re_bar);
-        MatGetValue(U_final_im_bar, row, iinit_global, &val_ufinal_im_bar);
-        VecSetValue(rho_t0_bar, id_re, val_ufinal_re_bar, ADD_VALUES);
-        VecSetValue(rho_t0_bar, id_im, val_ufinal_im_bar, ADD_VALUES);
-      }
-      VecAssemblyBegin(rho_t0_bar);
-      VecAssemblyEnd(rho_t0_bar);
-    }
+    // Derivative of storing final unitary (adds a column of U_final_bar into rho_t0_bar)
+    optim_target->storeFinalUnitaryColumn_diff(iinit_global, rho_t0_bar);
 
     /* Derivative of time-stepping */
     timestepper->solveAdjointODE(iinit, rho_t0_bar, obj_weights[iinit_global] * gamma_penalty_leakage, obj_weights[iinit_global]*gamma_penalty_weightedcost, obj_weights[iinit_global]*gamma_penalty_dpdm, obj_weights[iinit_global]*gamma_penalty_energy);
@@ -1052,10 +884,10 @@ bool OptimProblem::monitor(int iter, double f, double gnorm, double deltax){
   /* Every <output_optimization_stride> iterations: Output of optimization history */
   if (iter % getOutputOptimizationStride() == 0 || lastIter) {
     // Add to optimization history file 
-    getOutput()->writeOptimFile(iter, f, gnorm, deltax, F_avg, obj_cost, obj_riemann, obj_regul, obj_penal_leakage, obj_penal_dpdm, obj_penal_energy, obj_penal_variation, obj_penal_weightedcost);
+    getOutput()->writeOptimFile(iter, f, gnorm, deltax, F_avg, obj_cost, obj_regul, obj_penal_leakage, obj_penal_dpdm, obj_penal_energy, obj_penal_variation, obj_penal_weightedcost);
     // Screen output 
     if (getMPIrank_world() == 0) {
-      std::cout<< iter <<  "  " << std::scientific<<std::setprecision(14) << obj_cost << " + " << obj_regul << " + " << obj_penal_leakage << " + " << obj_penal_dpdm << " + " << obj_penal_energy << " + " << obj_penal_variation << " + " << obj_penal_weightedcost << " + " << obj_riemann;
+      std::cout<< iter <<  "  " << std::scientific<<std::setprecision(14) << obj_cost << " + " << obj_regul << " + " << obj_penal_leakage << " + " << obj_penal_dpdm << " + " << obj_penal_energy << " + " << obj_penal_variation << " + " << obj_penal_weightedcost;
       std::cout<< "  Fidelity = " << F_avg;
       std::cout<< "  ||Grad|| = " << gnorm;
       std::cout<< std::endl;

@@ -79,7 +79,7 @@ class Quandary:
     tol_costfunc        # Optimization stopping criterion based on the objective function value. Default 1e-4
     tol_gnorm_abs       # Optimization stopping criterion based on absolute gradient norm drop. Default 1e-4
     tol_gnorm_rel       # Optimization stopping criterion based on relative gradient norm drop. Default 1e-4
-    costfunction        # Cost function measure: "Jtrace" or "Jfrobenius". Default: "Jtrace"
+    costfunction        # Cost function measure: "Jtrace", "Jfrobenius", "JRiemannDistance", or "JRiemannDistance_Phasefree". Default: "Jtrace"
     optim_target        # Optional: Set other optimization target string, if not specified through the targetgate or targetstate. 
     gamma_tik0          # Parameter for Tikhonov regularization ||alpha||^2. Default 1e-4
     gamma_tik0_interpolate # Switch to use ||alpha-alpha_0||^2 instead, where alpha_0 is the initial guess. Default: False
@@ -87,8 +87,6 @@ class Quandary:
     gamma_energy        # Parameter for integral penality term on the control pulse energy. Default: 0.1
     gamma_dpdm          # Parameter for integral penality term on second state derivative. Default: 0.01
     gamma_variation     # Parameter for penality term on variations in the control parameters: Default: 0.01
-    gamma_riemannian     # Parameter for Riemannian distance penalty term. Default: 0.0 (no Riemannian penalty)
-    riemannian_phasefree # Switch to use phase-invariant Riemannian objective. Default: False
     optim_solver_type    # Type of optimization solver ("tao_lbfgs" or "gauss_newton"). Default: "tao_lbfgs"
     optim_ksp_rtol          # Relative tolerance for the KSP solver. Default: 1e-3
     optim_ksp_maxiter       # Maximum number of iterations for the KSP solver. Default: 100
@@ -184,8 +182,6 @@ class Quandary:
     gamma_energy           : float = 0.1
     gamma_dpdm             : float = 0.01        
     gamma_variation        : float = 0.01        
-    gamma_riemannian       : float = 0.0
-    riemannian_phasefree   : bool = False
     optim_solver_type      : str   = "tao_lbfgs"
     optim_ksp_rtol         : float = 1e-3
     optim_ksp_maxiter      : int   = 100
@@ -890,7 +886,7 @@ class Quandary:
             lines.append(f"tikhonov = {{ coeff = {self.gamma_tik0_interpolate}, use_x0 = true }}")
         else:
             lines.append(f"tikhonov = {{ coeff = {self.gamma_tik0}, use_x0 = false }}")
-        lines.append("penalty = { leakage = " + str(self.gamma_leakage) + ", energy = " + str(self.gamma_energy) + ", dpdm = " + str(self.gamma_dpdm) + ", variation = " + str(self.gamma_variation) + ", weightedcost = 0.0, weightedcost_width = 0.0, riemannian = " + str(self.gamma_riemannian) + ", riemannian_phasefree = " + _toml_bool(self.riemannian_phasefree) + " }")
+        lines.append("penalty = { leakage = " + str(self.gamma_leakage) + ", energy = " + str(self.gamma_energy) + ", dpdm = " + str(self.gamma_dpdm) + ", variation = " + str(self.gamma_variation) + ", weightedcost = 0.0, weightedcost_width = 0.0 }")
         lines.append(f"solver_type = {_toml_str(self.optim_solver_type)}")
         lines.append(f"ksp_rtol = {self.optim_ksp_rtol}")
         lines.append(f"ksp_maxiter = {self.optim_ksp_maxiter}")
@@ -977,7 +973,6 @@ class Quandary:
             "Gradient"               : optim_hist_tmp[:,2],
             "Fidelity"               : optim_hist_tmp[:,4],
             "Cost"                   : optim_hist_tmp[:,5],
-            "Riemann"                : optim_hist_tmp[:,6],
             "Tikhonov"               : optim_hist_tmp[:,7],
             "Penalty-Leakage"        : optim_hist_tmp[:,8],
             "Penalty-StateVariation" : optim_hist_tmp[:,9],

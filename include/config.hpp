@@ -105,8 +105,6 @@ class Config {
   double optim_penalty_dpdm; ///< Second derivative penalty coefficient
   double optim_penalty_energy; ///< Energy penalty coefficient
   double optim_penalty_variation; ///< Amplitude variation penalty coefficient
-  double optim_penalty_riemannian; ///< Riemannian distance penalty coefficient
-  bool optim_penalty_riemannian_phasefree; ///< Switch to use phase-free Riemannian distance measure
   OptimSolverType optim_solver_type; ///< Type of optimization solver to use
   double optim_ksp_rtol; ///< Relative tolerance for the KSP solver
   int optim_ksp_maxiter; ///< Maximum iterations for the KSP solver
@@ -185,8 +183,6 @@ class Config {
   double getOptimPenaltyDpdm() const { return optim_penalty_dpdm; }
   double getOptimPenaltyEnergy() const { return optim_penalty_energy; }
   double getOptimPenaltyVariation() const { return optim_penalty_variation; }
-  double getOptimPenaltyRiemannian() const { return optim_penalty_riemannian; }
-  bool getOptimPenaltyRiemannianPhaseFree() const { return optim_penalty_riemannian_phasefree; }
   OptimSolverType getOptimSolverType() const { return optim_solver_type; }
   double getOptimKSPRtol() const { return optim_ksp_rtol; }
   int getOptimKSPMaxiter() const { return optim_ksp_maxiter; }

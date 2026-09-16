@@ -51,12 +51,6 @@ class OptimProblem {
   int ninit_local; ///< Local number of initial conditions on this processor
   Vec rho_t0; ///< Storage for initial condition of the ODE
   Vec rho_t0_bar; ///< Storage for adjoint initial condition of the adjoint ODE (aka the terminal condition)
-  Mat U_final_re; ///< Storage for final-time unitary matrix. TODO: Remove the above store_finalstates, and use this one instead.
-  Mat U_final_im; ///< Storage for final-time unitary matrix. TODO: Remove the above store_finalstates, and use this one instead.
-  Mat U_final_re_bar; ///< Storage for derivative of final-time unitary matrix
-  Mat U_final_im_bar; ///< Storage for derivative of final-time unitary matrix
-  double optim_penalty_riemannian; ///< Flag to use new objective function based on Riemannian distance
-  bool phase_invariant; ///< Flag to use phase-invariant version of Riemannian distance objective
 
   OptimTarget* optim_target; ///< Pointer to the optimization target (gate or state)
 
@@ -74,7 +68,6 @@ class OptimProblem {
   int ndesign; ///< Number of global design (optimization) parameters
   double objective = 0.0; ///< Current objective function value (sum over final-time cost, regularization terms and penalty terms)
   double obj_cost = 0.0; ///< Final-time measure J(T) in objective
-  double obj_riemann = 0.0; ///< Riemannian distance measure 
   double obj_regul = 0.0; ///< Regularization term in objective
   double obj_penal_leakage = 0.0; ///< Penalty term for leakage into guard levels
   double obj_penal_weightedcost = 0.0; ///< Penalty term for weighted running cost 
@@ -151,7 +144,6 @@ class OptimProblem {
   int getNdesign(){ return ndesign; };
   double getObjective(){ return objective; };
   double getCostT()    { return obj_cost; };
-  double getRiemannDistance()    { return obj_riemann; };
   double getRegul()    { return obj_regul; };
   double getPenaltyLeakage()  { return obj_penal_leakage; };
   double getPenaltyWeightedCost()  { return obj_penal_weightedcost; };

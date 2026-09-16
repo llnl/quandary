@@ -30,12 +30,6 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
-  // Check if Riemannian distance output should be written. 
-  writeRiemannDistOptimHist = false;
-  if (config.getOptimPenaltyRiemannian() > 0.0) {
-    writeRiemannDistOptimHist = true;
-  }
-
   /* Prepare output for optimizer */
   if (mpirank_world == 0) {
     char filename[255];
@@ -45,12 +39,8 @@ Output::Output(const Config& config, MPI_Comm comm_petsc, MPI_Comm comm_init, bo
       printf("ERROR: Could not open file %s\n", filename);
       exit(1);
     }
-    if (writeRiemannDistOptimHist) {
-      fprintf(optimfile, "#\"iter\"    \"Objective\"           \"||Pr(grad)||\"           \"LS step\"           \"F_avg\"           \"Terminal cost\"         \"Riemannian \"         \"Tikhonov-regul\"        \"Penalty-term\"          \"State variation\"        \"Energy-term\"           \"Control variation\"\n");
-    } else {
-      fprintf(optimfile, "#\"iter\"    \"Objective\"           \"||Pr(grad)||\"           \"LS step\"           \"F_avg\"           \"Terminal cost\"         \"Tikhonov-regul\"        \"Penalty-term\"          \"State variation\"        \"Energy-term\"           \"Control variation\"\n");
+    fprintf(optimfile, "#\"iter\"    \"Objective\"           \"||Pr(grad)||\"           \"LS step\"           \"F_avg\"           \"Terminal cost\"         \"Tikhonov-regul\"        \"Penalty-term\"          \"State variation\"        \"Energy-term\"           \"Control variation\"\n");
 
-    }
   } 
 
   /* Reset flags and data file pointers */
@@ -96,13 +86,10 @@ Output::~Output(){
 }
 
 
-void Output::writeOptimFile(int optim_iter, double objective, double gnorm, double stepsize, double Favg, double costT, double obj_riemann, double tikh_regul, double penalty_leakage, double penalty_dpdm, double penalty_energy, double penalty_variation, double penalty_weightedcost){
+void Output::writeOptimFile(int optim_iter, double objective, double gnorm, double stepsize, double Favg, double costT, double tikh_regul, double penalty_leakage, double penalty_dpdm, double penalty_energy, double penalty_variation, double penalty_weightedcost){
 
   if (mpirank_world == 0){
-    if (writeRiemannDistOptimHist)
-      fprintf(optimfile, "%05d  %1.14e  %1.14e  %.8f  %1.14e  %1.14e  %1.14e  %1.14e  %1.14e  %1.14e  %1.14e  %1.14e\n", optim_iter, objective, gnorm, stepsize, Favg, costT, obj_riemann, tikh_regul, penalty_leakage + penalty_weightedcost, penalty_dpdm, penalty_energy, penalty_variation);
-    else
-      fprintf(optimfile, "%05d  %1.14e  %1.14e  %.8f  %1.14e  %1.14e  %1.14e  %1.14e  %1.14e  %1.14e  %1.14e\n", optim_iter, objective, gnorm, stepsize, Favg, costT, tikh_regul, penalty_leakage + penalty_weightedcost, penalty_dpdm, penalty_energy, penalty_variation);
+    fprintf(optimfile, "%05d  %1.14e  %1.14e  %.8f  %1.14e  %1.14e  %1.14e  %1.14e  %1.14e  %1.14e  %1.14e\n", optim_iter, objective, gnorm, stepsize, Favg, costT, tikh_regul, penalty_leakage + penalty_weightedcost, penalty_dpdm, penalty_energy, penalty_variation);
     fflush(optimfile);
   } 
 }

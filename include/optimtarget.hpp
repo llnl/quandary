@@ -52,6 +52,11 @@ class OptimTarget{
     Mat eigvecs_UdV_re; ///< Eigenvectors of log(U^\dagger V) (real part)
     Mat eigvecs_UdV_im; ///< Eigenvectors of log(U^\dagger V) (imaginary part)
 
+    Mat U_final_re; ///< Storage for final-time unitary matrix.
+    Mat U_final_im; ///< Storage for final-time unitary matrix.
+    Mat U_final_re_bar; ///< Storage for derivative of final-time unitary matrix
+    Mat U_final_im_bar; ///< Storage for derivative of final-time unitary matrix
+
   public:
     OptimTarget();
     bool freeze_theta_avg;
@@ -85,13 +90,28 @@ class OptimTarget{
      */
     int prepareInitialAndTargetState(const int iinit, const int ninit, const std::vector<size_t>& nlevels, const std::vector<size_t>& nessential);
 
+
+    /** 
+     * @brief Reset U_final matrices to zero
+     */
+    void resetFinalStates();
+
     /**
-     * @brief Evaluates the final-time objective function measure \f$J(\rho(T))\f$.
+     * @brief Stores one column of the final-time unitary matrix.
+     * @param col Column index of the final-time unitary matrix to store
+     * @param finalstate Real and imaginary parts of the final-time unitary column to store
+     */
+    void storeFinalUnitaryColumn(const int col, const Vec finalstate);
+    void storeFinalUnitaryColumn_diff(const int col, const Vec finalstate_bar);
+
+    /**
+     * @brief Evaluates the final-time objective function measure \f$J(\rho(T))\f$ for one final state column. 
      *
      * The target state must be prepared and stored before calling this function.
      * Returns both real and imaginary parts of the final-time measure. The imaginary part
      * is generally zero except for Schroedinger solver with the trace objective 
-     * function measure.
+     * function measure. 
+     * NOTE: Does not evaluate the Riemannian distance objective, which instead is computed in finalizeJ().
      *
      * @param[in] state Current state vector
      * @param[out] J_re_ptr Pointer to store real part of objective
@@ -113,34 +133,25 @@ class OptimTarget{
 
     /**
      * @brief Finalizes the objective function computation.
-     * 
-     * Compute the infidelity (1-fidelity).
+     * NOTE: This function is responsible for computing the final objective value for the Riemannian distance if applicable.
      * 
      * @param obj_cost_re Real part of objective cost
      * @param obj_cost_im Imaginary part of objective cost
+     * @param comm_init MPI communicator over initial conditions, needed for final-time matrix reduction
      * @return double Final objective function value
      */
-    double finalizeJ(const double obj_cost_re, const double obj_cost_im); 
+    double finalizeJ(const double obj_cost_re, const double obj_cost_im, MPI_Comm comm_init); 
 
     /**
      * @brief Computes the Riemannian distance between target and current unitary: J(U) = 1/2 || log(U^\dagger V) ||^2_F, or its trace invariant version. 
-     * @param U_final_re Real part of final-time unitary matrix
-     * @param U_final_im Imaginary part of final-time unitary matrix
-     * @param phase_invariant Flag to use phase-invariant version of Riemannian
      * @return double Riemannian distance objective value
      */
-    double RiemannianDistance(const Mat U_final_re, const Mat U_final_im, bool phase_invariant);
+    double RiemannianDistance();
 
     /**
      * @brief Derivative of Riemannian distance computation.
-     * 
-     * @param[in] U_final_re Real part of final-time unitary matrix
-     * @param[in] U_final_im Imaginary part of final-time unitary matrix
-     * @param[out] U_final_re_bar Real part of adjoint matrix to update
-     * @param[out] U_final_im_bar Imaginary part of adjoint matrix to update
-     * @param[in] phase_invariant Flag to use phase-invariant version of Riemannian
      */
-    void RiemannianDistance_diff(const Mat U_final_re, const Mat U_final_im, Mat U_final_re_bar, Mat U_final_im_bar, bool phase_invariant);
+    void RiemannianDistance_diff();
 
     /**
      * @brief Derivative of objective function finalization.

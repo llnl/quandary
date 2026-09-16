@@ -49,6 +49,34 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, bool quietmod
   VecZeroEntries(initialstate);
   VecAssemblyBegin(initialstate); VecAssemblyEnd(initialstate);
 
+  // Allocate storage for final-time unitary if Riemannian distance objective function is used
+  if (objective_type == ObjectiveType::JRIEMANNDISTANCE || objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) {
+    PetscInt globalsize_rows = dim;
+    PetscInt globalsize_cols = config.getNInitialConditions();;
+    PetscInt localsize_rows = globalsize_rows / mpisize_petsc;
+    PetscInt localsize_cols = globalsize_cols / mpisize_petsc;
+    MatCreateDense(PETSC_COMM_WORLD, localsize_rows, localsize_cols, globalsize_rows, globalsize_cols, NULL, &U_final_re);
+    MatCreateDense(PETSC_COMM_WORLD, localsize_rows, localsize_cols, globalsize_rows, globalsize_cols, NULL, &U_final_im);
+    MatCreateDense(PETSC_COMM_WORLD, localsize_rows, localsize_cols, globalsize_rows, globalsize_cols, NULL, &U_final_re_bar);
+    MatCreateDense(PETSC_COMM_WORLD, localsize_rows, localsize_cols, globalsize_rows, globalsize_cols, NULL, &U_final_im_bar);
+    MatSetUp(U_final_re);
+    MatSetUp(U_final_im);
+    MatSetUp(U_final_re_bar);
+    MatSetUp(U_final_im_bar);
+    MatZeroEntries(U_final_re);
+    MatZeroEntries(U_final_im);
+    MatZeroEntries(U_final_re_bar);
+    MatZeroEntries(U_final_im_bar);
+    MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_re_bar, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_im_bar, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_re_bar, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_im_bar, MAT_FINAL_ASSEMBLY);
+  } 
+
   /* Set up the fixed initial state for PRODUCT_STATE or FROMFILE or ENSEMBLE initialization. Otherwise it will be set during prepareInitialAndTargetState(). */
   /* Get initial condition type and IDs */
   initcond = config.getInitialCondition();
@@ -259,6 +287,13 @@ OptimTarget::~OptimTarget(){
   VecDestroy(&eigvals_UdV_im);
   MatDestroy(&eigvecs_UdV_re);
   MatDestroy(&eigvecs_UdV_im);
+
+  if (objective_type == ObjectiveType::JRIEMANNDISTANCE || objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) {
+    MatDestroy(&U_final_re);
+    MatDestroy(&U_final_im);
+    MatDestroy(&U_final_re_bar);
+    MatDestroy(&U_final_im_bar);
+  }
 }
 
 double OptimTarget::FrobeniusDistance(const Vec state){
@@ -618,6 +653,56 @@ int OptimTarget::prepareInitialAndTargetState(const int iinit, const int ninit, 
   return initID;
 }
 
+
+void OptimTarget::resetFinalStates(){
+  if (objective_type == ObjectiveType::JRIEMANNDISTANCE || objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) {
+    MatZeroEntries(U_final_re); 
+    MatZeroEntries(U_final_im);
+    MatZeroEntries(U_final_re_bar);
+    MatZeroEntries(U_final_im_bar);
+    MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY); MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY); MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_re_bar, MAT_FINAL_ASSEMBLY); MatAssemblyEnd(U_final_re_bar, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_im_bar, MAT_FINAL_ASSEMBLY); MatAssemblyEnd(U_final_im_bar, MAT_FINAL_ASSEMBLY);
+  }
+}
+
+
+void OptimTarget::storeFinalUnitaryColumn(const int col, const Vec finalstate){
+  if (objective_type == ObjectiveType::JRIEMANNDISTANCE || objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) {
+    const PetscScalar *finalstate_array;
+    VecGetArrayRead(finalstate, &finalstate_array);
+    for (size_t row = 0; row < dim; row++) {
+      int id_re = row;
+      int id_im = row + dim;
+      MatSetValue(U_final_re, row, col, finalstate_array[id_re], INSERT_VALUES);
+      MatSetValue(U_final_im, row, col, finalstate_array[id_im], INSERT_VALUES);
+    }
+    VecRestoreArrayRead(finalstate, &finalstate_array);
+  }
+}
+
+void OptimTarget::storeFinalUnitaryColumn_diff(const int col, const Vec finalstate_bar){
+  if (objective_type == ObjectiveType::JRIEMANNDISTANCE || objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) {
+    // NOT SURE IF THIS IS RIGHT. 
+    // VecZeroEntries(finalstate_bar);
+
+    // Pass i-th column of U_final_bar into final_state_bar
+    for (size_t row = 0; row < dim; row++) {
+      int id_re = row;
+      int id_im = row + dim;
+      double val_ufinal_re_bar, val_ufinal_im_bar;
+      MatGetValue(U_final_re_bar, row, col, &val_ufinal_re_bar);
+      MatGetValue(U_final_im_bar, row, col, &val_ufinal_im_bar);
+      VecSetValue(finalstate_bar, id_re, val_ufinal_re_bar, ADD_VALUES);
+      VecSetValue(finalstate_bar, id_im, val_ufinal_im_bar, ADD_VALUES);
+    }
+    VecAssemblyBegin(finalstate_bar);
+    VecAssemblyEnd(finalstate_bar);
+  }
+}
+
+
 void OptimTarget::evalJ(const Vec state, double* J_re_ptr, double* J_im_ptr){
   // Don't evaluate any objective function if the target type is NONE
   if (target_type == TargetType::NONE) {
@@ -665,6 +750,12 @@ void OptimTarget::evalJ(const Vec state, double* J_re_ptr, double* J_im_ptr){
 
       HilbertSchmidtOverlap(state, true, &J_re, &J_im); // is real if Lindblad solver. 
       break; // case J_Trace
+
+    /* Riemannian distance is handled in finalizeJ. */
+    case ObjectiveType::JRIEMANNDISTANCE:
+      break;
+    case ObjectiveType::JRIEMANNDISTANCE_PHASEFREE:
+      break;
 
     /* J_Measure = Tr(O_m rho(T)) = \sum_i |i-m| rho_ii(T) if Lindblad and \sum_i |i-m| |phi_i(T)|^2  if Schroedinger */
     case ObjectiveType::JMEASURE:
@@ -744,6 +835,13 @@ void OptimTarget::evalJ_diff(const Vec state, Vec statebar, const double J_re_ba
       HilbertSchmidtOverlap_diff(statebar, true, J_re_bar, J_im_bar);
     break;
 
+    case ObjectiveType::JRIEMANNDISTANCE:
+      // Riemannian distance is handled in finalizeJ, no derivative needed here.
+      break;
+    case ObjectiveType::JRIEMANNDISTANCE_PHASEFREE:
+      // Riemannian distance phase-free is handled in finalizeJ, no derivative needed here.
+      break;
+
     case ObjectiveType::JMEASURE:
 
       PetscInt dimsq = dim;   // Schroedinger solver: dim = N
@@ -778,7 +876,7 @@ void OptimTarget::evalJ_diff(const Vec state, Vec statebar, const double J_re_ba
   VecAssemblyBegin(statebar); VecAssemblyEnd(statebar);
 }
 
-double OptimTarget::finalizeJ(const double obj_cost_re, const double obj_cost_im) {
+double OptimTarget::finalizeJ(const double obj_cost_re, const double obj_cost_im, MPI_Comm comm_init) {
   if (target_type == TargetType::NONE) {
     return 0.0;
   }
@@ -790,6 +888,29 @@ double OptimTarget::finalizeJ(const double obj_cost_re, const double obj_cost_im
     } else {
       obj_cost = 1.0 - obj_cost_re;
     }
+  } else if (objective_type == ObjectiveType::JRIEMANNDISTANCE || objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) {
+
+    // Assemble the final-time unitary matrices.
+    MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
+
+    // Allreduce the final time matrix 
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    PetscScalar *data;
+    MatDenseGetArray(U_final_re, &data);
+    int size = dim;
+    MPI_Allreduce(MPI_IN_PLACE, data, size * size, MPIU_SCALAR, MPI_SUM, comm_init);
+    MatDenseRestoreArray(U_final_re, &data);
+
+    MatDenseGetArray(U_final_im, &data);
+    MPI_Allreduce(MPI_IN_PLACE, data, size * size, MPIU_SCALAR, MPI_SUM, comm_init);
+    MatDenseRestoreArray(U_final_im, &data);
+
+    // Evaluate the Riemannian distance
+    obj_cost = RiemannianDistance();
   } else {
     obj_cost = obj_cost_re;
     assert(obj_cost_im <= 1e-14);
@@ -815,6 +936,12 @@ void OptimTarget::finalizeJ_diff(const double obj_cost_re, const double obj_cost
       *obj_cost_re_bar = -1.0;
       *obj_cost_im_bar = 0.0;
     }
+  } else if (objective_type == ObjectiveType::JRIEMANNDISTANCE || objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) {
+
+    RiemannianDistance_diff();
+    MatScale(U_final_re_bar, 1.0);
+    MatScale(U_final_im_bar, 1.0);
+
   } else {
     *obj_cost_re_bar = 1.0;
     *obj_cost_im_bar = 0.0;
@@ -822,7 +949,7 @@ void OptimTarget::finalizeJ_diff(const double obj_cost_re, const double obj_cost
 }
 
 
-double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_im, bool phase_invariant){
+double OptimTarget::RiemannianDistance(){
 
   /* Set up A = U^\dagger V */
   Mat UdagV_re, UdagV_im;
@@ -895,7 +1022,7 @@ double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_i
   VecRestoreArrayRead(eigvals_UdV_im, &eigvals_UdV_im_ptr);
 
   // For phase invariance, compute Frechet mean theta_avg
-  if (phase_invariant) {
+  if (objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) {
     // Compute Frechet mean
     if (!freeze_theta_avg)
       theta_avg = FrechetMin(evals_theta);
@@ -922,7 +1049,7 @@ double OptimTarget::RiemannianDistance(const Mat U_final_re, const Mat U_final_i
 }
 
 
-void OptimTarget::RiemannianDistance_diff(const Mat U_final_re, const Mat U_final_im, Mat U_final_re_bar, Mat U_final_im_bar, bool phase_invariant){
+void OptimTarget::RiemannianDistance_diff(){
 /* Compute derivative of the Riemannian distance:
  *      U_final_bar = 1/dim *(- U_final * log(U_final^\dagger V) 
  *                    + (tr log(U^† V))/d * U  (if phase_invariant) )
@@ -930,7 +1057,7 @@ void OptimTarget::RiemannianDistance_diff(const Mat U_final_re, const Mat U_fina
 
   // Reconstruct log(U^\dagger V) from eigen decomposition of UdagV
   Mat logUdagV_re, logUdagV_im;
-  double do_log_frechetmean = phase_invariant ? theta_avg : 0.0;
+  double do_log_frechetmean = (objective_type == ObjectiveType::JRIEMANNDISTANCE_PHASEFREE) ? theta_avg : 0.0;
   int ierr = reconstructMatrixFromEigenComplex(eigvals_UdV_re, eigvals_UdV_im, eigvecs_UdV_re, eigvecs_UdV_im, logUdagV_re, logUdagV_im, do_log_frechetmean);
   if (ierr > 0){
     printf("Computing the log failed.\n");
