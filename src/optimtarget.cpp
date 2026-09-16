@@ -49,8 +49,11 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, bool quietmod
   VecZeroEntries(initialstate);
   VecAssemblyBegin(initialstate); VecAssemblyEnd(initialstate);
 
+  // Store final unitary if Geodesic distance objective is used
+  store_Ufinal = (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE);
+
   // Allocate storage for final-time unitary if Geodesic distance objective function is used
-  if (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE) {
+  if (store_Ufinal) {
     PetscInt globalsize_rows = dim;
     PetscInt globalsize_cols = config.getNInitialConditions();;
     PetscInt localsize_rows = globalsize_rows / mpisize_petsc;
@@ -288,7 +291,7 @@ OptimTarget::~OptimTarget(){
   MatDestroy(&eigvecs_UdV_re);
   MatDestroy(&eigvecs_UdV_im);
 
-  if (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE) {
+  if (store_Ufinal) {
     MatDestroy(&U_final_re);
     MatDestroy(&U_final_im);
     MatDestroy(&U_final_re_bar);
@@ -655,7 +658,7 @@ int OptimTarget::prepareInitialAndTargetState(const int iinit, const int ninit, 
 
 
 void OptimTarget::resetFinalStates(){
-  if (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE) {
+  if (store_Ufinal) {
     MatZeroEntries(U_final_re); 
     MatZeroEntries(U_final_im);
     MatZeroEntries(U_final_re_bar);
@@ -669,7 +672,7 @@ void OptimTarget::resetFinalStates(){
 
 
 void OptimTarget::storeFinalUnitaryColumn(const int col, const Vec finalstate){
-  if (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE) {
+  if (store_Ufinal) {
     const PetscScalar *finalstate_array;
     VecGetArrayRead(finalstate, &finalstate_array);
     for (size_t row = 0; row < dim; row++) {
@@ -683,7 +686,7 @@ void OptimTarget::storeFinalUnitaryColumn(const int col, const Vec finalstate){
 }
 
 void OptimTarget::storeFinalUnitaryColumn_diff(const int col, const Vec finalstate_bar){
-  if (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE) {
+  if (store_Ufinal) {
     // NOT SURE IF THIS IS RIGHT. 
     // VecZeroEntries(finalstate_bar);
 
@@ -891,6 +894,8 @@ double OptimTarget::finalizeJ(const double obj_cost_re, const double obj_cost_im
     }
   } else if (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE) {
 
+    assert(store_Ufinal);
+
     // Assemble the final-time unitary matrices.
     MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
@@ -912,6 +917,7 @@ double OptimTarget::finalizeJ(const double obj_cost_re, const double obj_cost_im
 
     // Evaluate the Geodesic distance
     obj_cost = GeodesicDistance();
+
   } else {
     obj_cost = obj_cost_re;
     assert(obj_cost_im <= 1e-14);
@@ -938,7 +944,9 @@ void OptimTarget::finalizeJ_diff(const double obj_cost_re, const double obj_cost
       *obj_cost_im_bar = 0.0;
     }
   } else if (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE) {
+    assert(store_Ufinal);
 
+    // Set U_final_bar to the derivative of the Geodesic distance with respect to final-time unitary 
     GeodesicDistance_diff();
     MatScale(U_final_re_bar, 1.0);
     MatScale(U_final_im_bar, 1.0);
@@ -951,7 +959,6 @@ void OptimTarget::finalizeJ_diff(const double obj_cost_re, const double obj_cost
 
 
 double OptimTarget::GeodesicDistance(){
-  assert(objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE);
 
   /* Set up A = U^\dagger V */
   Mat UdagV_re, UdagV_im;

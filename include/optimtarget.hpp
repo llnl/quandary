@@ -52,6 +52,7 @@ class OptimTarget{
     Mat eigvecs_UdV_re; ///< Eigenvectors of log(U^\dagger V) (real part)
     Mat eigvecs_UdV_im; ///< Eigenvectors of log(U^\dagger V) (imaginary part)
 
+    bool store_Ufinal; ///< Flag indicating whether to store the final-time unitary matrix
     Mat U_final_re; ///< Storage for final-time unitary matrix.
     Mat U_final_im; ///< Storage for final-time unitary matrix.
     Mat U_final_re_bar; ///< Storage for derivative of final-time unitary matrix
