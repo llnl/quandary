@@ -211,7 +211,7 @@ double OptimProblem::evalF(const Vec x, bool writeTrajectoryDataFiles) {
     if (mpirank_optim == 0 && !quietmode) printf("%d: Initial condition id=%d ...\n", mpirank_init, initid);
     Vec finalstate = timestepper->solveODE(initid, iinit, optim_target->getInitialState(), writeTrajectoryDataFiles, false);
 
-    /* Store the final state for Riemannian objective function */
+    /* Store the final state for Geodesic Riemannian objective function */
     optim_target->storeFinalUnitaryColumn(iinit_global, finalstate);
 
     /* Add to leakage penalty term */

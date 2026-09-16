@@ -840,11 +840,12 @@ void OptimTarget::evalJ_diff(const Vec state, Vec statebar, const double J_re_ba
     break;
 
     case ObjectiveType::JGEODESIC:
-      // Riemannian distance is handled in finalizeJ, no derivative needed here.
+      // Riemannian distance is handled in finalizeJ_diff, no derivative needed here.
       break;
     case ObjectiveType::JGEODESIC_PHASEFREE:
-      // Riemannian distance phase-free is handled in finalizeJ, no derivative needed here.
+      // Riemannian distance phase-free is handled in finalizeJ_diff, no derivative needed here.
       break;
+
 
     case ObjectiveType::JMEASURE:
 
@@ -896,12 +897,6 @@ double OptimTarget::finalizeJ(const double obj_cost_re, const double obj_cost_im
 
     assert(store_Ufinal);
 
-    // Assemble the final-time unitary matrices.
-    MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
-    MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
-
     // Allreduce the final time matrix 
     MPI_Barrier(MPI_COMM_WORLD);
 
@@ -921,6 +916,13 @@ double OptimTarget::finalizeJ(const double obj_cost_re, const double obj_cost_im
   } else {
     obj_cost = obj_cost_re;
     assert(obj_cost_im <= 1e-14);
+  }
+
+  if (store_Ufinal) {
+    MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(U_final_im, MAT_FINAL_ASSEMBLY);
   }
 
   return obj_cost;
