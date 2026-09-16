@@ -1014,7 +1014,7 @@ double OptimTarget::GeodesicDistance(){
       // MatView(eigvecs_UdV_re, PETSC_VIEWER_STDOUT_WORLD);
       // MatView(eigvecs_UdV_im, PETSC_VIEWER_STDOUT_WORLD);
 
-      exit(1);
+      // exit(1);
   }  
 
   /* Sum up the objective function from eigenvalue phases, eigval = e^{i*theta} */
