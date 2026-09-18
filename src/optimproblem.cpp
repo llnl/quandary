@@ -135,6 +135,13 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   VecZeroEntries(xeval_GN);
   VecAssemblyBegin(xeval_GN); VecAssemblyEnd(xeval_GN);
 
+  // Include hessian of generalized J_inf wrt U in GaussNewton Approximation (for Jtrace only)
+  if (optim_solver_type == OptimSolverType::GAUSS_NEWTON){
+    if (optim_target->getObjectiveType() == ObjectiveType::JTRACE) {
+      includeHessUJ = true;
+    }
+  }
+
   /* Create linear solver for solving Gauss-Newton Ax=b */
   KSPCreate(PETSC_COMM_SELF, &ksp_GN);
   KSPSetOperators(ksp_GN, GaussNewtonMatShell, GaussNewtonMatShell);
@@ -533,17 +540,57 @@ void OptimProblem::applyGaussNewtonMatShell(Mat A, const Vec v, Vec Av){
   //  Reset output 
   VecZeroEntries(Av);
   
-  // Apply linearized forward to get U(t) and dU/dalpha x v
-  // fills the timesteppers trajectory_states and lin_trajectory_states.
+  // Apply linearized forward to get dU/dalpha x v
+  // assumes that the timestepper's trajectory_states are already populated and computes all lin_trajectory_states.
   self->evalLinearizedForward(x, v);
 
-  // For each final linearized state, solve the adjoint ODE
+  // Optionally, include \nabla^2_U J(U) in the terminal adjoint condition. 
+  double obj_cost_re = 0.0;
+  double obj_cost_im = 0.0;
+  if (self->includeHessUJ){
+    // Only available for J_Inf (Generalized)
+    assert(self->optim_target->getObjectiveType() == ObjectiveType::JTRACE);
 
+    // Compute J_inf(W(T))
+    for (int iinit=0; iinit<self->ninit_local; iinit++) {
+      // Need to recompute the target (and initial) state
+      int iinit_global = self->mpirank_init * self->ninit_local + iinit;
+      self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
+      // eval J_inf(w(T))
+      Vec wT = self->timestepper->getLinearizedFinalState(iinit);
+      double obj_lin_iinit_re = 0.0;
+      double obj_lin_iinit_im = 0.0;
+      self->optim_target->evalJ(wT,  &obj_lin_iinit_re, &obj_lin_iinit_im);
+      obj_cost_re += self->obj_weights[iinit] * obj_lin_iinit_re;
+      obj_cost_im += self->obj_weights[iinit] * obj_lin_iinit_im;
+    }
+    // Gather result J_inf(W(T))
+    double mycost_re = obj_cost_re;
+    double mycost_im = obj_cost_im;
+    MPI_Allreduce(&mycost_re, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
+    MPI_Allreduce(&mycost_im, &obj_cost_im, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
+    
+  }
+
+  // Solve the adjoint ODE for initial condition 
   for (int iinit = 0; iinit < self->ninit_local; iinit++) {
 
     // Set terminal condition for adjoint
     Vec lin_final_state = self->timestepper->getLinearizedFinalState(iinit);
-    VecCopy(lin_final_state, self->rho_t0_bar);
+
+    // Set the terminal condition 
+    VecCopy(lin_final_state, self->rho_t0_bar);  // w_i(T)
+
+    if (self->includeHessUJ){
+      // scale w_i(t) by 2/n (contribution from 1/n||U||^2)
+      VecScale(self->rho_t0_bar, 2.0 / self->mastereq->getDim());
+      // Add derivative of Jinf -2/n^2 Re tr(...)
+      int iinit_global = self->mpirank_init * self->ninit_local + iinit;
+      self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
+      double obj_cost_re_bar, obj_cost_im_bar;
+      self->optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
+      self->optim_target->evalJ_diff(lin_final_state, self->rho_t0_bar, self->obj_weights[iinit]*obj_cost_re_bar, self->obj_weights[iinit]*obj_cost_im_bar); 
+    }
 
     // Solve adjoint backward ODE
     self->timestepper->solveAdjointODE(iinit, self->rho_t0_bar, 0.0, 0.0, 0.0, 0.0);

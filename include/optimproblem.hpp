@@ -103,6 +103,7 @@ class OptimProblem {
   Vec x_GN; ///< Current iterate for the GN optimization. Holds solution after finished. 
   int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton linear solve
   bool nonlinear_forward_valid; ///< True once the nonlinear forward has been solved and stored for the current xeval_GN, reset whenever xeval_GN changes
+  bool includeHessUJ = false; ///< Flag to include Hessian of J(U) in the terminal adjoint condition
 
   // Options for the Armijo line search 
   const double c1 = 1e-4;    //< Sufficient decrease parameter
