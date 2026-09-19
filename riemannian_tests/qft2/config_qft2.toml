@@ -1,0 +1,51 @@
+[system]
+nlevels = [2, 2]
+nessential = [2, 2]
+total_time = 100.0
+ntime = 342
+dt = 0.29239766081871343
+transition_frequency = [4.94, 5.0]
+selfkerr = [0.0, 0.0]
+crosskerr_coupling = 0.0
+dipole_coupling = 0.005
+rotation_frequency = [4.97, 4.97]
+decoherence = { type = "none" }
+initial_condition = { type = "basis" }
+
+[control]
+control_only_p_drive = false
+parameterization = { type = "spline", num = 36 }
+carrier_frequency = [
+  { subsystem = 0, value = [0.030413812651491352, -0.030413812651490464] },
+  { subsystem = 1, value = [0.030413812651491352, -0.030413812651490464] },
+]
+initialization = [
+  { subsystem = 0, type = "random", amplitude = 0.0035355339059327372 },
+  { subsystem = 1, type = "random", amplitude = 0.0035355339059327372 },
+]
+amplitude_bound = 1.0e12
+zero_boundary_condition = false
+
+[optimization]
+target = { type = "gate", filename = "gate_qft2.dat", gate_rot_freq = [0.0, 0.0] }
+objective = "Jtrace"
+tolerance = { grad_abs = 1e-05, grad_rel = 1e-05, final_cost = 1e-08, infidelity = 1e-05 }
+maxiter = 150
+tikhonov = { coeff = 1e-05, use_x0 = false }
+penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0 }
+solver_type = "gauss_newton"
+ksp_rtol = 0.1
+ksp_maxiter = 50
+
+[output]
+directory = "./"
+observables = ["population", "expectedEnergy", "fullstate"]
+timestep_stride = 1
+optimization_stride = 1
+
+[solver]
+runtype = "optimization"
+usematfree = true
+linearsolver = { type = "gmres", maxiter = 20 }
+timestepper = "IMR"
+rand_seed = 1122
