@@ -1,6 +1,9 @@
 #include "math.h"
 #include <assert.h>
 #include <petsctao.h>
+#ifdef WITH_SLEPC
+#include <slepceps.h>
+#endif
 #include "defs.hpp"
 #include "timestepper.hpp"
 #include <iostream>
@@ -113,19 +116,23 @@ class OptimProblem {
   // KSP linear solver
   KSP ksp_GN;  ///< Linear solver for Gauss-Newton system
   double ksp_damping = 1e-3; ///< Damping parameter for Gauss-Newton matrix shift
+  Vec diag_GN = NULL; ///< Cached diagonal of Gauss-Newton matrix for Jacobi preconditioner
 
   // EPS eigenvalue solver
+#ifdef WITH_SLEPC
   EPS eps_GN;
   PetscReal eps_tol = 1e-2; ///< Tolerance for EPS eigenvalue solver
   PetscInt eps_maxiter = 10; ///< Maximum number of iterations for EPS eigenvalue solver
   double evals_cutoff = 1e-5; ///< Cutoff for eigenvalues of the Gauss-Newton matrix
   int neigvals; ///< Number of eigenvalues to compute (=N^2-1)
-  int ncv; ///< Number of Lanczos vectors to use in EPS solver. Currently = neigvals + 2. HOW TO CHOOSE?? 
+  int ncv; ///< Number of Lanczos vectors to use in EPS solver. Currently = neigvals + 2. HOW TO CHOOSE??
+#endif 
 
-  public: 
+  public:
     Vec xlower, xupper; ///< Lower and upper bounds for optimization variables
     Vec xprev; ///< Design vector at previous iteration
     Vec xinit; ///< Initial design vector
+    FILE* ksp_history_file = NULL; ///< File pointer for writing KSP convergence history
 
 
   /**
@@ -210,6 +217,26 @@ class OptimProblem {
   static void applyGaussNewtonMatShell(Mat A, const Vec v, Vec Av);
 
   /**
+   * @brief Setup function for PCSHELL Jacobi preconditioner.
+   *
+   * Computes and caches the diagonal of the Gauss-Newton matrix A=L^*L.
+   *
+   * @param[in] pc The PCSHELL preconditioner
+   */
+  static PetscErrorCode jacobiShellSetup(PC pc);
+
+  /**
+   * @brief Apply function for PCSHELL Jacobi preconditioner.
+   *
+   * Applies diagonal scaling: y = x ./ diag(A) where diag includes damping.
+   *
+   * @param[in] pc The PCSHELL preconditioner
+   * @param[in] x Input vector
+   * @param[out] y Output vector y = M^{-1} x
+   */
+  static PetscErrorCode jacobiShellApply(PC pc, Vec x, Vec y);
+
+  /**
    * @brief Solves the Gauss-Newton linear system A(x) v = b for v using CG iterations
    * 
    * @param xinit Point of evaluation for the Gauss-Newton matrix
@@ -225,7 +252,9 @@ class OptimProblem {
    * @param b Right-hand side vector
    * @param Ainv_b Solution vector to store the result
    */
+#ifdef WITH_SLEPC
   void solveGaussNewtonEPS(Vec xinit, const Vec b, Vec Ainv_b);
+#endif
 
   /**
    * @brief Backtracking Armijo line search along a descent direction, projected onto bound constraints.
@@ -251,7 +280,9 @@ class OptimProblem {
    * @param[out] evecs_out Newly created dense matrix (ndesign x number-of-converged-evals) holding one eigenvector per column
    * @return Eigenvalues of Gauss-Newton matrix
    */
+#ifdef WITH_SLEPC
   std::vector<double> computeGaussNewtonEvals(Vec xinit, Mat* evecs_out);
+#endif
 
   /**
    * @brief Runs the optimization solver.

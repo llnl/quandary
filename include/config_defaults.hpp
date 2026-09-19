@@ -57,8 +57,10 @@ const double OPTIM_PENALTY_DPDM = 0.0; ///< Default second derivative penalty co
 const double OPTIM_PENALTY_ENERGY = 0.0; ///< Default energy penalty coefficient
 const double OPTIM_PENALTY_VARIATION = 0.01; ///< Default amplitude variation penalty coefficient
 const OptimSolverType OPTIM_SOLVER_TYPE = OptimSolverType::TAO_LBFGS; ///< Default optimization solver type
-const double OPTIM_KSP_RTOL = 1e-3; ///< Default relative tolerance for the KSP solver
-const int OPTIM_KSP_MAXITER = 100; ///< Default maximum iterations for the KSP solver
+const std::string OPTIM_GN_KSP_TYPE = "cg"; ///< Default KSP solver type for Gauss-Newton
+const double OPTIM_GN_KSP_RTOL = 1e-3; ///< Default relative tolerance for the Gauss-Newton KSP solver
+const int OPTIM_GN_KSP_MAXITER = 100; ///< Default maximum iterations for the Gauss-Newton KSP solver
+const std::string OPTIM_GN_PC_TYPE = "none"; ///< Default preconditioner type for Gauss-Newton KSP
 
 inline const std::string OUTPUT_DIRECTORY = "./data_out"; ///< Default output directory
 

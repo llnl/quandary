@@ -252,35 +252,35 @@ int main(int argc,char **argv)
     optimctx->solveGaussNewtonKSP(xinit, gnrhs, v_KSP);
 
     // Solve Gauss-Newton via SVD
-    Vec v_EPS;
-    VecDuplicate(grad, &v_EPS);
-    optimctx->solveGaussNewtonEPS(xinit, gnrhs, v_EPS);
+    // Vec v_EPS;
+    // VecDuplicate(grad, &v_EPS);
+    // optimctx->solveGaussNewtonEPS(xinit, gnrhs, v_EPS);
 
-    // Compare the solutions from KSP and EPS
-    if (mpirank_world == 0 && !quietmode) {
-      Vec diff;
-      VecDuplicate(grad, &diff);
-      VecCopy(v_KSP, diff);
-      VecAXPY(diff, -1.0, v_EPS);
-      double diff_norm;
-      VecNorm(diff, NORM_2, &diff_norm);
-      double vnorm;
-      VecNorm(v_KSP, NORM_2, &vnorm);
-      printf("\n Relative difference norm between KSP and EPS solutions: %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
-      VecDestroy(&diff);
-    }
+    // // Compare the solutions from KSP and EPS
+    // if (mpirank_world == 0 && !quietmode) {
+    //   Vec diff;
+    //   VecDuplicate(grad, &diff);
+    //   VecCopy(v_KSP, diff);
+    //   VecAXPY(diff, -1.0, v_EPS);
+    //   double diff_norm;
+    //   VecNorm(diff, NORM_2, &diff_norm);
+    //   double vnorm;
+    //   VecNorm(v_KSP, NORM_2, &vnorm);
+    //   printf("\n Relative difference norm between KSP and EPS solutions: %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
+    //   VecDestroy(&diff);
+    // }
     
     // Check if v_KSP is a descent direction
     double dot_ksp, dot_eps;
     VecDot(grad, v_KSP, &dot_ksp);
-    VecDot(grad, v_EPS, &dot_eps);
+    // VecDot(grad, v_EPS, &dot_eps);
     if (mpirank_world == 0 && !quietmode) {
       printf(" Dot product of gradient and KSP solution (should be negative for descent): %1.14e\n", dot_ksp);
-      printf(" Dot product of gradient and EPS solution (should be negative for descent): %1.14e\n", dot_eps);
+      // printf(" Dot product of gradient and EPS solution (should be negative for descent): %1.14e\n", dot_eps);
     }
 
     VecDestroy(&v_KSP);
-    VecDestroy(&v_EPS);
+    // VecDestroy(&v_EPS);
     VecDestroy(&gnrhs);
   }
 

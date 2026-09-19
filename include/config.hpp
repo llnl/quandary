@@ -106,8 +106,10 @@ class Config {
   double optim_penalty_energy; ///< Energy penalty coefficient
   double optim_penalty_variation; ///< Amplitude variation penalty coefficient
   OptimSolverType optim_solver_type; ///< Type of optimization solver to use
-  double optim_ksp_rtol; ///< Relative tolerance for the KSP solver
-  int optim_ksp_maxiter; ///< Maximum iterations for the KSP solver
+  std::string optim_gn_ksp_type; ///< Type of KSP solver for Gauss-Newton (e.g., "cg", "minres", "gmres")
+  double optim_gn_ksp_rtol; ///< Relative tolerance for the Gauss-Newton KSP solver
+  int optim_gn_ksp_maxiter; ///< Maximum iterations for the Gauss-Newton KSP solver
+  std::string optim_gn_pc_type; ///< Preconditioner type for Gauss-Newton KSP (e.g., "none", "shell")
 
   // Output and runtypes
   std::string output_directory; ///< Directory for output files
@@ -184,8 +186,10 @@ class Config {
   double getOptimPenaltyEnergy() const { return optim_penalty_energy; }
   double getOptimPenaltyVariation() const { return optim_penalty_variation; }
   OptimSolverType getOptimSolverType() const { return optim_solver_type; }
-  double getOptimKSPRtol() const { return optim_ksp_rtol; }
-  int getOptimKSPMaxiter() const { return optim_ksp_maxiter; }
+  std::string getOptimGnKspType() const { return optim_gn_ksp_type; }
+  double getOptimGnKspRtol() const { return optim_gn_ksp_rtol; }
+  int getOptimGnKspMaxiter() const { return optim_gn_ksp_maxiter; }
+  std::string getOptimGnPcType() const { return optim_gn_pc_type; }
 
   const std::string& getOutputDirectory() const { return output_directory; }
   const std::vector<OutputType>& getOutputObservables() const { return output_observables; }

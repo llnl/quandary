@@ -304,8 +304,12 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     // Parse optimization solver type
     optim_solver_type = parseEnum(optimization_table["solver_type"].value<std::string>(), OPTIM_SOLVER_TYPE_MAP, ConfigDefaults::OPTIM_SOLVER_TYPE);
-    optim_ksp_rtol = validators::field<double>(optimization_table, "ksp_rtol").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_KSP_RTOL);
-    optim_ksp_maxiter = validators::field<int>(optimization_table, "ksp_maxiter").greaterThanEqual(0).valueOr(ConfigDefaults::OPTIM_KSP_MAXITER);
+
+    // Gauss-Newton KSP configuration (with gn_ prefix to match command-line options)
+    optim_gn_ksp_type = validators::field<std::string>(optimization_table, "gn_ksp_type").valueOr(ConfigDefaults::OPTIM_GN_KSP_TYPE);
+    optim_gn_ksp_rtol = validators::field<double>(optimization_table, "gn_ksp_rtol").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_GN_KSP_RTOL);
+    optim_gn_ksp_maxiter = validators::field<int>(optimization_table, "gn_ksp_maxiter").greaterThanEqual(0).valueOr(ConfigDefaults::OPTIM_GN_KSP_MAXITER);
+    optim_gn_pc_type = validators::field<std::string>(optimization_table, "gn_pc_type").valueOr(ConfigDefaults::OPTIM_GN_PC_TYPE);
 
     // Parse output options from [output] table
     output_directory = output_table["directory"].value_or(ConfigDefaults::OUTPUT_DIRECTORY);
@@ -686,8 +690,10 @@ void Config::printConfig(std::stringstream& log) const {
       << " }\n";
   log << "solver_type = \"" << enumToString(optim_solver_type, OPTIM_SOLVER_TYPE_MAP) << "\"\n";
   if (optim_solver_type == OptimSolverType::GAUSS_NEWTON) {
-    log << "ksp_rtol = " << optim_ksp_rtol << "\n";
-    log << "ksp_maxiter = " << optim_ksp_maxiter << "\n";
+    log << "gn_ksp_type = \"" << optim_gn_ksp_type << "\"\n";
+    log << "gn_ksp_rtol = " << optim_gn_ksp_rtol << "\n";
+    log << "gn_ksp_maxiter = " << optim_gn_ksp_maxiter << "\n";
+    log << "gn_pc_type = \"" << optim_gn_pc_type << "\"\n";
   }
 
   log << "\n";

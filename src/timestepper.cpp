@@ -649,6 +649,7 @@ ImplMidpoint::ImplMidpoint(const Config& config, MasterEq* mastereq_, Output* ou
   if (linsolve_type == LinearSolverType::GMRES) {
     /* Create Petsc's linear solver */
     KSPCreate(PETSC_COMM_WORLD, &ksp);
+    KSPSetOptionsPrefix(ksp, "ts_");  // Prefix for time-stepping KSP options
     KSPGetPC(ksp, &preconditioner);
     PCSetType(preconditioner, PCNONE);
     KSPSetTolerances(ksp, linsolve_reltol, linsolve_abstol, PETSC_DEFAULT, linsolve_maxiter);

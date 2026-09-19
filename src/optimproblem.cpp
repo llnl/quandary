@@ -145,26 +145,45 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   /* Create linear solver for solving Gauss-Newton Ax=b */
   KSPCreate(PETSC_COMM_SELF, &ksp_GN);
   KSPSetOperators(ksp_GN, GaussNewtonMatShell, GaussNewtonMatShell);
-  KSPSetType(ksp_GN, KSPCG);  // CG method
-  // KSPSetType(ksp_GN, KSPMINRES);  // MINRES method
+  KSPSetOptionsPrefix(ksp_GN, "gn_");  // Prefix for Gauss-Newton specific options
+
+  // Set KSP type from config (default "cg", can be overridden by -gn_ksp_type)
+  std::string ksp_type = config.getOptimGnKspType();
+  KSPSetType(ksp_GN, ksp_type.c_str());
+
   KSPSetInitialGuessNonzero(ksp_GN, PETSC_FALSE);
-  KSPSetFromOptions(ksp_GN);
+  KSPSetTolerances(ksp_GN, config.getOptimGnKspRtol(), PETSC_DEFAULT, PETSC_DEFAULT, config.getOptimGnKspMaxiter());
+
+  // Configure preconditioner from config (default "none", can be overridden by -gn_pc_type)
   PC  pc;
   KSPGetPC(ksp_GN, &pc);
-  PCSetType(pc, PCNONE); // Disable preconditioner
-  KSPSetNormType(ksp_GN, KSP_NORM_UNPRECONDITIONED); // Unconditioned ressidual norm
-  KSPSetTolerances(ksp_GN,config.getOptimKSPRtol(),PETSC_DEFAULT,PETSC_DEFAULT,config.getOptimKSPMaxiter());
+  std::string pc_type_str = config.getOptimGnPcType();
+  PCSetType(pc, pc_type_str.c_str());
+
+  // Allow command-line options to override defaults (must be called AFTER setting defaults)
+  KSPSetFromOptions(ksp_GN);
+
+  // If user requested shell PC (either from config or command-line), register the Jacobi functions
+  PCType pc_type;
+  PCGetType(pc, &pc_type);
+  if (pc_type && strcmp(pc_type, PCSHELL) == 0) {
+    PCShellSetContext(pc, this);
+    PCShellSetSetUp(pc, jacobiShellSetup);
+    PCShellSetApply(pc, jacobiShellApply);
+  }
 
   /* Create eigenvalues solver for Gauss-Newton Ax=b */
+#ifdef WITH_SLEPC
   EPSCreate(PETSC_COMM_SELF, &eps_GN);
   EPSSetOperators(eps_GN, GaussNewtonMatShell, NULL);
-  EPSSetProblemType(eps_GN, EPS_HEP); // Hermitian 
+  EPSSetProblemType(eps_GN, EPS_HEP); // Hermitian
   EPSSetWhichEigenpairs(eps_GN, EPS_LARGEST_REAL); // largest eigenvalues
-  neigvals = mastereq->getDim()*mastereq->getDim() - 1; 
+  neigvals = mastereq->getDim()*mastereq->getDim() - 1;
   ncv = neigvals + 2; // Max Krylov dimension. How to set??
   EPSSetDimensions(eps_GN, neigvals, ncv, PETSC_DEFAULT);
   EPSSetTolerances(eps_GN, eps_tol, eps_maxiter);
   EPSSetFromOptions(eps_GN);
+#endif
 }
 
 
@@ -181,8 +200,11 @@ OptimProblem::~OptimProblem() {
 
   MatDestroy(&GaussNewtonMatShell);
   VecDestroy(&xeval_GN);
+  if (diag_GN != NULL) VecDestroy(&diag_GN);
   KSPDestroy(&ksp_GN);
+#ifdef WITH_SLEPC
   EPSDestroy(&eps_GN);
+#endif
   TaoDestroy(&tao);
 }
 
@@ -600,11 +622,74 @@ void OptimProblem::applyGaussNewtonMatShell(Mat A, const Vec v, Vec Av){
   }
 
   /* Sum up the gradient from all initial condition processors */
-  PetscScalar* Av_data; 
+  PetscScalar* Av_data;
   VecGetArray(Av, &Av_data);
   MPI_Allreduce(MPI_IN_PLACE, Av_data, self->ndesign, MPIU_SCALAR, MPI_SUM, self->comm_init);
   VecRestoreArray(Av, &Av_data);
 
+  // Add damping term: Av += damping * v (for Levenberg-Marquardt regularization)
+  if (self->ksp_damping > 0.0) {
+    VecAXPY(Av, self->ksp_damping, v);
+  }
+
+}
+
+
+PetscErrorCode OptimProblem::jacobiShellSetup(PC pc){
+  OptimProblem *self;
+  PCShellGetContext(pc, (void**)&self);
+
+  // If diagonal already computed, skip
+  if (self->diag_GN != NULL) return 0;
+
+  // Create diagonal vector
+  VecDuplicate(self->xeval_GN, &self->diag_GN);
+
+  // Get the size
+  PetscInt n;
+  VecGetSize(self->diag_GN, &n);
+
+  // Create temporary vectors
+  Vec e_i, Ae_i;
+  VecDuplicate(self->diag_GN, &e_i);
+  VecDuplicate(self->diag_GN, &Ae_i);
+
+  // For each parameter i, compute diag(A)_i = (A*e_i)_i
+  for (PetscInt i = 0; i < n; i++) {
+    // Create unit vector e_i
+    VecZeroEntries(e_i);
+    VecSetValue(e_i, i, 1.0, INSERT_VALUES);
+    VecAssemblyBegin(e_i);
+    VecAssemblyEnd(e_i);
+
+    // Compute A * e_i (includes damping)
+    applyGaussNewtonMatShell(self->GaussNewtonMatShell, e_i, Ae_i);
+
+    // Extract diagonal element (A*e_i)_i
+    PetscScalar diag_i;
+    VecGetValues(Ae_i, 1, &i, &diag_i);
+    VecSetValue(self->diag_GN, i, diag_i, INSERT_VALUES);
+  }
+
+  VecAssemblyBegin(self->diag_GN);
+  VecAssemblyEnd(self->diag_GN);
+
+  // Cleanup
+  VecDestroy(&e_i);
+  VecDestroy(&Ae_i);
+
+  return 0;
+}
+
+
+PetscErrorCode OptimProblem::jacobiShellApply(PC pc, Vec x, Vec y){
+  OptimProblem *self;
+  PCShellGetContext(pc, (void**)&self);
+
+  // Apply Jacobi preconditioner: y = x ./ diag
+  VecPointwiseDivide(y, x, self->diag_GN);
+
+  return 0;
 }
 
 
@@ -624,30 +709,67 @@ void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b){
   KSPMonitorCancel(ksp_GN);
   KSPMonitorSet(ksp_GN, KSPMonitorResidualAndSolution, (void*)this, NULL);
 
-  // Optional Levenberg-Marquardt damping: A += mu I
-  if (ksp_damping > 0.0) MatShift(GaussNewtonMatShell, ksp_damping);
+  // Open file for KSP convergence history
+  char ksp_filename[256] = "";
+  if (mpirank_world == 0) {
+    // Get KSP type and tolerances
+    KSPType ksp_type;
+    PetscReal rtol, atol, dtol;
+    PetscInt maxits;
+    KSPGetType(ksp_GN, &ksp_type);
+    KSPGetTolerances(ksp_GN, &rtol, &atol, &dtol, &maxits);
 
-  // Solve the linear system L^*L x = b
+    // Create filename with KSP type
+    snprintf(ksp_filename, sizeof(ksp_filename), "ksp_convergence_%s.dat", ksp_type);
+
+    ksp_history_file = fopen(ksp_filename, "w");
+    if (ksp_history_file != NULL) {
+      fprintf(ksp_history_file, "# KSP convergence history\n");
+      fprintf(ksp_history_file, "# KSP_TYPE: %s\n", ksp_type);
+      fprintf(ksp_history_file, "# RTOL: %e\n", rtol);
+      fprintf(ksp_history_file, "# MAXITER: %d\n", maxits);
+      fprintf(ksp_history_file, "# iteration  residual_norm  solution_norm\n");
+    }
+  }
+
+  // Solve the linear system (L^*L + damping*I) x = b
+  // Note: damping is applied inside applyGaussNewtonMatShell and getGaussNewtonDiagonal
   GN_MatVec_counter = 0;
   KSPSolve(ksp_GN, b, Ainv_b);
 
-  // Revert the optional scaling
-  if (ksp_damping > 0.0) MatShift(GaussNewtonMatShell, -ksp_damping);
-
-  // Report convergence
+  // Report convergence and write to file
   KSPConvergedReason reason;
   int iters;
   double rnorm;
   KSPGetConvergedReason(ksp_GN, &reason);
+
+  // Write convergence reason to file
+  if (mpirank_world == 0 && ksp_history_file != NULL) {
+    const char* reason_str = KSPConvergedReasons[reason];
+    fprintf(ksp_history_file, "# CONVERGED_REASON: %s\n", reason_str);
+  }
+
+  // Close KSP history file and report
+  if (mpirank_world == 0 && ksp_history_file != NULL) {
+    fclose(ksp_history_file);
+    ksp_history_file = NULL;
+    if (!quietmode) {
+      printf("KSP convergence history written to: %s\n", ksp_filename);
+    }
+  }
+
   KSPGetIterationNumber(ksp_GN, &iters);
   KSPGetResidualNorm(ksp_GN, &rnorm);
   ksp_iters_last = iters;
   if (mpirank_world == 0 && !quietmode) {
-    printf("Gauss-Newton CG stats: iterations = %d, MatVec counter = %d, residual norm = %1.14e\n", iters, GN_MatVec_counter, rnorm);
+    KSPType ksp_type_used;
+    KSPGetType(ksp_GN, &ksp_type_used);
+    printf("Gauss-Newton %s stats: iterations = %d, MatVec counter = %d, residual norm = %1.14e\n", ksp_type_used, iters, GN_MatVec_counter, rnorm);
   }
 }
 
 
+#ifdef WITH_SLEPC
 void OptimProblem::solveGaussNewtonEPS(Vec xinit, const Vec b, Vec Ainv_b){
 
   // Get eigenvalues and eigenvectors of the Gauss-Newton matrix
@@ -682,6 +804,7 @@ void OptimProblem::solveGaussNewtonEPS(Vec xinit, const Vec b, Vec Ainv_b){
   MatDestroy(&evecs);
   VecDestroy(&tmp);
 }
+#endif
 
 PetscErrorCode KSPMonitorResidualAndSolution(KSP ksp, PetscInt it, PetscReal rnorm, void* ctx){
   OptimProblem* self = (OptimProblem*) ctx;
@@ -695,9 +818,15 @@ PetscErrorCode KSPMonitorResidualAndSolution(KSP ksp, PetscInt it, PetscReal rno
     printf("KSP it %d: residual norm = %1.14e, solution norm = %1.14e\n", (int)it, (double)rnorm, (double)xnorm);
   }
 
+  // Write to file if file pointer is set
+  if (self->getMPIrank_world() == 0 && self->ksp_history_file != NULL) {
+    fprintf(self->ksp_history_file, "%d %1.14e %1.14e\n", (int)it, (double)rnorm, (double)xnorm);
+  }
+
   return 0;
 }
 
+#ifdef WITH_SLEPC
 std::vector<double> OptimProblem::computeGaussNewtonEvals(Vec xinit, Mat* evecs_out){
 
   // Store xinit so the MatShell can use it as point of evaluation.
@@ -765,6 +894,7 @@ std::vector<double> OptimProblem::computeGaussNewtonEvals(Vec xinit, Mat* evecs_
 
   return evals_re;
 }
+#endif
 
 
 double OptimProblem::armijoLineSearch(Vec x, double f, Vec grad, Vec dir, Vec xnew, Vec step) {
