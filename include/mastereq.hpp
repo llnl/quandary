@@ -289,6 +289,24 @@ class MasterEq{
     // void createReducedDensity(const Vec rho, Vec *reduced, const std::vector<int>& oscilIDs);
     // /* Derivative of reduced density computation */
     // void createReducedDensity_diff(Vec rhobar, const Vec reducedbar, const std::vector<int>& oscilIDs);
+
+
+    /**
+     * @brief Evaluates the resonator field for the current state vector. Only applicable if isTransmonResonatorSystem is true, otherwise returns zero
+     * @param x State vector
+     * @param field_re Pointer to store the real part of the resonator field
+     * @param field_im Pointer to store the imaginary part of the resonator field
+     */
+    void evalResonatorField(const Vec x, double* field_re, double* field_im);
+
+    /**
+     * @brief Evaluates the derivative of the resonator field with respect to the final state.
+     * 
+     * @param rho_t0_bar Adjoint state vector
+     * @param snr_re_bar Real part of the SNR derivative
+     * @param snr_im_bar Imaginary part of the SNR derivative
+     */
+    void evalResonatorField_diff(const Vec rho_t0_bar, const double snr_re_bar, const double snr_im_bar);
 };
 
 

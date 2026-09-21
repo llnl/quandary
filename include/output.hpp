@@ -47,6 +47,9 @@ class Output{
   std::vector<std::vector<std::vector<double>>> state_observables_re; ///< Real parts of states for observables: state_observables_Re/Im[observable_index][state_index][level_index]
   std::vector<std::vector<std::vector<double>>> state_observables_im; ///< Imaginary parts
 
+  bool writeResonatorField; ///< Flag to determine if the resonator field should be written to file
+  FILE *resonator_field_file; ///< File for writing real part of resonator field evolution
+
   // VecScatter scat; ///< PETSc's scatter context for state communication across cores
   // Vec xseq; ///< Sequential vector for I/O operations
 

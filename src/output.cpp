@@ -78,9 +78,13 @@ Output::Output(const Config& config, MasterEq* mastereq_, MPI_Comm comm_petsc, M
   }
 
   writeStateObservables = false;
+  writeResonatorField = false;
+  resonator_field_file = NULL;
   if (config.getTransmonResonator()) {
-    writeStateObservables = true;
+    writeResonatorField = true;
+
     
+    writeStateObservables = true;
     // Read all observables files. Each file contains columns of state vectors, stacking real and imaginary elements on top of each other. The header of the files should contain the number of rows and column: Nrows = number of levels, Ncolumns = number of state observables.   
     state_observables_filenames = config.getOutputPureStateObservablesFilenames();
     for (size_t ifile=0; ifile<state_observables_filenames.size(); ifile++) {
@@ -313,6 +317,16 @@ void Output::openTrajectoryDataFiles(std::string prefix, int initid){
       }
     }
 
+    if (writeResonatorField) {
+      snprintf(filename, 254, "%s/resonator_field.iinit%04d.dat", output_dir.c_str(), initid);
+      resonator_field_file = fopen(filename, "w");
+      if (resonator_field_file == nullptr) {
+        printf("ERROR: Could not open file %s\n", filename);
+        exit(1);
+      }
+      fprintf(resonator_field_file, "#\"time\"      \"Re(<I\\otimes a> rho)\"      \"Im(<I\\otimes a> rho)\"\n");
+    }
+
     // Open files for expected energy per oscillator  
     if (writeExpectedEnergy) {
       for (size_t i=0; i<noscillators; i++) { 
@@ -392,6 +406,15 @@ void Output::writeTrajectoryDataFiles(int timestep, double time, const Vec state
           }
           fprintf(state_expectations_files[iobs], "\n");
         }
+      }
+    }
+
+    /* Write resonator field to file */
+    if (writeResonatorField) {
+      double field_re, field_im;
+      mastereq->evalResonatorField(state, &field_re, &field_im);
+      if (mpirank_petsc == 0) {
+        fprintf(resonator_field_file, "%.8f %1.14e %1.14e\n", time, field_re, field_im);
       }
     }
 
@@ -495,6 +518,10 @@ void Output::closeTrajectoryDataFiles(){
       fclose(state_expectations_files[i]);
       state_expectations_files[i] = NULL;
     }
+  }
+  if (resonator_field_file != NULL) {
+    fclose(resonator_field_file);
+    resonator_field_file = NULL;
   }
 }
 

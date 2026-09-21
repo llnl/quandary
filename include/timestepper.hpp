@@ -55,13 +55,6 @@ class TimeStepper{
     double weightedcost_integral; ///< Sums the integral over weighted cost function
     double weightedcost_width; ///< Width parameter for weighted cost function
 
-    std::vector<double> resonator_field_re; ///< Real part trajectory of <I \otimes a>(t) for current forward solve
-    std::vector<double> resonator_field_im; ///< Imaginary part trajectory of <I \otimes a>(t) for current forward solve
-    std::vector<double> resonator_field_times; ///< Time points corresponding to resonator field trajectories for current forward solve
-
-    void appendResonatorFieldSample(const Vec x, const double time); ///< Evaluates the resonator field value for the current state and appends it to the resonator field trajectory. Also appends the corresponding time value to resonator_field_times.
-    void evalResonatorField(const Vec x, double* field_re, double* field_im) const;
-
     int ntime; ///< Number of time steps
     double total_time; ///< Final evolution time
     double dt; ///< Time step size
@@ -91,9 +84,7 @@ class TimeStepper{
     double getWeightedCostIntegral(){ return weightedcost_integral; };
     double getEnergyIntegral(){ return energy_integral; };
     double getDPDMIntegral(){ return dpdm_integral; };
-    const std::vector<double>& getResonatorFieldRe() const { return resonator_field_re; };
-    const std::vector<double>& getResonatorFieldIm() const { return resonator_field_im; };
-    const std::vector<double>& getResonatorFieldTimes() const { return resonator_field_times; };
+
     Vec getReducedGradient(){ return redgrad; };
     void setWriteTrajectoryDataFiles(bool write){ writeTrajectoryDataFiles = write; };
 

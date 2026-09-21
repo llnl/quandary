@@ -27,9 +27,6 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
 
   /* Store number of initial conditions per init-processor group */
   ninit_local = ninit / mpisize_init; 
-  resonator_field_re_local.resize(ninit_local);
-  resonator_field_im_local.resize(ninit_local);
-  resonator_field_times.resize(ninit_local);
 
   /* Store number of design parameters */
   int n = 0;
@@ -139,104 +136,6 @@ OptimProblem::~OptimProblem() {
   TaoDestroy(&tao);
 }
 
-double OptimProblem::evalSNR(){
-
-  // Only if two initial states are given.
-  if (ninit != 2) return 0.0;
-
-  // Communicate resonator field from the 1st initial condition processors to the zero's initial condition processor
-  // Interpolate the 1st resonator field to the time grid of the zero's field  
-  // Integrate the SNR^2: |resonator_re_1 - resonator_re_0|^2 + |resonator_im_1 - resonator_im_0|^2 
-
-  const int iinit0_global = 0;   
-  const int iinit1_global = 1;   
-  const int owner0 = iinit0_global / ninit_local; 
-  const int owner1 = iinit1_global / ninit_local;
-  const int local0 = iinit0_global % ninit_local;
-  const int local1 = iinit1_global % ninit_local;
-
-  std::vector<double> t0, re0, im0;
-  std::vector<double> t1, re1, im1;
-  if (mpirank_init == owner0) {
-    t0 = resonator_field_times[local0];
-    re0 = resonator_field_re_local[local0];
-    im0 = resonator_field_im_local[local0];
-  }
-  if (mpirank_init == owner1) {
-    t1 = resonator_field_times[local1];
-    re1 = resonator_field_re_local[local1];
-    im1 = resonator_field_im_local[local1];
-  }
-  // Communicate the number of stored samples
-  int n0 = static_cast<int>(t0.size());
-  int n1 = static_cast<int>(t1.size());
-  MPI_Bcast(&n0, 1, MPI_INT, owner0, comm_init);
-  MPI_Bcast(&n1, 1, MPI_INT, owner1, comm_init);
-
-  // Ensure receive buffers are allocated on all ranks before broadcasting payloads.
-  t0.resize(n0);
-  re0.resize(n0);
-  im0.resize(n0);
-  t1.resize(n1);
-  re1.resize(n1);
-  im1.resize(n1);
-
-  // Communicate the resonator field trajecotires and times
-  MPI_Bcast(t0.data(), n0, MPI_DOUBLE, owner0, comm_init);
-  MPI_Bcast(re0.data(), n0, MPI_DOUBLE, owner0, comm_init);
-  MPI_Bcast(im0.data(), n0, MPI_DOUBLE, owner0, comm_init);
-  MPI_Bcast(t1.data(), n1, MPI_DOUBLE, owner1, comm_init);
-  MPI_Bcast(re1.data(), n1, MPI_DOUBLE, owner1, comm_init);
-  MPI_Bcast(im1.data(), n1, MPI_DOUBLE, owner1, comm_init);
-
-  if (n0 < 2 || n1 < 2) return 0.0;
-
-  // Define a helper function to interpolate the resonator field onto different time points. Linear interpolation. Usage: interp_linear(t, y, x) returns the interpolated value at time x given the trajectory defined by time points t and values y. If x is outside of the range of t, the function returns the boundary value.
-  auto interp_linear = [](const std::vector<double>& t, const std::vector<double>& y, double x) {
-    if (x <= t.front()) return y.front();
-    if (x >= t.back()) return y.back();
-    auto it = std::upper_bound(t.begin(), t.end(), x);
-    const int i1 = static_cast<int>(it - t.begin());
-    const int i0 = i1 - 1;
-    const double dt = t[i1] - t[i0];
-    if (std::abs(dt) < 1e-16) return y[i0];
-    const double a = (x - t[i0]) / dt;
-    return (1.0 - a) * y[i0] + a * y[i1];
-  };
-
-  // Integrate the SNR^2 using the trapezoidal rule on the zero's time grid.
-  double snr_sq = 0.0;
-  for (int i = 0; i < n0 - 1; i++) {
-    // Get current and next time points
-    const double ti = t0[i];
-    const double tip1 = t0[i + 1];
-    const double dt = tip1 - ti;
-    if (dt <= 0.0) continue;
-
-    // Interpolate first fields at t_i and t_i+1 time points and evaluate the integrand |resonator_1 - resonator_0|^2 = (re1 - re0)^2 + (im1 - im0)^2, where re0 and im0 are already defined on the t0 grid, but re1 and im1 need to be interpolated from the t1 grid.
-    // t_i
-    const double re1_i = interp_linear(t1, re1, ti);
-    const double im1_i = interp_linear(t1, im1, ti);
-    const double dre_i = re1_i - re0[i];
-    const double dim_i = im1_i - im0[i];
-    const double f_i = dre_i * dre_i + dim_i * dim_i;
-    // t_i+1
-    const double re1_ip1 = interp_linear(t1, re1, tip1);
-    const double im1_ip1 = interp_linear(t1, im1, tip1);
-    const double dre_ip1 = re1_ip1 - re0[i + 1];
-    const double dim_ip1 = im1_ip1 - im0[i + 1];
-    const double f_ip1 = dre_ip1 * dre_ip1 + dim_ip1 * dim_ip1;
-
-    // Trapezoidal rule for SNR^2 integral
-    snr_sq += 0.5 * (f_i + f_ip1) * dt;
-  }
-
-  return snr_sq;
-}
-
-
-
-
 double OptimProblem::evalF(const Vec x) {
   if (mpirank_world == 0 && !quietmode) printf("EVAL F... \n");
 
@@ -251,16 +150,13 @@ double OptimProblem::evalF(const Vec x) {
   obj_penal_dpdm = 0.0;
   obj_penal_energy = 0.0;
   obj_penal_variation = 0.0;
+  obj_snr_re = 0.0;
+  obj_snr_im = 0.0;
   fidelity = 0.0;
   double obj_cost_re = 0.0;
   double obj_cost_im = 0.0;
   double fidelity_re = 0.0;
   double fidelity_im = 0.0;
-  for (int iinit = 0; iinit < ninit_local; iinit++) {
-    resonator_field_re_local[iinit].clear();
-    resonator_field_im_local[iinit].clear();
-    resonator_field_times[iinit].clear();
-  }
 
   /*  Iterate over initial condition */
   for (int iinit = 0; iinit < ninit_local; iinit++) {
@@ -270,12 +166,15 @@ double OptimProblem::evalF(const Vec x) {
     int initid = optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
 
     /* Run forward with initial condition initid */
-    if (mpirank_optim == 0 && !quietmode) printf("%d: Initial condition id=%d ...\n", mpirank_init, initid);
+    // if (mpirank_optim == 0 && !quietmode) printf("%d: Initial condition id=%d ...\n", mpirank_init, initid);
     Vec finalstate = timestepper->solveODE(initid, iinit, optim_target->getInitialState());
-    /* Store the resonator field for for this initial condition (for later use in the SNR computation)*/
-    resonator_field_re_local[iinit] = timestepper->getResonatorFieldRe();
-    resonator_field_im_local[iinit] = timestepper->getResonatorFieldIm();
-    resonator_field_times[iinit] = timestepper->getResonatorFieldTimes();
+
+    /* Add to separation error (SNR^2) */
+    double I, Q;
+    mastereq->evalResonatorField(finalstate, &I, &Q);
+    double factor = (iinit_global == 0) ? -1.0 : 1.0;
+    obj_snr_re += factor * I;
+    obj_snr_im += factor * Q;
 
     /* Add to leakage penalty term */
     obj_penal_leakage += obj_weights[iinit_global] * gamma_penalty_leakage * timestepper->getLeakageIntegral();
@@ -315,6 +214,10 @@ double OptimProblem::evalF(const Vec x) {
   double mycost_im = obj_cost_im;
   double myfidelity_re = fidelity_re;
   double myfidelity_im = fidelity_im;
+  double mysnr_re = obj_snr_re;
+  double mysnr_im = obj_snr_im;
+  MPI_Allreduce(&mysnr_re, &obj_snr_re, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+  MPI_Allreduce(&mysnr_im, &obj_snr_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
   MPI_Allreduce(&mypen_leak, &obj_penal_leakage, 1, MPI_DOUBLE, MPI_SUM, comm_init);
   MPI_Allreduce(&mypen_wcost, &obj_penal_weightedcost, 1, MPI_DOUBLE, MPI_SUM, comm_init);
   MPI_Allreduce(&mypen_dpdm, &obj_penal_dpdm, 1, MPI_DOUBLE, MPI_SUM, comm_init);
@@ -334,10 +237,10 @@ double OptimProblem::evalF(const Vec x) {
   /* Finalize the objective function */
   obj_cost = optim_target->finalizeJ(obj_cost_re, obj_cost_im);
 
-  /* evaluate the SNR^2 (this involves comunication of the resonator fields) */
+  /* Finalize the SNR^2 */
   if (mastereq->isTransmonResonatorSystem()) { // Only relevant for resonator system
-    double snr_sq = evalSNR();
-    obj_cost = snr_sq;
+    double snr_sq = obj_snr_re * obj_snr_re + obj_snr_im * obj_snr_im ;
+    obj_cost = -1.0 * snr_sq;
     // printf("\n %d: SNR^2 Integrated (non-scaled) = %1.14e\n\n", mpirank_world, snr_sq);
   }
 
@@ -410,16 +313,13 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   obj_penal_dpdm = 0.0;
   obj_penal_energy = 0.0;
   obj_penal_variation = 0.0;
+  obj_snr_re = 0.0;
+  obj_snr_im = 0.0;
   fidelity = 0.0;
   double obj_cost_re = 0.0;
   double obj_cost_im = 0.0;
   double fidelity_re = 0.0;
   double fidelity_im = 0.0;
-  for (int iinit = 0; iinit < ninit_local; iinit++) {
-    resonator_field_re_local[iinit].clear();
-    resonator_field_im_local[iinit].clear();
-    resonator_field_times[iinit].clear();
-  }
 
   /*  Iterate over initial condition */
   for (int iinit = 0; iinit < ninit_local; iinit++) {
@@ -434,11 +334,13 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
 
     /* Run forward with initial condition rho_t0 */
     Vec finalstate = timestepper->solveODE(initid, iinit, optim_target->getInitialState());
-    /* Store the resonator field for for this initial condition (for later use in the SNR computation)*/
-    resonator_field_re_local[iinit] = timestepper->getResonatorFieldRe();
-    resonator_field_im_local[iinit] = timestepper->getResonatorFieldIm();
-    resonator_field_times[iinit] = timestepper->getResonatorFieldTimes();
 
+    /* Add to separation error (SNR^2) */
+    double I, Q;
+    mastereq->evalResonatorField(finalstate, &I, &Q);
+    double factor = (iinit_global == 0) ? -1.0 : 1.0;
+    obj_snr_re += factor * I;
+    obj_snr_im += factor * Q;
 
     /* Add to leakage penalty term */
     obj_penal_leakage += obj_weights[iinit_global] * gamma_penalty_leakage * timestepper->getLeakageIntegral();
@@ -475,6 +377,10 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
   double mycost_im = obj_cost_im;
   double myfidelity_re = fidelity_re;
   double myfidelity_im = fidelity_im;
+  double mysnr_re = obj_snr_re;
+  double mysnr_im = obj_snr_im;
+  MPI_Allreduce(&mysnr_re, &obj_snr_re, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+  MPI_Allreduce(&mysnr_im, &obj_snr_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
   MPI_Allreduce(&mypen_leak, &obj_penal_leakage, 1, MPI_DOUBLE, MPI_SUM, comm_init);
   MPI_Allreduce(&mypen_wcost, &obj_penal_weightedcost, 1, MPI_DOUBLE, MPI_SUM, comm_init);
   MPI_Allreduce(&mypen_dpdm, &obj_penal_dpdm, 1, MPI_DOUBLE, MPI_SUM, comm_init);
@@ -497,10 +403,14 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
 
   /* evaluate the SNR^2 (this involves comunication of the resonator fields) */
   if (mastereq->isTransmonResonatorSystem()) { // Only relevant for resonator system
-    double snr_sq = evalSNR();
-    obj_cost = snr_sq;
+    double snr_sq = obj_snr_re * obj_snr_re + obj_snr_im * obj_snr_im ;
+    obj_cost = -1.0 * snr_sq;
     // printf("\n %d: SNR^2 Integrated (non-scaled) = %1.14e\n\n", mpirank_world, snr_sq);
   }
+  
+  /* Derivative of SNR^2 */
+  double snr_re_bar = - 2.0 * obj_snr_re;
+  double snr_im_bar = - 2.0 * obj_snr_im;
 
   /* Evaluate Tikhonov regularization term += gamma/2 * ||x||^2*/
   double xnorm;
@@ -537,6 +447,14 @@ void OptimProblem::evalGradF(const Vec x, Vec G){
     double obj_cost_re_bar, obj_cost_im_bar;
     optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
     optim_target->evalJ_diff(timestepper->getFinalState(iinit), rho_t0_bar, obj_weights[iinit_global]*obj_cost_re_bar, obj_weights[iinit_global]*obj_cost_im_bar);
+
+    /* Derivative of SNR^2 with respect to the final state */
+    if (mastereq->isTransmonResonatorSystem()) {
+      double factor = (iinit_global == 0) ? -1.0 : 1.0;
+      snr_re_bar *= factor;
+      snr_im_bar *= factor;
+      mastereq->evalResonatorField_diff(rho_t0_bar, snr_re_bar, snr_im_bar);
+    }
 
     /* Derivative of time-stepping */
     timestepper->solveAdjointODE(iinit, rho_t0_bar, obj_weights[iinit_global] * gamma_penalty_leakage, obj_weights[iinit_global]*gamma_penalty_weightedcost, obj_weights[iinit_global]*gamma_penalty_dpdm, obj_weights[iinit_global]*gamma_penalty_energy);

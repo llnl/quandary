@@ -51,9 +51,6 @@ class OptimProblem {
   int ninit_local; ///< Local number of initial conditions on this processor
   Vec rho_t0; ///< Storage for initial condition of the ODE
   Vec rho_t0_bar; ///< Storage for adjoint initial condition of the adjoint ODE (aka the terminal condition)
-  std::vector<std::vector<double>> resonator_field_re_local; ///< Real part trajectories of <I \otimes a> per local initial condition
-  std::vector<std::vector<double>> resonator_field_im_local; ///< Imaginary part trajectories of <I \otimes a> per local initial condition
-  std::vector<std::vector<double>> resonator_field_times; ///< Time points corresponding to the resonator field trajectories per local initial condition
 
   OptimTarget* optim_target; ///< Pointer to the optimization target (gate or state)
 
@@ -76,6 +73,8 @@ class OptimProblem {
   double obj_penal_dpdm; ///< Penalty term second-order state derivatives (penalizes variations of the state evolution)
   double obj_penal_variation; ///< Penalty term for variation of control parameters
   double obj_penal_energy; ///< Energy penalty term in objective
+  double obj_snr_re; ///< For transmon-resonator system: separation error SNR^2
+  double obj_snr_im; ///< For transmon-resonator system: separation error SNR^2
   double fidelity; ///< Final-time fidelity: 1/ninit sum_i Tr(rho_target^dag rho(T)) for Lindblad, |1/ninit sum_i phi_target^dag phi|^2 for Schrodinger
   double gnorm; ///< Current norm of gradient
   double gamma_tikhonov; ///< Parameter for Tikhonov regularization
@@ -121,13 +120,6 @@ class OptimProblem {
   ~OptimProblem();
 
   int getNdesign(){ return ndesign; };
-
-  /* Retrieve the local resonator field trajectories */
-  const std::vector<std::vector<double>>& getResonatorFieldReLocal() const { return resonator_field_re_local; };
-  const std::vector<std::vector<double>>& getResonatorFieldImLocal() const { return resonator_field_im_local; };
-
-  /* Compute the SNR^2 */
-  double evalSNR();
 
   double getObjective(){ return objective; };
   double getCostT()    { return obj_cost; };
