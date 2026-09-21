@@ -969,7 +969,9 @@ bool hasSuffix(const std::string& str, const std::string& suffix) {
 
 // ############### NEW EIGENDECOMPOSITION 
 int getEigendecompositionComplex(Mat C_re, Mat C_im, Vec eigvals_re, Vec eigvals_im, Mat eigvecs_re, Mat eigvecs_im) {
-
+    // Reset counter of eigenvalues of C found so far
+    int eigCount = 0;
+  #ifdef WITH_SLEPC
     /* Reset */
     MatZeroEntries(eigvecs_re);
     MatZeroEntries(eigvecs_im);
@@ -1084,9 +1086,6 @@ int getEigendecompositionComplex(Mat C_re, Mat C_im, Vec eigvals_re, Vec eigvals
     Vec z_re, z_im;
     MatCreateVecs(M, NULL, &z_re);
     MatCreateVecs(M, NULL, &z_im);
- 
-    // Reset counter of eigenvalues of C found so far
-    int eigCount = 0;
 
     // Iterate over groups of distinct eigenvalues of M 
     for (const auto& entry : groups) {
@@ -1195,7 +1194,7 @@ int getEigendecompositionComplex(Mat C_re, Mat C_im, Vec eigvals_re, Vec eigvals
     VecDestroy(&ctx.tmp_re);
     VecDestroy(&ctx.tmp_im);
     MatDestroy(&M);
-
+#endif
     return eigCount;
 }
 
