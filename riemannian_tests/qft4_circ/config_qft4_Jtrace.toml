@@ -1,0 +1,69 @@
+[system]
+nlevels = [2, 2, 2, 2]
+nessential = [2, 2, 2, 2]
+total_time = 200.0
+ntime = 2000
+#dt = 0.09047044632086852
+transition_frequency = [4.94, 5.0, 5.06, 5.12]
+selfkerr = [0.0, 0.0, 0.0, 0.0]
+crosskerr_coupling = 0.0
+dipole_coupling = [
+  { subsystem = [0, 1], value = 0.005 },
+  { subsystem = [0, 2], value = 0.0 },
+  { subsystem = [0, 3], value = 0.005 },
+  { subsystem = [1, 2], value = 0.005 },
+  { subsystem = [1, 3], value = 0.0 },
+  { subsystem = [2, 3], value = 0.005 },
+]
+rotation_frequency = [5.03, 5.03, 5.03, 5.03]
+decoherence = { type = "none" }
+initial_condition = { type = "basis" }
+#initial_condition = { type = "state", levels=[1,0,0,0] }
+
+[control]
+control_only_p_drive = false
+parameterization = { type = "spline", num = 69 }
+carrier_frequency = [
+  { subsystem = 0, value = [0.09041523150627062, 0.030001431826955, -0.030001431826955832, -0.09041523150627152] },
+  { subsystem = 1, value = [0.09041523150627062, 0.030001431826955, -0.030001431826955832, -0.09041523150627152] },
+  { subsystem = 2, value = [0.09041523150627062, 0.030001431826955, -0.030001431826955832, -0.09041523150627152] },
+  { subsystem = 3, value = [0.09041523150627062, 0.030001431826955, -0.030001431826955832, -0.09041523150627152] },
+]
+#initialization = {type="file", filename="params.dat"}
+initialization = [
+  { subsystem = 0, type = "random", amplitude = 0.002 },
+  { subsystem = 1, type = "random", amplitude = 0.002 },
+  { subsystem = 2, type = "random", amplitude = 0.002 },
+  { subsystem = 3, type = "random", amplitude = 0.002 },
+]
+
+amplitude_bound = 1.0e12
+zero_boundary_condition = false
+
+[optimization]
+#target = { type = "gate", filename = "gate_qft4.dat", gate_rot_freq = [0.0, 0.0, 0.0, 0.0] }
+target = { type = "gate", gate_type = "qft", gate_rot_freq = [0.0, 0.0, 0.0, 0.0] }
+objective = "Jtrace"
+tolerance = { grad_abs = 1e-06, grad_rel = 1e-05, final_cost = 1e-08, infidelity = 1e-06 }
+maxiter = 300
+tikhonov = { coeff = 1e-05, use_x0 = false }
+#penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0, riemannian = 0.0, riemannian_phasefree = true }
+penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0, riemannian = 0.0}
+solver_type = "gauss_newton"
+gn_ksp_rtol = 0.04
+gn_ksp_maxiter = 100
+gn_ksp_warmstart = true
+gn_ksp_type = "minres"
+
+[output]
+directory = "./"
+# observables = ["expectedEnergy"]
+timestep_stride = 1
+optimization_stride = 1
+
+[solver]
+runtype = "optimization"
+usematfree = true
+linearsolver = { type = "gmres", maxiter = 20 }
+timestepper = "IMR"
+rand_seed = 123
