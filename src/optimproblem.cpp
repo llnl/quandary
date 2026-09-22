@@ -129,6 +129,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   VecZeroEntries(xprev);
   VecDuplicate(xinit, &prev_solution_GN);
   VecZeroEntries(prev_solution_GN);
+  VecAssemblyBegin(prev_solution_GN); VecAssemblyEnd(prev_solution_GN);
 
   /* Create MatShell for Gauss-Newton A=L^*L */
   MatCreateShell(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign, this, &GaussNewtonMatShell);
@@ -153,7 +154,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   std::string ksp_type = config.getOptimGnKspType();
   KSPSetType(ksp_GN, ksp_type.c_str());
 
-  KSPSetInitialGuessNonzero(ksp_GN, PETSC_TRUE);
+  KSPSetInitialGuessNonzero(ksp_GN, PETSC_FALSE);
   KSPSetTolerances(ksp_GN, config.getOptimGnKspRtol(), PETSC_DEFAULT, PETSC_DEFAULT, config.getOptimGnKspMaxiter());
 
   // Configure preconditioner from config (default "none", can be overridden by -gn_pc_type)
@@ -705,8 +706,8 @@ void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b){
   // Set the matrix again, just in case, for reset.
   KSPSetOperators(ksp_GN, GaussNewtonMatShell, GaussNewtonMatShell);
 
-  // Warm-start with previous solution
-  VecCopy(prev_solution_GN, Ainv_b);
+  // Set zero initial guess (warm-starting temporarily disabled)
+  VecZeroEntries(Ainv_b);
 
   // Monitor residual and solution norm at every iteration
   KSPMonitorCancel(ksp_GN);
@@ -772,6 +773,7 @@ void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b){
 
   // Save solution for warm-starting next iteration
   VecCopy(Ainv_b, prev_solution_GN);
+  VecAssemblyBegin(prev_solution_GN); VecAssemblyEnd(prev_solution_GN);
 }
 
 
