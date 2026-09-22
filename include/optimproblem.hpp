@@ -115,7 +115,7 @@ class OptimProblem {
 
   // KSP linear solver
   KSP ksp_GN;  ///< Linear solver for Gauss-Newton system
-  double ksp_damping = 0.0; //1e-3; ///< Damping parameter for Gauss-Newton matrix shift
+  double ksp_damping = 1e-3; ///< Damping parameter for Gauss-Newton matrix shift
   Vec diag_GN = NULL; ///< Cached diagonal of Gauss-Newton matrix for Jacobi preconditioner
   Vec prev_solution_GN = NULL; ///< Previous solution for warm-starting KSP iterations
 
