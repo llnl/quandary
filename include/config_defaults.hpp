@@ -61,6 +61,7 @@ const std::string OPTIM_GN_KSP_TYPE = "minres"; ///< Default KSP solver type for
 const double OPTIM_GN_KSP_RTOL = 1e-3; ///< Default relative tolerance for the Gauss-Newton KSP solver
 const int OPTIM_GN_KSP_MAXITER = 100; ///< Default maximum iterations for the Gauss-Newton KSP solver
 const std::string OPTIM_GN_PC_TYPE = "none"; ///< Default preconditioner type for Gauss-Newton KSP
+const bool OPTIM_GN_KSP_WARMSTART = false; ///< Default warm-start option for Gauss-Newton KSP solver
 
 inline const std::string OUTPUT_DIRECTORY = "./data_out"; ///< Default output directory
 

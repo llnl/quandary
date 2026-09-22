@@ -110,6 +110,7 @@ class Config {
   double optim_gn_ksp_rtol; ///< Relative tolerance for the Gauss-Newton KSP solver
   int optim_gn_ksp_maxiter; ///< Maximum iterations for the Gauss-Newton KSP solver
   std::string optim_gn_pc_type; ///< Preconditioner type for Gauss-Newton KSP (e.g., "none", "shell")
+  bool optim_gn_ksp_warmstart; ///< Enable warm-starting for Gauss-Newton KSP solver
 
   // Output and runtypes
   std::string output_directory; ///< Directory for output files
@@ -190,6 +191,7 @@ class Config {
   double getOptimGnKspRtol() const { return optim_gn_ksp_rtol; }
   int getOptimGnKspMaxiter() const { return optim_gn_ksp_maxiter; }
   std::string getOptimGnPcType() const { return optim_gn_pc_type; }
+  bool getOptimGnKspWarmstart() const { return optim_gn_ksp_warmstart; }
 
   const std::string& getOutputDirectory() const { return output_directory; }
   const std::vector<OutputType>& getOutputObservables() const { return output_observables; }

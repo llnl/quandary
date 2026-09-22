@@ -154,7 +154,9 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   std::string ksp_type = config.getOptimGnKspType();
   KSPSetType(ksp_GN, ksp_type.c_str());
 
-  KSPSetInitialGuessNonzero(ksp_GN, PETSC_FALSE);
+  // Set warm-start option from config (default false)
+  bool warmstart = config.getOptimGnKspWarmstart();
+  KSPSetInitialGuessNonzero(ksp_GN, warmstart ? PETSC_TRUE : PETSC_FALSE);
   KSPSetTolerances(ksp_GN, config.getOptimGnKspRtol(), PETSC_DEFAULT, PETSC_DEFAULT, config.getOptimGnKspMaxiter());
 
   // Configure preconditioner from config (default "none", can be overridden by -gn_pc_type)
@@ -697,7 +699,7 @@ PetscErrorCode OptimProblem::jacobiShellApply(PC pc, Vec x, Vec y){
 }
 
 
-void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b){
+void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b, int outer_iter){
 
   // Store the point of evaluation for the Gauss-Newton matrix shell A(xinit)
   VecCopy(xinit, xeval_GN);
@@ -706,8 +708,15 @@ void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b){
   // Set the matrix again, just in case, for reset.
   KSPSetOperators(ksp_GN, GaussNewtonMatShell, GaussNewtonMatShell);
 
-  // Set zero initial guess (warm-starting temporarily disabled)
-  VecZeroEntries(Ainv_b);
+  // Set initial guess: either warm-start with previous solution or use zero
+  PetscBool warmstart;
+  KSPGetInitialGuessNonzero(ksp_GN, &warmstart);
+  if (warmstart) {
+    VecCopy(prev_solution_GN, Ainv_b);
+    VecAssemblyBegin(Ainv_b); VecAssemblyEnd(Ainv_b);
+  } else {
+    VecZeroEntries(Ainv_b);
+  }
 
   // Monitor residual and solution norm at every iteration
   KSPMonitorCancel(ksp_GN);
@@ -723,8 +732,12 @@ void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b){
     KSPGetType(ksp_GN, &ksp_type);
     KSPGetTolerances(ksp_GN, &rtol, &atol, &dtol, &maxits);
 
-    // Create filename with KSP type
-    snprintf(ksp_filename, sizeof(ksp_filename), "ksp_convergence_%s.dat", ksp_type);
+    // Create filename with KSP type and iteration number
+    if (outer_iter >= 0) {
+      snprintf(ksp_filename, sizeof(ksp_filename), "ksp_convergence_%s_iter%04d.dat", ksp_type, outer_iter);
+    } else {
+      snprintf(ksp_filename, sizeof(ksp_filename), "ksp_convergence_%s.dat", ksp_type);
+    }
 
     ksp_history_file = fopen(ksp_filename, "w");
     if (ksp_history_file != NULL) {
@@ -974,7 +987,7 @@ void OptimProblem::solve(Vec xinit) {
         VecNorm(G, NORM_2, &gnorm);
 
         // Precondition the gradient: solve the Gauss-Newton system A(x)*Gprec = G via KSP
-        solveGaussNewtonKSP(x_GN, G, Gprec);
+        solveGaussNewtonKSP(x_GN, G, Gprec, iter);
         // solveGaussNewtonEPS(x_GN, G, Gprec);
         // VecCopy(G, Gprec); // Steepest descent, no preconditioner
 

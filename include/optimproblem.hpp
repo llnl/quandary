@@ -244,7 +244,7 @@ class OptimProblem {
    * @param b Right-hand side vector
    * @param Ainv_b Solution vector to store the result
    */
-  void solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b);
+  void solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b, int outer_iter = -1);
 
   /**
    * @brief Solves the Gauss-Newton linear system A(x) v = b via eigenvalue decomposition
