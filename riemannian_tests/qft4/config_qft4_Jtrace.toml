@@ -60,7 +60,7 @@ optimization_stride = 1
 
 [solver]
 runtype = "optimization"
-usematfree = false
+usematfree = true
 linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"
 rand_seed = 1122

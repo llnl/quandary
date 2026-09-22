@@ -20,8 +20,8 @@ def plot_objective(filenames):
     if isinstance(filenames, str):
         filenames = [filenames]
 
-    # Create figure with two subplots
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
+    # Create figure with three subplots
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 14))
 
     # Plot each file
     for idx, filename in enumerate(filenames):
@@ -31,6 +31,7 @@ def plot_objective(filenames):
         # Extract columns
         iteration = data[:, 0].astype(int)
         objective = data[:, 1]
+        infidelity = data[:, 5]  # Column 6 (1-indexed) = index 5 (0-indexed)
         ksp_iters = data[:, 11].astype(int)
 
         # Extract label from filename (remove path and extension)
@@ -41,8 +42,12 @@ def plot_objective(filenames):
         ax1.plot(iteration, objective, 'o-', linewidth=2, markersize=4,
                 label=label, color=f'C{idx}')
 
+        # Middle subplot: Infidelity (log scale)
+        ax2.plot(iteration, infidelity, 'o-', linewidth=2, markersize=4,
+                label=label, color=f'C{idx}')
+
         # Bottom subplot: KSP iterations (linear scale)
-        ax2.plot(iteration, ksp_iters, 'o-', linewidth=2, markersize=4,
+        ax3.plot(iteration, ksp_iters, 'o-', linewidth=2, markersize=4,
                 label=label, color=f'C{idx}')
 
     # Format top subplot
@@ -53,12 +58,20 @@ def plot_objective(filenames):
     ax1.legend(fontsize=10)
     ax1.set_yscale('log')
 
-    # Format bottom subplot
+    # Format middle subplot
     ax2.set_xlabel('Iteration', fontsize=12)
-    ax2.set_ylabel('KSP iterations', fontsize=12)
-    ax2.set_title('KSP Iterations per Gauss-Newton Step', fontsize=14)
+    ax2.set_ylabel('Infidelity', fontsize=12)
+    ax2.set_title('Infidelity Convergence', fontsize=14)
     ax2.grid(True, alpha=0.3)
     ax2.legend(fontsize=10)
+    ax2.set_yscale('log')
+
+    # Format bottom subplot
+    ax3.set_xlabel('Iteration', fontsize=12)
+    ax3.set_ylabel('KSP iterations', fontsize=12)
+    ax3.set_title('KSP Iterations per Gauss-Newton Step', fontsize=14)
+    ax3.grid(True, alpha=0.3)
+    ax3.legend(fontsize=10)
 
     plt.tight_layout()
 
