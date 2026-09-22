@@ -127,6 +127,8 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   VecZeroEntries(x_GN);
   VecDuplicate(xinit, &xprev);
   VecZeroEntries(xprev);
+  VecDuplicate(xinit, &prev_solution_GN);
+  VecZeroEntries(prev_solution_GN);
 
   /* Create MatShell for Gauss-Newton A=L^*L */
   MatCreateShell(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign, this, &GaussNewtonMatShell);
@@ -151,7 +153,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   std::string ksp_type = config.getOptimGnKspType();
   KSPSetType(ksp_GN, ksp_type.c_str());
 
-  KSPSetInitialGuessNonzero(ksp_GN, PETSC_FALSE);
+  KSPSetInitialGuessNonzero(ksp_GN, PETSC_TRUE);
   KSPSetTolerances(ksp_GN, config.getOptimGnKspRtol(), PETSC_DEFAULT, PETSC_DEFAULT, config.getOptimGnKspMaxiter());
 
   // Configure preconditioner from config (default "none", can be overridden by -gn_pc_type)
@@ -201,6 +203,7 @@ OptimProblem::~OptimProblem() {
   MatDestroy(&GaussNewtonMatShell);
   VecDestroy(&xeval_GN);
   if (diag_GN != NULL) VecDestroy(&diag_GN);
+  if (prev_solution_GN != NULL) VecDestroy(&prev_solution_GN);
   KSPDestroy(&ksp_GN);
 #ifdef WITH_SLEPC
   EPSDestroy(&eps_GN);
@@ -699,11 +702,11 @@ void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b){
   VecCopy(xinit, xeval_GN);
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
 
-  // Set the matrix again, just in case, for reset. 
+  // Set the matrix again, just in case, for reset.
   KSPSetOperators(ksp_GN, GaussNewtonMatShell, GaussNewtonMatShell);
 
-  // Set zero initial guess
-  VecZeroEntries(Ainv_b);
+  // Warm-start with previous solution
+  VecCopy(prev_solution_GN, Ainv_b);
 
   // Monitor residual and solution norm at every iteration
   KSPMonitorCancel(ksp_GN);
@@ -766,6 +769,9 @@ void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b){
     KSPGetType(ksp_GN, &ksp_type_used);
     printf("Gauss-Newton %s stats: iterations = %d, MatVec counter = %d, residual norm = %1.14e\n", ksp_type_used, iters, GN_MatVec_counter, rnorm);
   }
+
+  // Save solution for warm-starting next iteration
+  VecCopy(Ainv_b, prev_solution_GN);
 }
 
 
