@@ -46,11 +46,11 @@ target = { type = "gate", gate_type = "qft", gate_rot_freq = [0.0, 0.0, 0.0, 0.0
 objective = "Jtrace"
 tolerance = { grad_abs = 1e-06, grad_rel = 1e-05, final_cost = 1e-08, infidelity = 1e-06 }
 maxiter = 300
-tikhonov = { coeff = 1e-05, use_x0 = false }
+tikhonov = { coeff = 1e-10, use_x0 = false }
 #penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0, riemannian = 0.0, riemannian_phasefree = true }
 penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0, riemannian = 0.0}
 solver_type = "gauss_newton"
-gn_ksp_rtol = 0.04
+gn_ksp_rtol = 0.01
 gn_ksp_maxiter = 100
 gn_ksp_warmstart = true
 gn_ksp_type = "minres"
