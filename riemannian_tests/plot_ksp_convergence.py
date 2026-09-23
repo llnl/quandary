@@ -116,8 +116,17 @@ def plot_ksp_convergence_multi(filenames, output_file=None, show_interactive=Fal
         marker = markers[idx % len(markers)]
         linestyle = linestyles[idx % len(linestyles)]
 
+        # Extract iteration number from filename if present (format: ksp_convergence_TYPE_iterNNNN.dat)
+        import re
+        filename = os.path.basename(data['filename'])
+        iter_match = re.search(r'_iter(\d+)', filename)
+
         ksp_label = data['ksp_type'].upper()
-        label = f"{ksp_label} (n={len(data['iterations'])})"
+        if iter_match:
+            iter_num = int(iter_match.group(1))
+            label = f"Iter {iter_num} - {ksp_label} (n={len(data['iterations'])})"
+        else:
+            label = f"{ksp_label} (n={len(data['iterations'])})"
 
         # Plot residual norm
         ax1.semilogy(data['iterations'], data['residual_norm'],

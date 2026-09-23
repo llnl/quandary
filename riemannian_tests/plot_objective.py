@@ -32,23 +32,30 @@ def plot_objective(filenames):
         iteration = data[:, 0].astype(int)
         objective = data[:, 1]
         infidelity = data[:, 5]  # Column 6 (1-indexed) = index 5 (0-indexed)
+        tikhonov = data[:, 6]    # Column 7 (1-indexed) = index 6 (0-indexed)
         ksp_iters = data[:, 11].astype(int)
 
         # Extract label from filename (remove path and extension)
         import os
         label = os.path.basename(filename).replace('.dat', '').replace('optim_history_', '')
 
-        # Top subplot: Objective (log scale)
+        # Calculate marker frequency (show ~20 markers regardless of data size)
+        n_points = len(iteration)
+        marker_every = max(1, n_points // 20)
+
+        # Top subplot: Objective and Tikhonov (log scale)
         ax1.plot(iteration, objective, 'o-', linewidth=2, markersize=4,
-                label=label, color=f'C{idx}')
+                label=f'{label} (Obj)', color=f'C{idx}', markevery=marker_every)
+        ax1.plot(iteration, tikhonov, 's--', linewidth=1.5, markersize=3,
+                label=f'{label} (Tikh)', color=f'C{idx}', alpha=0.7, markevery=marker_every)
 
         # Middle subplot: Infidelity (log scale)
         ax2.plot(iteration, infidelity, 'o-', linewidth=2, markersize=4,
-                label=label, color=f'C{idx}')
+                label=label, color=f'C{idx}', markevery=marker_every)
 
         # Bottom subplot: KSP iterations (linear scale)
         ax3.plot(iteration, ksp_iters, 'o-', linewidth=2, markersize=4,
-                label=label, color=f'C{idx}')
+                label=label, color=f'C{idx}', markevery=marker_every)
 
     # Format top subplot
     ax1.set_xlabel('Iteration', fontsize=12)
