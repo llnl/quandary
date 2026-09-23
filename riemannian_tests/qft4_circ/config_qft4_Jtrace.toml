@@ -41,19 +41,17 @@ amplitude_bound = 1.0e12
 zero_boundary_condition = false
 
 [optimization]
-#target = { type = "gate", filename = "gate_qft4.dat", gate_rot_freq = [0.0, 0.0, 0.0, 0.0] }
 target = { type = "gate", gate_type = "qft", gate_rot_freq = [0.0, 0.0, 0.0, 0.0] }
 objective = "Jtrace"
 tolerance = { grad_abs = 1e-06, grad_rel = 1e-05, final_cost = 1e-08, infidelity = 1e-06 }
 maxiter = 300
-tikhonov = { coeff = 1e-10, use_x0 = false }
-#penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0, riemannian = 0.0, riemannian_phasefree = true }
-penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0, riemannian = 0.0}
+tikhonov = { coeff = 1e-5, use_x0 = false }
+penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0}
 solver_type = "gauss_newton"
-gn_ksp_rtol = 0.01
+gn_ksp_rtol = 0.1
 gn_ksp_maxiter = 100
-gn_ksp_warmstart = true
-gn_ksp_type = "minres"
+gn_ksp_warmstart = false
+gn_ksp_type = "cg"
 
 [output]
 directory = "./"

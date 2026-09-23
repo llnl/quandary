@@ -168,15 +168,6 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   // Allow command-line options to override defaults (must be called AFTER setting defaults)
   KSPSetFromOptions(ksp_GN);
 
-  // If user requested shell PC (either from config or command-line), register the Jacobi functions
-  PCType pc_type;
-  PCGetType(pc, &pc_type);
-  if (pc_type && strcmp(pc_type, PCSHELL) == 0) {
-    PCShellSetContext(pc, this);
-    PCShellSetSetUp(pc, jacobiShellSetup);
-    PCShellSetApply(pc, jacobiShellApply);
-  }
-
   /* Create eigenvalues solver for Gauss-Newton Ax=b */
 #ifdef WITH_SLEPC
   EPSCreate(PETSC_COMM_SELF, &eps_GN);
@@ -205,7 +196,6 @@ OptimProblem::~OptimProblem() {
 
   MatDestroy(&GaussNewtonMatShell);
   VecDestroy(&xeval_GN);
-  if (diag_GN != NULL) VecDestroy(&diag_GN);
   if (prev_solution_GN != NULL) VecDestroy(&prev_solution_GN);
   KSPDestroy(&ksp_GN);
 #ifdef WITH_SLEPC
@@ -638,64 +628,6 @@ void OptimProblem::applyGaussNewtonMatShell(Mat A, const Vec v, Vec Av){
     VecAXPY(Av, self->ksp_damping, v);
   }
 
-}
-
-
-PetscErrorCode OptimProblem::jacobiShellSetup(PC pc){
-  OptimProblem *self;
-  PCShellGetContext(pc, (void**)&self);
-
-  // If diagonal already computed, skip
-  if (self->diag_GN != NULL) return 0;
-
-  // Create diagonal vector
-  VecDuplicate(self->xeval_GN, &self->diag_GN);
-
-  // Get the size
-  PetscInt n;
-  VecGetSize(self->diag_GN, &n);
-
-  // Create temporary vectors
-  Vec e_i, Ae_i;
-  VecDuplicate(self->diag_GN, &e_i);
-  VecDuplicate(self->diag_GN, &Ae_i);
-
-  // For each parameter i, compute diag(A)_i = (A*e_i)_i
-  for (PetscInt i = 0; i < n; i++) {
-    // Create unit vector e_i
-    VecZeroEntries(e_i);
-    VecSetValue(e_i, i, 1.0, INSERT_VALUES);
-    VecAssemblyBegin(e_i);
-    VecAssemblyEnd(e_i);
-
-    // Compute A * e_i (includes damping)
-    applyGaussNewtonMatShell(self->GaussNewtonMatShell, e_i, Ae_i);
-
-    // Extract diagonal element (A*e_i)_i
-    PetscScalar diag_i;
-    VecGetValues(Ae_i, 1, &i, &diag_i);
-    VecSetValue(self->diag_GN, i, diag_i, INSERT_VALUES);
-  }
-
-  VecAssemblyBegin(self->diag_GN);
-  VecAssemblyEnd(self->diag_GN);
-
-  // Cleanup
-  VecDestroy(&e_i);
-  VecDestroy(&Ae_i);
-
-  return 0;
-}
-
-
-PetscErrorCode OptimProblem::jacobiShellApply(PC pc, Vec x, Vec y){
-  OptimProblem *self;
-  PCShellGetContext(pc, (void**)&self);
-
-  // Apply Jacobi preconditioner: y = x ./ diag
-  VecPointwiseDivide(y, x, self->diag_GN);
-
-  return 0;
 }
 
 

@@ -116,7 +116,6 @@ class OptimProblem {
   // KSP linear solver
   KSP ksp_GN;  ///< Linear solver for Gauss-Newton system
   double ksp_damping = 1e-3; ///< Damping parameter for Gauss-Newton matrix shift
-  Vec diag_GN = NULL; ///< Cached diagonal of Gauss-Newton matrix for Jacobi preconditioner
   Vec prev_solution_GN = NULL; ///< Previous solution for warm-starting KSP iterations
 
   // EPS eigenvalue solver
@@ -217,25 +216,6 @@ class OptimProblem {
    */
   static void applyGaussNewtonMatShell(Mat A, const Vec v, Vec Av);
 
-  /**
-   * @brief Setup function for PCSHELL Jacobi preconditioner.
-   *
-   * Computes and caches the diagonal of the Gauss-Newton matrix A=L^*L.
-   *
-   * @param[in] pc The PCSHELL preconditioner
-   */
-  static PetscErrorCode jacobiShellSetup(PC pc);
-
-  /**
-   * @brief Apply function for PCSHELL Jacobi preconditioner.
-   *
-   * Applies diagonal scaling: y = x ./ diag(A) where diag includes damping.
-   *
-   * @param[in] pc The PCSHELL preconditioner
-   * @param[in] x Input vector
-   * @param[out] y Output vector y = M^{-1} x
-   */
-  static PetscErrorCode jacobiShellApply(PC pc, Vec x, Vec y);
 
   /**
    * @brief Solves the Gauss-Newton linear system A(x) v = b for v using CG iterations

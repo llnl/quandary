@@ -23,6 +23,15 @@ def plot_objective(filenames):
     # Create figure with three subplots
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 14))
 
+    # First pass: find the maximum number of data points across all files
+    max_points = 0
+    for filename in filenames:
+        data = np.loadtxt(filename, skiprows=1)
+        max_points = max(max_points, len(data))
+
+    # Calculate marker frequency based on the longest dataset (show ~20 markers)
+    marker_every = max(1, max_points // 20)
+
     # Plot each file
     for idx, filename in enumerate(filenames):
         # Read the data, skipping the header line
@@ -39,10 +48,6 @@ def plot_objective(filenames):
         import os
         label = os.path.basename(filename).replace('.dat', '').replace('optim_history_', '')
 
-        # Calculate marker frequency (show ~20 markers regardless of data size)
-        n_points = len(iteration)
-        marker_every = max(1, n_points // 20)
-
         # Top subplot: Objective and Tikhonov (log scale)
         ax1.plot(iteration, objective, 'o-', linewidth=2, markersize=4,
                 label=f'{label} (Obj)', color=f'C{idx}', markevery=marker_every)
@@ -50,11 +55,16 @@ def plot_objective(filenames):
                 label=f'{label} (Tikh)', color=f'C{idx}', alpha=0.7, markevery=marker_every)
 
         # Middle subplot: Infidelity (log scale)
-        ax2.plot(iteration, infidelity, 'o-', linewidth=2, markersize=4,
+        # Use alternating line styles and semi-transparency for better distinguishability
+        linestyles = ['-', '--', '-.', ':']
+        ax2.plot(iteration, infidelity, marker='o', linestyle=linestyles[idx % len(linestyles)],
+                linewidth=2, markersize=4, alpha=0.7,
                 label=label, color=f'C{idx}', markevery=marker_every)
 
         # Bottom subplot: KSP iterations (linear scale)
-        ax3.plot(iteration, ksp_iters, 'o-', linewidth=2, markersize=4,
+        # Use alternating line styles and semi-transparency for better distinguishability
+        ax3.plot(iteration, ksp_iters, marker='o', linestyle=linestyles[idx % len(linestyles)],
+                linewidth=2, markersize=4, alpha=0.7,
                 label=label, color=f'C{idx}', markevery=marker_every)
 
     # Format top subplot
