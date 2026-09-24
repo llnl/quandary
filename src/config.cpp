@@ -311,6 +311,9 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     optim_gn_ksp_maxiter = validators::field<int>(optimization_table, "gn_ksp_maxiter").greaterThanEqual(0).valueOr(ConfigDefaults::OPTIM_GN_KSP_MAXITER);
     optim_gn_pc_type = validators::field<std::string>(optimization_table, "gn_pc_type").valueOr(ConfigDefaults::OPTIM_GN_PC_TYPE);
     optim_gn_ksp_warmstart = validators::field<bool>(optimization_table, "gn_ksp_warmstart").valueOr(ConfigDefaults::OPTIM_GN_KSP_WARMSTART);
+    optim_gn_ksp_damping = validators::field<double>(optimization_table, "gn_ksp_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_GN_KSP_DAMPING);
+    optim_gn_ksp_solution_norm_threshold = validators::field<double>(optimization_table, "gn_ksp_solution_norm_threshold").greaterThan(0.0).valueOr(ConfigDefaults::OPTIM_GN_KSP_SOLUTION_NORM_THRESHOLD);
+    optim_gn_minres_qlp = validators::field<bool>(optimization_table, "gn_minres_qlp").valueOr(ConfigDefaults::OPTIM_GN_MINRES_QLP);
 
     // Parse output options from [output] table
     output_directory = output_table["directory"].value_or(ConfigDefaults::OUTPUT_DIRECTORY);
@@ -696,6 +699,9 @@ void Config::printConfig(std::stringstream& log) const {
     log << "gn_ksp_maxiter = " << optim_gn_ksp_maxiter << "\n";
     log << "gn_pc_type = \"" << optim_gn_pc_type << "\"\n";
     log << "gn_ksp_warmstart = " << (optim_gn_ksp_warmstart ? "true" : "false") << "\n";
+    log << "gn_ksp_damping = " << optim_gn_ksp_damping << "\n";
+    log << "gn_ksp_solution_norm_threshold = " << optim_gn_ksp_solution_norm_threshold << "\n";
+    log << "gn_minres_qlp = " << (optim_gn_minres_qlp ? "true" : "false") << "\n";
   }
 
   log << "\n";

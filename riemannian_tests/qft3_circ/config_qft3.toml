@@ -40,10 +40,13 @@ maxiter = 300
 tikhonov = { coeff = 1e-05, use_x0 = false }
 penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0 }
 solver_type = "gauss_newton"
-gn_ksp_rtol = 0.1
+gn_ksp_rtol = 1e-5
+gn_ksp_damping = 1e-5
+gn_ksp_solution_norm_threshold = 1.0
 gn_ksp_maxiter = 100
 gn_ksp_warmstart = false
-gn_ksp_type = "cg"
+gn_ksp_type = "minres"
+gn_minres_qlp = true  
 
 [output]
 directory = "./"

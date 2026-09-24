@@ -166,6 +166,20 @@ penalty = { leakage = 0.0,                # Penalize leakage into guard levels
             weightedcost_width = 0.0      # Width parameter for weighted cost function integral
           }
 
+# Optimization solver type: "lbfgs" (default) or "gauss_newton"
+# solver_type = "lbfgs"
+# solver_type = "gauss_newton"
+
+# Gauss-Newton KSP solver settings (only used when solver_type = "gauss_newton")
+# gn_ksp_type = "cg"                        # KSP solver type: "cg", "minres", "gmres" (default: "minres")
+# gn_ksp_rtol = 1e-3                        # Relative tolerance for KSP solver (default: 1e-3)
+# gn_ksp_maxiter = 100                      # Maximum iterations for KSP solver (default: 100)
+# gn_ksp_warmstart = false                  # Enable warm-starting from previous solution (default: false)
+# gn_ksp_damping = 1e-3                     # Damping parameter for Gauss-Newton matrix shift (default: 1e-3)
+# gn_ksp_solution_norm_threshold = 0.1      # Solution norm threshold for early termination (default: 1e12, effectively disabled)
+# gn_minres_qlp = true                      # Enable MINRES-QLP variant (more robust for ill-conditioned systems, only applies when gn_ksp_type = "minres")
+# gn_pc_type = "none"                       # Preconditioner type (default: "none")
+
 [output]
 # Directory for output files
 directory = "./data_out"

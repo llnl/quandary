@@ -62,6 +62,9 @@ const double OPTIM_GN_KSP_RTOL = 1e-3; ///< Default relative tolerance for the G
 const int OPTIM_GN_KSP_MAXITER = 100; ///< Default maximum iterations for the Gauss-Newton KSP solver
 const std::string OPTIM_GN_PC_TYPE = "none"; ///< Default preconditioner type for Gauss-Newton KSP
 const bool OPTIM_GN_KSP_WARMSTART = false; ///< Default warm-start option for Gauss-Newton KSP solver
+const double OPTIM_GN_KSP_DAMPING = 1e-3; ///< Default damping parameter for Gauss-Newton matrix shift
+const double OPTIM_GN_KSP_SOLUTION_NORM_THRESHOLD = 1e12; ///< Default solution norm threshold for early termination (disabled by default with large value)
+const bool OPTIM_GN_MINRES_QLP = false; ///< Default: use standard MINRES (not QLP variant)
 
 inline const std::string OUTPUT_DIRECTORY = "./data_out"; ///< Default output directory
 

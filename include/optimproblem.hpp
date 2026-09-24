@@ -116,6 +116,7 @@ class OptimProblem {
   // KSP linear solver
   KSP ksp_GN;  ///< Linear solver for Gauss-Newton system
   double ksp_damping = 1e-3; ///< Damping parameter for Gauss-Newton matrix shift
+  double ksp_solution_norm_threshold = 1e12; ///< Solution norm threshold for early termination
   Vec prev_solution_GN = NULL; ///< Previous solution for warm-starting KSP iterations
 
   // EPS eigenvalue solver
@@ -169,6 +170,7 @@ class OptimProblem {
   OptimTarget* getOptimTarget() { return optim_target; };
   Mat getGaussNewtonMatShell() { return GaussNewtonMatShell; };
   bool getQuietmode() { return quietmode; };
+  double getKspSolutionNormThreshold() { return ksp_solution_norm_threshold; };
 
   int getOutputOptimizationStride() { return output_optimization_stride; };
   Output* getOutput() { return output; };

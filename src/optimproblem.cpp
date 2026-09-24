@@ -1,5 +1,9 @@
 #include "optimproblem.hpp"
 
+// Forward declarations for KSP callback functions
+PetscErrorCode KSPMonitorResidualAndSolution(KSP ksp, PetscInt it, PetscReal rnorm, void* ctx);
+PetscErrorCode KSPConvergenceTestSolutionNorm(KSP ksp, PetscInt it, PetscReal rnorm, KSPConvergedReason *reason, void *ctx);
+
 OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, TimeStepper* timestepper_, MasterEq* mastereq_, MPI_Comm comm_init_, MPI_Comm comm_optim_, Output* output_, bool quietmode_){
 
   optim_target = optim_target_;
@@ -159,11 +163,25 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   KSPSetInitialGuessNonzero(ksp_GN, warmstart ? PETSC_TRUE : PETSC_FALSE);
   KSPSetTolerances(ksp_GN, config.getOptimGnKspRtol(), PETSC_DEFAULT, PETSC_DEFAULT, config.getOptimGnKspMaxiter());
 
+  // Set damping parameter from config
+  ksp_damping = config.getOptimGnKspDamping();
+
+  // Set solution norm threshold from config
+  ksp_solution_norm_threshold = config.getOptimGnKspSolutionNormThreshold();
+
   // Configure preconditioner from config (default "none", can be overridden by -gn_pc_type)
   PC  pc;
   KSPGetPC(ksp_GN, &pc);
   std::string pc_type_str = config.getOptimGnPcType();
   PCSetType(pc, pc_type_str.c_str());
+
+  // Enable MINRES-QLP variant if configured (only applies when ksp_type is "minres")
+  if (config.getOptimGnMinresQlp() && ksp_type == "minres") {
+    PetscOptionsSetValue(NULL, "-gn_ksp_minres_qlp", "true");
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Enabling MINRES-QLP variant for Gauss-Newton KSP solver\n");
+    }
+  }
 
   // Allow command-line options to override defaults (must be called AFTER setting defaults)
   KSPSetFromOptions(ksp_GN);
@@ -650,6 +668,9 @@ void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b, int o
     VecZeroEntries(Ainv_b);
   }
 
+  // Set custom convergence test to monitor solution norm
+  KSPSetConvergenceTest(ksp_GN, KSPConvergenceTestSolutionNorm, (void*)this, NULL);
+
   // Monitor residual and solution norm at every iteration
   KSPMonitorCancel(ksp_GN);
   KSPMonitorSet(ksp_GN, KSPMonitorResidualAndSolution, (void*)this, NULL);
@@ -774,6 +795,38 @@ PetscErrorCode KSPMonitorResidualAndSolution(KSP ksp, PetscInt it, PetscReal rno
   // Write to file if file pointer is set
   if (self->getMPIrank_world() == 0 && self->ksp_history_file != NULL) {
     fprintf(self->ksp_history_file, "%d %1.14e %1.14e\n", (int)it, (double)rnorm, (double)xnorm);
+  }
+
+  return 0;
+}
+
+PetscErrorCode KSPConvergenceTestSolutionNorm(KSP ksp, PetscInt it, PetscReal rnorm, KSPConvergedReason *reason, void *ctx){
+  OptimProblem* self = (OptimProblem*) ctx;
+
+  // First, apply default convergence test
+  KSPConvergedDefault(ksp, it, rnorm, reason, ctx);
+
+  // If already converged or diverged, keep that reason
+  if (*reason != KSP_CONVERGED_ITERATING) {
+    return 0;
+  }
+
+  // Check solution norm threshold
+  Vec x;
+  KSPBuildSolution(ksp, NULL, &x);
+  PetscReal xnorm;
+  VecNorm(x, NORM_2, &xnorm);
+
+  double threshold = self->getKspSolutionNormThreshold();
+  if (xnorm > threshold) {
+    *reason = KSP_DIVERGED_DTOL;  // Divergence tolerance exceeded
+    if (self->getMPIrank_world() == 0 && !self->getQuietmode()) {
+      printf("KSP terminated: solution norm %1.14e exceeds threshold %1.14e\n", (double)xnorm, threshold);
+    }
+    // Write to file if file pointer is set
+    if (self->getMPIrank_world() == 0 && self->ksp_history_file != NULL) {
+      fprintf(self->ksp_history_file, "# KSP terminated: solution norm %1.14e exceeds threshold %1.14e\n", (double)xnorm, threshold);
+    }
   }
 
   return 0;

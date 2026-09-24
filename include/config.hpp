@@ -111,6 +111,9 @@ class Config {
   int optim_gn_ksp_maxiter; ///< Maximum iterations for the Gauss-Newton KSP solver
   std::string optim_gn_pc_type; ///< Preconditioner type for Gauss-Newton KSP (e.g., "none", "shell")
   bool optim_gn_ksp_warmstart; ///< Enable warm-starting for Gauss-Newton KSP solver
+  double optim_gn_ksp_damping; ///< Damping parameter for Gauss-Newton matrix shift
+  double optim_gn_ksp_solution_norm_threshold; ///< Solution norm threshold for early termination
+  bool optim_gn_minres_qlp; ///< Enable MINRES-QLP variant (more robust for ill-conditioned systems)
 
   // Output and runtypes
   std::string output_directory; ///< Directory for output files
@@ -192,6 +195,9 @@ class Config {
   int getOptimGnKspMaxiter() const { return optim_gn_ksp_maxiter; }
   std::string getOptimGnPcType() const { return optim_gn_pc_type; }
   bool getOptimGnKspWarmstart() const { return optim_gn_ksp_warmstart; }
+  double getOptimGnKspDamping() const { return optim_gn_ksp_damping; }
+  double getOptimGnKspSolutionNormThreshold() const { return optim_gn_ksp_solution_norm_threshold; }
+  bool getOptimGnMinresQlp() const { return optim_gn_minres_qlp; }
 
   const std::string& getOutputDirectory() const { return output_directory; }
   const std::vector<OutputType>& getOutputObservables() const { return output_observables; }
