@@ -11,6 +11,8 @@
 #include "version.hpp"
 #ifdef WITH_SLEPC
 #include <slepceps.h>
+#include <slepcsvd.h>
+
 #include <memory>
 #endif
 
@@ -434,3 +436,16 @@ struct MatShellCtx_ComplexEig {
 
 
 PetscErrorCode MatMultShell_M(Mat M, Vec x, Vec y);
+
+
+
+/**
+ * @brief Computes a low-rank approximation of the matrix A using randomized range finding.
+ *
+ * @param A Input matrix to approximate.
+ * @param ncut Number of dominant singular vectors to compute.
+ * @param nextra Number of extra vectors to improve approximation accuracy.
+ * @param U_out Output matrix containing the dominant left singular vectors.
+ * @param lambda_out Output vector containing the corresponding singular values.
+ */
+void RandomizedRangeFinder(const Mat A, const int ncut, const int nextra, bool use_positive_evals, bool quietmode, MPI_Comm comm, Mat* U_out, Vec* lambda_out);

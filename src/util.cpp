@@ -1318,3 +1318,269 @@ PetscErrorCode MatMultShell_M(Mat M, Vec x, Vec y) {
 
     return 0;
 };
+
+
+void RandomizedRangeFinder(const Mat A, const int ncut, const int nextra, bool use_positive_evals, bool quietmode, MPI_Comm comm_samples, Mat* U_out, Vec* lambda_out){
+  // Sample a random matrix Omega
+  // Apply A on each column of Q -> Y = A * Omega
+  // Find basis with economy SVD and take top-k left singular vectors
+  //   -> U,S,V = SVD(Y), Q = U[:,1:k]
+  // Solve B * (Q' * Omega) = (Q' * Y) for B: least squares problem 
+  //   -> B = lstsq( (Q.T*Omega).T, (Q.T*Y).T ).T
+  // Eigenvalue decomposition of B -> B = V Lambda V'
+  // Project: U = Q * V
+  //  -> A \approx U * Lambda * U'
+  //  -> grad_proj = U * Lambda^{-1} * U' * grad
+  // Returns Mat U and Vec Lambda
+
+  PetscInt n;
+  MatGetSize(A, &n, NULL);
+
+  int mpisize_samples;
+  int mpirank_samples;
+  int mpirank_world;
+  MPI_Comm_size(comm_samples, &mpisize_samples);
+  MPI_Comm_rank(comm_samples, &mpirank_samples);
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
+
+  // Sanity check: each comm_samples rank independently calls MatMult(A,...) on its own
+  // subset of columns. That is only well-defined if A itself is not spatially distributed
+  // across those same ranks (otherwise MatMult is a collective op mixing unrelated columns).
+  MPI_Comm comm_A;
+  PetscObjectGetComm((PetscObject)A, &comm_A);
+  int mpisize_A;
+  MPI_Comm_size(comm_A, &mpisize_A);
+  if (mpisize_samples > 1 && mpisize_A > 1) {
+    printf("ERROR: RandomizedRangeFinder sample-parallelism (comm_samples, size=%d) requires A to live on a single-rank communicator (got size=%d). Otherwise MatMult mixes columns across ranks.\n", mpisize_samples, mpisize_A);
+    exit(1);
+  }
+
+  Mat Omega, Y, Q;
+  SVD svd;
+  PetscInt nconv;
+  Mat QtOmega, QtY, B, U;
+  EPS eps;
+  PetscScalar *lambda;
+  PetscRandom rctx;
+  
+  /* Sample random matrix Omega (n x ncut+nextra) */
+  PetscInt nsample = ncut + nextra;
+  MatCreateDense(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, nsample, NULL, &Omega);
+  PetscRandomCreate(PETSC_COMM_WORLD, &rctx);
+  PetscRandomSetFromOptions(rctx);
+  // Seed must vary across ranks (comm_samples in particular), otherwise different
+  // processes draw from identical RNG state and Omega gets correlated row-blocks.
+  PetscRandomSetSeed(rctx, 42 + (unsigned long)mpirank_world);
+  PetscRandomSeed(rctx);
+  MatSetRandom(Omega, rctx);
+  MatSetUp(Omega);
+  MatAssemblyBegin(Omega, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(Omega, MAT_FINAL_ASSEMBLY);
+
+  /* Apply matrix-vector product Y = A * Omega */
+  MatDuplicate(Omega, MAT_DO_NOT_COPY_VALUES, &Y);
+  MatZeroEntries(Y); // columns not owned by this rank must be 0 before the Allreduce-sum below
+  Vec omega_col, y_col;
+  int nsample_local = nsample / mpisize_samples;
+  // Sanity check for parallel distribution:
+  if (nsample % mpisize_samples != 0) {
+    printf("ERROR: Number of threads for Hessian RandRangeFinder needs to be integer divisor of the numer of samples (%d)\n", nsample);
+    exit(1);
+  }
+  
+  for (int i_local= 0; i_local< nsample_local; i_local++) {
+    int i_global = mpirank_samples * nsample_local + i_local;
+
+    MatDenseGetColumnVecRead(Omega, i_global, &omega_col);
+    MatDenseGetColumnVecWrite(Y, i_global, &y_col);
+
+    // Apply matrix-vector product, if this sample belongs to this processor
+    // if (mpirank_init ==0 && !quietmode) printf("%d Applying matrix-vector product %d / %d\n", mpirank_samples, i_global, nsample);
+    MatMult(A, omega_col, y_col);
+
+    MatDenseRestoreColumnVecRead(Omega, i_global, &omega_col);
+    MatDenseRestoreColumnVecWrite(Y, i_global, &y_col);
+  }
+  // Allreduce the Columns
+  int rows, cols;
+  MatGetSize(Y, &rows, &cols);
+  double* mytmp = new double[rows*cols];
+  PetscScalar *ptr;
+  MatDenseGetArray(Y, &ptr);
+  for (int i=0; i<rows*cols; i++){
+    mytmp[i] = ptr[i];
+  }
+  MPI_Allreduce(mytmp, ptr, rows*cols, MPI_DOUBLE, MPI_SUM, comm_samples);
+  MatDenseRestoreArray(Y, &ptr);
+  delete [] mytmp;
+
+  
+  /* Find orthonormal basis for Y */
+  // Economy SVD of Y, keep ncut top left singular vectors
+  SVDCreate(PETSC_COMM_WORLD, &svd); 
+  SVDSetOperators(svd, Y, NULL); 
+  SVDSetType(svd, SVDTRLANCZOS);  // or SVDCROSS, SVDLAPACK
+  SVDSetDimensions(svd, ncut, 2*ncut, PETSC_DEFAULT); 
+  SVDSetFromOptions(svd); 
+  SVDSolve(svd); 
+  SVDGetConverged(svd, &nconv); 
+  if (nconv < ncut) {
+    printf("ERROR: SVD converged to %D singular values, needed %D", nconv, ncut);
+    exit(1);
+  }
+  // Extract Q = U[:,1:ncut] (left singular vectors)
+  MatCreateDense(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, n, ncut, NULL, &Q); 
+  Vec u_col;
+  for (int i = 0; i < ncut; i++) {
+    MatDenseGetColumnVecWrite(Q, i, &u_col);
+    SVDGetSingularTriplet(svd, i, NULL, u_col, NULL);
+    MatDenseRestoreColumnVecWrite(Q, i, &u_col);
+  }
+  
+  /*  Compute Q^T * Omega and Q^T * Y */
+  MatTransposeMatMult(Q, Omega, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &QtOmega); 
+  MatTransposeMatMult(Q, Y, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &QtY);
+  
+  /* Solve least squares: B * (Q^T * Omega) = (Q^T * Y) */
+  // Transpose: (Q^T*Omega)^T * B^T = (Q^T*Y)^T
+  // Solve for B^T:  (Q^T*Omega)(Q^T*Omega)^T * B^T = (Q^T*Omega)(Q^T*Y)^T
+
+  // Compute Gram = QtOmega * QtOmega^T
+  Mat Gram;
+  MatMatTransposeMult(QtOmega, QtOmega, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Gram);
+  // Compute RHS = QtOmega * QtY^T
+  Mat RHS;
+  MatMatTransposeMult(QtOmega, QtY, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &RHS);
+  // Set up the solution matrix
+  Mat X;
+  MatDuplicate(Gram, MAT_DO_NOT_COPY_VALUES, &X);
+  // Solve Gram * X = RHS for X (=B^T) using Petsc KSP solver
+  KSP ksp;
+  KSPCreate(PETSC_COMM_WORLD, &ksp);
+  KSPSetOperators(ksp, Gram, Gram);
+  // PC pc;
+  // KSPGetPC(ksp, &pc);
+  // PCSetType(pc, PCLU);
+  KSPSetFromOptions(ksp);
+  KSPMatSolve(ksp, RHS, X);
+
+  KSPConvergedReason ksp_reason;
+  KSPGetConvergedReason(ksp, &ksp_reason);
+  if (ksp_reason < 0) {
+    if (mpirank_world == 0) {
+      printf("ERROR: Gram solve failed in HessianRandRangeFinder with KSP reason %d\n", (int)ksp_reason);
+    }
+    exit(1);
+  }
+
+  // Transpose X to get B
+  MatTranspose(X, MAT_INITIAL_MATRIX, &B);
+
+  // B should approximate the symmetric Rayleigh quotient Q'*A*Q (A assumed symmetric),
+  // but the least-squares solve above only recovers B up to numerical noise, which can break
+  // symmetry. Symmetrize explicitly so the eigensolver below is guaranteed real eigenpairs.
+  Mat Bt, Bsym;
+  MatTranspose(B, MAT_INITIAL_MATRIX, &Bt);
+  MatDuplicate(B, MAT_COPY_VALUES, &Bsym);
+  MatAXPY(Bsym, 1.0, Bt, SAME_NONZERO_PATTERN);
+  MatScale(Bsym, 0.5);
+  MatDestroy(&Bt);
+  MatDestroy(&B);
+  B = Bsym;
+
+  /* Eigenvalue decomposition of B */
+  EPSCreate(PETSC_COMM_WORLD, &eps);
+  EPSSetOperators(eps, B, NULL);
+  EPSSetProblemType(eps, EPS_HEP); // B is symmetrized above, use the Hermitian solver
+
+  // Get ncut eigenvalues
+  EPSSetDimensions(eps, ncut, PETSC_DEFAULT, PETSC_DEFAULT);  
+  // EPSSetThreshold(EPS eps,PetscReal thres,PetscBool rel); // Alternatively, specify a threshold
+  // OrderingL: get the largest real eigenvalues first
+  EPSSetWhichEigenpairs(eps, EPS_LARGEST_REAL); 
+
+  // Alternatively: Get all eigenvalues in a given interval [a,b]. This only works for the symmetric EPS solver! 
+  // EPSSetWhichEigenpairs(eps, EPS_ALL); 
+  // EPSSetInterval(eps, 0.0, 1e5);
+
+  EPSSetFromOptions(eps);
+  EPSSolve(eps);
+  EPSGetConverged(eps, &nconv); 
+  if (nconv < ncut) {
+    printf("ERROR: EPS converged to %D eigenvalues, needed %D", nconv, ncut);
+  }
+
+  // Find number of positive eigenvalues
+  int npos = ncut;
+  if (use_positive_evals){
+    PetscScalar ev;
+    npos=0;
+    for (int i = 0; i < ncut; i++) {
+      EPSGetEigenpair(eps, i, &ev, NULL, NULL, NULL);
+      if (ev > 1e-12) {
+        npos++;
+      }
+    }
+  }
+  
+  // Extract eigenvectors V and eigenvalues Lambda
+  MatCreateDense(PETSC_COMM_WORLD, PETSC_DECIDE, PETSC_DECIDE, ncut, npos, NULL, &U); // This will be U from B = U*Lambda*V'
+  PetscMalloc1(npos, &lambda);
+  
+  PetscScalar eigval;
+  int id_pos = 0;
+  for (int i = 0; i < ncut; i++) {
+    EPSGetEigenpair(eps, i, &eigval, NULL, NULL, NULL);
+    if (use_positive_evals) {
+      if (eigval > 1e-12) {
+        MatDenseGetColumnVecWrite(U, id_pos, &u_col);
+        EPSGetEigenpair(eps, i, &eigval, NULL, u_col, NULL);
+        lambda[id_pos] = eigval;  
+        MatDenseRestoreColumnVecWrite(U, id_pos, &u_col);
+        id_pos++;
+      }
+    } else {
+      MatDenseGetColumnVecWrite(U, i, &u_col);
+      EPSGetEigenpair(eps, i, &eigval, NULL, u_col, NULL);
+      lambda[i] = eigval;  
+      MatDenseRestoreColumnVecWrite(U, i, &u_col);
+    }
+  }
+  // print the eigenvalues
+  if (mpirank_world==0 && !quietmode) {
+    printf("Dominant eigenvalues of the Hessian approximation:\n");
+    printf("Use pos? %d, npos=%d\n", use_positive_evals, npos);
+    for (int i = 0; i < npos; i++) {
+      printf("%1.14e\n", lambda[i]);
+    }
+  }
+  
+  /* Project and store U_out = Q * U */
+  MatMatMult(Q, U, MAT_INITIAL_MATRIX, PETSC_DEFAULT, U_out); 
+
+  /* Store lambda*/
+  MatCreateVecs(*U_out, lambda_out, NULL);
+  PetscScalar *lambda_ptr;
+  VecGetArrayWrite(*lambda_out, &lambda_ptr);
+  for (int i = 0; i < npos; i++) {
+    lambda_ptr[i] = lambda[i];
+  }
+  VecRestoreArrayWrite(*lambda_out, &lambda_ptr);
+
+  // Cleanup
+  PetscFree(lambda);
+  MatDestroy(&Q);
+  MatDestroy(&Y);
+  MatDestroy(&QtOmega);
+  MatDestroy(&Omega);
+  MatDestroy(&QtY);
+  MatDestroy(&Gram);
+  MatDestroy(&RHS);
+  MatDestroy(&X);
+  MatDestroy(&B);
+  MatDestroy(&U);
+  SVDDestroy(&svd);
+  EPSDestroy(&eps);
+  KSPDestroy(&ksp);
+  PetscRandomDestroy(&rctx);
+}
