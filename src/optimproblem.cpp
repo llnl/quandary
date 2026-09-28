@@ -1026,15 +1026,16 @@ void OptimProblem::updateGaussNewtonMatDense(){
   VecDuplicate(e, &Av);
 
   // Parallelize of comm_optim threads
-  int ncols_local = ndesign / mpisize_optim;
+  int ncols_per_rank = ndesign / mpisize_optim;
+  int ncols_local = ncols_per_rank;
   if (mpirank_optim == mpisize_optim - 1) {
-    ncols_local = ndesign - mpirank_optim * ncols_local;
+    ncols_local = ndesign - mpirank_optim * ncols_per_rank;
   }
   // printf("%d: Number of local columns = %d\n", mpirank_optim, ncols_local);
 
   // iterate over local columns
   for (int ix_local = 0; ix_local < ncols_local; ++ix_local) {
-    int ix = ix_local + mpirank_optim * ncols_local;
+    int ix = ix_local + mpirank_optim * ncols_per_rank;
     // if (mpirank_init == 0 && !quietmode) printf("%d: Eval A*e_%d / %d \n", mpirank_optim, ix, ndesign);
 
     VecSet(e, 0.0);
