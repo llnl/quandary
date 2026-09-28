@@ -571,6 +571,9 @@ int main(int argc,char **argv)
   optimctx->getStartingPoint(xinit);
   output->writeControlParams(xinit); // Write params to file
 
+  // Set point of evaluation for Gauss-Newton matrix
+  optimctx->setXevalGN(xinit);
+
   Vec v, Av;
   VecDuplicate(xinit, &v);
   VecDuplicate(xinit, &Av);
@@ -607,7 +610,6 @@ int main(int argc,char **argv)
     VecAssemblyBegin(v); VecAssemblyEnd(v);
 
     // Evaluate Av
-    VecCopy(xinit, optimctx->x_for_GN);
     MatMult(optimctx->getGaussNewtonMatShell(), v, Av);
     
     // Store Av in k-th column of A 
@@ -625,30 +627,62 @@ int main(int argc,char **argv)
     }
   }
 
-  // Now Compare Aij to Re tr(Ui^d Uj) = sum_init Ui[iinit]^T Uj[iinit]
-  double max_abs_err = 0.0;
-  for (int ix=0; ix<ndesign; ix++){
-    for (int jx=0; jx<ndesign; jx++){
-    // int jx = ix; {
-      double Aij = 0.0;
-      // VecGetValues(A_columns[jx], 1, &ix, &Aij);
-      MatGetValue(A, ix, jx, &Aij);
+  // Write the full matrix A to file in Python-friendly format
+  if (mpirank_world == 0) {
+    snprintf(filename, 254, "%s/gaussnewton_matrix.dat", output->output_dir.c_str());
+    FILE* matfile = fopen(filename, "w");
+    if (matfile) {
+      // Write header comment with dimensions
+      fprintf(matfile, "# Gauss-Newton matrix A\n");
+      fprintf(matfile, "# Dimensions: %d x %d\n", ndesign, ndesign);
 
-      double Aij_test = 0.0;
-      for (int iinit=0; iinit<ninit_local; iinit++){
-        double dot = 0.0;
-        VecDot(DU[ix][iinit], DU[jx][iinit], &dot);
-        Aij_test += dot;
+      // Write matrix row by row
+      for (int i = 0; i < ndesign; i++) {
+        for (int j = 0; j < ndesign; j++) {
+          double Aij;
+          MatGetValue(A, i, j, &Aij);
+          fprintf(matfile, "%.16e", Aij);
+          if (j < ndesign - 1) {
+            fprintf(matfile, " ");
+          }
+        }
+        fprintf(matfile, "\n");
       }
-
-      double abs_err = std::abs(Aij - Aij_test);
-      printf("A_%d,%d: linSolve = %1.14e, ReTr = %1.14e err=%1.14e\n", ix, jx, Aij, Aij_test, abs_err);
-
-      max_abs_err = std::max(abs_err, max_abs_err);
+      fclose(matfile);
+      printf("File written: %s\n", filename);
+    } else {
+      printf("ERROR: Could not open file %s for writing\n", filename);
     }
   }
 
-  printf("\n Max. absolute error = %1.14e\n", max_abs_err);
+
+  // TEST: Compare Aij to Re tr(Ui^d Uj) = sum_init Ui[iinit]^T Uj[iinit]
+  // if (true) {
+  if (false) {
+    double max_abs_err = 0.0;
+    for (int ix=0; ix<ndesign; ix++){
+      for (int jx=0; jx<ndesign; jx++){
+      // int jx = ix; {
+        double Aij = 0.0;
+        // VecGetValues(A_columns[jx], 1, &ix, &Aij);
+        MatGetValue(A, ix, jx, &Aij);
+
+        double Aij_test = 0.0;
+        for (int iinit=0; iinit<ninit_local; iinit++){
+          double dot = 0.0;
+          VecDot(DU[ix][iinit], DU[jx][iinit], &dot);
+          Aij_test += dot;
+        }
+
+        double abs_err = std::abs(Aij - Aij_test);
+        printf("A_%d,%d: linSolve = %1.14e, ReTr = %1.14e err=%1.14e\n", ix, jx, Aij, Aij_test, abs_err);
+
+        max_abs_err = std::max(abs_err, max_abs_err);
+      }
+    }
+
+    printf("\n Max. absolute error = %1.14e\n", max_abs_err);
+  }
 
 #endif
 
