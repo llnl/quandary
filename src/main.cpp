@@ -67,11 +67,13 @@ int main(int argc,char **argv)
   // Number of cores for optimization. Under development, set to 1 for now. 
   // int np_optim= config.GetIntParam("np_optim", 1);
   // np_optim= min(np_optim, mpisize_world); 
-  int np_optim= 1;
+  // int np_optim= 1;
   // Number of cores for initial condition distribution. Since this gives perfect speedup, choose maximum.
   int np_init = std::min(ninit, mpisize_world); 
   // Number of cores for Petsc: All the remaining ones. 
-  int np_petsc = mpisize_world / (np_init * np_optim);
+  // int np_petsc = mpisize_world / (np_init * np_optim);
+  int np_petsc = 1;
+  int np_optim = mpisize_world / (np_init * np_petsc);
 
   /* Sanity check for communicator sizes */ 
   if (mpisize_world % ninit != 0 && ninit % mpisize_world != 0) {
@@ -101,7 +103,7 @@ int main(int argc,char **argv)
   /* Set Petsc using petsc's communicator */
   PETSC_COMM_WORLD = comm_petsc;
 
-  if (mpirank_world == 0 && !quietmode)  std::cout<< "Parallel distribution: " << mpisize_init << " np_init  X  " << mpisize_petsc<< " np_petsc  " << std::endl;
+  if (mpirank_world == 0 && !quietmode)  std::cout<< "Parallel distribution: " << mpisize_init << " np_init  X  " << mpisize_petsc<< " np_petsc  X " << mpisize_optim << " np_optim" << std::endl;
 
   char** petsc_argv = args.petsc_argv.data();
 #ifdef WITH_SLEPC
@@ -579,53 +581,73 @@ int main(int argc,char **argv)
   VecDuplicate(xinit, &Av);
   VecZeroEntries(v);
   VecZeroEntries(Av);
-
-  // storage for Uk for all k and all initial conditions
-  optimctx->evalF(xinit);
-  Vec state;
-  VecDuplicate(timestepper->getFinalState(0), &state);
   int ndesign = optimctx->getNdesign();
-  std::vector<std::vector<Vec>> DU(ndesign);
-  for (int ix = 0; ix<ndesign; ix++){
-    DU[ix].resize(ninit_local);
-    for (int iinit=0; iinit<ninit_local; iinit++){
-      VecDuplicate(state, &DU[ix][iinit]);
-    }
-  }
 
-  // Storage for A matrix
-  Mat A;
-  MatCreate(PETSC_COMM_SELF, &A);
-  MatSetSizes(A,  PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign);
-  MatSetType(A, MATDENSE);
-  MatSetUp(A);
-  MatZeroEntries(A);
+  // // storage for Uk for all k and all initial conditions for comparison test. 
+  // optimctx->evalF(xinit);
+  // Vec state;
+  // VecDuplicate(timestepper->getFinalState(0), &state);
+  // std::vector<std::vector<Vec>> DU(ndesign);
+  // for (int ix = 0; ix<ndesign; ix++){
+  //   DU[ix].resize(ninit_local);
+  //   for (int iinit=0; iinit<ninit_local; iinit++){
+  //     VecDuplicate(state, &DU[ix][iinit]);
+  //   }
+  // }
 
-  for (int ix=0; ix<optimctx->getNdesign(); ix++) {
-    printf("Eval A*e_%d / %d \n", ix, optimctx->getNdesign());
+  // // Storage for A matrix
+  // Mat A;
+  // MatCreate(PETSC_COMM_SELF, &A);
+  // MatSetSizes(A,  PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign);
+  // MatSetType(A, MATDENSE);
+  // MatSetUp(A);
+  // MatZeroEntries(A);
 
-    // Set v to the i-th unit vector
-    VecZeroEntries(v);
-    VecSetValue(v, ix, 1.0, INSERT_VALUES);
-    VecAssemblyBegin(v); VecAssemblyEnd(v);
+  // // Number of local matrix columns for this processor
+  // int ncols_local = ndesign / mpisize_optim;
+  // // If not integer divisible, let the last processor handle the remainder
+  // if (mpirank_optim == mpisize_optim - 1) {
+  //   ncols_local = ndesign - mpirank_optim * ncols_local;
+  // }
+  // // printf("%d: Number of local columns = %d\n", mpirank_optim, ncols_local);
 
-    // Evaluate Av
-    MatMult(optimctx->getGaussNewtonMatShell(), v, Av);
+  // // iterate over local columns of the Gauss-Newton matrix
+  // for (int ix_local=0; ix_local<ncols_local; ix_local++) {
+  //   int ix = mpirank_optim * ncols_local + ix_local;
+  //   if (mpirank_optim == 0) printf("%d: Eval A*e_%d / %d \n", mpirank_optim, ix, ndesign);
+
+  //   // Set v to the i-th unit vector
+  //   VecZeroEntries(v);
+  //   VecSetValue(v, ix, 1.0, INSERT_VALUES);
+  //   VecAssemblyBegin(v); VecAssemblyEnd(v);
+
+  //   // Evaluate Av, this runs on mpisize_init ranks
+  //   MatMult(optimctx->getGaussNewtonMatShell(), v, Av);
     
-    // Store Av in k-th column of A 
-    const PetscScalar *Av_ptr;
-    VecGetArrayRead(Av, &Av_ptr);
-    for (size_t row=0; row < ndesign; row++){
-      MatSetValue(A, row, ix, Av_ptr[row], INSERT_VALUES);
-    }
-    VecRestoreArrayRead(Av, &Av_ptr);
-    MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY); MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
+  //   // Store Av in k-th column of A 
+  //   const PetscScalar *Av_ptr;
+  //   VecGetArrayRead(Av, &Av_ptr);
+  //   for (size_t row=0; row < ndesign; row++){
+  //     MatSetValue(A, row, ix, Av_ptr[row], INSERT_VALUES);
+  //   }
+  //   VecRestoreArrayRead(Av, &Av_ptr);
+  //   MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY); MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
 
-    // Store linearized final states 
-    for (int iinit=0; iinit<ninit_local; iinit++){
-      VecCopy(timestepper->getLinearizedFinalState(iinit), DU[ix][iinit]);
-    }
-  }
+  //   // // Store linearized final states for comparison test later
+  //   // for (int iinit=0; iinit<ninit_local; iinit++){
+  //   //   VecCopy(timestepper->getLinearizedFinalState(iinit), DU[ix][iinit]);
+  //   // }
+  // }
+
+  // // Need to sum up the columns of A from all optim_comm processors 
+  // PetscScalar *A_data;
+  // MatDenseGetArray(A, &A_data);
+  // int size = ndesign * ndesign;
+  // MPI_Allreduce(MPI_IN_PLACE, A_data, size, MPIU_SCALAR, MPI_SUM, comm_optim);
+  // MatDenseRestoreArray(A, &A_data);
+
+  optimctx->updateGaussNewtonMatDense();
+  Mat A = optimctx->getGaussNewtonMatDense();
 
   // Write the full matrix A to file in Python-friendly format
   if (mpirank_world == 0) {
@@ -656,33 +678,30 @@ int main(int argc,char **argv)
   }
 
 
-  // TEST: Compare Aij to Re tr(Ui^d Uj) = sum_init Ui[iinit]^T Uj[iinit]
-  // if (true) {
-  if (false) {
-    double max_abs_err = 0.0;
-    for (int ix=0; ix<ndesign; ix++){
-      for (int jx=0; jx<ndesign; jx++){
-      // int jx = ix; {
-        double Aij = 0.0;
-        // VecGetValues(A_columns[jx], 1, &ix, &Aij);
-        MatGetValue(A, ix, jx, &Aij);
+  // // TEST: Compare Aij to Re tr(Ui^d Uj) = sum_init Ui[iinit]^T Uj[iinit]
+  // double max_abs_err = 0.0;
+  // for (int ix=0; ix<ndesign; ix++){
+  //   for (int jx=0; jx<ndesign; jx++){
+  //   // int jx = ix; {
+  //     double Aij = 0.0;
+  //     // VecGetValues(A_columns[jx], 1, &ix, &Aij);
+  //     MatGetValue(A, ix, jx, &Aij);
 
-        double Aij_test = 0.0;
-        for (int iinit=0; iinit<ninit_local; iinit++){
-          double dot = 0.0;
-          VecDot(DU[ix][iinit], DU[jx][iinit], &dot);
-          Aij_test += dot;
-        }
+  //     double Aij_test = 0.0;
+  //     for (int iinit=0; iinit<ninit_local; iinit++){
+  //       double dot = 0.0;
+  //       VecDot(DU[ix][iinit], DU[jx][iinit], &dot);
+  //       Aij_test += dot;
+  //     }
 
-        double abs_err = std::abs(Aij - Aij_test);
-        printf("A_%d,%d: linSolve = %1.14e, ReTr = %1.14e err=%1.14e\n", ix, jx, Aij, Aij_test, abs_err);
+  //     double abs_err = std::abs(Aij - Aij_test);
+  //     printf("A_%d,%d: linSolve = %1.14e, ReTr = %1.14e err=%1.14e\n", ix, jx, Aij, Aij_test, abs_err);
 
-        max_abs_err = std::max(abs_err, max_abs_err);
-      }
-    }
-
-    printf("\n Max. absolute error = %1.14e\n", max_abs_err);
-  }
+  //     max_abs_err = std::max(abs_err, max_abs_err);
+  //   }
+  // }
+  // printf("\n Max. absolute error = %1.14e\n", max_abs_err);
+  
 
 #endif
 

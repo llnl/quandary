@@ -135,6 +135,10 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   VecZeroEntries(xeval_GN);
   VecAssemblyBegin(xeval_GN); VecAssemblyEnd(xeval_GN);
 
+  /* Create dense matrix for Gauss-Newton */
+  MatCreateDense(PETSC_COMM_SELF, ndesign, ndesign, ndesign, ndesign, NULL, &GaussNewtonMatDense);
+  MatZeroEntries(GaussNewtonMatDense);
+
   // Include hessian of generalized J_inf wrt U in GaussNewton Approximation (for Jtrace only)
   if (optim_solver_type == OptimSolverType::GAUSS_NEWTON){
     if (optim_target->getObjectiveType() == ObjectiveType::JTRACE) {
@@ -161,7 +165,8 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   EPSSetProblemType(eps_GN, EPS_HEP); // Hermitian 
   EPSSetWhichEigenpairs(eps_GN, EPS_LARGEST_REAL); // largest eigenvalues
   neigvals = mastereq->getDim()*mastereq->getDim() - 1; 
-  ncv = neigvals + 2; // Max Krylov dimension. How to set??
+  // ncv = neigvals + 2; // Max Krylov dimension. How to set??
+  ncv = 2*neigvals ; // Max Krylov dimension. How to set??
   EPSSetDimensions(eps_GN, neigvals, ncv, PETSC_DEFAULT);
   EPSSetTolerances(eps_GN, eps_tol, eps_maxiter);
   EPSSetFromOptions(eps_GN);
@@ -179,6 +184,7 @@ OptimProblem::~OptimProblem() {
   VecDestroy(&x_GN);
   VecDestroy(&xprev);
 
+  MatDestroy(&GaussNewtonMatDense);
   MatDestroy(&GaussNewtonMatShell);
   VecDestroy(&xeval_GN);
   KSPDestroy(&ksp_GN);
@@ -668,8 +674,8 @@ void OptimProblem::solveGaussNewtonEPS(Vec xinit, const Vec b, Vec Ainv_b){
   PetscScalar* tmp_data;
   VecGetArray(tmp, &tmp_data);
   for (int i=0; i<evals.size(); i++) {
-    if (evals[i] > evals_cutoff) {
-      tmp_data[i] /= evals[i];
+    if (evals[i] > eps_evals_cutoff) {
+      tmp_data[i] /= (evals[i] + eps_damping);
     } else {
       tmp_data[i] = 0.0;
     }
@@ -704,7 +710,15 @@ std::vector<double> OptimProblem::computeGaussNewtonEvals(Vec xinit, Mat* evecs_
   VecCopy(xinit, xeval_GN);
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
 
-  // CAREFUL: EPS solver might need a reset if called multiple times!?
+  // Update EPS for a fresh solve on the new xeval_GN. 
+  if (!GN_densemat) { 
+    // use MatShell 
+    EPSSetOperators(eps_GN, GaussNewtonMatShell, NULL);
+  } else {
+    // use dense Matrix representation of the Gauss-Newton matrix
+    updateGaussNewtonMatDense(); // does N2-1 applications of the MatShell
+    EPSSetOperators(eps_GN, GaussNewtonMatDense, NULL);
+  }
 
   // Solve the eigenvalue problem for the Gauss-Newton matrix
   GN_MatVec_counter = 0;
@@ -730,14 +744,13 @@ std::vector<double> OptimProblem::computeGaussNewtonEvals(Vec xinit, Mat* evecs_
 
     // Retrieve the eigenvalue (is real) and eigenvector
     EPSGetEigenpair(eps_GN, i, &evals_re[i], NULL, evec_re[i], NULL);
-    // EPSGetEigenvalue(eps, i, &evals_re[i], NULL);
 
-    // // Estimate the errror (needs one more application of A)
-    // double error = 0.0;
-    // EPSComputeError(eps,i,EPS_ERROR_RELATIVE,&error);
-    // if (error > 1e-12) {
-    //     if (mpirank_world==0) printf("WARNING: Relative error of eigenpair %d is large (error=%1.4e)\n", i, error);
-    // }
+    // Estimate the errror (needs one more application of A)
+    double error = 0.0;
+    EPSComputeError(eps_GN,i,EPS_ERROR_RELATIVE,&error);
+    if (error > eps_tol) {
+      if (mpirank_world==0) printf("ERROR: Relative error of eigenpair %d is large (error=%1.4e)\n", i, error);
+    }
   }
 
   // Resize to the number of converged eigenvalues. 
@@ -836,8 +849,8 @@ void OptimProblem::solve(Vec xinit) {
         VecNorm(G, NORM_2, &gnorm);
 
         // Precondition the gradient: solve the Gauss-Newton system A(x)*Gprec = G via KSP
-        solveGaussNewtonKSP(x_GN, G, Gprec);
-        // solveGaussNewtonEPS(x_GN, G, Gprec);
+        // solveGaussNewtonKSP(x_GN, G, Gprec);
+        solveGaussNewtonEPS(x_GN, G, Gprec);
         // VecCopy(G, Gprec); // Steepest descent, no preconditioner
 
         // Backtracking Armijo line search along -Gprec, projected onto the bound constraints
@@ -1001,4 +1014,52 @@ PetscErrorCode TaoEvalGradient(Tao /*tao*/, Vec x, Vec G, void*ptr){
   ctx->evalGradF(x, G, false);
   
   return 0;
+}
+
+
+void OptimProblem::updateGaussNewtonMatDense(){
+  MatZeroEntries(GaussNewtonMatDense);
+
+  Vec e;
+  VecDuplicate(xeval_GN, &e);
+  Vec Av;
+  VecDuplicate(e, &Av);
+
+  // Parallelize of comm_optim threads
+  int ncols_local = ndesign / mpisize_optim;
+  if (mpirank_optim == mpisize_optim - 1) {
+    ncols_local = ndesign - mpirank_optim * ncols_local;
+  }
+  // printf("%d: Number of local columns = %d\n", mpirank_optim, ncols_local);
+
+  // iterate over local columns
+  for (int ix_local = 0; ix_local < ncols_local; ++ix_local) {
+    int ix = ix_local + mpirank_optim * ncols_local;
+    // if (mpirank_init == 0 && !quietmode) printf("%d: Eval A*e_%d / %d \n", mpirank_optim, ix, ndesign);
+
+    VecSet(e, 0.0);
+    VecSetValue(e, ix, 1.0, INSERT_VALUES);
+    VecAssemblyBegin(e);
+    VecAssemblyEnd(e);
+    // applyGaussNewtonMatShell(GaussNewtonMatDense, e, Av);
+    MatMult(this->getGaussNewtonMatShell(), e, Av);
+    for (int jx = 0; jx < ndesign; ++jx) {
+      PetscScalar val;
+      VecGetValues(Av, 1, &jx, &val);
+      MatSetValue(GaussNewtonMatDense, jx, ix, val, INSERT_VALUES);
+    }
+  }
+  VecDestroy(&e);
+  VecDestroy(&Av);
+
+  MatAssemblyBegin(GaussNewtonMatDense, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(GaussNewtonMatDense, MAT_FINAL_ASSEMBLY);
+
+  // Allreduce to combine contributions from all MPI ranks
+  PetscScalar *data;
+  MatDenseGetArray(GaussNewtonMatDense, &data);
+  int size = ndesign * ndesign;
+  MPI_Allreduce(MPI_IN_PLACE, data, size, MPIU_SCALAR, MPI_SUM, comm_optim);
+  MatDenseRestoreArray(GaussNewtonMatDense, &data);
+
 }

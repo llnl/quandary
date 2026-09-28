@@ -116,11 +116,14 @@ class OptimProblem {
 
   // EPS eigenvalue solver
   EPS eps_GN;
-  PetscReal eps_tol = 1e-2; ///< Tolerance for EPS eigenvalue solver
+  bool GN_densemat = false; ///< Flag indicating if the dense matrix representation of the Gauss-Newton matrix is used
+  Mat GaussNewtonMatDense; ///< Dense matrix representation of the Gauss-Newton matrix
+  PetscReal eps_tol = 1e-4; ///< Tolerance for EPS eigenvalue solver
   PetscInt eps_maxiter = 10; ///< Maximum number of iterations for EPS eigenvalue solver
-  double evals_cutoff = 1e-5; ///< Cutoff for eigenvalues of the Gauss-Newton matrix
+  double eps_evals_cutoff = 1e-5; ///< Cutoff for eigenvalues of the Gauss-Newton matrix
+  double eps_damping = 1e-3; ///< Damping for eigenvalues of the Gauss-Newton matrix
   int neigvals; ///< Number of eigenvalues to compute (=N^2-1)
-  int ncv; ///< Number of Lanczos vectors to use in EPS solver. Currently = neigvals + 2. HOW TO CHOOSE?? 
+  int ncv; ///< Number of Lanczos vectors to use in EPS solver. HOW TO CHOOSE?? 
 
   public: 
     Vec xlower, xupper; ///< Lower and upper bounds for optimization variables
@@ -161,6 +164,7 @@ class OptimProblem {
   int getMaxIter()     { return maxiter; };
   OptimTarget* getOptimTarget() { return optim_target; };
   Mat getGaussNewtonMatShell() { return GaussNewtonMatShell; };
+  Mat getGaussNewtonMatDense() { return GaussNewtonMatDense; };
   bool getQuietmode() { return quietmode; };
 
   int getOutputOptimizationStride() { return output_optimization_stride; };
@@ -210,6 +214,12 @@ class OptimProblem {
    * @param[out] Av Resulting vector after applying the linearized forward and adjoint operators
    */
   static void applyGaussNewtonMatShell(Mat A, const Vec v, Vec Av);
+
+  /**
+   * @brief Updates the dense full  Gauss-Newton matrix based on the current point of evaluation xeval_GN by calling applyGaussNewtonMatShell on each unit vectoor.
+   * @note This operation can be expensive as it involves N^2-1 applications of the MatShell.
+   */
+  void updateGaussNewtonMatDense();
 
   /**
    * @brief Solves the Gauss-Newton linear system A(x) v = b for v using CG iterations
