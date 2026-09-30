@@ -3,7 +3,7 @@
 #flux: -N 1
 #flux: -q pbatch
 #flux: -B rqspam
-#flux: -t 1h
+#flux: -t 15m
 
 export HSA_XNACK=1
 
