@@ -149,6 +149,7 @@ enum class RunType {
   OPTIMIZATION, ///< Runs optimization iterations
   EVALCONTROLS, ///< Only evaluates the current control pulses (no simulation)
   GAUSSNEWTON_LS, ///< Solves the Gauss-Newton linear system
+  GAUSSNEWTON_EVALS, ///< Computes the eigenvalues of the Gauss-Newton matrix
   NONE          ///< Don't run anything
 };
 
@@ -158,6 +159,7 @@ const std::map<std::string, RunType> RUN_TYPE_MAP = {
     {"optimization", RunType::OPTIMIZATION},
     {"evalcontrols", RunType::EVALCONTROLS},
     {"gaussnewton_ls", RunType::GAUSSNEWTON_LS},
+    {"gaussnewton_evals", RunType::GAUSSNEWTON_EVALS},
     {"none", RunType::NONE}
 };
 

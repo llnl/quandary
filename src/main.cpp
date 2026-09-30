@@ -233,6 +233,64 @@ int main(int argc,char **argv)
     output->writeControls(xinit, mastereq, config.getTotalTime(), config.getDt(), timestepper->getMinTimestepSize()); // Write the control pulses 
   } 
 
+  /* Test Gauss-Newton eigenvalue computation */
+  if (config.getRuntype() == RunType::GAUSSNEWTON_EVALS) {
+    if (mpirank_world == 0 && !quietmode) printf("\nStarting Gauss-Newton eigenvalue computation...\n");
+    optimctx->getStartingPoint(xinit);
+
+    Mat evecs;
+    std::vector<double> evals = optimctx->computeGaussNewtonEvals(xinit, &evecs);
+    // Print the eigenvalues to file:
+    snprintf(filename, 254, "%s/eigenvalues.dat", output->output_dir.c_str());
+    std::ofstream evalfile(filename);
+    if (evalfile.is_open()){
+      for (int i=0; i<evals.size(); i++) {
+        evalfile << evals[i] << "\n";
+      }
+      evalfile.close();
+      if (mpirank_world == 0 && !quietmode) printf("Eigenvalues written to file: %s\n", filename);
+    }
+    else std::cerr << "Unable to open " << filename;
+
+    // Print all eigenvectors to file
+    snprintf(filename, 254, "%s/eigenvectors.dat", output->output_dir.c_str());
+    std::ofstream evecfile(filename);
+    if (evecfile.is_open()){
+      PetscInt nrows, ncols;
+      MatGetSize(evecs, &nrows, &ncols);
+      for (PetscInt i = 0; i < nrows; i++) {
+        for (PetscInt j = 0; j < ncols; j++) {
+          PetscScalar val;
+          MatGetValues(evecs, 1, &i, 1, &j, &val);
+          evecfile << PetscRealPart(val) << " ";
+        }
+        evecfile << "\n";
+      }
+      evecfile.close();
+      if (mpirank_world == 0 && !quietmode) printf("Eigenvectors written to file: %s\n", filename);
+    }
+    else std::cerr << "Unable to open " << filename;
+
+    // // Test if evecs are orthonormal
+    // Mat evecsT;
+    // MatTranspose(evecs, MAT_INITIAL_MATRIX, &evecsT);
+    // Mat product;
+    // MatMatMult(evecsT, evecs, MAT_INITIAL_MATRIX, 1.0, &product);
+    // // Check if product is approximately the identity matrix
+    // PetscInt nrows, ncols;
+    // MatGetSize(product, &nrows, &ncols);
+    // for (PetscInt i = 0; i < nrows; i++) {
+    //   for (PetscInt j = 0; j < ncols; j++) {
+    //     PetscScalar val;
+    //     MatGetValues(product, 1, &i, 1, &j, &val);
+    //     if (mpirank_world == 0) printf("product(%d,%d) = %1.14e\n", i, j, PetscRealPart(val));
+    //   }
+    // }
+    // MatDestroy(&evecsT);
+    // MatDestroy(&product);
+    MatDestroy(&evecs);
+
+  }
 
   /* Test Gauss-Newton linear system solve */
   if (config.getRuntype() == RunType::GAUSSNEWTON_LS) {
@@ -646,7 +704,9 @@ int main(int argc,char **argv)
   // MPI_Allreduce(MPI_IN_PLACE, A_data, size, MPIU_SCALAR, MPI_SUM, comm_optim);
   // MatDenseRestoreArray(A, &A_data);
 
+  if (mpirank_world==0) printf("Updating Gauss-Newton matrix dense representation...\n");
   optimctx->updateGaussNewtonMatDense();
+  if (mpirank_world==0) printf("Done.\n");
   Mat A = optimctx->getGaussNewtonMatDense();
 
   // Write the full matrix A to file in Python-friendly format

@@ -164,12 +164,30 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   EPSSetOperators(eps_GN, GaussNewtonMatShell, NULL);
   EPSSetProblemType(eps_GN, EPS_HEP); // Hermitian 
   EPSSetWhichEigenpairs(eps_GN, EPS_LARGEST_REAL); // largest eigenvalues
+  double eps_thresh = eps_evals_cutoff;
+  EPSSetThreshold(eps_GN, eps_thresh, PETSC_FALSE);  // absolute threshold
   neigvals = mastereq->getDim()*mastereq->getDim() - 1; 
   // ncv = neigvals + 2; // Max Krylov dimension. How to set??
   ncv = 2*neigvals ; // Max Krylov dimension. How to set??
   EPSSetDimensions(eps_GN, neigvals, ncv, PETSC_DEFAULT);
   EPSSetTolerances(eps_GN, eps_tol, eps_maxiter);
   EPSSetFromOptions(eps_GN);
+
+  // Notes from Slepc documentation:
+  // The characteristics of the problem can be determined with the functions EPSIsGeneralized(), EPSIsHermitian(),EPSIsPositive(), and EPSIsStructured().
+
+  // EPSSetThreshold() as alternative to EPSSetWhichEigenpairs! This function internally calls EPSSetStoppingTest() to set a special stopping test based on the threshold, where eigenvalues are computed in sequence until one of the computed eigenvalues is below the threshold thres (in magnitude). This is the interpretation in case of searching for largest eigenvalues in magnitude, see EPSSetWhichEigenpairs().
+
+  // The eigenvectors are normalized so that they have a unit 2-norm,
+
+  // In the case of non-Hermitian problems, SLEPc provides the alternative of retrieving an orthonormal basis of an invariant subspace instead of getting individual eigenvectors. This is done with the following function:
+  // EPSGetInvariantSubspace(EPS eps,Vec v[]);
+  // This is sufficient in some applications and is safer from the numerical point of view.
+
+  // Error estimates can be displayed during execution of the solution algorithm, as a way of monitoring convergence. There are several such monitors available. The user can activate them via the options database (see examples below),orwithinthecodewith EPSMonitorSet(). Bydefault,thesolversrunsilentlywithoutdisplayinginformation about the iteration. Also, application programmers can provide their own routines to perform the monitoring by using the function EPSMonitorSet().
+  // command line: -eps_monitor or -eps_monitor_all
+
+  // forlargevaluesof nev,itmaybe enough setting ncvtobeslightlylargerthan nev.
 }
 
 
@@ -665,7 +683,7 @@ void OptimProblem::solveGaussNewtonEPS(Vec xinit, const Vec b, Vec Ainv_b){
   //   if (mpirank_world == 0) printf("Eigenvalue %d: %1.14e\n", i, evals[i]);
   // }
 
-  // Project the rhs onto evals: b_proj = evals^Tb
+  // Project the rhs onto evals: b_proj = evecs^Tb
   Vec tmp;
   MatCreateVecs(evecs, &tmp, NULL);
   MatMultTranspose(evecs, b, tmp);
