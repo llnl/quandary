@@ -20,8 +20,19 @@ def plot_objective(filenames):
     if isinstance(filenames, str):
         filenames = [filenames]
 
-    # Create figure with three subplots
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 14))
+    # First pass: check if inner residual column exists (column 13 = index 12)
+    has_inner_residual = False
+    for filename in filenames:
+        data = np.loadtxt(filename, skiprows=1)
+        if data.ndim == 2 and data.shape[1] >= 13:
+            has_inner_residual = True
+            break
+
+    # Create figure with three or four subplots depending on data availability
+    if has_inner_residual:
+        fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(10, 18))
+    else:
+        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 14))
 
     # First pass: find the maximum number of data points across all files
     max_points = 0
@@ -44,28 +55,43 @@ def plot_objective(filenames):
         tikhonov = data[:, 6]    # Column 7 (1-indexed) = index 6 (0-indexed)
         ksp_iters = data[:, 11].astype(int)
 
+        # Extract inner residual if available
+        if has_inner_residual and data.shape[1] >= 13:
+            inner_residual = data[:, 12]  # Column 13 (1-indexed) = index 12 (0-indexed)
+        else:
+            inner_residual = None
+
         # Extract label from filename (remove path and extension)
         import os
         label = os.path.basename(filename).replace('.dat', '').replace('optim_history_', '')
 
         # Top subplot: Objective and Tikhonov (log scale)
-        ax1.plot(iteration, objective, 'o-', linewidth=2, markersize=4,
-                label=f'{label} (Obj)', color=f'C{idx}', markevery=marker_every)
-        ax1.plot(iteration, tikhonov, 's--', linewidth=1.5, markersize=3,
-                label=f'{label} (Tikh)', color=f'C{idx}', alpha=0.7, markevery=marker_every)
-
-        # Middle subplot: Infidelity (log scale)
         # Use alternating line styles and semi-transparency for better distinguishability
         linestyles = ['-', '--', '-.', ':']
+        ax1.plot(iteration, objective, marker='o', linestyle=linestyles[idx % len(linestyles)],
+                linewidth=2, markersize=4, alpha=0.7,
+                label=f'{label} (Obj)', color=f'C{idx}', markevery=marker_every)
+        ax1.plot(iteration, tikhonov, marker='s', linestyle=linestyles[idx % len(linestyles)],
+                linewidth=1.5, markersize=3, alpha=0.5,
+                label=f'{label} (Tikh)', color=f'C{idx}', markevery=marker_every)
+
+        # Middle subplot: Infidelity (log scale)
+        # Use same linestyles as defined above
         ax2.plot(iteration, infidelity, marker='o', linestyle=linestyles[idx % len(linestyles)],
                 linewidth=2, markersize=4, alpha=0.7,
                 label=label, color=f'C{idx}', markevery=marker_every)
 
-        # Bottom subplot: KSP iterations (linear scale)
+        # Third subplot: KSP iterations (linear scale)
         # Use alternating line styles and semi-transparency for better distinguishability
         ax3.plot(iteration, ksp_iters, marker='o', linestyle=linestyles[idx % len(linestyles)],
                 linewidth=2, markersize=4, alpha=0.7,
                 label=label, color=f'C{idx}', markevery=marker_every)
+
+        # Fourth subplot: Inner residual (linear scale) - only if data available
+        if has_inner_residual and inner_residual is not None:
+            ax4.plot(iteration, inner_residual, marker='o', linestyle=linestyles[idx % len(linestyles)],
+                    linewidth=2, markersize=4, alpha=0.7,
+                    label=label, color=f'C{idx}', markevery=marker_every)
 
     # Format top subplot
     ax1.set_xlabel('Iteration', fontsize=12)
@@ -83,12 +109,20 @@ def plot_objective(filenames):
     ax2.legend(fontsize=10)
     ax2.set_yscale('log')
 
-    # Format bottom subplot
+    # Format third subplot
     ax3.set_xlabel('Iteration', fontsize=12)
     ax3.set_ylabel('KSP iterations', fontsize=12)
     ax3.set_title('KSP Iterations per Gauss-Newton Step', fontsize=14)
     ax3.grid(True, alpha=0.3)
     ax3.legend(fontsize=10)
+
+    # Format fourth subplot (Inner residual - linear scale) - only if data available
+    if has_inner_residual:
+        ax4.set_xlabel('Iteration', fontsize=12)
+        ax4.set_ylabel('Relative Inner Residual', fontsize=12)
+        ax4.set_title('Relative Inner Residual ||Lv + ∇_U J|| / ||∇_U J|| (Linear Scale)', fontsize=14)
+        ax4.grid(True, alpha=0.3)
+        ax4.legend(fontsize=10)
 
     plt.tight_layout()
 

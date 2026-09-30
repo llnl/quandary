@@ -111,7 +111,7 @@ enum class ObjectiveType {
   JMEASURE,   ///< Pure state measurement: \f$\text{Tr}(O_m \rho(T))\f$ for observable \f$O_m\f$
   JGEODESIC, ///< Length of the Geodesic on the Riemannian manifold: \f$d(\rho_{\text{target}}, \rho(T))\f$
   JGEODESIC_PHASEFREE ///< Phase-free Riemann distance: \f$d(\rho_{\text{target}}, \rho(T))\f$ ignoring global phase
-  
+
 };
 
 const std::map<std::string, ObjectiveType> OBJECTIVE_TYPE_MAP = {

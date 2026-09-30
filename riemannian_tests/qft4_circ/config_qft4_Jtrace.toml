@@ -1,8 +1,10 @@
 [system]
 nlevels = [2, 2, 2, 2]
 nessential = [2, 2, 2, 2]
-total_time = 300.0
-ntime = 3000
+total_time = 400.0
+ntime = 4444
+# total_time = 300.0
+# ntime = 3326
 #dt = 0.09047044632086852
 transition_frequency = [4.94, 5.0, 5.06, 5.12]
 selfkerr = [0.0, 0.0, 0.0, 0.0]
@@ -22,19 +24,21 @@ initial_condition = { type = "basis" }
 
 [control]
 control_only_p_drive = false
-parameterization = { type = "spline", num = 69 }
+# parameterization = { type = "spline", num = 69 }
+parameterization = { type = "spline", num = 135 }
 carrier_frequency = [
-  { subsystem = 0, value = [0.09041523150627062, 0.030001431826955, -0.030001431826955832, -0.09041523150627152] },
-  { subsystem = 1, value = [0.09041523150627062, 0.030001431826955, -0.030001431826955832, -0.09041523150627152] },
-  { subsystem = 2, value = [0.09041523150627062, 0.030001431826955, -0.030001431826955832, -0.09041523150627152] },
-  { subsystem = 3, value = [0.09041523150627062, 0.030001431826955, -0.030001431826955832, -0.09041523150627152] },
+  { subsystem = 0, value = [0.09041523150627062, -0.030001431826955832, -0.09041523150627152] },
+  { subsystem = 1, value = [0.030001431826955,   -0.030001431826955832, -0.09041523150627152] },
+  { subsystem = 2, value = [0.09041523150627062, 0.030001431826955,     -0.030001431826955832] },
+  { subsystem = 3, value = [0.09041523150627062, 0.030001431826955,     -0.09041523150627152] },
 ]
+
 #initialization = {type="file", filename="params.dat"}
 initialization = [
-  { subsystem = 0, type = "random", amplitude = 0.002 },
-  { subsystem = 1, type = "random", amplitude = 0.002 },
-  { subsystem = 2, type = "random", amplitude = 0.002 },
-  { subsystem = 3, type = "random", amplitude = 0.002 },
+  { subsystem = 0, type = "random", amplitude = 0.002357 },
+  { subsystem = 1, type = "random", amplitude = 0.002357 },
+  { subsystem = 2, type = "random", amplitude = 0.002357 },
+  { subsystem = 3, type = "random", amplitude = 0.002357 },
 ]
 
 amplitude_bound = 1.0e12
@@ -44,15 +48,25 @@ zero_boundary_condition = false
 target = { type = "gate", gate_type = "qft", gate_rot_freq = [0.0, 0.0, 0.0, 0.0] }
 objective = "Jtrace"
 tolerance = { grad_abs = 1e-06, grad_rel = 1e-05, final_cost = 1e-08, infidelity = 1e-06 }
-maxiter = 100
+maxiter = 300
 tikhonov = { coeff = 1e-5, use_x0 = false }
 penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0}
+
 solver_type = "gauss_newton"
-gn_ksp_rtol = 1e-4
-gn_ksp_damping = 1e-2
-gn_ksp_solution_norm_threshold = 1.0
-gn_ksp_maxiter = 100
+gn_ksp_damping = 1e-4
+gn_ksp_solution_norm_threshold = 10.0
+
+# std cg settings
+# gn_ksp_maxiter = 100
+# gn_ksp_warmstart = false
+# gn_ksp_rtol = 0.1
+# gn_ksp_type = "cg"
+# gn_minres_qlp = false
+
+# minres-qlp settings
+gn_ksp_maxiter = 150
 gn_ksp_warmstart = false
+gn_ksp_rtol = 1e-4
 gn_ksp_type = "minres"
 gn_minres_qlp = true 
 

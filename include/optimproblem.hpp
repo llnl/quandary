@@ -101,12 +101,14 @@ class OptimProblem {
   MasterEq* mastereq; ///< Pointer to master equation solver
 
   Mat GaussNewtonMatShell; ///< MatShell for applying Gauss-Newtonmatrix A=L^L to a vector
-  Vec xeval_GN; ///< Point of evaluation for Gauss-Newtonapply A 
+  Vec xeval_GN; ///< Point of evaluation for Gauss-Newtonapply A
   int GN_MatVec_counter; ///< Counter for Gauss-Newton MatVec multiplications
-  Vec x_GN; ///< Current iterate for the GN optimization. Holds solution after finished. 
+  Vec x_GN; ///< Current iterate for the GN optimization. Holds solution after finished.
   int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton linear solve
   bool nonlinear_forward_valid; ///< True once the nonlinear forward has been solved and stored for the current xeval_GN, reset whenever xeval_GN changes
   bool includeHessUJ = false; ///< Flag to include Hessian of J(U) in the terminal adjoint condition
+  Vec state_gradient; ///< State-space gradient ∂J/∂U(T) for inner residual computation
+  double inner_residual_last; ///< Relative inner residual R = ||Lv + ∇_U J|| / ||∇_U J|| from most recent Gauss-Newton solve
 
   // Options for the Armijo line search 
   const double c1 = 1e-4;    //< Sufficient decrease parameter
@@ -209,15 +211,27 @@ class OptimProblem {
   void evalLinearizedForward(const Vec x, const Vec v);
 
   /**
-   * @brief MatMult operation for MatShell Gauss-Newton Av = L*Lv: Linearized forward + adjoint operator. 
-   * 
+   * @brief MatMult operation for MatShell Gauss-Newton Av = L*Lv: Linearized forward + adjoint operator.
+   *
    * The point of evaluation xeval_GN must be set correctly in the OptimProblem before calling this.
-   * 
+   *
    * @param[in] v Direction vector
    * @param[out] Av Resulting vector after applying the linearized forward and adjoint operators
    */
   static void applyGaussNewtonMatShell(Mat A, const Vec v, Vec Av);
 
+  /**
+   * @brief Computes the relative inner residual R = ||Lv + ∇_U J|| / ||∇_U J||
+   *
+   * Applies the linearized forward operator L to the Gauss-Newton step v, accumulates
+   * over initial conditions, and computes the relative residual normalized by the
+   * state-space gradient norm. This gives a dimensionless measure of how well the
+   * Gauss-Newton step aligns with the descent direction in state space.
+   *
+   * @param[in] v Gauss-Newton step (solution from KSP)
+   * @return double Relative inner residual (dimensionless)
+   */
+  double computeInnerResidual(const Vec v);
 
   /**
    * @brief Solves the Gauss-Newton linear system A(x) v = b for v using CG iterations

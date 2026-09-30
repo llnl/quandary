@@ -18,6 +18,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   /* Reset */
   objective = 0.0;
   ksp_iters_last = 0;
+  inner_residual_last = 0.0;
   nonlinear_forward_valid = false;
 
   /* Store communicators */
@@ -47,6 +48,11 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   VecDuplicate(optim_target->getInitialState(), &rho_t0_bar);
   VecZeroEntries(rho_t0_bar);
   VecAssemblyBegin(rho_t0_bar); VecAssemblyEnd(rho_t0_bar);
+
+  /* Allocate state gradient vector for inner residual computation */
+  VecDuplicate(optim_target->getInitialState(), &state_gradient);
+  VecZeroEntries(state_gradient);
+  VecAssemblyBegin(state_gradient); VecAssemblyEnd(state_gradient);
 
   /* Get weights for the objective function (weighting the different initial conditions */
   obj_weights = config.getOptimWeights();
@@ -492,13 +498,16 @@ void OptimProblem::evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles){
   double obj_cost_re_bar, obj_cost_im_bar;
   optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
 
+  /* Reset state gradient vector */
+  VecZeroEntries(state_gradient);
+
   /* Solve adjoint equations for all initial conditions . */
   for (int iinit = 0; iinit < ninit_local; iinit++) {
     int iinit_global = mpirank_init * ninit_local + iinit;
 
     /* Recompute the initial state and target */
     optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
-   
+
     /* Reset adjoint */
     VecZeroEntries(rho_t0_bar);
 
@@ -508,15 +517,38 @@ void OptimProblem::evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles){
     // Derivative of storing final unitary (adds a column of U_final_bar into rho_t0_bar)
     optim_target->storeFinalUnitaryColumn_diff(iinit_global, rho_t0_bar);
 
+    /* Accumulate Euclidean state gradient (will project to Riemannian after loop) */
+    VecAXPY(state_gradient, 1.0, rho_t0_bar);
+
     /* Derivative of time-stepping */
     timestepper->solveAdjointODE(iinit, rho_t0_bar, obj_weights[iinit_global] * gamma_penalty_leakage, obj_weights[iinit_global]*gamma_penalty_weightedcost, obj_weights[iinit_global]*gamma_penalty_dpdm, obj_weights[iinit_global]*gamma_penalty_energy);
 
     /* Add to optimizers's gradient */
     VecAXPY(G, 1.0, timestepper->getReducedGradient());
-  } // end of initial condition loop 
+  } // end of initial condition loop
+
+  /* Sum up the Euclidean state gradient across all initial condition processors */
+  VecAssemblyBegin(state_gradient);
+  VecAssemblyEnd(state_gradient);
+  PetscInt state_grad_size;
+  VecGetLocalSize(state_gradient, &state_grad_size);
+  PetscScalar* state_grad_arr;
+  VecGetArray(state_gradient, &state_grad_arr);
+  double* mystate_grad = new double[state_grad_size];
+  for (int i = 0; i < state_grad_size; i++) {
+    mystate_grad[i] = PetscRealPart(state_grad_arr[i]);
+  }
+  MPI_Allreduce(mystate_grad, state_grad_arr, state_grad_size, MPI_DOUBLE, MPI_SUM, comm_init);
+  delete[] mystate_grad;
+  VecRestoreArray(state_gradient, &state_grad_arr);
+
+  /* Project to Riemannian gradient for JTRACE objective */
+  if (optim_target->getObjectiveType() == ObjectiveType::JTRACE) {
+    optim_target->projectGradientToRiemannianManifold(state_gradient);
+  }
 
   /* Sum up the gradient from all initial condition processors */
-  PetscScalar* grad; 
+  PetscScalar* grad;
   VecGetArray(G, &grad);
   for (int i=0; i<ndesign; i++) {
     mygrad[i] = grad[i];
@@ -562,6 +594,52 @@ void OptimProblem::evalLinearizedForward(const Vec x, const Vec v){
     timestepper->solveLinearizedODE(iinit, v, storeLinearizedStates); 
   }
   nonlinear_forward_valid = true;
+}
+
+double OptimProblem::computeInnerResidual(const Vec v) {
+  // Compute ||Lv - (-∇_U J)|| / ||-∇_U J|| = ||Lv + ∇_U J|| / ||∇_U J||
+  // where L is the linearized forward operator
+  // Note: state_gradient stores the adjoint terminal condition which is -∇_U J
+
+  // Apply linearized forward operator L to v
+  evalLinearizedForward(xeval_GN, v);
+
+  // Accumulate Lv across all initial conditions
+  Vec residual;
+  VecDuplicate(state_gradient, &residual);
+  VecZeroEntries(residual);
+
+  for (int iinit = 0; iinit < ninit_local; iinit++) {
+    Vec lin_final_state = timestepper->getLinearizedFinalState(iinit);
+    VecAXPY(residual, obj_weights[iinit], lin_final_state);  // residual += weight * Lv_i
+  }
+
+  // Sum across initial condition processors
+  VecAssemblyBegin(residual);
+  VecAssemblyEnd(residual);
+  PetscInt residual_size;
+  VecGetLocalSize(residual, &residual_size);
+  PetscScalar* residual_arr;
+  VecGetArray(residual, &residual_arr);
+  double* myresidual = new double[residual_size];
+  for (int i = 0; i < residual_size; i++) {
+    myresidual[i] = PetscRealPart(residual_arr[i]);
+  }
+  MPI_Allreduce(myresidual, residual_arr, residual_size, MPI_DOUBLE, MPI_SUM, comm_init);
+  delete[] myresidual;
+  VecRestoreArray(residual, &residual_arr);
+
+  // Subtract state gradient: Lv - (-∇_U J) = Lv + ∇_U J
+  VecAXPY(residual, -1.0, state_gradient);
+
+  // Compute norms
+  double numerator, denominator;
+  VecNorm(residual, NORM_2, &numerator);
+  VecNorm(state_gradient, NORM_2, &denominator);
+
+  VecDestroy(&residual);
+
+  return (denominator > 1e-14) ? numerator / denominator : 0.0;
 }
 
 void OptimProblem::applyGaussNewtonMatShell(Mat A, const Vec v, Vec Av){
@@ -731,10 +809,14 @@ void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b, int o
   KSPGetIterationNumber(ksp_GN, &iters);
   KSPGetResidualNorm(ksp_GN, &rnorm);
   ksp_iters_last = iters;
+
+  // Compute inner residual ||Lv + ∇_U J|| / ||∇_U J||
+  inner_residual_last = computeInnerResidual(Ainv_b);
+
   if (mpirank_world == 0 && !quietmode) {
     KSPType ksp_type_used;
     KSPGetType(ksp_GN, &ksp_type_used);
-    printf("Gauss-Newton %s stats: iterations = %d, MatVec counter = %d, residual norm = %1.14e\n", ksp_type_used, iters, GN_MatVec_counter, rnorm);
+    printf("Gauss-Newton %s stats: iterations = %d, MatVec counter = %d, residual norm = %1.14e, inner residual = %1.14e\n", ksp_type_used, iters, GN_MatVec_counter, rnorm, inner_residual_last);
   }
 
   // Save solution for warm-starting next iteration
@@ -1074,8 +1156,8 @@ bool OptimProblem::monitor(int iter, double f, double gnorm, double deltax){
 
   /* Every <output_optimization_stride> iterations: Output of optimization history */
   if (iter % getOutputOptimizationStride() == 0 || lastIter) {
-    // Add to optimization history file 
-    getOutput()->writeOptimFile(iter, f, gnorm, deltax, F_avg, obj_cost, obj_regul, obj_penal_leakage, obj_penal_dpdm, obj_penal_energy, obj_penal_variation, obj_penal_weightedcost, ksp_iters_last);
+    // Add to optimization history file
+    getOutput()->writeOptimFile(iter, f, gnorm, deltax, F_avg, obj_cost, obj_regul, obj_penal_leakage, obj_penal_dpdm, obj_penal_energy, obj_penal_variation, obj_penal_weightedcost, ksp_iters_last, inner_residual_last);
     // Screen output 
     if (getMPIrank_world() == 0) {
       std::cout<< iter <<  "  " << std::scientific<<std::setprecision(14) << obj_cost << " + " << obj_regul << " + " << obj_penal_leakage << " + " << obj_penal_dpdm << " + " << obj_penal_energy << " + " << obj_penal_variation << " + " << obj_penal_weightedcost;
