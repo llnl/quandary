@@ -16,9 +16,10 @@
  * the unitary gate matrix (target unitary transformation).
  */
 class Gate {
-  protected:
+  public:
     Mat V_re, V_im; ///< Real and imaginary parts of V_target, non-vectorized, essential levels only.
 
+  protected:
     std::vector<size_t> nessential; ///< Number of essential levels per oscillator.
     std::vector<size_t> nlevels; ///< Total number of levels per oscillator.
     int mpirank_petsc; ///< MPI rank in PETSc communicator.

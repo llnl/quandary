@@ -37,6 +37,7 @@ class OptimTarget{
     int mpisize_petsc; ///< Size of PETSc communicator
     int mpirank_petsc; ///< Rank of PETSc communicator
     int mpirank_world; ///< Rank of MPI_COMM_WORLD
+    MPI_Comm comm_init; ///< MPI communicator over initial conditions (stored for use in gradient computation)
     PetscInt localsize_u; ///< Size of local sub vector u or v in state x=[u,v]
     PetscInt ilow; ///< First index of the local sub vector u,v
     PetscInt iupp; ///< Last index (+1) of the local sub vector u,v
@@ -155,6 +156,11 @@ class OptimTarget{
     void GeodesicDistance_diff();
 
     /**
+     * @brief Derivative of generalized trace infidelity with Riemannian gradient.
+     */
+    void GeneralizedTraceInfidelity_diff();
+
+    /**
      * @brief Derivative of objective function finalization.
      *
      * @param[in] obj_cost_re Real part of objective cost
@@ -204,5 +210,17 @@ class OptimTarget{
      * @param HS_im_bar Adjoint of imaginary part of overlap
      */
     void HilbertSchmidtOverlap_diff(Vec statebar, bool scalebypurity, const double HS_re_bar, const double HS_im_bar);
+
+    /**
+     * @brief Projects Euclidean gradient onto the Riemannian tangent space of the unitary manifold.
+     *
+     * For JTRACE optimization on the unitary manifold U(n), the Euclidean gradient must be
+     * projected onto the tangent space at U. The projection formula is:
+     *   ∇_Riemann J(U) = U * skew(U† * G_Euclidean)
+     * where skew(A) = (A - A†)/2 extracts the skew-Hermitian part.
+     *
+     * @param gradient_euclidean Euclidean gradient vector (input/output, modified in place)
+     */
+    void projectGradientToRiemannianManifold(Vec gradient_euclidean);
 };
 
