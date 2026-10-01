@@ -1053,10 +1053,19 @@ void OptimProblem::solve(Vec xinit) {
         double f = objective;
         VecNorm(G, NORM_2, &gnorm);
 
+        // Normalize gradient for better numerical conditioning in KSP solve
+        VecScale(G, 1.0 / gnorm);
+
         // Precondition the gradient: solve the Gauss-Newton system A(x)*Gprec = G via KSP
         solveGaussNewtonKSP(x_GN, G, Gprec, iter);
         // solveGaussNewtonEPS(x_GN, G, Gprec);
         // VecCopy(G, Gprec); // Steepest descent, no preconditioner
+
+        // Scale Gprec back by gnorm for the line search
+        VecScale(Gprec, gnorm);
+
+        // Restore G to original scale (for line search directional derivative check)
+        VecScale(G, gnorm);
 
         // Backtracking Armijo line search along -Gprec, projected onto the bound constraints
         double alpha = armijoLineSearch(x_GN, f, G, Gprec, xnew, step);
