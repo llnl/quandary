@@ -64,9 +64,9 @@ gn_ksp_solution_norm_threshold = 10.0
 # gn_minres_qlp = false
 
 # minres-qlp settings
-gn_ksp_maxiter = 150
+gn_ksp_maxiter = 250
 gn_ksp_warmstart = false
-gn_ksp_rtol = 1e-4
+gn_ksp_rtol = 1e-5
 gn_ksp_type = "minres"
 gn_minres_qlp = true 
 
