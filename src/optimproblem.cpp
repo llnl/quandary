@@ -165,9 +165,18 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   KSPSetOperators(ksp_LeastSquares, GNLeastSquaresShell, GNLeastSquaresShell);
   KSPSetType(ksp_LeastSquares, KSPLSQR);
   // KSPSetTolerances(ksp_LeastSquares, 1e-10, 1e-14, PETSC_DEFAULT, 200);
-  KSPSetTolerances(ksp_LeastSquares, 1e-6, 1e-12, PETSC_DEFAULT, 30); 
+  KSPSetTolerances(ksp_LeastSquares, 1e-6, 1e-12, PETSC_DEFAULT, 30);
   KSPSetComputeSingularValues(ksp_LeastSquares, PETSC_TRUE);
   KSPSetFromOptions(ksp_LeastSquares);
+
+  // Cache state dimension for efficiency
+  VecGetSize(rho_t0_bar, &state_dim_cached);
+
+  // Pre-allocate workspace vectors for GNLeastSquaresShell operations
+  wsub_workspace = new Vec[ninit_local];
+  for (int iinit = 0; iinit < ninit_local; iinit++) {
+    VecDuplicate(rho_t0_bar, &wsub_workspace[iinit]);
+  }
 
 
   /* Create linear solver for solving Gauss-Newton Ax=b */
@@ -234,6 +243,12 @@ OptimProblem::~OptimProblem() {
   EPSDestroy(&eps_GN);
   KSPDestroy(&ksp_LeastSquares);
   TaoDestroy(&tao);
+
+  // Clean up workspace vectors
+  for (int iinit = 0; iinit < ninit_local; iinit++) {
+    VecDestroy(&wsub_workspace[iinit]);
+  }
+  delete[] wsub_workspace;
 }
 
 
@@ -1123,9 +1138,8 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, Vec v_LeastSqua
   Vec b; // RHS: single long vector stacking ninit subvectors
   GNLeastSquaresShell_MatCreateVecs(GNLeastSquaresShell, nullptr, &b);
 
-  // Get state size to compute offsets
-  PetscInt state_size;
-  VecGetSize(rho_t0_bar, &state_size);
+  // Use cached state size
+  PetscInt state_size = state_dim_cached;
 
   // first compute J(U(T)) needed for \nabla_UJ. WHAT ABOUT THE NONLINEAR_FORWARD_VALID?? HERE, THIS ASSUMES THAT IT IS VALID, see getFinalState(iinit)! TODO!
   double obj_cost_re = 0.0;
@@ -1146,18 +1160,17 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, Vec v_LeastSqua
   MPI_Allreduce(&mycost_re, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, comm_init);
   MPI_Allreduce(&mycost_im, &obj_cost_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
 
-  // Get array access to b for direct writing
-  PetscScalar *b_data;
-  VecGetArray(b, &b_data);
+  // Create local buffer for this processor's portion
+  PetscInt local_size = ninit_local * state_size;
+  PetscScalar *local_buffer = new PetscScalar[local_size];
 
   for (int iinit = 0; iinit < ninit_local; iinit++) {
     int iinit_global = mpirank_init * ninit_local + iinit;
-    PetscInt offset = iinit_global * state_size;
+    PetscInt local_offset = iinit * state_size;
     Vec ui = timestepper->getFinalState(iinit);
 
-    // Create temporary vector for this portion of b
-    Vec b_iinit;
-    VecCreateSeqWithArray(PETSC_COMM_SELF, 1, state_size, &b_data[offset], &b_iinit);
+    // Use pre-allocated workspace vector
+    Vec b_iinit = wsub_workspace[iinit];
 
     // Copy ui to b_iinit
     VecCopy(ui, b_iinit);
@@ -1169,22 +1182,42 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, Vec v_LeastSqua
     double scale = 1.0 / mastereq->getDim();
     optim_target->evalJ_diff(ui, b_iinit, scale*obj_cost_re_bar, scale*obj_cost_im_bar);
 
-    VecDestroy(&b_iinit);
+    // Copy result to local buffer
+    const PetscScalar *b_iinit_data;
+    VecGetArrayRead(b_iinit, &b_iinit_data);
+    memcpy(&local_buffer[local_offset], b_iinit_data, state_size * sizeof(PetscScalar));
+    VecRestoreArrayRead(b_iinit, &b_iinit_data);
   }
-
-  VecRestoreArray(b, &b_data);
 
   if (includeHessUJ) {
-    VecScale(b, sqrt(mastereq->getDim() / 2.0));
+    // Scale local buffer
+    for (PetscInt i = 0; i < local_size; i++) {
+      local_buffer[i] *= sqrt(mastereq->getDim() / 2.0);
+    }
   }
-  // Finalize the RHS.
-  VecScale(b, -1.0);
+  // Finalize the RHS: scale by -1
+  for (PetscInt i = 0; i < local_size; i++) {
+    local_buffer[i] *= -1.0;
+  }
 
-  // Synchronize b across all comm_init processors
+  // Gather all local buffers into b using MPI_Allgatherv
+  PetscScalar *b_data;
   VecGetArray(b, &b_data);
-  PetscInt b_size;
-  VecGetSize(b, &b_size);
-  MPI_Allreduce(MPI_IN_PLACE, b_data, b_size, MPIU_SCALAR, MPI_SUM, comm_init);
+
+  int *recvcounts = new int[mpisize_init];
+  int *displs = new int[mpisize_init];
+  for (int rank = 0; rank < mpisize_init; rank++) {
+    recvcounts[rank] = ninit_local * state_size;
+    displs[rank] = rank * ninit_local * state_size;
+  }
+
+  MPI_Allgatherv(local_buffer, local_size, MPIU_SCALAR,
+                 b_data, recvcounts, displs, MPIU_SCALAR, comm_init);
+
+  delete[] recvcounts;
+  delete[] displs;
+  delete[] local_buffer;
+
   VecRestoreArray(b, &b_data);
 
 
@@ -1252,32 +1285,30 @@ void OptimProblem::GNLeastSquaresShell_MatMult(Mat A, Vec v, Vec y)
   // assumes that the timestepper's trajectory_states are already populated and computes all lin_trajectory_states.
   self->evalLinearizedForward(self->xeval_GN, v);
 
-  // Get state size to compute offsets in the stacked ou5pu5 vector
-  PetscInt state_size;
-  VecGetSize(self->rho_t0_bar, &state_size);
+  // Use cached state size
+  PetscInt state_size = self->state_dim_cached;
 
   // Get array access to y for direct writing
   PetscScalar *y_data;
   VecGetArray(y, &y_data);
 
   // Each comm_init processor fills its portion of y
+  // Copy local data into a contiguous buffer for Allgatherv
+  PetscInt local_size = self->ninit_local * state_size;
+  PetscScalar *local_buffer = new PetscScalar[local_size];
+
   for (int iinit = 0; iinit < self->ninit_local; iinit++) {
-    int iinit_global = self->mpirank_init * self->ninit_local + iinit;
     Vec lin_final_state = self->timestepper->getLinearizedFinalState(iinit);
 
-    // Copy to the appropriate location in y
+    // Copy to local buffer
     const PetscScalar *lin_state_data;
     VecGetArrayRead(lin_final_state, &lin_state_data);
-    PetscInt offset = iinit_global * state_size;
-    for (PetscInt i = 0; i < state_size; i++) {
-      y_data[offset + i] = lin_state_data[i];
-    }
+    PetscInt local_offset = iinit * state_size;
+    memcpy(&local_buffer[local_offset], lin_state_data, state_size * sizeof(PetscScalar));
     VecRestoreArrayRead(lin_final_state, &lin_state_data);
   }
 
-  VecRestoreArray(y, &y_data);
-
-  // Apply W^1/2 to each portion if needed
+  // Apply W^1/2 to local buffer if needed
   if (self->includeHessUJ){
     // Only available for J_Inf (Generalized)
     assert(self->optim_target->getObjectiveType() == ObjectiveType::JTRACE);
@@ -1302,15 +1333,17 @@ void OptimProblem::GNLeastSquaresShell_MatMult(Mat A, Vec v, Vec y)
     MPI_Allreduce(&mycost_re, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
     MPI_Allreduce(&mycost_im, &obj_cost_im, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
 
-    // Then apply W^1/2 to each portion
-    VecGetArray(y, &y_data);
+    // Then apply W^1/2 to each portion in local buffer
     for (int iinit = 0; iinit < self->ninit_local; iinit++) {
       int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-      PetscInt offset = iinit_global * state_size;
+      PetscInt local_offset = iinit * state_size;
 
-      // Create temporary vector for this portion
-      Vec y_iinit;
-      VecCreateSeqWithArray(PETSC_COMM_SELF, 1, state_size, &y_data[offset], &y_iinit);
+      // Use pre-allocated workspace vector
+      Vec y_iinit = self->wsub_workspace[iinit];
+      PetscScalar *y_iinit_data;
+      VecGetArray(y_iinit, &y_iinit_data);
+      memcpy(y_iinit_data, &local_buffer[local_offset], state_size * sizeof(PetscScalar));
+      VecRestoreArray(y_iinit, &y_iinit_data);
 
       double obj_cost_re_bar, obj_cost_im_bar;
       // scale w_i(t) by sqrt(2/n)
@@ -1321,16 +1354,29 @@ void OptimProblem::GNLeastSquaresShell_MatMult(Mat A, Vec v, Vec y)
       double scale = 0.5*sqrt(2.0 / self->mastereq->getDim());
       self->optim_target->evalJ_diff(y_iinit, y_iinit, scale*obj_cost_re_bar, scale*obj_cost_im_bar);
 
-      VecDestroy(&y_iinit);
+      // Copy back to local buffer
+      VecGetArray(y_iinit, &y_iinit_data);
+      memcpy(&local_buffer[local_offset], y_iinit_data, state_size * sizeof(PetscScalar));
+      VecRestoreArray(y_iinit, &y_iinit_data);
     }
-    VecRestoreArray(y, &y_data);
   }
 
-  // Synchronize across all comm_init processors with Allreduce
-  VecGetArray(y, &y_data);
-  PetscInt y_size;
-  VecGetSize(y, &y_size);
-  MPI_Allreduce(MPI_IN_PLACE, y_data, y_size, MPIU_SCALAR, MPI_SUM, self->comm_init);
+  // Gather all local buffers into y using MPI_Allgatherv
+  // Setup receive counts and displacements
+  int *recvcounts = new int[self->mpisize_init];
+  int *displs = new int[self->mpisize_init];
+  for (int rank = 0; rank < self->mpisize_init; rank++) {
+    recvcounts[rank] = self->ninit_local * state_size;
+    displs[rank] = rank * self->ninit_local * state_size;
+  }
+
+  MPI_Allgatherv(local_buffer, local_size, MPIU_SCALAR,
+                 y_data, recvcounts, displs, MPIU_SCALAR, self->comm_init);
+
+  delete[] recvcounts;
+  delete[] displs;
+  delete[] local_buffer;
+
   VecRestoreArray(y, &y_data);
 }
 
@@ -1342,33 +1388,29 @@ void OptimProblem::GNLeastSquaresShell_MatMultTranspose(Mat A, Vec w, Vec vout)
   // Reset output
   VecZeroEntries(vout);
 
-  // Get state size to compute offsets in the stacked vector
-  PetscInt state_size;
-  VecGetSize(self->rho_t0_bar, &state_size);
+  // Use cached state size
+  PetscInt state_size = self->state_dim_cached;
 
   // Get read access to w
   const PetscScalar *w_data;
   VecGetArrayRead(w, &w_data);
 
   // Extract and copy portions for this processor's initial conditions
-  Vec *wsub_copy = new Vec[self->ninit_local];
+  // Use pre-allocated workspace vectors
   for (int iinit = 0; iinit < self->ninit_local; iinit++) {
     int iinit_global = self->mpirank_init * self->ninit_local + iinit;
     PetscInt offset = iinit_global * state_size;
 
-    // Create and copy the portion of w for this initial condition
-    VecDuplicate(self->rho_t0_bar, &wsub_copy[iinit]);
+    // Copy the portion of w for this initial condition into workspace
     PetscScalar *wsub_data;
-    VecGetArray(wsub_copy[iinit], &wsub_data);
-    for (PetscInt i = 0; i < state_size; i++) {
-      wsub_data[i] = w_data[offset + i];
-    }
-    VecRestoreArray(wsub_copy[iinit], &wsub_data);
+    VecGetArray(self->wsub_workspace[iinit], &wsub_data);
+    memcpy(wsub_data, &w_data[offset], state_size * sizeof(PetscScalar));
+    VecRestoreArray(self->wsub_workspace[iinit], &wsub_data);
   }
 
   VecRestoreArrayRead(w, &w_data);
 
-  // Optional, apply W^1/2 to each terminal condition wsub_copy[iinit]
+  // Optional, apply W^1/2 to each terminal condition in workspace
   if (self->includeHessUJ){
     // Only available for J_Inf (Generalized)
     assert(self->optim_target->getObjectiveType() == ObjectiveType::JTRACE);
@@ -1383,7 +1425,7 @@ void OptimProblem::GNLeastSquaresShell_MatMultTranspose(Mat A, Vec w, Vec vout)
       // eval J_inf(w(T))
       double obj_lin_iinit_re = 0.0;
       double obj_lin_iinit_im = 0.0;
-      self->optim_target->evalJ(wsub_copy[iinit],  &obj_lin_iinit_re, &obj_lin_iinit_im);
+      self->optim_target->evalJ(self->wsub_workspace[iinit],  &obj_lin_iinit_re, &obj_lin_iinit_im);
       obj_cost_re += self->obj_weights[iinit] * obj_lin_iinit_re;
       obj_cost_im += self->obj_weights[iinit] * obj_lin_iinit_im;
     }
@@ -1397,30 +1439,24 @@ void OptimProblem::GNLeastSquaresShell_MatMultTranspose(Mat A, Vec w, Vec vout)
       int iinit_global = self->mpirank_init * self->ninit_local + iinit;
       double obj_cost_re_bar, obj_cost_im_bar;
       // scale w_i(t) by sqrt(2/n)
-      VecScale(wsub_copy[iinit], sqrt(2.0 / self->mastereq->getDim()));
+      VecScale(self->wsub_workspace[iinit], sqrt(2.0 / self->mastereq->getDim()));
       // Add -sqrt(2/n)*1/n tr(...)V
       self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
       self->optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
       double scale = 0.5*sqrt(2.0 / self->mastereq->getDim());
-      self->optim_target->evalJ_diff(wsub_copy[iinit], wsub_copy[iinit], scale*obj_cost_re_bar, scale*obj_cost_im_bar);
+      self->optim_target->evalJ_diff(self->wsub_workspace[iinit], self->wsub_workspace[iinit], scale*obj_cost_re_bar, scale*obj_cost_im_bar);
     }
   }
 
-  // Solve adjoint backward ODE for each terminal condition wsub_copy[iinit]
+  // Solve adjoint backward ODE for each terminal condition in workspace
   for (int iinit = 0; iinit < self->ninit_local; iinit++) {
 
     // Solve backwards
-    self->timestepper->solveAdjointODE(iinit, wsub_copy[iinit], 0.0, 0.0, 0.0, 0.0);
+    self->timestepper->solveAdjointODE(iinit, self->wsub_workspace[iinit], 0.0, 0.0, 0.0, 0.0);
 
     // Add gradient to output
     VecAXPY(vout, 1.0, self->timestepper->getReducedGradient());
   }
-
-  // Clean up temporary vectors
-  for (int iinit = 0; iinit < self->ninit_local; iinit++) {
-    VecDestroy(&wsub_copy[iinit]);
-  }
-  delete[] wsub_copy;
 
   /* Sum up the gradient from all initial condition processors */
   PetscScalar* vout_data;

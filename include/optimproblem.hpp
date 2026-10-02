@@ -112,6 +112,8 @@ class OptimProblem {
   // Gauss-Newton least squares solver
   Mat GNLeastSquaresShell; ///< MatShell for the Gauss-Newton least-squares problem
   KSP ksp_LeastSquares;
+  Vec *wsub_workspace; ///< Pre-allocated workspace vectors for MatMultTranspose (size: ninit_local)
+  PetscInt state_dim_cached; ///< Cached state dimension for efficiency
 
   // KSP linear solver
   KSP ksp_GN;  ///< Linear solver for Gauss-Newton system
