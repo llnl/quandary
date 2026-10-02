@@ -22,7 +22,7 @@
 #define TEST_FD_GRAD 0    // Run Finite Differences gradient test
 #define TEST_FD_HESS 0    // Run Finite Differences Hessian test
 #define TEST_FD_LINEARIZED_FWD 0 // Run Finite Differences Linearized Forward test
-#define TEST_GAUSSNEWTON_LINEARSYSTEM 1
+#define TEST_GAUSSNEWTON_LINEARSYSTEM 0
 #define TEST_GAUSSNEWTON_LEASTSQUARES 1
 #define HESSIAN_DECOMPOSITION 0 // Run eigenvalue analysis for Hessian
 #define EPS 1e-5          // Epsilon for Finite Differences
