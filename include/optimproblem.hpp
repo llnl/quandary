@@ -49,7 +49,6 @@ class OptimProblem {
 
   size_t ninit; ///< Number of initial conditions to be considered (N^2, N, or 1)
   int ninit_local; ///< Local number of initial conditions on this processor
-  Vec rho_t0; ///< Storage for initial condition of the ODE
   Vec rho_t0_bar; ///< Storage for adjoint initial condition of the adjoint ODE (aka the terminal condition)
 
   OptimTarget* optim_target; ///< Pointer to the optimization target (gate or state)
