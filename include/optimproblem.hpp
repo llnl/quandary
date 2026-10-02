@@ -102,12 +102,16 @@ class OptimProblem {
   Vec x_GN; ///< Current iterate for the GN optimization. Holds solution after finished. 
   int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton linear solve
   bool nonlinear_forward_valid; ///< True once the nonlinear forward has been solved and stored for the current xeval_GN, reset whenever xeval_GN changes
-  bool includeHessUJ = false; ///< Flag to include Hessian of J(U) in the terminal adjoint condition
+  bool includeHessUJ; ///< Flag to include Hessian of J(U) in the terminal adjoint condition
 
   // Options for the Armijo line search 
   const double c1 = 1e-4;    //< Sufficient decrease parameter
   const double rho_backtrack = 0.5;   ///< Backtracking factor
   const int max_ls_iter = 20; ///< Maximum number of backtracking steps
+
+  // Gauss-Newton least squares solver
+  Mat GNLeastSquaresShell; ///< MatShell for the Gauss-Newton least-squares problem
+  KSP ksp_LeastSquares;
 
   // KSP linear solver
   KSP ksp_GN;  ///< Linear solver for Gauss-Newton system
@@ -164,6 +168,7 @@ class OptimProblem {
   OptimTarget* getOptimTarget() { return optim_target; };
   Mat getGaussNewtonMatShell() { return GaussNewtonMatShell; };
   Mat getGaussNewtonMatDense() { return GaussNewtonMatDense; };
+  Mat getGNLeastSquaresShell() { return GNLeastSquaresShell; };
   bool getQuietmode() { return quietmode; };
 
   int getOutputOptimizationStride() { return output_optimization_stride; };
@@ -203,6 +208,21 @@ class OptimProblem {
    * @param[in] v Direction vector 
    */
   void evalLinearizedForward(const Vec x, const Vec v);
+
+  /**
+   * @brief Solves the Gauss-Newton least-squares problem min_v ||W^1/2 L v + W^-1/2 \nabla_UJ||_F^2
+   * 
+   * First fills the VecNest RHS with the appropriate values based on the current point of evaluation xinit, then solves the least-squares problem to obtain v_LeastSquares.
+   *
+   * @param xinit Point of evaluation for the Gauss-Newton matrix
+   * @param v_LeastSquares Solution vector to store the result
+   */
+  void solveGaussNewtonLeastSquares(const Vec xinit, Vec v_LeastSquares);
+
+  // For the Gauss-Newton least-squares MatShell operations
+  static void GNLeastSquaresShell_MatMult(Mat A, Vec v, Vec y); // Apply y = W^1/2Lv
+  static void GNLeastSquaresShell_MatMultTranspose(Mat A, Vec w, Vec vout); // Apply vout = L* W^1/2 w
+  static void GNLeastSquaresShell_MatCreateVecs(Mat A, Vec *right, Vec *left);
 
   /**
    * @brief MatMult operation for MatShell Gauss-Newton Av = L*Lv: Linearized forward + adjoint operator. 

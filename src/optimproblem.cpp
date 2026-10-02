@@ -128,6 +128,17 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   VecDuplicate(xinit, &xprev);
   VecZeroEntries(xprev);
 
+  /* Create MatShell for Gauss-Newton least-squares problem */
+  // MatCreateShell(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign, this, &GNLeastSquaresShell);
+  // MatShellSetOperation(GNLeastSquaresShell, MATOP_MULT, (void(*) (void)) applyGNLeastSquaresMatShell);
+  // Create MatShell for GNLeastSquares solve
+  PetscInt M = ninit*2*mastereq->getDim(); // total matrix-space dimension 
+  MatCreateShell(PETSC_COMM_SELF, M, ndesign, M, ndesign, this, &GNLeastSquaresShell);
+  MatShellSetOperation(GNLeastSquaresShell, MATOP_MULT, (void(*)(void))GNLeastSquaresShell_MatMult);
+  MatShellSetOperation(GNLeastSquaresShell, MATOP_MULT_TRANSPOSE, (void(*)(void))GNLeastSquaresShell_MatMultTranspose);
+  MatShellSetOperation(GNLeastSquaresShell, MATOP_CREATE_VECS,     (void(*)(void))GNLeastSquaresShell_MatCreateVecs);
+
+
   /* Create MatShell for Gauss-Newton A=L^*L */
   MatCreateShell(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign, this, &GaussNewtonMatShell);
   MatShellSetOperation(GaussNewtonMatShell, MATOP_MULT, (void(*) (void)) applyGaussNewtonMatShell);
@@ -140,11 +151,24 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   MatZeroEntries(GaussNewtonMatDense);
 
   // Include hessian of generalized J_inf wrt U in GaussNewton Approximation (for Jtrace only)
+  includeHessUJ = false;
   if (optim_solver_type == OptimSolverType::GAUSS_NEWTON){
     if (optim_target->getObjectiveType() == ObjectiveType::JTRACE) {
       includeHessUJ = true;
     }
   }
+  // DISABLE includeHessUJ: Using L^*L instead of L^*\nabla_U^2JL!
+  includeHessUJ = false;
+
+  // Create the KSP solver for the Gauss-Newton least-squares problem
+  KSPCreate(PETSC_COMM_SELF, &ksp_LeastSquares);
+  KSPSetOperators(ksp_LeastSquares, GNLeastSquaresShell, GNLeastSquaresShell);
+  KSPSetType(ksp_LeastSquares, KSPLSQR);
+  // KSPSetTolerances(ksp_LeastSquares, 1e-10, 1e-14, PETSC_DEFAULT, 200);
+  KSPSetTolerances(ksp_LeastSquares, 1e-6, 1e-12, PETSC_DEFAULT, 30); 
+  KSPSetComputeSingularValues(ksp_LeastSquares, PETSC_TRUE);
+  KSPSetFromOptions(ksp_LeastSquares);
+
 
   /* Create linear solver for solving Gauss-Newton Ax=b */
   KSPCreate(PETSC_COMM_SELF, &ksp_GN);
@@ -204,9 +228,11 @@ OptimProblem::~OptimProblem() {
 
   MatDestroy(&GaussNewtonMatDense);
   MatDestroy(&GaussNewtonMatShell);
+  MatDestroy(&GNLeastSquaresShell);
   VecDestroy(&xeval_GN);
   KSPDestroy(&ksp_GN);
   EPSDestroy(&eps_GN);
+  KSPDestroy(&ksp_LeastSquares);
   TaoDestroy(&tao);
 }
 
@@ -867,8 +893,8 @@ void OptimProblem::solve(Vec xinit) {
         VecNorm(G, NORM_2, &gnorm);
 
         // Precondition the gradient: solve the Gauss-Newton system A(x)*Gprec = G via KSP
-        // solveGaussNewtonKSP(x_GN, G, Gprec);
-        solveGaussNewtonEPS(x_GN, G, Gprec);
+        solveGaussNewtonKSP(x_GN, G, Gprec);
+        // solveGaussNewtonEPS(x_GN, G, Gprec);
         // VecCopy(G, Gprec); // Steepest descent, no preconditioner
 
         // Backtracking Armijo line search along -Gprec, projected onto the bound constraints
@@ -1081,4 +1107,259 @@ void OptimProblem::updateGaussNewtonMatDense(){
   MPI_Allreduce(MPI_IN_PLACE, data, size, MPIU_SCALAR, MPI_SUM, comm_optim);
   MatDenseRestoreArray(GaussNewtonMatDense, &data);
 
+}
+
+
+void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, Vec v_LeastSquares){
+
+  // Store the point of evaluation 
+  VecCopy(xinit, xeval_GN);
+  nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
+ 
+  // Fill the RHS: b = -W^{-1/2} \nabla_U J = -W^1/2 U = -sqrt(n/2)\nabla_U J
+  // or b = -\nabla_U J 
+  // \nabla_J = 2/n U - 2/n^2Tr(V^dU)V = 2/n(I-P)U
+
+  Vec b; // RHS: VecNest containing ninit sub-vecs
+  GNLeastSquaresShell_MatCreateVecs(GNLeastSquaresShell, nullptr, &b); 
+  Vec *bsub; 
+  VecNestGetSubVecs(b, nullptr, &bsub);
+
+  // first compute J(U(T)) needed for \nabla_UJ. WHAT ABOUT THE NONLINEAR_FORWARD_VALID?? HERE, THIS ASSUMES THAT IT IS VALID, see getFinalState(iinit)! TODO!
+  double obj_cost_re = 0.0;
+  double obj_cost_im = 0.0;
+  for (int iinit=0; iinit<ninit_local; iinit++) {
+    int iinit_global = mpirank_init * ninit_local + iinit;
+    optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
+    double obj_lin_iinit_re = 0.0;
+    double obj_lin_iinit_im = 0.0;
+    Vec ui = timestepper->getFinalState(iinit);
+    optim_target->evalJ(ui,  &obj_lin_iinit_re, &obj_lin_iinit_im);
+    obj_cost_re += obj_weights[iinit] * obj_lin_iinit_re;
+    obj_cost_im += obj_weights[iinit] * obj_lin_iinit_im;
+  }
+  // Gather result J_inf(U(T))
+  double mycost_re = obj_cost_re;
+  double mycost_im = obj_cost_im;
+  MPI_Allreduce(&mycost_re, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+  MPI_Allreduce(&mycost_im, &obj_cost_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+  for (int iinit = 0; iinit < ninit_local; iinit++) {
+    Vec ui = timestepper->getFinalState(iinit);
+    VecCopy(ui, bsub[iinit]);
+    double obj_cost_re_bar, obj_cost_im_bar;
+    VecScale(bsub[iinit], 2.0 / mastereq->getDim());
+    optim_target->prepareInitialAndTargetState(mpirank_init*ninit_local + iinit, ninit, mastereq->nlevels, mastereq->nessential);
+    optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
+    double scale = 1.0 / mastereq->getDim();
+    optim_target->evalJ_diff(ui, bsub[iinit], scale*obj_cost_re_bar, scale*obj_cost_im_bar); 
+  }
+  if (includeHessUJ) {
+    VecScale(b, sqrt(mastereq->getDim() / 2.0));
+  }
+  // Finalize the RHS. 
+  VecScale(b, -1.0);
+
+
+  // // Adjoint test: <w, A v> should equal <A^T w, v>  (all real)
+  // printf("GN Least-Squares: Adjoint test\n");
+  // Vec v_test, w_test, Av, ATw;
+  // GNLeastSquaresShell_MatCreateVecs(GNLeastSquaresShell, &v_test, nullptr);
+  // GNLeastSquaresShell_MatCreateVecs(GNLeastSquaresShell, nullptr, &w_test);
+  // VecSetRandom(v_test, nullptr);
+  // VecSetRandom(w_test, nullptr);
+  // GNLeastSquaresShell_MatCreateVecs(GNLeastSquaresShell, nullptr, &Av);
+  // GNLeastSquaresShell_MatMult(GNLeastSquaresShell, v_test, Av);
+  // GNLeastSquaresShell_MatCreateVecs(GNLeastSquaresShell, &ATw, nullptr);
+  // GNLeastSquaresShell_MatMultTranspose(GNLeastSquaresShell, w_test, ATw);
+
+  // PetscScalar lhs, rhs;
+  // VecDot(w_test, Av, &lhs);
+  // VecDot(ATw, v_test, &rhs);
+  // PetscScalar max_val = PetscMax(PetscAbsScalar(lhs), PetscAbsScalar(rhs));
+  // PetscScalar diff = lhs - rhs;
+  // PetscScalar diff_rel = (lhs - rhs) / max_val;
+  // PetscPrintf(PETSC_COMM_SELF, "adjoint check: %g vs %g, diff: %g, diff_rel: %g\n", (double)PetscRealPart(lhs), (double)PetscRealPart(rhs), (double)PetscRealPart(diff), (double)PetscRealPart(diff_rel));
+  // exit(1);
+
+  // Set the matrix again, just in case, for reset.
+  KSPSetOperators(ksp_LeastSquares, GNLeastSquaresShell, GNLeastSquaresShell);
+  
+  // Set zero initial gues
+  VecZeroEntries(v_LeastSquares);
+
+  // Monitor residual and solution norm at every iteration
+  KSPMonitorCancel(ksp_LeastSquares);
+  KSPMonitorSet(ksp_LeastSquares, KSPMonitorResidualAndSolution, (void*)this, NULL);
+ 
+  // Solve the Gauss-Newton least-squares problem
+  KSPSolve(ksp_LeastSquares, b, v_LeastSquares);
+
+  // Report convergence
+  KSPConvergedReason reason;
+  int iters;
+  double rnorm;
+  KSPGetConvergedReason(ksp_LeastSquares, &reason);
+  KSPGetIterationNumber(ksp_LeastSquares, &iters);
+  KSPGetResidualNorm(ksp_LeastSquares, &rnorm);
+  ksp_iters_last = iters;
+  if (mpirank_world == 0 && !quietmode) {
+    printf("Gauss-Newton Least-Squares stats: iterations = %d, residual norm = %1.14e\n", iters, rnorm);
+  }
+
+}
+
+
+void OptimProblem::GNLeastSquaresShell_MatMult(Mat A, Vec v, Vec y)
+{
+  OptimProblem *self;
+  MatShellGetContext(A, (void**)&self);
+
+  //  Reset output 
+  VecZeroEntries(y);
+
+  // Apply linearized forward to get dU/dalpha x v
+  // assumes that the timestepper's trajectory_states are already populated and computes all lin_trajectory_states.
+  self->evalLinearizedForward(self->xeval_GN, v);
+
+  // Grab the output subvectors and store w_i(T) in them 
+  Vec *ysub;
+  int nsubvecs;
+  VecNestGetSubVecs(y, &nsubvecs, &ysub);  // y is a VecNest containing ninit sub-vecs
+  assert(nsubvecs == self->ninit);
+
+  for (auto iinit = 0; iinit < self->ninit_local; iinit++) {
+    Vec lin_final_state = self->timestepper->getLinearizedFinalState(iinit);
+    VecCopy(lin_final_state, ysub[iinit]);
+  }
+
+  // Apply W^1/2 to each column of the linearized forward  
+  if (self->includeHessUJ){
+    // Only available for J_Inf (Generalized)
+    assert(self->optim_target->getObjectiveType() == ObjectiveType::JTRACE);
+
+    // first compute J(w(T)) needed for W^1/2
+    double obj_cost_re = 0.0;
+    double obj_cost_im = 0.0;
+    for (int iinit=0; iinit<self->ninit_local; iinit++) {
+      // Need to recompute the target (and initial) state
+      int iinit_global = self->mpirank_init * self->ninit_local + iinit;
+      self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
+      // eval J_inf(w(T))
+      Vec wT = self->timestepper->getLinearizedFinalState(iinit);
+      double obj_lin_iinit_re = 0.0;
+      double obj_lin_iinit_im = 0.0;
+      self->optim_target->evalJ(wT,  &obj_lin_iinit_re, &obj_lin_iinit_im);
+      obj_cost_re += self->obj_weights[iinit] * obj_lin_iinit_re;
+      obj_cost_im += self->obj_weights[iinit] * obj_lin_iinit_im;
+    }
+    double mycost_re = obj_cost_re;
+    double mycost_im = obj_cost_im;
+    MPI_Allreduce(&mycost_re, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
+    MPI_Allreduce(&mycost_im, &obj_cost_im, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
+
+    // Then apply W^1/2 to each column of the linearized forward 
+    for (int iinit = 0; iinit < self->ninit_local; iinit++) {
+      double obj_cost_re_bar, obj_cost_im_bar;
+      // scale w_i(t) by sqrt(2/n)
+      VecScale(ysub[iinit], sqrt(2.0 / self->mastereq->getDim()));
+      // Add -sqrt(2/n)*1/n tr(...)V
+      self->optim_target->prepareInitialAndTargetState(self->mpirank_init*self->ninit_local + iinit, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
+      self->optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
+      double scale = 0.5*sqrt(2.0 / self->mastereq->getDim());
+      self->optim_target->evalJ_diff(ysub[iinit], ysub[iinit], scale*obj_cost_re_bar, scale*obj_cost_im_bar); 
+    }
+  }
+
+  // TODO: Probably need to communicate the sub-vectors if they are distributed across MPI ranks. Or tell petsc that y (and A) are distributed vectors using comm_init.
+  assert(mpisize_world == 1);
+}
+
+void OptimProblem::GNLeastSquaresShell_MatMultTranspose(Mat A, Vec w, Vec vout)
+{
+  OptimProblem *self;
+  MatShellGetContext(A, (void**)&self);
+
+  // Reset output
+  VecZeroEntries(vout);
+
+  // Grab the input subvectors
+  Vec *wsub;
+  int nsubvecs;
+  VecNestGetSubVecs(w, &nsubvecs, &wsub);
+  assert(nsubvecs == self->ninit_local);
+
+  // Make a copy of all wsub vectors to be used as terminal conditions for the adjoint run:
+  Vec *wsub_copy = new Vec[self->ninit_local];
+  for (int iinit = 0; iinit < self->ninit_local; iinit++) {
+    VecDuplicate(wsub[iinit], &wsub_copy[iinit]);
+    VecCopy(wsub[iinit], wsub_copy[iinit]);
+  }
+
+  // Optional, apply W^1/2  to each terminal conditions wsub_copy[iinit] 
+  if (self->includeHessUJ){
+    // Only available for J_Inf (Generalized)
+    assert(self->optim_target->getObjectiveType() == ObjectiveType::JTRACE);
+
+    // first compute J(wsub) needed for W^1/2
+    double obj_cost_re = 0.0;
+    double obj_cost_im = 0.0;
+    for (int iinit=0; iinit<self->ninit_local; iinit++) {
+      // Need to recompute the target (and initial) state
+      int iinit_global = self->mpirank_init * self->ninit_local + iinit;
+      self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
+      // eval J_inf(w(T))
+      double obj_lin_iinit_re = 0.0;
+      double obj_lin_iinit_im = 0.0;
+      self->optim_target->evalJ(wsub[iinit],  &obj_lin_iinit_re, &obj_lin_iinit_im);
+      obj_cost_re += self->obj_weights[iinit] * obj_lin_iinit_re;
+      obj_cost_im += self->obj_weights[iinit] * obj_lin_iinit_im;
+    }
+    double mycost_re = obj_cost_re;
+    double mycost_im = obj_cost_im;
+    MPI_Allreduce(&mycost_re, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
+    MPI_Allreduce(&mycost_im, &obj_cost_im, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
+
+    // Then apply W^1/2 to each subvector
+    for (int iinit = 0; iinit < self->ninit_local; iinit++) {
+      double obj_cost_re_bar, obj_cost_im_bar;
+      // scale w_i(t) by sqrt(2/n)
+      VecScale(wsub_copy[iinit], sqrt(2.0 / self->mastereq->getDim()));
+      // Add -sqrt(2/n)*1/n tr(...)V
+      self->optim_target->prepareInitialAndTargetState(self->mpirank_init*self->ninit_local + iinit, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
+      self->optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
+      double scale = 0.5*sqrt(2.0 / self->mastereq->getDim());
+      self->optim_target->evalJ_diff(wsub_copy[iinit], wsub_copy[iinit], scale*obj_cost_re_bar, scale*obj_cost_im_bar); 
+    }
+  }
+
+  // Solve adjoint backward ODE for each terminal condition wsub_copy[iinit]
+  for (int iinit = 0; iinit < self->ninit_local; iinit++) {
+
+    // Solve backwards 
+    self->timestepper->solveAdjointODE(iinit, wsub_copy[iinit], 0.0, 0.0, 0.0, 0.0);
+
+    // Add gradient to output
+    VecAXPY(vout, 1.0, self->timestepper->getReducedGradient());
+  }
+
+  /* Sum up the gradient from all initial condition processors */
+  PetscScalar* vout_data; 
+  VecGetArray(vout, &vout_data);
+  MPI_Allreduce(MPI_IN_PLACE, vout_data, self->ndesign, MPIU_SCALAR, MPI_SUM, self->comm_init);
+  VecRestoreArray(vout, &vout_data);
+}
+
+void OptimProblem::GNLeastSquaresShell_MatCreateVecs(Mat A, Vec *right, Vec *left)
+{
+  OptimProblem *self;
+  MatShellGetContext(A, (void**)&self);
+
+
+  if (right) VecCreateSeq(PETSC_COMM_SELF, self->ndesign, right);
+  if (left) {
+    std::vector<Vec> subs(self->ninit);
+    for (auto &s : subs) VecDuplicate(self->rho_t0_bar, &s);
+    VecCreateNest(PETSC_COMM_SELF, self->ninit, nullptr, subs.data(), left);
+    for (auto &s : subs) VecDestroy(&s);   // nest takes its own reference
+  }
 }

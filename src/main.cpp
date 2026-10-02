@@ -16,12 +16,14 @@
 #include "util.hpp"
 #ifdef WITH_SLEPC
 #include <slepceps.h>
+#include <slepcsvd.h>
 #endif
 
 #define TEST_FD_GRAD 0    // Run Finite Differences gradient test
 #define TEST_FD_HESS 0    // Run Finite Differences Hessian test
 #define TEST_FD_LINEARIZED_FWD 0 // Run Finite Differences Linearized Forward test
-#define TEST_GAUSSNEWTON 0
+#define TEST_GAUSSNEWTON_LINEARSYSTEM 1
+#define TEST_GAUSSNEWTON_LEASTSQUARES 1
 #define HESSIAN_DECOMPOSITION 0 // Run eigenvalue analysis for Hessian
 #define EPS 1e-5          // Epsilon for Finite Differences
 
@@ -294,29 +296,38 @@ int main(int argc,char **argv)
 
   /* Test Gauss-Newton linear system solve */
   if (config.getRuntype() == RunType::GAUSSNEWTON_LS) {
-    if (mpirank_world == 0 && !quietmode) printf("\nStarting Gauss-Newton linear system solve...\n");
+    if (mpirank_world == 0 && !quietmode) printf("\nStarting Gauss-Newton solves ...\n");
     optimctx->getStartingPoint(xinit);
-    // One gradient evaluation first to get the right hand side
+
+    // Do one gradient evaluation first to store the forward states and get the right hand side
     bool writeTrajectoryDataFiles = true;
     optimctx->evalGradF(xinit, grad, writeTrajectoryDataFiles);
 
-    // Set right hand side
+    Vec v_LeastSquares;
+    VecDuplicate(xinit, &v_LeastSquares); 
+    optimctx->solveGaussNewtonLeastSquares(xinit, v_LeastSquares);
+
+    // Linear systems: Set right hand side
     Vec gnrhs; 
     VecDuplicate(grad, &gnrhs); 
     VecCopy(grad, gnrhs);
     VecScale(gnrhs, -1.0);
-
+    
     // Solve Gauss-Newton linear system with KSP
     Vec v_KSP;
     VecDuplicate(grad, &v_KSP);
     optimctx->solveGaussNewtonKSP(xinit, gnrhs, v_KSP);
+
+    exit(1);
+
+
 
     // Solve Gauss-Newton via SVD
     Vec v_EPS;
     VecDuplicate(grad, &v_EPS);
     optimctx->solveGaussNewtonEPS(xinit, gnrhs, v_EPS);
 
-    // Compare the solutions from KSP and EPS
+    // Compare the solutions from KSP and EPS and v_LeastSquares
     if (mpirank_world == 0 && !quietmode) {
       Vec diff;
       VecDuplicate(grad, &diff);
@@ -327,6 +338,11 @@ int main(int argc,char **argv)
       double vnorm;
       VecNorm(v_KSP, NORM_2, &vnorm);
       printf("\n Relative difference norm between KSP and EPS solutions: %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
+      VecCopy(v_KSP, diff);
+      VecAXPY(diff, -1.0, v_LeastSquares);
+      VecNorm(diff, NORM_2, &diff_norm);
+      VecNorm(v_KSP, NORM_2, &vnorm);
+      printf("\n Relative difference norm between KSP and LeastSquares solutions: %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
       VecDestroy(&diff);
     }
     
@@ -341,6 +357,7 @@ int main(int argc,char **argv)
 
     VecDestroy(&v_KSP);
     VecDestroy(&v_EPS);
+    VecDestroy(&v_LeastSquares);
     VecDestroy(&gnrhs);
   }
 
@@ -626,103 +643,68 @@ int main(int argc,char **argv)
 
 #endif
 
-#if TEST_GAUSSNEWTON
-  /*  ---- TEST: Evaluate GaussNewton matrix columns ---- */
+#if TEST_GAUSSNEWTON_LEASTSQUARES
   optimctx->getStartingPoint(xinit);
   output->writeControlParams(xinit); // Write params to file
+
+  // One forward and backward first to populate final_states.
+  bool writeTrajectoryDataFiles = true;
+  optimctx->evalGradF(xinit, grad, writeTrajectoryDataFiles);
 
   // Set point of evaluation for Gauss-Newton matrix
   optimctx->setXevalGN(xinit);
 
   Vec v, Av;
-  VecDuplicate(xinit, &v);
-  VecDuplicate(xinit, &Av);
-  VecZeroEntries(v);
-  VecZeroEntries(Av);
   int ndesign = optimctx->getNdesign();
 
-  // // storage for Uk for all k and all initial conditions for comparison test. 
-  // optimctx->evalF(xinit);
-  // Vec state;
-  // VecDuplicate(timestepper->getFinalState(0), &state);
-  // std::vector<std::vector<Vec>> DU(ndesign);
-  // for (int ix = 0; ix<ndesign; ix++){
-  //   DU[ix].resize(ninit_local);
-  //   for (int iinit=0; iinit<ninit_local; iinit++){
-  //     VecDuplicate(state, &DU[ix][iinit]);
-  //   }
-  // }
+  // Create vectors with correct dimensions using MatCreateVecs
+  MatCreateVecs(optimctx->getGNLeastSquaresShell(), &v, &Av);
 
-  // // Storage for A matrix
-  // Mat A;
-  // MatCreate(PETSC_COMM_SELF, &A);
-  // MatSetSizes(A,  PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign);
-  // MatSetType(A, MATDENSE);
-  // MatSetUp(A);
-  // MatZeroEntries(A);
+  // Get the dimension of the output vector (nested vector with ninit subvectors)
+  PetscInt nrows;
+  VecGetSize(Av, &nrows);
 
-  // // Number of local matrix columns for this processor
-  // int ncols_local = ndesign / mpisize_optim;
-  // // If not integer divisible, let the last processor handle the remainder
-  // if (mpirank_optim == mpisize_optim - 1) {
-  //   ncols_local = ndesign - mpirank_optim * ncols_local;
-  // }
-  // // printf("%d: Number of local columns = %d\n", mpirank_optim, ncols_local);
+  // Create matrix to store all columns: nrows x ndesign
+  Mat A_LeastSquares;
+  MatCreate(PETSC_COMM_SELF, &A_LeastSquares);
+  MatSetSizes(A_LeastSquares, PETSC_DECIDE, PETSC_DECIDE, nrows, ndesign);
+  MatSetType(A_LeastSquares, MATDENSE);
+  MatSetUp(A_LeastSquares);
+  MatZeroEntries(A_LeastSquares);
 
-  // // iterate over local columns of the Gauss-Newton matrix
-  // for (int ix_local=0; ix_local<ncols_local; ix_local++) {
-  //   int ix = mpirank_optim * ncols_local + ix_local;
-  //   if (mpirank_optim == 0) printf("%d: Eval A*e_%d / %d \n", mpirank_optim, ix, ndesign);
+  // Apply GNLeastSquaresShell operator to each unit vector, storing the resulting matrix
+  for (int ix = 0; ix < ndesign; ix++){
+    VecZeroEntries(v);
+    VecSetValue(v, ix, 1.0, INSERT_VALUES);
+    VecAssemblyBegin(v); VecAssemblyEnd(v);
 
-  //   // Set v to the i-th unit vector
-  //   VecZeroEntries(v);
-  //   VecSetValue(v, ix, 1.0, INSERT_VALUES);
-  //   VecAssemblyBegin(v); VecAssemblyEnd(v);
+    MatMult(optimctx->getGNLeastSquaresShell(), v, Av);
 
-  //   // Evaluate Av, this runs on mpisize_init ranks
-  //   MatMult(optimctx->getGaussNewtonMatShell(), v, Av);
-    
-  //   // Store Av in k-th column of A 
-  //   const PetscScalar *Av_ptr;
-  //   VecGetArrayRead(Av, &Av_ptr);
-  //   for (size_t row=0; row < ndesign; row++){
-  //     MatSetValue(A, row, ix, Av_ptr[row], INSERT_VALUES);
-  //   }
-  //   VecRestoreArrayRead(Av, &Av_ptr);
-  //   MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY); MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
+    // Store Av in ix-th column of A_LeastSquares
+    const PetscScalar *Av_ptr;
+    VecGetArrayRead(Av, &Av_ptr);
+    for (PetscInt row = 0; row < nrows; row++){
+      MatSetValue(A_LeastSquares, row, ix, Av_ptr[row], INSERT_VALUES);
+    }
+    VecRestoreArrayRead(Av, &Av_ptr);
+  }
+  MatAssemblyBegin(A_LeastSquares, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(A_LeastSquares, MAT_FINAL_ASSEMBLY);
 
-  //   // // Store linearized final states for comparison test later
-  //   // for (int iinit=0; iinit<ninit_local; iinit++){
-  //   //   VecCopy(timestepper->getLinearizedFinalState(iinit), DU[ix][iinit]);
-  //   // }
-  // }
-
-  // // Need to sum up the columns of A from all optim_comm processors 
-  // PetscScalar *A_data;
-  // MatDenseGetArray(A, &A_data);
-  // int size = ndesign * ndesign;
-  // MPI_Allreduce(MPI_IN_PLACE, A_data, size, MPIU_SCALAR, MPI_SUM, comm_optim);
-  // MatDenseRestoreArray(A, &A_data);
-
-  if (mpirank_world==0) printf("Updating Gauss-Newton matrix dense representation...\n");
-  optimctx->updateGaussNewtonMatDense();
-  if (mpirank_world==0) printf("Done.\n");
-  Mat A = optimctx->getGaussNewtonMatDense();
-
-  // Write the full matrix A to file in Python-friendly format
+  // Write the full matrix to file in Python-friendly format
   if (mpirank_world == 0) {
-    snprintf(filename, 254, "%s/gaussnewton_matrix.dat", output->output_dir.c_str());
+    snprintf(filename, 254, "%s/gaussnewton_leastsquares_matrix.dat", output->output_dir.c_str());
     FILE* matfile = fopen(filename, "w");
     if (matfile) {
       // Write header comment with dimensions
-      fprintf(matfile, "# Gauss-Newton matrix A\n");
-      fprintf(matfile, "# Dimensions: %d x %d\n", ndesign, ndesign);
+      fprintf(matfile, "# Gauss-Newton Least Squares matrix (Jacobian L)\n");
+      fprintf(matfile, "# Dimensions: %d x %d (rows x cols)\n", (int)nrows, ndesign);
 
       // Write matrix row by row
-      for (int i = 0; i < ndesign; i++) {
+      for (PetscInt i = 0; i < nrows; i++) {
         for (int j = 0; j < ndesign; j++) {
           double Aij;
-          MatGetValue(A, i, j, &Aij);
+          MatGetValue(A_LeastSquares, i, j, &Aij);
           fprintf(matfile, "%.16e", Aij);
           if (j < ndesign - 1) {
             fprintf(matfile, " ");
@@ -737,31 +719,109 @@ int main(int argc,char **argv)
     }
   }
 
+  // Clean up
+  VecDestroy(&v);
+  VecDestroy(&Av);
+  MatDestroy(&A_LeastSquares);
 
-  // // TEST: Compare Aij to Re tr(Ui^d Uj) = sum_init Ui[iinit]^T Uj[iinit]
-  // double max_abs_err = 0.0;
-  // for (int ix=0; ix<ndesign; ix++){
-  //   for (int jx=0; jx<ndesign; jx++){
-  //   // int jx = ix; {
-  //     double Aij = 0.0;
-  //     // VecGetValues(A_columns[jx], 1, &ix, &Aij);
-  //     MatGetValue(A, ix, jx, &Aij);
+#endif
 
-  //     double Aij_test = 0.0;
-  //     for (int iinit=0; iinit<ninit_local; iinit++){
-  //       double dot = 0.0;
-  //       VecDot(DU[ix][iinit], DU[jx][iinit], &dot);
-  //       Aij_test += dot;
-  //     }
+#if TEST_GAUSSNEWTON_LINEARSYSTEM
+  /*  ---- TEST: Evaluate GaussNewton matrix columns ---- */
+  optimctx->getStartingPoint(xinit);
+  output->writeControlParams(xinit); // Write params to file
 
-  //     double abs_err = std::abs(Aij - Aij_test);
-  //     printf("A_%d,%d: linSolve = %1.14e, ReTr = %1.14e err=%1.14e\n", ix, jx, Aij, Aij_test, abs_err);
+  // One forward and backward first to populate final_states.
+  bool writeTrajectoryDataFiles_GN = true;
+  optimctx->evalGradF(xinit, grad, writeTrajectoryDataFiles_GN);
 
-  //     max_abs_err = std::max(abs_err, max_abs_err);
-  //   }
-  // }
-  // printf("\n Max. absolute error = %1.14e\n", max_abs_err);
-  
+  // Set point of evaluation for Gauss-Newton matrix
+  optimctx->setXevalGN(xinit);
+
+  Vec v_GN, Av_GN;
+  VecDuplicate(xinit, &v_GN);
+  VecDuplicate(xinit, &Av_GN);
+  VecZeroEntries(v_GN);
+  VecZeroEntries(Av_GN);
+  int ndesign_GN = optimctx->getNdesign();
+
+  // Storage for Gauss-Newton matrix A = L^T * L
+  Mat A_GaussNewton;
+  MatCreate(PETSC_COMM_SELF, &A_GaussNewton);
+  MatSetSizes(A_GaussNewton, PETSC_DECIDE, PETSC_DECIDE, ndesign_GN, ndesign_GN);
+  MatSetType(A_GaussNewton, MATDENSE);
+  MatSetUp(A_GaussNewton);
+  MatZeroEntries(A_GaussNewton);
+
+  // Number of local matrix columns for this processor
+  int ncols_local = ndesign_GN / mpisize_optim;
+  // If not integer divisible, let the last processor handle the remainder
+  if (mpirank_optim == mpisize_optim - 1) {
+    ncols_local = ndesign_GN - mpirank_optim * ncols_local;
+  }
+
+  // Iterate over local columns of the Gauss-Newton matrix
+  for (int ix_local = 0; ix_local < ncols_local; ix_local++) {
+    int ix = mpirank_optim * ncols_local + ix_local;
+
+    // Set v_GN to the ix-th unit vector
+    VecZeroEntries(v_GN);
+    VecSetValue(v_GN, ix, 1.0, INSERT_VALUES);
+    VecAssemblyBegin(v_GN); VecAssemblyEnd(v_GN);
+
+    // Evaluate Av_GN = A * e_ix
+    MatMult(optimctx->getGaussNewtonMatShell(), v_GN, Av_GN);
+
+    // Store Av_GN in ix-th column of A_GaussNewton
+    const PetscScalar *Av_ptr;
+    VecGetArrayRead(Av_GN, &Av_ptr);
+    for (int row = 0; row < ndesign_GN; row++){
+      MatSetValue(A_GaussNewton, row, ix, Av_ptr[row], INSERT_VALUES);
+    }
+    VecRestoreArrayRead(Av_GN, &Av_ptr);
+    MatAssemblyBegin(A_GaussNewton, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(A_GaussNewton, MAT_FINAL_ASSEMBLY);
+  }
+
+  // Need to sum up the columns of A_GaussNewton from all optim_comm processors
+  PetscScalar *A_data;
+  MatDenseGetArray(A_GaussNewton, &A_data);
+  int size = ndesign_GN * ndesign_GN;
+  MPI_Allreduce(MPI_IN_PLACE, A_data, size, MPIU_SCALAR, MPI_SUM, comm_optim);
+  MatDenseRestoreArray(A_GaussNewton, &A_data);
+
+  // Write the full matrix to file in Python-friendly format
+  if (mpirank_world == 0) {
+    snprintf(filename, 254, "%s/gaussnewton_linearsystem_matrix.dat", output->output_dir.c_str());
+    FILE* matfile = fopen(filename, "w");
+    if (matfile) {
+      // Write header comment with dimensions
+      fprintf(matfile, "# Gauss-Newton matrix A = L^T * L\n");
+      fprintf(matfile, "# Dimensions: %d x %d (rows x cols)\n", ndesign_GN, ndesign_GN);
+
+      // Write matrix row by row
+      for (int i = 0; i < ndesign_GN; i++) {
+        for (int j = 0; j < ndesign_GN; j++) {
+          double Aij;
+          MatGetValue(A_GaussNewton, i, j, &Aij);
+          fprintf(matfile, "%.16e", Aij);
+          if (j < ndesign_GN - 1) {
+            fprintf(matfile, " ");
+          }
+        }
+        fprintf(matfile, "\n");
+      }
+      fclose(matfile);
+      printf("File written: %s\n", filename);
+    } else {
+      printf("ERROR: Could not open file %s for writing\n", filename);
+    }
+  }
+
+  // Clean up
+  VecDestroy(&v_GN);
+  VecDestroy(&Av_GN);
+  MatDestroy(&A_GaussNewton);
 
 #endif
 
