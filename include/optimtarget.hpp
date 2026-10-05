@@ -75,6 +75,8 @@ class OptimTarget{
 
     Vec getInitialState() { return initialstate; };
     ObjectiveType getObjectiveType(){ return objective_type; };
+    Mat getFinalUnitaryRe() { return U_final_re; };
+    Mat getFinalUnitaryIm() { return U_final_im; };
 
     /**
      * @brief Prepares the initial condition state and target state

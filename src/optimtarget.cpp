@@ -50,7 +50,7 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, bool quietmod
   VecAssemblyBegin(initialstate); VecAssemblyEnd(initialstate);
 
   // Store final unitary if Geodesic distance objective is used
-  store_Ufinal = (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE);
+  store_Ufinal = (objective_type == ObjectiveType::JGEODESIC || objective_type == ObjectiveType::JGEODESIC_PHASEFREE || objective_type == ObjectiveType::JTRACE);
 
   // Allocate storage for final-time unitary if Geodesic distance objective function is used
   if (store_Ufinal) {
@@ -919,6 +919,20 @@ double OptimTarget::finalizeJ(const double obj_cost_re, const double obj_cost_im
   }
 
   if (store_Ufinal) {
+    // Allreduce the final time matrix 
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    PetscScalar *data;
+    MatDenseGetArray(U_final_re, &data);
+    int size = dim;
+    MPI_Allreduce(MPI_IN_PLACE, data, size * size, MPIU_SCALAR, MPI_SUM, comm_init);
+    MatDenseRestoreArray(U_final_re, &data);
+
+    MatDenseGetArray(U_final_im, &data);
+    MPI_Allreduce(MPI_IN_PLACE, data, size * size, MPIU_SCALAR, MPI_SUM, comm_init);
+    MatDenseRestoreArray(U_final_im, &data);
+
+
     MatAssemblyBegin(U_final_re, MAT_FINAL_ASSEMBLY);
     MatAssemblyBegin(U_final_im, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(U_final_re, MAT_FINAL_ASSEMBLY);

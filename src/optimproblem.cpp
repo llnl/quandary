@@ -1,4 +1,5 @@
 #include "optimproblem.hpp"
+#include "gellmann.hpp"
 
 OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, TimeStepper* timestepper_, MasterEq* mastereq_, MPI_Comm comm_init_, MPI_Comm comm_optim_, Output* output_, bool quietmode_){
 
@@ -129,10 +130,8 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   VecZeroEntries(xprev);
 
   /* Create MatShell for Gauss-Newton least-squares problem */
-  // MatCreateShell(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign, this, &GNLeastSquaresShell);
-  // MatShellSetOperation(GNLeastSquaresShell, MATOP_MULT, (void(*) (void)) applyGNLeastSquaresMatShell);
   // Create MatShell for GNLeastSquares solve
-  PetscInt M = ninit*2*mastereq->getDim(); // total matrix-space dimension 
+  PetscInt M = mastereq->getDim()*mastereq->getDim() - 1; 
   MatCreateShell(PETSC_COMM_SELF, M, ndesign, M, ndesign, this, &GNLeastSquaresShell);
   MatShellSetOperation(GNLeastSquaresShell, MATOP_MULT, (void(*)(void))GNLeastSquaresShell_MatMult);
   MatShellSetOperation(GNLeastSquaresShell, MATOP_MULT_TRANSPOSE, (void(*)(void))GNLeastSquaresShell_MatMultTranspose);
@@ -163,10 +162,10 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   // Create the KSP solver for the Gauss-Newton least-squares problem
   KSPCreate(PETSC_COMM_SELF, &ksp_LeastSquares);
   KSPSetOperators(ksp_LeastSquares, GNLeastSquaresShell, GNLeastSquaresShell);
+  // KSPSetNormType(ksp_LeastSquares, KSP_NORM_UNPRECONDITIONED); // Unconditioned ressidual norm
   KSPSetType(ksp_LeastSquares, KSPLSQR);
-  // KSPSetTolerances(ksp_LeastSquares, 1e-10, 1e-14, PETSC_DEFAULT, 200);
-  KSPSetTolerances(ksp_LeastSquares, 1e-6, 1e-12, PETSC_DEFAULT, 30);
-  KSPSetComputeSingularValues(ksp_LeastSquares, PETSC_TRUE);
+  KSPSetTolerances(ksp_LeastSquares,config.getOptimKSPRtol(),PETSC_DEFAULT,PETSC_DEFAULT,config.getOptimKSPMaxiter());
+  // KSPSetComputeSingularValues(ksp_LeastSquares, PETSC_TRUE);
   KSPSetFromOptions(ksp_LeastSquares);
 
   // Cache state dimension for efficiency
@@ -177,7 +176,6 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   for (int iinit = 0; iinit < ninit_local; iinit++) {
     VecDuplicate(rho_t0_bar, &wsub_workspace[iinit]);
   }
-
 
   /* Create linear solver for solving Gauss-Newton Ax=b */
   KSPCreate(PETSC_COMM_SELF, &ksp_GN);
@@ -1131,17 +1129,20 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, Vec v_LeastSqua
   VecCopy(xinit, xeval_GN);
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
 
-  // Fill the RHS: b = -W^{-1/2} \nabla_U J = -W^1/2 U = -sqrt(n/2)\nabla_U J
-  // or b = -\nabla_U J
+  // Fill the RHS: b = -\nabla_U J projected to tangent space
   // \nabla_J = 2/n U - 2/n^2Tr(V^dU)V = 2/n(I-P)U
 
-  Vec b; // RHS: single long vector stacking ninit subvectors
+  Vec b; // RHS: single long vector stacking ninit subvectors in tangent space
   GNLeastSquaresShell_MatCreateVecs(GNLeastSquaresShell, nullptr, &b);
 
-  // Use cached state size
-  PetscInt state_size = state_dim_cached;
+  PetscInt tangent_dim;;
+  VecGetSize(b, &tangent_dim);
 
-  // first compute J(U(T)) needed for \nabla_UJ. WHAT ABOUT THE NONLINEAR_FORWARD_VALID?? HERE, THIS ASSUMES THAT IT IS VALID, see getFinalState(iinit)! TODO!
+  // Get U(T) from optim_target
+  Mat U_final_re = optim_target->getFinalUnitaryRe();
+  Mat U_final_im = optim_target->getFinalUnitaryIm();
+
+  // first compute J(U(T)) needed for \nabla_UJ
   double obj_cost_re = 0.0;
   double obj_cost_im = 0.0;
   for (int iinit = 0; iinit < ninit_local; iinit++) {
@@ -1160,16 +1161,13 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, Vec v_LeastSqua
   MPI_Allreduce(&mycost_re, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, comm_init);
   MPI_Allreduce(&mycost_im, &obj_cost_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
 
-  // Create local buffer for this processor's portion
-  PetscInt local_size = ninit_local * state_size;
-  PetscScalar *local_buffer = new PetscScalar[local_size];
-
+  PetscScalar *b_data;
+  VecGetArray(b, &b_data);
   for (int iinit = 0; iinit < ninit_local; iinit++) {
     int iinit_global = mpirank_init * ninit_local + iinit;
-    PetscInt local_offset = iinit * state_size;
     Vec ui = timestepper->getFinalState(iinit);
 
-    // Use pre-allocated workspace vector
+    // Use pre-allocated workspace vector to compute -nabla_U J
     Vec b_iinit = wsub_workspace[iinit];
 
     // Copy ui to b_iinit
@@ -1182,44 +1180,23 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, Vec v_LeastSqua
     double scale = 1.0 / mastereq->getDim();
     optim_target->evalJ_diff(ui, b_iinit, scale*obj_cost_re_bar, scale*obj_cost_im_bar);
 
-    // Copy result to local buffer
-    const PetscScalar *b_iinit_data;
-    VecGetArrayRead(b_iinit, &b_iinit_data);
-    memcpy(&local_buffer[local_offset], b_iinit_data, state_size * sizeof(PetscScalar));
-    VecRestoreArrayRead(b_iinit, &b_iinit_data);
+    // Scale by -1 to get -nabla_U J
+    VecScale(b_iinit, -1.0);
+
+    GellMann::projectVecToTangentSpace(b_iinit, U_final_re, U_final_im, mastereq->getDim(), iinit_global, b_data);
   }
 
-  if (includeHessUJ) {
-    // Scale local buffer
-    for (PetscInt i = 0; i < local_size; i++) {
-      local_buffer[i] *= sqrt(mastereq->getDim() / 2.0);
-    }
-  }
-  // Finalize the RHS: scale by -1
-  for (PetscInt i = 0; i < local_size; i++) {
-    local_buffer[i] *= -1.0;
-  }
-
-  // Gather all local buffers into b using MPI_Allgatherv
-  PetscScalar *b_data;
-  VecGetArray(b, &b_data);
-
-  int *recvcounts = new int[mpisize_init];
-  int *displs = new int[mpisize_init];
-  for (int rank = 0; rank < mpisize_init; rank++) {
-    recvcounts[rank] = ninit_local * state_size;
-    displs[rank] = rank * ninit_local * state_size;
-  }
-
-  MPI_Allgatherv(local_buffer, local_size, MPIU_SCALAR,
-                 b_data, recvcounts, displs, MPIU_SCALAR, comm_init);
-
-  delete[] recvcounts;
-  delete[] displs;
-  delete[] local_buffer;
-
+  // Allreduce b across all comm_init processors
+  MPI_Allreduce(MPI_IN_PLACE, b_data, tangent_dim, MPIU_SCALAR, MPI_SUM, comm_init);
   VecRestoreArray(b, &b_data);
 
+  // Note: includeHessUJ is disabled (set to false in constructor)
+  if (includeHessUJ) {
+    // TODO: Implement W^1/2 in tangent space if needed
+    if (mpirank_world == 0) {
+      printf("WARNING: includeHessUJ is not implemented for tangent space projection.\n");
+    }
+  }
 
   // // Adjoint test: <w, A v> should equal <A^T w, v>  (all real)
   // printf("GN Least-Squares: Adjoint test\n");
@@ -1281,103 +1258,43 @@ void OptimProblem::GNLeastSquaresShell_MatMult(Mat A, Vec v, Vec y)
   // Reset output
   VecZeroEntries(y);
 
+  PetscInt tangent_dim;
+  VecGetSize(y, &tangent_dim);
+
   // Apply linearized forward to get dU/dalpha x v
   // assumes that the timestepper's trajectory_states are already populated and computes all lin_trajectory_states.
   self->evalLinearizedForward(self->xeval_GN, v);
 
-  // Use cached state size
-  PetscInt state_size = self->state_dim_cached;
+  // Get U_final matrices. This needs that the matrices are synchronized across comm_init (happens in finalizeJ)
+  Mat U_final_re = self->optim_target->getFinalUnitaryRe();
+  Mat U_final_im = self->optim_target->getFinalUnitaryIm();
 
-  // Get array access to y for direct writing
+  // Set up Omega_j = U(T)^d *(Lv)_j and project onto tangent space
   PetscScalar *y_data;
   VecGetArray(y, &y_data);
-
-  // Each comm_init processor fills its portion of y
-  // Copy local data into a contiguous buffer for Allgatherv
-  PetscInt local_size = self->ninit_local * state_size;
-  PetscScalar *local_buffer = new PetscScalar[local_size];
-
   for (int iinit = 0; iinit < self->ninit_local; iinit++) {
+    int iinit_global = self->mpirank_init * self->ninit_local + iinit;
     Vec lin_final_state = self->timestepper->getLinearizedFinalState(iinit);
 
-    // Copy to local buffer
-    const PetscScalar *lin_state_data;
-    VecGetArrayRead(lin_final_state, &lin_state_data);
-    PetscInt local_offset = iinit * state_size;
-    memcpy(&local_buffer[local_offset], lin_state_data, state_size * sizeof(PetscScalar));
-    VecRestoreArrayRead(lin_final_state, &lin_state_data);
+    GellMann::projectVecToTangentSpace(lin_final_state, U_final_re, U_final_im, self->mastereq->getDim(), iinit_global, y_data);
   }
 
+  // Allreduce the data in y across all comm_init processors
+  MPI_Allreduce(MPI_IN_PLACE, y_data, tangent_dim, MPIU_SCALAR, MPI_SUM, self->comm_init);
+  VecRestoreArray(y, &y_data);
+
   // Apply W^1/2 to local buffer if needed
+  // NOTE: includeHessUJ is disabled (set to false in constructor), so this branch is unlikely
   if (self->includeHessUJ){
     // Only available for J_Inf (Generalized)
     assert(self->optim_target->getObjectiveType() == ObjectiveType::JTRACE);
 
-    // first compute J(w(T)) needed for W^1/2
-    double obj_cost_re = 0.0;
-    double obj_cost_im = 0.0;
-    for (int iinit = 0; iinit < self->ninit_local; iinit++) {
-      // Need to recompute the target (and initial) state
-      int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-      self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
-      // eval J_inf(w(T))
-      Vec wT = self->timestepper->getLinearizedFinalState(iinit);
-      double obj_lin_iinit_re = 0.0;
-      double obj_lin_iinit_im = 0.0;
-      self->optim_target->evalJ(wT,  &obj_lin_iinit_re, &obj_lin_iinit_im);
-      obj_cost_re += self->obj_weights[iinit] * obj_lin_iinit_re;
-      obj_cost_im += self->obj_weights[iinit] * obj_lin_iinit_im;
-    }
-    double mycost_re = obj_cost_re;
-    double mycost_im = obj_cost_im;
-    MPI_Allreduce(&mycost_re, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
-    MPI_Allreduce(&mycost_im, &obj_cost_im, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
-
-    // Then apply W^1/2 to each portion in local buffer
-    for (int iinit = 0; iinit < self->ninit_local; iinit++) {
-      int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-      PetscInt local_offset = iinit * state_size;
-
-      // Use pre-allocated workspace vector
-      Vec y_iinit = self->wsub_workspace[iinit];
-      PetscScalar *y_iinit_data;
-      VecGetArray(y_iinit, &y_iinit_data);
-      memcpy(y_iinit_data, &local_buffer[local_offset], state_size * sizeof(PetscScalar));
-      VecRestoreArray(y_iinit, &y_iinit_data);
-
-      double obj_cost_re_bar, obj_cost_im_bar;
-      // scale w_i(t) by sqrt(2/n)
-      VecScale(y_iinit, sqrt(2.0 / self->mastereq->getDim()));
-      // Add -sqrt(2/n)*1/n tr(...)V
-      self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
-      self->optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
-      double scale = 0.5*sqrt(2.0 / self->mastereq->getDim());
-      self->optim_target->evalJ_diff(y_iinit, y_iinit, scale*obj_cost_re_bar, scale*obj_cost_im_bar);
-
-      // Copy back to local buffer
-      VecGetArray(y_iinit, &y_iinit_data);
-      memcpy(&local_buffer[local_offset], y_iinit_data, state_size * sizeof(PetscScalar));
-      VecRestoreArray(y_iinit, &y_iinit_data);
+    // TODO: Need to implement W^1/2 in tangent space representation
+    // For now, this is disabled as includeHessUJ = false in the constructor
+    if (self->mpirank_world == 0) {
+      printf("WARNING: includeHessUJ is not implemented for tangent space projection. Skipping W^1/2 application.\n");
     }
   }
-
-  // Gather all local buffers into y using MPI_Allgatherv
-  // Setup receive counts and displacements
-  int *recvcounts = new int[self->mpisize_init];
-  int *displs = new int[self->mpisize_init];
-  for (int rank = 0; rank < self->mpisize_init; rank++) {
-    recvcounts[rank] = self->ninit_local * state_size;
-    displs[rank] = rank * self->ninit_local * state_size;
-  }
-
-  MPI_Allgatherv(local_buffer, local_size, MPIU_SCALAR,
-                 y_data, recvcounts, displs, MPIU_SCALAR, self->comm_init);
-
-  delete[] recvcounts;
-  delete[] displs;
-  delete[] local_buffer;
-
-  VecRestoreArray(y, &y_data);
 }
 
 void OptimProblem::GNLeastSquaresShell_MatMultTranspose(Mat A, Vec w, Vec vout)
@@ -1388,65 +1305,35 @@ void OptimProblem::GNLeastSquaresShell_MatMultTranspose(Mat A, Vec w, Vec vout)
   // Reset output
   VecZeroEntries(vout);
 
-  // Use cached state size
-  PetscInt state_size = self->state_dim_cached;
-
-  // Get read access to w
+  // Get read access to w (in reduced tangent space) Note: w has size tangent_dim, 
   const PetscScalar *w_data;
   VecGetArrayRead(w, &w_data);
 
-  // Extract and copy portions for this processor's initial conditions
-  // Use pre-allocated workspace vectors
-  for (int iinit = 0; iinit < self->ninit_local; iinit++) {
-    int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-    PetscInt offset = iinit_global * state_size;
-
-    // Copy the portion of w for this initial condition into workspace
-    PetscScalar *wsub_data;
-    VecGetArray(self->wsub_workspace[iinit], &wsub_data);
-    memcpy(wsub_data, &w_data[offset], state_size * sizeof(PetscScalar));
-    VecRestoreArray(self->wsub_workspace[iinit], &wsub_data);
-  }
-
-  VecRestoreArrayRead(w, &w_data);
-
-  // Optional, apply W^1/2 to each terminal condition in workspace
+  // Optional, apply W^1/2 to w before reconstruction
+  // NOTE: includeHessUJ is disabled (set to false in constructor)
   if (self->includeHessUJ){
     // Only available for J_Inf (Generalized)
     assert(self->optim_target->getObjectiveType() == ObjectiveType::JTRACE);
 
-    // first compute J(wsub) needed for W^1/2
-    double obj_cost_re = 0.0;
-    double obj_cost_im = 0.0;
-    for (int iinit = 0; iinit < self->ninit_local; iinit++) {
-      // Need to recompute the target (and initial) state
-      int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-      self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
-      // eval J_inf(w(T))
-      double obj_lin_iinit_re = 0.0;
-      double obj_lin_iinit_im = 0.0;
-      self->optim_target->evalJ(self->wsub_workspace[iinit],  &obj_lin_iinit_re, &obj_lin_iinit_im);
-      obj_cost_re += self->obj_weights[iinit] * obj_lin_iinit_re;
-      obj_cost_im += self->obj_weights[iinit] * obj_lin_iinit_im;
-    }
-    double mycost_re = obj_cost_re;
-    double mycost_im = obj_cost_im;
-    MPI_Allreduce(&mycost_re, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
-    MPI_Allreduce(&mycost_im, &obj_cost_im, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
-
-    // Then apply W^1/2 to each subvector
-    for (int iinit = 0; iinit < self->ninit_local; iinit++) {
-      int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-      double obj_cost_re_bar, obj_cost_im_bar;
-      // scale w_i(t) by sqrt(2/n)
-      VecScale(self->wsub_workspace[iinit], sqrt(2.0 / self->mastereq->getDim()));
-      // Add -sqrt(2/n)*1/n tr(...)V
-      self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
-      self->optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
-      double scale = 0.5*sqrt(2.0 / self->mastereq->getDim());
-      self->optim_target->evalJ_diff(self->wsub_workspace[iinit], self->wsub_workspace[iinit], scale*obj_cost_re_bar, scale*obj_cost_im_bar);
+    // TODO: Need to implement W^1/2 in tangent space representation
+    // For now, this is disabled as includeHessUJ = false in the constructor
+    if (self->mpirank_world == 0) {
+      printf("WARNING: includeHessUJ is not implemented for tangent space projection. Skipping W^1/2 application.\n");
     }
   }
+
+  // Reconstruct full state vectors from tangent space coefficients for this processor's initial conditions
+  for (int iinit = 0; iinit < self->ninit_local; iinit++) {
+    int iinit_global = self->mpirank_init * self->ninit_local + iinit;
+    // Get U(T) from optim_target
+    Mat U_final_re = self->optim_target->getFinalUnitaryRe();
+    Mat U_final_im = self->optim_target->getFinalUnitaryIm();
+
+    // Reconstruct full state vector from tangent space coefficients. This is the adjoint of projectVecToTangentSpace
+    GellMann::reconstructVecFromTangentSpace(w_data, U_final_re, U_final_im, self->mastereq->getDim(), iinit_global, self->wsub_workspace[iinit]);
+  }
+
+  VecRestoreArrayRead(w, &w_data);
 
   // Solve adjoint backward ODE for each terminal condition in workspace
   for (int iinit = 0; iinit < self->ninit_local; iinit++) {
@@ -1472,11 +1359,9 @@ void OptimProblem::GNLeastSquaresShell_MatCreateVecs(Mat A, Vec *right, Vec *lef
 
   if (right) VecCreateSeq(PETSC_COMM_SELF, self->ndesign, right);
   if (left) {
-    // Create a single long vector stacking ninit subvectors
-    // Total size: ninit * state_dimension
-    PetscInt state_size;
-    VecGetSize(self->rho_t0_bar, &state_size);
-    PetscInt total_size = self->ninit * state_size;
-    VecCreateSeq(PETSC_COMM_SELF, total_size, left);
+    // Create a reduced tangent space
+    PetscInt N = self->mastereq->getDim();
+    PetscInt tangent_dim = N * N - 1;
+    VecCreateSeq(PETSC_COMM_SELF, tangent_dim, left);
   }
 }

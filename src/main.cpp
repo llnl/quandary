@@ -23,7 +23,7 @@
 #define TEST_FD_HESS 0    // Run Finite Differences Hessian test
 #define TEST_FD_LINEARIZED_FWD 0 // Run Finite Differences Linearized Forward test
 #define TEST_GAUSSNEWTON_LINEARSYSTEM 0
-#define TEST_GAUSSNEWTON_LEASTSQUARES 1
+#define TEST_GAUSSNEWTON_LEASTSQUARES 0
 #define HESSIAN_DECOMPOSITION 0 // Run eigenvalue analysis for Hessian
 #define EPS 1e-5          // Epsilon for Finite Differences
 
@@ -307,6 +307,8 @@ int main(int argc,char **argv)
     VecDuplicate(xinit, &v_LeastSquares); 
     optimctx->solveGaussNewtonLeastSquares(xinit, v_LeastSquares);
 
+    // exit(1);
+
     // Linear systems: Set right hand side
     Vec gnrhs; 
     VecDuplicate(grad, &gnrhs); 
@@ -317,9 +319,6 @@ int main(int argc,char **argv)
     Vec v_KSP;
     VecDuplicate(grad, &v_KSP);
     optimctx->solveGaussNewtonKSP(xinit, gnrhs, v_KSP);
-
-    exit(1);
-
 
 
     // Solve Gauss-Newton via SVD
@@ -342,17 +341,19 @@ int main(int argc,char **argv)
       VecAXPY(diff, -1.0, v_LeastSquares);
       VecNorm(diff, NORM_2, &diff_norm);
       VecNorm(v_KSP, NORM_2, &vnorm);
-      printf("\n Relative difference norm between KSP and LeastSquares solutions: %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
+      printf("Relative difference norm between KSP and LeastSquares solutions: %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
       VecDestroy(&diff);
     }
     
     // Check if v_KSP is a descent direction
-    double dot_ksp, dot_eps;
+    double dot_ksp, dot_eps, dot_ls;
     VecDot(grad, v_KSP, &dot_ksp);
     VecDot(grad, v_EPS, &dot_eps);
+    VecDot(grad, v_LeastSquares, &dot_ls);
     if (mpirank_world == 0 && !quietmode) {
-      printf(" Dot product of gradient and KSP solution (should be negative for descent): %1.14e\n", dot_ksp);
+      printf("\n Dot product of gradient and KSP solution (should be negative for descent): %1.14e\n", dot_ksp);
       printf(" Dot product of gradient and EPS solution (should be negative for descent): %1.14e\n", dot_eps);
+      printf(" Dot product of gradient and LeastSquares solution (should be negative for descent): %1.14e\n", dot_ls);
     }
 
     VecDestroy(&v_KSP);
