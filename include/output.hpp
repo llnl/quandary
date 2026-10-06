@@ -80,8 +80,9 @@ class Output{
      * @param penalty_energy Energy penalty term
      * @param penalty_variation Control variation penalty
      * @param ksp_iters Number of KSP linear solver iterations used at this optimization iteration (0 if not applicable)
+     * @param inner_residual Inner residual from Gauss-Newton solve (0 if not applicable)
      */
-    void writeOptimFile(int optim_iter, double objective, double gnorm, double stepsize, double Favg, double cost, double tikh_regul,  double penalty_leakage, double penalty_dpdm, double penalty_energy, double penalty_variation, double penalty_weightedcost, int ksp_iters);
+    void writeOptimFile(int optim_iter, double objective, double gnorm, double stepsize, double Favg, double cost, double tikh_regul,  double penalty_leakage, double penalty_dpdm, double penalty_energy, double penalty_variation, double penalty_weightedcost, int ksp_iters, double inner_residual);
 
     /**
      * @brief Writes current control parameters to file.

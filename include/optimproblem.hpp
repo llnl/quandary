@@ -50,6 +50,7 @@ class OptimProblem {
   size_t ninit; ///< Number of initial conditions to be considered (N^2, N, or 1)
   int ninit_local; ///< Local number of initial conditions on this processor
   Vec rho_t0_bar; ///< Storage for adjoint initial condition of the adjoint ODE (aka the terminal condition)
+  Vec state_gradient; ///< Accumulated Euclidean state gradient across all initial conditions
 
   OptimTarget* optim_target; ///< Pointer to the optimization target (gate or state)
 
@@ -117,7 +118,9 @@ class OptimProblem {
 
   // KSP linear solver
   KSP ksp_GN;  ///< Linear solver for Gauss-Newton system
-  double ksp_damping = 1e-3; ///< Damping parameter for Gauss-Newton matrix shift
+  double ksp_damping; ///< Damping parameter for Gauss-Newton matrix shift
+  double ksp_solution_norm_threshold; ///< Solution norm threshold for early termination
+  std::string ksp_type; ///< KSP solver type for reporting
 
   // EPS eigenvalue solver
   EPS eps_GN;
@@ -227,10 +230,10 @@ class OptimProblem {
   static void GNLeastSquaresShell_MatCreateVecs(Mat A, Vec *right, Vec *left);
 
   /**
-   * @brief MatMult operation for MatShell Gauss-Newton Av = L*Lv: Linearized forward + adjoint operator. 
-   * 
+   * @brief MatMult operation for MatShell Gauss-Newton Av = L*Lv: Linearized forward + adjoint operator.
+   *
    * The point of evaluation xeval_GN must be set correctly in the OptimProblem before calling this.
-   * 
+   *
    * @param[in] v Direction vector
    * @param[out] Av Resulting vector after applying the linearized forward and adjoint operators
    */

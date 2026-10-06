@@ -106,6 +106,14 @@ class Config {
   double optim_penalty_energy; ///< Energy penalty coefficient
   double optim_penalty_variation; ///< Amplitude variation penalty coefficient
   OptimSolverType optim_solver_type; ///< Type of optimization solver to use
+  std::string optim_gn_ksp_type; ///< KSP solver type for Gauss-Newton
+  double optim_gn_ksp_rtol; ///< Relative tolerance for the Gauss-Newton KSP solver
+  int optim_gn_ksp_maxiter; ///< Maximum iterations for the Gauss-Newton KSP solver
+  std::string optim_gn_pc_type; ///< Preconditioner type for Gauss-Newton KSP
+  bool optim_gn_ksp_warmstart; ///< Warm-start option for Gauss-Newton KSP solver
+  double optim_gn_ksp_damping; ///< Damping parameter for Gauss-Newton matrix shift
+  double optim_gn_ksp_solution_norm_threshold; ///< Solution norm threshold for early termination
+  bool optim_gn_minres_qlp; ///< Enable MINRES-QLP variant
   double optim_ksp_rtol; ///< Relative tolerance for the KSP solver
   int optim_ksp_maxiter; ///< Maximum iterations for the KSP solver
 
@@ -184,6 +192,14 @@ class Config {
   double getOptimPenaltyEnergy() const { return optim_penalty_energy; }
   double getOptimPenaltyVariation() const { return optim_penalty_variation; }
   OptimSolverType getOptimSolverType() const { return optim_solver_type; }
+  std::string getOptimGnKspType() const { return optim_gn_ksp_type; }
+  double getOptimGnKspRtol() const { return optim_gn_ksp_rtol; }
+  int getOptimGnKspMaxiter() const { return optim_gn_ksp_maxiter; }
+  std::string getOptimGnPcType() const { return optim_gn_pc_type; }
+  bool getOptimGnKspWarmstart() const { return optim_gn_ksp_warmstart; }
+  double getOptimGnKspDamping() const { return optim_gn_ksp_damping; }
+  double getOptimGnKspSolutionNormThreshold() const { return optim_gn_ksp_solution_norm_threshold; }
+  bool getOptimGnMinresQlp() const { return optim_gn_minres_qlp; }
   double getOptimKSPRtol() const { return optim_ksp_rtol; }
   int getOptimKSPMaxiter() const { return optim_ksp_maxiter; }
 

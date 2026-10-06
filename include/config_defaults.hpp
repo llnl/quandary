@@ -57,8 +57,14 @@ const double OPTIM_PENALTY_DPDM = 0.0; ///< Default second derivative penalty co
 const double OPTIM_PENALTY_ENERGY = 0.0; ///< Default energy penalty coefficient
 const double OPTIM_PENALTY_VARIATION = 0.01; ///< Default amplitude variation penalty coefficient
 const OptimSolverType OPTIM_SOLVER_TYPE = OptimSolverType::TAO_LBFGS; ///< Default optimization solver type
-const double OPTIM_KSP_RTOL = 1e-3; ///< Default relative tolerance for the KSP solver
-const int OPTIM_KSP_MAXITER = 100; ///< Default maximum iterations for the KSP solver
+const std::string OPTIM_GN_KSP_TYPE = "minres"; ///< Default KSP solver type for Gauss-Newton
+const double OPTIM_GN_KSP_RTOL = 1e-3; ///< Default relative tolerance for the Gauss-Newton KSP solver
+const int OPTIM_GN_KSP_MAXITER = 100; ///< Default maximum iterations for the Gauss-Newton KSP solver
+const std::string OPTIM_GN_PC_TYPE = "none"; ///< Default preconditioner type for Gauss-Newton KSP
+const bool OPTIM_GN_KSP_WARMSTART = false; ///< Default warm-start option for Gauss-Newton KSP solver
+const double OPTIM_GN_KSP_DAMPING = 1e-3; ///< Default damping parameter for Gauss-Newton matrix shift
+const double OPTIM_GN_KSP_SOLUTION_NORM_THRESHOLD = 1e12; ///< Default solution norm threshold for early termination (disabled by default with large value)
+const bool OPTIM_GN_MINRES_QLP = false; ///< Default: use standard MINRES (not QLP variant)
 
 inline const std::string OUTPUT_DIRECTORY = "./data_out"; ///< Default output directory
 

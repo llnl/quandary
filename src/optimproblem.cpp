@@ -11,6 +11,9 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   quietmode = quietmode_;
   output_optimization_stride = config.getOutputOptimizationStride();
   optim_solver_type = config.getOptimSolverType();
+  ksp_damping = config.getOptimGnKspDamping();
+  ksp_solution_norm_threshold = config.getOptimGnKspSolutionNormThreshold();
+  ksp_type = config.getOptimGnKspType();
 
   /* Reset */
   objective = 0.0;
@@ -44,6 +47,11 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   VecDuplicate(optim_target->getInitialState(), &rho_t0_bar);
   VecZeroEntries(rho_t0_bar);
   VecAssemblyBegin(rho_t0_bar); VecAssemblyEnd(rho_t0_bar);
+
+  /* Allocate state gradient accumulator */
+  VecDuplicate(optim_target->getInitialState(), &state_gradient);
+  VecZeroEntries(state_gradient);
+  VecAssemblyBegin(state_gradient); VecAssemblyEnd(state_gradient);
 
   /* Get weights for the objective function (weighting the different initial conditions */
   obj_weights = config.getOptimWeights();
@@ -180,15 +188,34 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   /* Create linear solver for solving Gauss-Newton Ax=b */
   KSPCreate(PETSC_COMM_SELF, &ksp_GN);
   KSPSetOperators(ksp_GN, GaussNewtonMatShell, GaussNewtonMatShell);
-  KSPSetType(ksp_GN, KSPCG);  // CG method
-  // KSPSetType(ksp_GN, KSPMINRES);  // MINRES method
-  KSPSetInitialGuessNonzero(ksp_GN, PETSC_FALSE);
-  KSPSetFromOptions(ksp_GN);
-  PC  pc;
+
+  // Set KSP type from config (configurable via TOML)
+  std::string ksp_type = config.getOptimGnKspType();
+  KSPSetType(ksp_GN, ksp_type.c_str());
+
+  // Enable MINRES-QLP variant if configured
+  if (config.getOptimGnMinresQlp() && ksp_type == "minres") {
+    PetscOptionsSetValue(NULL, "-gn_ksp_minres_qlp", "true");
+    if (!quietmode) printf("Enabling MINRES-QLP variant for Gauss-Newton KSP solver\n");
+  }
+
+  // Set convergence tolerances
+  KSPSetTolerances(ksp_GN, config.getOptimGnKspRtol(), PETSC_DEFAULT, PETSC_DEFAULT,
+                   config.getOptimGnKspMaxiter());
+
+  // Configure warm-starting
+  KSPSetInitialGuessNonzero(ksp_GN, config.getOptimGnKspWarmstart() ? PETSC_TRUE : PETSC_FALSE);
+
+  // Set preconditioner type
+  PC pc;
   KSPGetPC(ksp_GN, &pc);
-  PCSetType(pc, PCNONE); // Disable preconditioner
-  KSPSetNormType(ksp_GN, KSP_NORM_UNPRECONDITIONED); // Unconditioned ressidual norm
-  KSPSetTolerances(ksp_GN,config.getOptimKSPRtol(),PETSC_DEFAULT,PETSC_DEFAULT,config.getOptimKSPMaxiter());
+  std::string pc_type = config.getOptimGnPcType();
+  PCSetType(pc, pc_type.c_str());
+
+  // Set options prefix and apply command-line overrides
+  KSPSetOptionsPrefix(ksp_GN, "gn_");
+  KSPSetNormType(ksp_GN, KSP_NORM_UNPRECONDITIONED); // Unconditioned residual norm
+  KSPSetFromOptions(ksp_GN);
 
   /* Create eigenvalues solver for Gauss-Newton Ax=b */
   EPSCreate(PETSC_COMM_SELF, &eps_GN);
@@ -225,6 +252,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
 OptimProblem::~OptimProblem() {
   delete [] mygrad;
   VecDestroy(&rho_t0_bar);
+  VecDestroy(&state_gradient);
 
   VecDestroy(&xlower);
   VecDestroy(&xupper);
@@ -388,6 +416,9 @@ void OptimProblem::evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles){
   /* Reset Gradient */
   VecZeroEntries(G);
 
+  /* Reset state gradient accumulator */
+  VecZeroEntries(state_gradient);
+
   // Reset U_final
   optim_target->resetFinalStates();
 
@@ -535,6 +566,9 @@ void OptimProblem::evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles){
     // Derivative of storing final unitary (adds a column of U_final_bar into rho_t0_bar)
     optim_target->storeFinalUnitaryColumn_diff(iinit_global, rho_t0_bar);
 
+    /* Accumulate Euclidean state gradient (will project to Riemannian after loop) */
+    VecAXPY(state_gradient, 1.0, rho_t0_bar);
+
     /* Derivative of time-stepping */
     timestepper->solveAdjointODE(iinit, rho_t0_bar, obj_weights[iinit_global] * gamma_penalty_leakage, obj_weights[iinit_global]*gamma_penalty_weightedcost, obj_weights[iinit_global]*gamma_penalty_dpdm, obj_weights[iinit_global]*gamma_penalty_energy);
 
@@ -543,13 +577,33 @@ void OptimProblem::evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles){
   } // end of initial condition loop 
 
   /* Sum up the gradient from all initial condition processors */
-  PetscScalar* grad; 
+  PetscScalar* grad;
   VecGetArray(G, &grad);
   for (int i=0; i<ndesign; i++) {
     mygrad[i] = grad[i];
   }
   MPI_Allreduce(mygrad, grad, ndesign, MPI_DOUBLE, MPI_SUM, comm_init);
   VecRestoreArray(G, &grad);
+
+  /* Sum up the Euclidean state gradient across all initial condition processors */
+  VecAssemblyBegin(state_gradient);
+  VecAssemblyEnd(state_gradient);
+  PetscInt state_grad_size;
+  VecGetLocalSize(state_gradient, &state_grad_size);
+  PetscScalar* state_grad_arr;
+  VecGetArray(state_gradient, &state_grad_arr);
+  double* mystate_grad = new double[state_grad_size];
+  for (int i = 0; i < state_grad_size; i++) {
+    mystate_grad[i] = PetscRealPart(state_grad_arr[i]);
+  }
+  MPI_Allreduce(mystate_grad, state_grad_arr, state_grad_size, MPI_DOUBLE, MPI_SUM, comm_init);
+  delete[] mystate_grad;
+  VecRestoreArray(state_gradient, &state_grad_arr);
+
+  /* Project to Riemannian gradient for JTRACE objective */
+  if (optim_target->getObjectiveType() == ObjectiveType::JTRACE) {
+    optim_target->projectGradientToRiemannianManifold(state_gradient);
+  }
 
   /* Compute and store gradient norm */
   VecNorm(G, NORM_2, &(gnorm));
@@ -671,6 +725,7 @@ void OptimProblem::applyGaussNewtonMatShell(Mat A, const Vec v, Vec Av){
 }
 
 
+
 void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b){
 
   // Store the point of evaluation for the Gauss-Newton matrix shell A(xinit)
@@ -705,8 +760,20 @@ void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b){
   KSPGetIterationNumber(ksp_GN, &iters);
   KSPGetResidualNorm(ksp_GN, &rnorm);
   ksp_iters_last = iters;
+
+  // Check solution norm against threshold
+  double solution_norm;
+  VecNorm(Ainv_b, NORM_2, &solution_norm);
+  if (solution_norm > ksp_solution_norm_threshold) {
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Warning: KSP solution norm %.2e exceeds threshold %.2e\n",
+             solution_norm, ksp_solution_norm_threshold);
+    }
+  }
+
   if (mpirank_world == 0 && !quietmode) {
-    printf("Gauss-Newton CG stats: iterations = %d, MatVec counter = %d, residual norm = %1.14e\n", iters, GN_MatVec_counter, rnorm);
+    printf("Gauss-Newton %s stats: iterations = %d, MatVec counter = %d, residual norm = %1.14e, solution norm = %1.14e\n",
+           ksp_type.c_str(), iters, GN_MatVec_counter, rnorm, solution_norm);
   }
 }
 
@@ -905,10 +972,16 @@ void OptimProblem::solve(Vec xinit) {
         double f = objective;
         VecNorm(G, NORM_2, &gnorm);
 
+        // Normalize gradient for better numerical conditioning in KSP solve
+        VecScale(G, 1.0 / gnorm);
+
         // Precondition the gradient: solve the Gauss-Newton system A(x)*Gprec = G via KSP
         solveGaussNewtonKSP(x_GN, G, Gprec);
         // solveGaussNewtonEPS(x_GN, G, Gprec);
         // VecCopy(G, Gprec); // Steepest descent, no preconditioner
+
+        // Scale Gprec back by gnorm for the line search
+        VecScale(Gprec, gnorm);
 
         // Backtracking Armijo line search along -Gprec, projected onto the bound constraints
         double alpha = armijoLineSearch(x_GN, f, G, Gprec, xnew, step);
@@ -1008,8 +1081,8 @@ bool OptimProblem::monitor(int iter, double f, double gnorm, double deltax){
 
   /* Every <output_optimization_stride> iterations: Output of optimization history */
   if (iter % getOutputOptimizationStride() == 0 || lastIter) {
-    // Add to optimization history file 
-    getOutput()->writeOptimFile(iter, f, gnorm, deltax, F_avg, obj_cost, obj_regul, obj_penal_leakage, obj_penal_dpdm, obj_penal_energy, obj_penal_variation, obj_penal_weightedcost, ksp_iters_last);
+    // Add to optimization history file
+    getOutput()->writeOptimFile(iter, f, gnorm, deltax, F_avg, obj_cost, obj_regul, obj_penal_leakage, obj_penal_dpdm, obj_penal_energy, obj_penal_variation, obj_penal_weightedcost, ksp_iters_last, 0.0);
     // Screen output 
     if (getMPIrank_world() == 0) {
       std::cout<< iter <<  "  " << std::scientific<<std::setprecision(14) << obj_cost << " + " << obj_regul << " + " << obj_penal_leakage << " + " << obj_penal_dpdm << " + " << obj_penal_energy << " + " << obj_penal_variation << " + " << obj_penal_weightedcost;

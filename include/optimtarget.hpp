@@ -206,5 +206,15 @@ class OptimTarget{
      * @param HS_im_bar Adjoint of imaginary part of overlap
      */
     void HilbertSchmidtOverlap_diff(Vec statebar, bool scalebypurity, const double HS_re_bar, const double HS_im_bar);
+
+    /**
+     * @brief Projects Euclidean gradient onto Riemannian tangent space of unitary manifold.
+     *
+     * For JTRACE objective with closed quantum systems, this applies the projection:
+     * g_proj = g - U(U† g) where U is the final unitary.
+     *
+     * @param gradient_euclidean Euclidean gradient vector (input/output, modified in place)
+     */
+    void projectGradientToRiemannianManifold(Vec gradient_euclidean);
 };
 
