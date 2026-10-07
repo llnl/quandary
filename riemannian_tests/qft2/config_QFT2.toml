@@ -48,6 +48,7 @@ gn_minres_qlp = true
 # ksp_rtol = 1e-4
 
 ls_solver = "LSQR"
+# ls_solver = "BRGN"
 
 [output]
 directory = "."

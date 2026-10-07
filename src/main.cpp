@@ -324,7 +324,7 @@ int main(int argc,char **argv)
     // Save current max iterations, set to 1 for residual check, then restore
     int saved_maxiter = optimctx->getGaussNewtonMaxiter();
     optimctx->setGaussNewtonMaxiter(1); // just for checking the residual
-    if (mpirank_world == 0 && !quietmode) printf("\nTesting\n");
+    if (mpirank_world == 0 && !quietmode) printf("\nTesting: call solveGNLS again with converged search direction\n");
     optimctx->solveGaussNewtonLeastSquares(xinit, v_LeastSquares, v_result);
     // check if the solution norm has changed
     VecNorm(v_result, NORM_2, &v_LeastSquares_norm);
@@ -348,7 +348,7 @@ int main(int argc,char **argv)
 
     // call the Gauss-Newton solver again to re-evaluate the residual
     optimctx->setGaussNewtonMaxiter(1); // just for checking the residual
-    if (mpirank_world == 0 && !quietmode) printf("\nTesting\n");
+    if (mpirank_world == 0 && !quietmode) printf("\nTesting: call solveGNKSP again with converged search direction\n");
     optimctx->solveGaussNewtonKSP(xinit, v_KSP, gnrhs, v_result);
     // check if the solution norm has changed
     VecNorm(v_result, NORM_2, &v_LeastSquares_norm);
@@ -357,6 +357,7 @@ int main(int argc,char **argv)
     }
 
     // check if the solution from the least squares routine gives a small residual?
+        if (mpirank_world == 0 && !quietmode) printf("\nTesting: call solveGNKSP with converged search direction from solveGNLS\n");
     optimctx->solveGaussNewtonKSP(xinit, v_LeastSquares, gnrhs, v_result);
     VecNorm(v_result, NORM_2, &v_LeastSquares_norm);
     if (mpirank_world == 0 && !quietmode) {
