@@ -115,6 +115,12 @@ class OptimProblem {
   Vec *wsub_workspace; ///< Pre-allocated workspace vectors for MatMultTranspose (size: ninit_local)
   PetscInt state_dim_cached; ///< Cached state dimension for efficiency
 
+  // Tao BRGN solver for least-squares problem
+  Tao tao_brgn;        ///< Tao BRGN solver (alternative to KSPLSQR)
+  Vec brgn_rhs;        ///< Cached RHS vector for BRGN residual evaluation
+  double brgn_damping; ///< Damping parameter λ for BRGN regularization
+  std::string ls_solver; ///< Least-squares solver name: "BRGN" or "LSQR"
+
   // KSP linear solver
   KSP ksp_GN;  ///< Linear solver for Gauss-Newton system
   double ksp_damping = 1e-3; ///< Damping parameter for Gauss-Newton matrix shift
@@ -213,13 +219,29 @@ class OptimProblem {
 
   /**
    * @brief Solves the Gauss-Newton least-squares problem min_v ||W^1/2 L v + W^-1/2 \nabla_UJ||_F^2
-   * 
+   *
    * First fills the VecNest RHS with the appropriate values based on the current point of evaluation xinit, then solves the least-squares problem to obtain v_LeastSquares.
    *
    * @param xinit Point of evaluation for the Gauss-Newton matrix
    * @param v_LeastSquares Solution vector to store the result
    */
   void solveGaussNewtonLeastSquares(const Vec xinit, Vec v_LeastSquares);
+
+
+  /**
+   * @brief Callback for TaoBRGN residual evaluation: F(v) = L*v - b
+   */
+  static PetscErrorCode TaoBRGN_EvalResidual(Tao tao, Vec v, Vec F, void *ctx);
+
+  /**
+   * @brief Callback for TaoBRGN Jacobian evaluation: dF/dv = L (constant)
+   */
+  static PetscErrorCode TaoBRGN_EvalJacobianResidual(Tao tao, Vec v, Mat J, Mat Jpre, void *ctx);
+
+  /**
+   * @brief Monitor function for TaoBRGN iterations
+   */
+  static PetscErrorCode TaoBRGN_Monitor(Tao tao, void *ctx);
 
   // For the Gauss-Newton least-squares MatShell operations
   static void GNLeastSquaresShell_MatMult(Mat A, Vec v, Vec y); // Apply y = W^1/2Lv

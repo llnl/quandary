@@ -168,6 +168,38 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   // KSPSetComputeSingularValues(ksp_LeastSquares, PETSC_TRUE);
   KSPSetFromOptions(ksp_LeastSquares);
 
+  // Initialize Tao BRGN solver for least-squares problem if configured
+  ls_solver = config.getLeastSquaresSolver();
+  if (ls_solver == "BRGN") {
+    // Create Tao solver on PETSC_COMM_SELF (same as ksp_LeastSquares)
+    TaoCreate(PETSC_COMM_SELF, &tao_brgn);
+    TaoSetType(tao_brgn, TAOBRGN);
+
+    // Create storage for RHS vector (used in residual callback)
+    GNLeastSquaresShell_MatCreateVecs(GNLeastSquaresShell, nullptr, &brgn_rhs);
+
+    // Set convergence tolerances (reuse KSP settings)
+    TaoSetTolerances(tao_brgn, config.getOptimKSPRtol(), PETSC_DEFAULT, PETSC_DEFAULT);
+    TaoSetMaximumIterations(tao_brgn, config.getOptimKSPMaxiter());
+
+    // Set damping parameter for regularization term λ||v||²
+    brgn_damping = config.getBrgnDamping();
+    TaoBRGNSetRegularizerWeight(tao_brgn, brgn_damping);
+
+    // Set Jacobian (the matrix L = GNLeastSquaresShell, constant for this problem)
+    TaoSetJacobianResidualRoutine(tao_brgn, GNLeastSquaresShell, GNLeastSquaresShell,
+                                   TaoBRGN_EvalJacobianResidual, (void*)this);
+
+    // Set monitor function to track progress
+    TaoMonitorSet(tao_brgn, TaoBRGN_Monitor, (void*)this, NULL);
+
+    // Allow command-line overrides
+    TaoSetFromOptions(tao_brgn);
+  } else {
+    tao_brgn = nullptr;
+    brgn_rhs = nullptr;
+  }
+
   // Cache state dimension for efficiency
   VecGetSize(rho_t0_bar, &state_dim_cached);
 
@@ -240,6 +272,10 @@ OptimProblem::~OptimProblem() {
   KSPDestroy(&ksp_GN);
   EPSDestroy(&eps_GN);
   KSPDestroy(&ksp_LeastSquares);
+  if (tao_brgn) {
+    TaoDestroy(&tao_brgn);
+    VecDestroy(&brgn_rhs);
+  }
   TaoDestroy(&tao);
 
   // Clean up workspace vectors
@@ -906,9 +942,10 @@ void OptimProblem::solve(Vec xinit) {
         VecNorm(G, NORM_2, &gnorm);
 
         // Precondition the gradient: solve the Gauss-Newton system A(x)*Gprec = G via KSP
-        solveGaussNewtonKSP(x_GN, G, Gprec);
+        // solveGaussNewtonKSP(x_GN, G, Gprec);
         // solveGaussNewtonEPS(x_GN, G, Gprec);
         // VecCopy(G, Gprec); // Steepest descent, no preconditioner
+        solveGaussNewtonLeastSquares(x_GN, Gprec);
 
         // Backtracking Armijo line search along -Gprec, projected onto the bound constraints
         double alpha = armijoLineSearch(x_GN, f, G, Gprec, xnew, step);
@@ -1219,34 +1256,130 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, Vec v_LeastSqua
   // PetscPrintf(PETSC_COMM_SELF, "adjoint check: %g vs %g, diff: %g, diff_rel: %g\n", (double)PetscRealPart(lhs), (double)PetscRealPart(rhs), (double)PetscRealPart(diff), (double)PetscRealPart(diff_rel));
   // exit(1);
 
-  // Set the matrix again, just in case, for reset.
-  KSPSetOperators(ksp_LeastSquares, GNLeastSquaresShell, GNLeastSquaresShell);
+
+  // Solve the Least Squares system with either TAOBRGN or KSPLSQR
+  if (ls_solver == "BRGN") {
+
+    // Cache the RHS for residual evaluations (store -b for F(v) = L*v - b)
+    VecCopy(b, brgn_rhs);
+    // Create residual vector (same size as b)
+    Vec residual;
+    VecDuplicate(brgn_rhs, &residual);
+
+    // Set up Tao solver for this specific problem
+    TaoSetResidualRoutine(tao_brgn, residual, TaoBRGN_EvalResidual, (void*)this);
+
+    // Set initial guess (zero)
+    VecZeroEntries(v_LeastSquares);
+    TaoSetSolution(tao_brgn, v_LeastSquares);
+
+    // Solve the regularized least-squares problem: min_v ||L*v - b||² + λ||v||²
+    TaoSolve(tao_brgn);
+
+    // Report convergence
+    TaoConvergedReason reason;
+    PetscInt iters;
+    TaoGetConvergedReason(tao_brgn, &reason);
+    TaoGetIterationNumber(tao_brgn, &iters);
+
+    // Compute actual residual norm at final solution: ||L*v - b||
+    // (TaoGetResidualNorm may not return the correct value after convergence)
+    MatMult(GNLeastSquaresShell, v_LeastSquares, residual);  // residual = L*v
+    VecAXPY(residual, -1.0, brgn_rhs);                       // residual = L*v - b
+    PetscReal rnorm;
+    VecNorm(residual, NORM_2, &rnorm);
+
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Tao BRGN Least-Squares stats: iterations = %d, residual norm = %1.14e, reason = %d\n",
+             (int)iters, rnorm, reason);
+    }
+
+    VecDestroy(&residual);
+
+  } else{
+    // Set the matrix again, just in case, for reset.
+    KSPSetOperators(ksp_LeastSquares, GNLeastSquaresShell, GNLeastSquaresShell);
   
-  // Set zero initial gues
-  VecZeroEntries(v_LeastSquares);
+    // Set zero initial gues
+    VecZeroEntries(v_LeastSquares);
 
-  // Monitor residual and solution norm at every iteration
-  KSPMonitorCancel(ksp_LeastSquares);
-  KSPMonitorSet(ksp_LeastSquares, KSPMonitorResidualAndSolution, (void*)this, NULL);
+    // Monitor residual and solution norm at every iteration
+    KSPMonitorCancel(ksp_LeastSquares);
+    KSPMonitorSet(ksp_LeastSquares, KSPMonitorResidualAndSolution, (void*)this, NULL);
  
-  // Solve the Gauss-Newton least-squares problem
-  KSPSolve(ksp_LeastSquares, b, v_LeastSquares);
+    // Solve the Gauss-Newton least-squares problem
+    KSPSolve(ksp_LeastSquares, b, v_LeastSquares);
 
-  // Report convergence
-  KSPConvergedReason reason;
-  int iters;
-  double rnorm;
-  KSPGetConvergedReason(ksp_LeastSquares, &reason);
-  KSPGetIterationNumber(ksp_LeastSquares, &iters);
-  KSPGetResidualNorm(ksp_LeastSquares, &rnorm);
-  ksp_iters_last = iters;
-  if (mpirank_world == 0 && !quietmode) {
-    printf("Gauss-Newton Least-Squares stats: iterations = %d, residual norm = %1.14e\n", iters, rnorm);
+    // Report convergence
+    KSPConvergedReason reason;
+    int iters;
+    double rnorm;
+    KSPGetConvergedReason(ksp_LeastSquares, &reason);
+    KSPGetIterationNumber(ksp_LeastSquares, &iters);
+    KSPGetResidualNorm(ksp_LeastSquares, &rnorm);
+    ksp_iters_last = iters;
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Gauss-Newton Least-Squares stats: iterations = %d, residual norm = %1.14e\n", iters, rnorm);
+    }
   }
 
   // Clean up
   VecDestroy(&b);
 
+}
+
+// Callback: Evaluate residual F(v) = L*v - b
+PetscErrorCode OptimProblem::TaoBRGN_EvalResidual(Tao tao, Vec v, Vec F, void *ctx) {
+  PetscFunctionBeginUser;
+
+  OptimProblem* self = (OptimProblem*)ctx;
+
+  // Compute residual: F(v) = L*v - b
+  MatMult(self->GNLeastSquaresShell, v, F);  // F = L*v (use MatMult, not direct call)
+  VecAXPY(F, -1.0, self->brgn_rhs);          // F = L*v - b
+
+  PetscFunctionReturn(0);
+}
+
+// Callback: Evaluate Jacobian dF/dv = L (constant matrix)
+PetscErrorCode OptimProblem::TaoBRGN_EvalJacobianResidual(Tao tao, Vec v, Mat J, Mat Jpre, void *ctx) {
+  PetscFunctionBeginUser;
+
+  // The Jacobian is L = GNLeastSquaresShell, which is constant
+  // Already set via TaoSetJacobianResidualRoutine, nothing to compute
+
+  PetscFunctionReturn(0);
+}
+
+// Monitor function for TaoBRGN iterations
+PetscErrorCode OptimProblem::TaoBRGN_Monitor(Tao tao, void *ctx) {
+  PetscFunctionBeginUser;
+
+  OptimProblem* self = (OptimProblem*)ctx;
+
+  // Get current status (iteration, objective, gradient norm, etc.)
+  PetscInt iter;
+  PetscReal f, gnorm, cnorm, xdiff;
+  TaoConvergedReason reason;
+  TaoGetSolutionStatus(tao, &iter, &f, &gnorm, &cnorm, &xdiff, &reason);
+
+  // Get current solution norm
+  Vec x;
+  TaoGetSolution(tao, &x);
+  PetscReal xnorm;
+  VecNorm(x, NORM_2, &xnorm);
+
+  // Get current residual norm
+  PetscReal rnorm;
+  TaoGetResidualNorm(tao, &rnorm);
+
+  // Print progress (objective is (1/2)||F||^2 + (lambda/2)||x||^2)
+  if (self->mpirank_world == 0 && !self->quietmode) {
+    printf("  TaoBRGN it %d: objective = %1.8e, residual norm = %1.8e, solution norm = %1.8e\n",
+           (int)iter, f, rnorm, xnorm);
+  }
+
+  PetscFunctionReturn(0);
 }
 
 

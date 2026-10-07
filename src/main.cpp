@@ -306,6 +306,11 @@ int main(int argc,char **argv)
     Vec v_LeastSquares;
     VecDuplicate(xinit, &v_LeastSquares); 
     optimctx->solveGaussNewtonLeastSquares(xinit, v_LeastSquares);
+    double v_LeastSquares_norm;
+    VecNorm(v_LeastSquares, NORM_2, &v_LeastSquares_norm);
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Norm of LeastSquares solution: %1.14e\n", v_LeastSquares_norm);
+    }
 
     // exit(1);
 

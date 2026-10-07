@@ -307,6 +307,15 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     optim_ksp_rtol = validators::field<double>(optimization_table, "ksp_rtol").greaterThanEqual(0.0).valueOr(ConfigDefaults::OPTIM_KSP_RTOL);
     optim_ksp_maxiter = validators::field<int>(optimization_table, "ksp_maxiter").greaterThanEqual(0).valueOr(ConfigDefaults::OPTIM_KSP_MAXITER);
 
+    // Parse least-squares solver options (only for Gauss-Newton)
+    if (optim_solver_type == OptimSolverType::GAUSS_NEWTON) {
+      ls_solver = validators::field<std::string>(optimization_table, "ls_solver").valueOr(ConfigDefaults::LS_SOLVER);
+      brgn_damping = validators::field<double>(optimization_table, "brgn_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::BRGN_DAMPING);
+    } else {
+      ls_solver = ConfigDefaults::LS_SOLVER;
+      brgn_damping = ConfigDefaults::BRGN_DAMPING;
+    }
+
     // Parse output options from [output] table
     output_directory = output_table["directory"].value_or(ConfigDefaults::OUTPUT_DIRECTORY);
 
@@ -688,6 +697,10 @@ void Config::printConfig(std::stringstream& log) const {
   if (optim_solver_type == OptimSolverType::GAUSS_NEWTON) {
     log << "ksp_rtol = " << optim_ksp_rtol << "\n";
     log << "ksp_maxiter = " << optim_ksp_maxiter << "\n";
+    log << "ls_solver = \"" << ls_solver << "\"\n";
+    if (ls_solver == "BRGN") {
+      log << "brgn_damping = " << brgn_damping << "\n";
+    }
   }
 
   log << "\n";
