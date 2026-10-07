@@ -311,9 +311,15 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     if (optim_solver_type == OptimSolverType::GAUSS_NEWTON) {
       ls_solver = validators::field<std::string>(optimization_table, "ls_solver").valueOr(ConfigDefaults::LS_SOLVER);
       brgn_damping = validators::field<double>(optimization_table, "brgn_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::BRGN_DAMPING);
+      gn_ksp_damping = validators::field<double>(optimization_table, "gn_ksp_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::GN_KSP_DAMPING);
+      gn_ksp_type = validators::field<std::string>(optimization_table, "gn_ksp_type").valueOr(ConfigDefaults::GN_KSP_TYPE);
+      gn_minres_qlp = validators::field<bool>(optimization_table, "gn_minres_qlp").valueOr(ConfigDefaults::GN_MINRES_QLP);
     } else {
       ls_solver = ConfigDefaults::LS_SOLVER;
       brgn_damping = ConfigDefaults::BRGN_DAMPING;
+      gn_ksp_damping = ConfigDefaults::GN_KSP_DAMPING;
+      gn_ksp_type = ConfigDefaults::GN_KSP_TYPE;
+      gn_minres_qlp = ConfigDefaults::GN_MINRES_QLP;
     }
 
     // Parse output options from [output] table
@@ -697,6 +703,9 @@ void Config::printConfig(std::stringstream& log) const {
   if (optim_solver_type == OptimSolverType::GAUSS_NEWTON) {
     log << "ksp_rtol = " << optim_ksp_rtol << "\n";
     log << "ksp_maxiter = " << optim_ksp_maxiter << "\n";
+    log << "gn_ksp_damping = " << gn_ksp_damping << "\n";
+    log << "gn_ksp_type = \"" << gn_ksp_type << "\"\n";
+    log << "gn_minres_qlp = " << (gn_minres_qlp ? "true" : "false") << "\n";
     log << "ls_solver = \"" << ls_solver << "\"\n";
     if (ls_solver == "BRGN") {
       log << "brgn_damping = " << brgn_damping << "\n";

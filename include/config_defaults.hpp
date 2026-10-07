@@ -61,6 +61,9 @@ const double OPTIM_KSP_RTOL = 1e-3; ///< Default relative tolerance for the KSP 
 const int OPTIM_KSP_MAXITER = 100; ///< Default maximum iterations for the KSP solver
 inline const std::string LS_SOLVER = "BRGN"; ///< Default least-squares solver for Gauss-Newton ("BRGN" or "LSQR")
 const double BRGN_DAMPING = 1e-3; ///< Default damping parameter for BRGN regularization
+const double GN_KSP_DAMPING = 1e-3; ///< Default damping parameter for Gauss-Newton KSP solver (Levenberg-Marquardt)
+inline const std::string GN_KSP_TYPE = "CG"; ///< Default KSP solver type for Gauss-Newton ("CG", "MINRES", "GMRES", etc.)
+const bool GN_MINRES_QLP = false; ///< Use MINRES-QLP variant (more robust than standard MINRES)
 
 inline const std::string OUTPUT_DIRECTORY = "./data_out"; ///< Default output directory
 

@@ -110,6 +110,9 @@ class Config {
   int optim_ksp_maxiter; ///< Maximum iterations for the KSP solver
   std::string ls_solver; ///< Least-squares solver for Gauss-Newton: "BRGN" or "LSQR"
   double brgn_damping; ///< Damping parameter for BRGN regularization
+  double gn_ksp_damping; ///< Damping parameter for Gauss-Newton KSP solver (Levenberg-Marquardt)
+  std::string gn_ksp_type; ///< KSP solver type for Gauss-Newton: "CG", "MINRES", "GMRES", etc.
+  bool gn_minres_qlp; ///< Use MINRES-QLP variant (more robust than standard MINRES)
 
   // Output and runtypes
   std::string output_directory; ///< Directory for output files
@@ -190,6 +193,9 @@ class Config {
   int getOptimKSPMaxiter() const { return optim_ksp_maxiter; }
   const std::string& getLeastSquaresSolver() const { return ls_solver; }
   double getBrgnDamping() const { return brgn_damping; }
+  double getGnKspDamping() const { return gn_ksp_damping; }
+  const std::string& getGnKspType() const { return gn_ksp_type; }
+  bool getGnMinresQlp() const { return gn_minres_qlp; }
 
   const std::string& getOutputDirectory() const { return output_directory; }
   const std::vector<OutputType>& getOutputObservables() const { return output_observables; }

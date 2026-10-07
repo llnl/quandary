@@ -123,14 +123,13 @@ class OptimProblem {
 
   // KSP linear solver
   KSP ksp_GN;  ///< Linear solver for Gauss-Newton system
-  double ksp_damping = 1e-3; ///< Damping parameter for Gauss-Newton matrix shift
+  double ksp_damping; ///< Damping parameter for Gauss-Newton matrix shift (configurable via gn_ksp_damping)
 
   // EPS eigenvalue solver
   EPS eps_GN;
   bool GN_densemat = false; ///< Flag indicating if the dense matrix representation of the Gauss-Newton matrix is used
   Mat GaussNewtonMatDense; ///< Dense matrix representation of the Gauss-Newton matrix
   PetscReal eps_tol = 1e-4; ///< Tolerance for EPS eigenvalue solver
-  PetscInt eps_maxiter = 10; ///< Maximum number of iterations for EPS eigenvalue solver
   double eps_evals_cutoff = 1e-5; ///< Cutoff for eigenvalues of the Gauss-Newton matrix
   double eps_damping = 1e-3; ///< Damping for eigenvalues of the Gauss-Newton matrix
   int neigvals; ///< Number of eigenvalues to compute (=N^2-1)
@@ -186,6 +185,25 @@ class OptimProblem {
   void setXevalGN(const Vec x){ VecCopy(x, xeval_GN); }
 
   /**
+   * @brief Override the maximum number of iterations for all Gauss-Newton solvers.
+   *
+   * This sets the maximum iterations for:
+   * - KSP solver (used in solveGaussNewtonKSP)
+   * - Least Squares solver (used in solveGaussNewtonLeastSquares)
+   * - EPS eigenvalue solver (used in solveGaussNewtonEPS)
+   *
+   * @param maxiter Maximum number of iterations
+   */
+  void setGaussNewtonMaxiter(int maxiter);
+
+  /**
+   * @brief Get the current maximum number of iterations for Gauss-Newton solvers.
+   *
+   * @return int Current maximum number of iterations (from KSP solver)
+   */
+  int getGaussNewtonMaxiter();
+
+  /**
    * @brief Evaluates the objective function F(x).
    * 
    * Performs forward simulations for each initial conditions and
@@ -225,7 +243,7 @@ class OptimProblem {
    * @param xinit Point of evaluation for the Gauss-Newton matrix
    * @param v_LeastSquares Solution vector to store the result
    */
-  void solveGaussNewtonLeastSquares(const Vec xinit, Vec v_LeastSquares);
+  void solveGaussNewtonLeastSquares(const Vec xinit, const Vec initial_guess, Vec v_LeastSquares);
 
 
   /**
@@ -271,7 +289,7 @@ class OptimProblem {
    * @param b Right-hand side vector
    * @param Ainv_b Solution vector to store the result
    */
-  void solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b);
+  void solveGaussNewtonKSP(Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b);
 
   /**
    * @brief Solves the Gauss-Newton linear system A(x) v = b via eigenvalue decomposition

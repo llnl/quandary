@@ -210,10 +210,30 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   }
 
   /* Create linear solver for solving Gauss-Newton Ax=b */
+  ksp_damping = config.getGnKspDamping();
   KSPCreate(PETSC_COMM_SELF, &ksp_GN);
   KSPSetOperators(ksp_GN, GaussNewtonMatShell, GaussNewtonMatShell);
-  KSPSetType(ksp_GN, KSPCG);  // CG method
-  // KSPSetType(ksp_GN, KSPMINRES);  // MINRES method
+
+  // Set KSP type from configuration
+  std::string ksp_type_str = config.getGnKspType();
+  if (ksp_type_str == "CG") {
+    KSPSetType(ksp_GN, KSPCG);
+  } else if (ksp_type_str == "MINRES") {
+    if (config.getGnMinresQlp()) {
+      KSPSetType(ksp_GN, "minres-qlp");  // MINRES-QLP variant
+    } else {
+      KSPSetType(ksp_GN, KSPMINRES);
+    }
+  } else if (ksp_type_str == "GMRES") {
+    KSPSetType(ksp_GN, KSPGMRES);
+  } else {
+    // Default or try to use the string directly for other types
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Warning: Unknown gn_ksp_type '%s', using it directly with PETSc\n", ksp_type_str.c_str());
+    }
+    KSPSetType(ksp_GN, ksp_type_str.c_str());
+  }
+
   KSPSetInitialGuessNonzero(ksp_GN, PETSC_FALSE);
   KSPSetFromOptions(ksp_GN);
   PC  pc;
@@ -225,15 +245,15 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   /* Create eigenvalues solver for Gauss-Newton Ax=b */
   EPSCreate(PETSC_COMM_SELF, &eps_GN);
   EPSSetOperators(eps_GN, GaussNewtonMatShell, NULL);
-  EPSSetProblemType(eps_GN, EPS_HEP); // Hermitian 
+  EPSSetProblemType(eps_GN, EPS_HEP); // Hermitian
   EPSSetWhichEigenpairs(eps_GN, EPS_LARGEST_REAL); // largest eigenvalues
   double eps_thresh = eps_evals_cutoff;
   EPSSetThreshold(eps_GN, eps_thresh, PETSC_FALSE);  // absolute threshold
-  neigvals = mastereq->getDim()*mastereq->getDim() - 1; 
+  neigvals = mastereq->getDim()*mastereq->getDim() - 1;
   // ncv = neigvals + 2; // Max Krylov dimension. How to set??
   ncv = 2*neigvals ; // Max Krylov dimension. How to set??
   EPSSetDimensions(eps_GN, neigvals, ncv, PETSC_DEFAULT);
-  EPSSetTolerances(eps_GN, eps_tol, eps_maxiter);
+  EPSSetTolerances(eps_GN, eps_tol, config.getOptimKSPMaxiter());
   EPSSetFromOptions(eps_GN);
 
   // Notes from Slepc documentation:
@@ -283,6 +303,41 @@ OptimProblem::~OptimProblem() {
     VecDestroy(&wsub_workspace[iinit]);
   }
   delete[] wsub_workspace;
+}
+
+
+void OptimProblem::setGaussNewtonMaxiter(int maxiter) {
+  if (mpirank_world == 0 && !quietmode) {
+    printf("Setting max iterations for all Gauss-Newton solvers to: %d\n", maxiter);
+  }
+
+  // 1. Set for KSP solver (used in solveGaussNewtonKSP)
+  PetscReal rtol, abstol, dtol;
+  PetscInt current_maxits;
+  KSPGetTolerances(ksp_GN, &rtol, &abstol, &dtol, &current_maxits);
+  KSPSetTolerances(ksp_GN, rtol, abstol, dtol, maxiter);
+
+  // 2. Set for Least Squares solver (used in solveGaussNewtonLeastSquares)
+  if (ls_solver == "BRGN") {
+    TaoSetMaximumIterations(tao_brgn, maxiter);
+  } else {
+    KSPGetTolerances(ksp_LeastSquares, &rtol, &abstol, &dtol, &current_maxits);
+    KSPSetTolerances(ksp_LeastSquares, rtol, abstol, dtol, maxiter);
+  }
+
+  // 3. Set for EPS eigenvalue solver (used in solveGaussNewtonEPS)
+  PetscReal eps_tol;
+  EPSGetTolerances(eps_GN, &eps_tol, &current_maxits);
+  EPSSetTolerances(eps_GN, eps_tol, maxiter);
+}
+
+
+int OptimProblem::getGaussNewtonMaxiter() {
+  // Return the current max iterations from ksp_GN (they should all be the same)
+  PetscReal rtol, abstol, dtol;
+  PetscInt maxits;
+  KSPGetTolerances(ksp_GN, &rtol, &abstol, &dtol, &maxits);
+  return (int)maxits;
 }
 
 
@@ -707,17 +762,18 @@ void OptimProblem::applyGaussNewtonMatShell(Mat A, const Vec v, Vec Av){
 }
 
 
-void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b){
+void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b){
 
   // Store the point of evaluation for the Gauss-Newton matrix shell A(xinit)
   VecCopy(xinit, xeval_GN);
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
 
-  // Set the matrix again, just in case, for reset. 
+  // Set the matrix again, just in case, for reset.
   KSPSetOperators(ksp_GN, GaussNewtonMatShell, GaussNewtonMatShell);
 
-  // Set zero initial guess
-  VecZeroEntries(Ainv_b);
+  // Set initial guess from initial_guess parameter
+  VecCopy(initial_guess, Ainv_b);
+  KSPSetInitialGuessNonzero(ksp_GN, PETSC_TRUE);
 
   // Monitor residual and solution norm at every iteration
   KSPMonitorCancel(ksp_GN);
@@ -742,7 +798,9 @@ void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec b, Vec Ainv_b){
   KSPGetResidualNorm(ksp_GN, &rnorm);
   ksp_iters_last = iters;
   if (mpirank_world == 0 && !quietmode) {
-    printf("Gauss-Newton CG stats: iterations = %d, MatVec counter = %d, residual norm = %1.14e\n", iters, GN_MatVec_counter, rnorm);
+    KSPType ksp_type;
+    KSPGetType(ksp_GN, &ksp_type);
+    printf("Gauss-Newton KSP (%s) stats: iterations = %d, MatVec counter = %d, residual norm = %1.14e\n", ksp_type, iters, GN_MatVec_counter, rnorm);
   }
 }
 
@@ -928,11 +986,13 @@ void OptimProblem::solve(Vec xinit) {
       VecCopy(xinit, x_GN);
 
       // Work vectors for gradient, preconditioned search direction, and line search
-      Vec G, Gprec, xnew, step;
+      Vec G, Gprec, xnew, step, v_zero;
       VecDuplicate(x_GN, &G);
       VecDuplicate(x_GN, &Gprec);
       VecDuplicate(x_GN, &xnew);
       VecDuplicate(x_GN, &step);
+      VecDuplicate(x_GN, &v_zero);
+      VecZeroEntries(v_zero);
 
       bool stop = false;
       for (int iter = 0; !stop; iter++) {
@@ -945,7 +1005,7 @@ void OptimProblem::solve(Vec xinit) {
         // solveGaussNewtonKSP(x_GN, G, Gprec);
         // solveGaussNewtonEPS(x_GN, G, Gprec);
         // VecCopy(G, Gprec); // Steepest descent, no preconditioner
-        solveGaussNewtonLeastSquares(x_GN, Gprec);
+        solveGaussNewtonLeastSquares(x_GN, v_zero, Gprec);
 
         // Backtracking Armijo line search along -Gprec, projected onto the bound constraints
         double alpha = armijoLineSearch(x_GN, f, G, Gprec, xnew, step);
@@ -962,6 +1022,7 @@ void OptimProblem::solve(Vec xinit) {
       VecDestroy(&Gprec);
       VecDestroy(&xnew);
       VecDestroy(&step);
+      VecDestroy(&v_zero);
       break;
     }
 
@@ -1160,9 +1221,9 @@ void OptimProblem::updateGaussNewtonMatDense(){
 }
 
 
-void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, Vec v_LeastSquares){
+void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initial_guess, Vec v_LeastSquares){
 
-  // Store the point of evaluation
+  // Store the point of evaluation (design parameters)
   VecCopy(xinit, xeval_GN);
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
 
@@ -1269,8 +1330,8 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, Vec v_LeastSqua
     // Set up Tao solver for this specific problem
     TaoSetResidualRoutine(tao_brgn, residual, TaoBRGN_EvalResidual, (void*)this);
 
-    // Set initial guess (zero)
-    VecZeroEntries(v_LeastSquares);
+    // Set initial guess from initial_guess parameter
+    VecCopy(initial_guess, v_LeastSquares);
     TaoSetSolution(tao_brgn, v_LeastSquares);
 
     // Solve the regularized least-squares problem: min_v ||L*v - b||² + λ||v||²
@@ -1299,14 +1360,15 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, Vec v_LeastSqua
   } else{
     // Set the matrix again, just in case, for reset.
     KSPSetOperators(ksp_LeastSquares, GNLeastSquaresShell, GNLeastSquaresShell);
-  
-    // Set zero initial gues
-    VecZeroEntries(v_LeastSquares);
+
+    // Set initial guess from initial_guess parameter
+    VecCopy(initial_guess, v_LeastSquares);
+    KSPSetInitialGuessNonzero(ksp_LeastSquares, PETSC_TRUE);
 
     // Monitor residual and solution norm at every iteration
     KSPMonitorCancel(ksp_LeastSquares);
     KSPMonitorSet(ksp_LeastSquares, KSPMonitorResidualAndSolution, (void*)this, NULL);
- 
+
     // Solve the Gauss-Newton least-squares problem
     KSPSolve(ksp_LeastSquares, b, v_LeastSquares);
 

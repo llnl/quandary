@@ -296,22 +296,43 @@ int main(int argc,char **argv)
 
   /* Test Gauss-Newton linear system solve */
   if (config.getRuntype() == RunType::GAUSSNEWTON_LS) {
-    if (mpirank_world == 0 && !quietmode) printf("\nStarting Gauss-Newton solves ...\n");
+    if (mpirank_world == 0 && !quietmode) {
+      printf("\nStarting Gauss-Newton solves ...\n");
+    }
     optimctx->getStartingPoint(xinit);
+    // Example: Override max iterations for all Gauss-Newton solvers at once
+    // (All three solvers use ksp_maxiter from config by default)
+    // optimctx->setGaussNewtonMaxiter(200);
 
     // Do one gradient evaluation first to store the forward states and get the right hand side
     bool writeTrajectoryDataFiles = true;
     optimctx->evalGradF(xinit, grad, writeTrajectoryDataFiles);
 
-    Vec v_LeastSquares;
-    VecDuplicate(xinit, &v_LeastSquares); 
-    optimctx->solveGaussNewtonLeastSquares(xinit, v_LeastSquares);
+    Vec v_LeastSquares, v_result, v_zero;
+    VecDuplicate(xinit, &v_LeastSquares);
+    VecDuplicate(xinit, &v_zero);
+    VecDuplicate(xinit, &v_result); // for testing
+    VecZeroEntries(v_zero); // Zero initial guess
+    optimctx->solveGaussNewtonLeastSquares(xinit, v_zero, v_LeastSquares);
     double v_LeastSquares_norm;
     VecNorm(v_LeastSquares, NORM_2, &v_LeastSquares_norm);
     if (mpirank_world == 0 && !quietmode) {
       printf("Norm of LeastSquares solution: %1.14e\n", v_LeastSquares_norm);
     }
 
+    // call the Gauss-Newton solver again to evaluate the residual
+    // Save current max iterations, set to 1 for residual check, then restore
+    int saved_maxiter = optimctx->getGaussNewtonMaxiter();
+    optimctx->setGaussNewtonMaxiter(1); // just for checking the residual
+    if (mpirank_world == 0 && !quietmode) printf("\nTesting\n");
+    optimctx->solveGaussNewtonLeastSquares(xinit, v_LeastSquares, v_result);
+    // check if the solution norm has changed
+    VecNorm(v_result, NORM_2, &v_LeastSquares_norm);
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Norm of re-evaluated LeastSquares solution: %1.14e\n", v_LeastSquares_norm);
+      printf("End test\n\n");
+    }
+    optimctx->setGaussNewtonMaxiter(saved_maxiter); // reset max iterations
     // exit(1);
 
     // Linear systems: Set right hand side
@@ -323,7 +344,27 @@ int main(int argc,char **argv)
     // Solve Gauss-Newton linear system with KSP
     Vec v_KSP;
     VecDuplicate(grad, &v_KSP);
-    optimctx->solveGaussNewtonKSP(xinit, gnrhs, v_KSP);
+    optimctx->solveGaussNewtonKSP(xinit, v_zero, gnrhs, v_KSP);
+
+    // call the Gauss-Newton solver again to re-evaluate the residual
+    optimctx->setGaussNewtonMaxiter(1); // just for checking the residual
+    if (mpirank_world == 0 && !quietmode) printf("\nTesting\n");
+    optimctx->solveGaussNewtonKSP(xinit, v_KSP, gnrhs, v_result);
+    // check if the solution norm has changed
+    VecNorm(v_result, NORM_2, &v_LeastSquares_norm);
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Norm of re-evaluated KSP solution: %1.14e\n", v_LeastSquares_norm);
+    }
+
+    // check if the solution from the least squares routine gives a small residual?
+    optimctx->solveGaussNewtonKSP(xinit, v_LeastSquares, gnrhs, v_result);
+    VecNorm(v_result, NORM_2, &v_LeastSquares_norm);
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Norm of KSP residual on the LS solution: %1.14e\n", v_LeastSquares_norm);
+      printf("End test\n\n");
+    }
+
+    optimctx->setGaussNewtonMaxiter(saved_maxiter); // reset max iterations
 
 
     // Solve Gauss-Newton via SVD
@@ -341,12 +382,26 @@ int main(int argc,char **argv)
       VecNorm(diff, NORM_2, &diff_norm);
       double vnorm;
       VecNorm(v_KSP, NORM_2, &vnorm);
-      printf("\n Relative difference norm between KSP and EPS solutions: %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
+      printf("\n");
+      printf("Least-squares solver type: %s\n", config.getLeastSquaresSolver().c_str());
+      printf("GN KSP solver type: %s", config.getGnKspType().c_str());
+      if (config.getGnKspType() == "MINRES" && config.getGnMinresQlp()) {
+        printf(" (QLP variant)");
+      }
+      printf("\n");
+      printf("GN KSP damping: %1.4e\n", config.getGnKspDamping());
+      printf("\n");
+      printf("Relative difference norm between KSP and EPS solutions: %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
       VecCopy(v_KSP, diff);
       VecAXPY(diff, -1.0, v_LeastSquares);
       VecNorm(diff, NORM_2, &diff_norm);
       VecNorm(v_KSP, NORM_2, &vnorm);
       printf("Relative difference norm between KSP and LeastSquares solutions: %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
+      VecCopy(v_EPS, diff);
+      VecAXPY(diff, -1.0, v_LeastSquares);
+      VecNorm(diff, NORM_2, &diff_norm);
+      VecNorm(v_EPS, NORM_2, &vnorm);
+      printf("Relative difference norm between EPS and LeastSquares solutions: %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
       VecDestroy(&diff);
     }
     
@@ -364,6 +419,8 @@ int main(int argc,char **argv)
     VecDestroy(&v_KSP);
     VecDestroy(&v_EPS);
     VecDestroy(&v_LeastSquares);
+    VecDestroy(&v_result);
+    VecDestroy(&v_zero);
     VecDestroy(&gnrhs);
   }
 
