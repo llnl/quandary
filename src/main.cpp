@@ -357,12 +357,22 @@ int main(int argc,char **argv)
     }
 
     // check if the solution from the least squares routine gives a small residual?
-        if (mpirank_world == 0 && !quietmode) printf("\nTesting: call solveGNKSP with converged search direction from solveGNLS\n");
+    if (mpirank_world == 0 && !quietmode) printf("\nTesting: call solveGNKSP with converged search direction from solveGNLS\n");
     optimctx->solveGaussNewtonKSP(xinit, v_LeastSquares, gnrhs, v_result);
     VecNorm(v_result, NORM_2, &v_LeastSquares_norm);
     if (mpirank_world == 0 && !quietmode) {
       printf("Norm of KSP residual on the LS solution: %1.14e\n", v_LeastSquares_norm);
       printf("End test\n\n");
+    }
+
+    // Evaluate residuals from Least Squares solution
+    Vec v_test_1;
+    VecDuplicate(grad, &v_test_1);
+    MatMult(optimctx->getGaussNewtonMatShell(), v_LeastSquares, v_test_1);
+    VecAXPY(v_test_1, -1.0, gnrhs);
+    VecNorm(v_test_1, NORM_2, &v_LeastSquares_norm);
+    if (mpirank_world == 0 && !quietmode) {
+      printf("\nTEST: Norm of direct KSP residual on the LS solution: %1.14e\n\n", v_LeastSquares_norm);
     }
 
     optimctx->setGaussNewtonMaxiter(saved_maxiter); // reset max iterations

@@ -50,4 +50,9 @@ void projectVecToTangentSpace(Vec X_vec, Mat U_final_re, Mat U_final_im, PetscIn
  */
 void reconstructVecFromTangentSpace(const PetscScalar *h_in, Mat U_final_re, Mat U_final_im, PetscInt N, PetscInt columnID, Vec X_vec);
 
+
+
+/* NEW VERSION THAT DOES NOT RELY ON X BEING HERMITIAN */
+void projectMatToTangentSpace(Mat X_re, Mat X_im, PetscInt N, Vec h_out);
+
 } // namespace GellMann

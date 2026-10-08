@@ -1584,3 +1584,46 @@ void RandomizedRangeFinder(const Mat A, const int ncut, const int nextra, bool u
   KSPDestroy(&ksp);
   PetscRandomDestroy(&rctx);
 }
+
+
+void ComputeAdagB(const Mat A_re, const Mat A_im, const Mat B_re, const Mat B_im, Mat* AdagB_re, Mat* AdagB_im){
+
+  Mat Out_re, Out_im;
+  MatDuplicate(A_re, MAT_DO_NOT_COPY_VALUES, &Out_re);
+  MatDuplicate(A_im, MAT_DO_NOT_COPY_VALUES, &Out_im);
+  MatZeroEntries(Out_re);
+  MatZeroEntries(Out_im);
+
+  Mat tmp1, tmp2;
+  //  Out_re = A_re^T*B_re + A_im^T*B_im 
+  MatTransposeMatMult(A_re, B_re, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &tmp1);
+  MatTransposeMatMult(A_im, B_im, MAT_INITIAL_MATRIX, PETSC_DETERMINE, &tmp2);
+  MatAXPY(Out_re, 1.0, tmp1, DIFFERENT_NONZERO_PATTERN); 
+  MatAXPY(Out_re, 1.0, tmp2, DIFFERENT_NONZERO_PATTERN); 
+  // => Out_im = -A_im^T*B_re + A_re^T*B_im
+  MatTransposeMatMult(A_re, B_im, MAT_REUSE_MATRIX, PETSC_DETERMINE, &tmp1);
+  MatTransposeMatMult(A_im, B_re, MAT_REUSE_MATRIX, PETSC_DETERMINE, &tmp2);
+  MatAXPY(Out_im, 1.0, tmp1, DIFFERENT_NONZERO_PATTERN); 
+  MatAXPY(Out_im, -1.0, tmp2, DIFFERENT_NONZERO_PATTERN); 
+  MatDestroy(&tmp1);
+  MatDestroy(&tmp2);
+
+  *AdagB_re = Out_re;
+  *AdagB_im = Out_im;
+}
+
+
+void ComputeTrace(const Mat A_re, const Mat A_im, double* trace_re, double* trace_im){
+  
+  int n;
+  MatGetSize(A_re, &n, NULL);
+  *trace_re = 0.0;
+  *trace_im = 0.0;
+  for (int i = 0; i < n; i++) {
+    double a_re, a_im;
+    MatGetValues(A_re, 1, &i, 1, &i, &a_re);
+    MatGetValues(A_im, 1, &i, 1, &i, &a_im);
+    *trace_re += a_re;
+    *trace_im += a_im;
+  }
+}

@@ -77,6 +77,8 @@ class OptimTarget{
     ObjectiveType getObjectiveType(){ return objective_type; };
     Mat getFinalUnitaryRe() { return U_final_re; };
     Mat getFinalUnitaryIm() { return U_final_im; };
+    Mat getTargetUnitaryRe() { return targetgate->getUnitaryRe(); };
+    Mat getTargetUnitaryIm() { return targetgate->getUnitaryIm(); };
 
     /**
      * @brief Prepares the initial condition state and target state

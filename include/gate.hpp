@@ -60,6 +60,9 @@ class Gate {
 
     virtual ~Gate();
 
+    Mat getUnitaryRe() { return VxV_re; };
+    Mat getUnitaryIm() { return VxV_im; };
+
     /**
      * @brief Retrieves the dimension of the density matrix.
      *

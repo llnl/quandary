@@ -449,3 +449,27 @@ PetscErrorCode MatMultShell_M(Mat M, Vec x, Vec y);
  * @param lambda_out Output vector containing the corresponding singular values.
  */
 void RandomizedRangeFinder(const Mat A, const int ncut, const int nextra, bool use_positive_evals, bool quietmode, MPI_Comm comm, Mat* U_out, Vec* lambda_out);
+
+
+/**
+ * @brief Compute A^dagger B, where A and B are complex matrices represented by their real and imaginary parts.
+ *
+ * @param A_re Real part of matrix A.
+ * @param A_im Imaginary part of matrix A.
+ * @param B_re Real part of matrix B.
+ * @param B_im Imaginary part of matrix B.
+ * @param AdagB_re Output real part of A^dagger B.
+ * @param AdagB_im Output imaginary part of A^dagger B.
+ */
+void ComputeAdagB(const Mat A_re, const Mat A_im, const Mat B_re, const Mat B_im, Mat* AdagB_re, Mat* AdagB_im);
+
+
+/**
+ * @brief Computes the trace of a complex matrix represented by its real and imaginary parts.
+ *
+ * @param A_re Real part of the matrix A.
+ * @param A_im Imaginary part of the matrix A.
+ * @param trace_re Output real part of the trace.
+ * @param trace_im Output imaginary part of the trace.
+ */
+void ComputeTrace(const Mat A_re, const Mat A_im, double* trace_re, double* trace_im);
