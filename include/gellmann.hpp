@@ -1,8 +1,11 @@
-#pragma once
 #include <complex>
 #include <cmath>
+#include <util.hpp>
 #include <petscsys.h>
+#include <cassert>
+#include <petsc.h>
 #include <petscmat.h>
+#pragma once
 
 /**
  * @brief Utilities for generalized Gell-Mann matrices and tangent space projection
@@ -53,6 +56,6 @@ void reconstructVecFromTangentSpace(const PetscScalar *h_in, Mat U_final_re, Mat
 
 
 /* NEW VERSION THAT DOES NOT RELY ON X BEING HERMITIAN */
-void projectMatToTangentSpace(Mat X_re, Mat X_im, PetscInt N, Vec h_out);
+void projectMatToTangentSpace(Mat X_re, Mat X_im, Mat U_final_re, Mat U_final_im, PetscInt N, Vec h_out);
 
 } // namespace GellMann

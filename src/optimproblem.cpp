@@ -1288,54 +1288,50 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
   MPI_Allreduce(MPI_IN_PLACE, b_data, tangent_dim, MPIU_SCALAR, MPI_SUM, comm_init);
   VecRestoreArray(b, &b_data);
 
+  // /*------ TEST setup of \nabla_U J and tangent space projection ----- */
+  // if (mpisize_world > 1) {
+  //   printf("Need mpisize_world == 1! \n");
+  //   exit(1);
+  // }
 
-  /*------ TEST setup of \nabla_U J and tangent space projection ----- */
-  if (mpisize_world > 1) {
-    printf("Need mpisize_world == 1! \n");
-    exit(1);
-  }
+  // Mat V_re = optim_target->getTargetUnitaryRe();
+  // Mat V_im = optim_target->getTargetUnitaryIm();
 
-  Mat V_re = optim_target->getTargetUnitaryRe();
-  Mat V_im = optim_target->getTargetUnitaryIm();
+  // // Compute pre-factor -2/n^2 * <V,U> 
+  // double factor_re, factor_im;
+  // Mat VdU_re, VdU_im;
+  // ComputeAdagB(V_re, V_im, U_final_re, U_final_im, &VdU_re, &VdU_im);
+  // ComputeTrace(VdU_re, VdU_im, &factor_re, &factor_im);
+  // factor_re = -2.0 / (mastereq->getDim() * mastereq->getDim()) * factor_re;
+  // factor_im = -2.0 / (mastereq->getDim() * mastereq->getDim()) * factor_im;
 
-  // Compute pre-factor -2/n^2 * <V,U> 
-  double factor_re, factor_im;
-  Mat VdU_re, VdU_im;
-  ComputeAdagB(V_re, V_im, U_final_re, U_final_im, &VdU_re, &VdU_im);
-  ComputeTrace(VdU_re, VdU_im, &factor_re, &factor_im);
-  factor_re = -2.0 / (mastereq->getDim() * mastereq->getDim()) * factor_re;
-  factor_im = -2.0 / (mastereq->getDim() * mastereq->getDim()) * factor_im;
+  // // Compute nabla_U J = 2/n U + factor * V
+  // // nablaUJ_re = 2/n U_re + factor_re*V_re - factor_im*V_im
+  // // nablaUJ_im = 2/n U_im + factor_re*V_im + factor_im*V_re
+  // Mat nablaUJ_re, nablaUJ_im;
+  // MatDuplicate(U_final_re, MAT_COPY_VALUES, &nablaUJ_re);
+  // MatDuplicate(U_final_im, MAT_COPY_VALUES, &nablaUJ_im);
+  // MatScale(nablaUJ_re, 2.0 / mastereq->getDim());
+  // MatScale(nablaUJ_im, 2.0 / mastereq->getDim());
+  // MatAXPY(nablaUJ_re, factor_re, V_re, DIFFERENT_NONZERO_PATTERN);
+  // MatAXPY(nablaUJ_re, -factor_im, V_im, DIFFERENT_NONZERO_PATTERN);
+  // MatAXPY(nablaUJ_im, factor_re, V_im, DIFFERENT_NONZERO_PATTERN);
+  // MatAXPY(nablaUJ_im, factor_im, V_re, DIFFERENT_NONZERO_PATTERN);
 
-  // Compute nabla_U J = 2/n U + factor * V
-  // nablaUJ_re = 2/n U_re + factor_re*V_re - factor_im*V_im
-  // nablaUJ_im = 2/n U_im + factor_re*V_im + factor_im*V_re
-  Mat nablaUJ_re, nablaUJ_im;
-  MatDuplicate(U_final_re, MAT_COPY_VALUES, &nablaUJ_re);
-  MatDuplicate(U_final_im, MAT_COPY_VALUES, &nablaUJ_im);
-  MatScale(nablaUJ_re, 2.0 / mastereq->getDim());
-  MatScale(nablaUJ_im, 2.0 / mastereq->getDim());
-  MatAXPY(nablaUJ_re, factor_re, V_re, DIFFERENT_NONZERO_PATTERN);
-  MatAXPY(nablaUJ_re, -factor_im, V_im, DIFFERENT_NONZERO_PATTERN);
-  MatAXPY(nablaUJ_im, factor_re, V_im, DIFFERENT_NONZERO_PATTERN);
-  MatAXPY(nablaUJ_im, factor_im, V_re, DIFFERENT_NONZERO_PATTERN);
+ 
+  // // Project onto tangent space
+  // GellMann::projectMatToTangentSpace(nablaUJ_re, nablaUJ_im, U_final_re, U_final_im, mastereq->getDim(), b);
 
-  // Left-multiply by U^dagger 
-  Mat UdnablaUJ_re, UdnablaUJ_im;
-  ComputeAdagB(U_final_re, U_final_im, nablaUJ_re, nablaUJ_im, &UdnablaUJ_re, &UdnablaUJ_im);
-  
-  // Project onto tangent space
-  GellMann::projectMatToTangentSpace(UdnablaUJ_re, UdnablaUJ_im, mastereq->getDim(), b);
+  // // Scale RHS by -1
+  // VecScale(b, -1.0);
 
-  // Scale RHS by -1
-  VecScale(b, -1.0);
-
-  // printf("Projected RHS:\n");
+  // printf("MAT Projected RHS:\n");
   // VecView(b, PETSC_VIEWER_STDOUT_WORLD);
 
-  MatDestroy(&nablaUJ_re);
-  MatDestroy(&nablaUJ_im);
-  MatDestroy(&UdnablaUJ_re);
-  MatDestroy(&UdnablaUJ_im);
+  // MatDestroy(&nablaUJ_re);
+  // MatDestroy(&nablaUJ_im);
+
+  // ----- END TANGENT SPACE PROJECTION SECTION -----
 
 
   // Note: includeHessUJ is disabled (set to false in constructor)
@@ -1528,74 +1524,44 @@ void OptimProblem::GNLeastSquaresShell_MatMult(Mat A, Vec v, Vec y)
   MPI_Allreduce(MPI_IN_PLACE, y_data, tangent_dim, MPIU_SCALAR, MPI_SUM, self->comm_init);
   VecRestoreArray(y, &y_data);
 
+  //   /* ----- TEST: Project Lv onto tangent space  ----*/
+  // assert(self->mpisize_world == 1);
+  // int dim = self->mastereq->getDim();
 
+  // // First set up W = Lv as a Petsc matrix
+  // Mat W_re, W_im;
+  // MatDuplicate(U_final_re, MAT_DO_NOT_COPY_VALUES, &W_re);
+  // MatDuplicate(U_final_im, MAT_DO_NOT_COPY_VALUES, &W_im);
+  // MatZeroEntries(W_re);
+  // MatZeroEntries(W_im);
+  // for (int iinit = 0; iinit < self->ninit_local; iinit++) {
+  //   int iinit_global = self->mpirank_init * self->ninit_local + iinit;
+  //   Vec lin_final_state = self->timestepper->getLinearizedFinalState(iinit);
+  //   const PetscScalar *lin_final_state_ptr;
+  //   VecGetArrayRead(lin_final_state, &lin_final_state_ptr);
+  //   for (size_t row = 0; row < dim; row++) {
+  //     int row_re = row;
+  //     int row_im = row + dim;
+  //     int col = iinit_global;
+  //     MatSetValue(W_re, row, col, lin_final_state_ptr[row_re], INSERT_VALUES);
+  //     MatSetValue(W_im, row, col, lin_final_state_ptr[row_im], INSERT_VALUES);
+  //   }
+  //   VecRestoreArrayRead(lin_final_state, &lin_final_state_ptr);
+  // }
+  // MatAssemblyBegin(W_re, MAT_FINAL_ASSEMBLY); MatAssemblyEnd(W_re, MAT_FINAL_ASSEMBLY);
+  // MatAssemblyBegin(W_im, MAT_FINAL_ASSEMBLY); MatAssemblyEnd(W_im, MAT_FINAL_ASSEMBLY);
 
-    /* ----- TEST: Check if Omega = U(T)^d * (Lv) is skew Hermitian ----*/
-  assert(self->mpisize_world == 1);
-  int dim = self->mastereq->getDim();
+  // /* --- Set the tangent space projection from Omega ----*/
+  // GellMann::projectMatToTangentSpace(W_re, W_im, U_final_re, U_final_im, dim, y);
 
-  // First set up W = Lv as a Petsc matrix
-  Mat W_re, W_im;
-  MatDuplicate(U_final_re, MAT_DO_NOT_COPY_VALUES, &W_re);
-  MatDuplicate(U_final_im, MAT_DO_NOT_COPY_VALUES, &W_im);
-  MatZeroEntries(W_re);
-  MatZeroEntries(W_im);
-  for (int iinit = 0; iinit < self->ninit_local; iinit++) {
-    int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-    Vec lin_final_state = self->timestepper->getLinearizedFinalState(iinit);
-    const PetscScalar *lin_final_state_ptr;
-    VecGetArrayRead(lin_final_state, &lin_final_state_ptr);
-    for (size_t row = 0; row < dim; row++) {
-      int row_re = row;
-      int row_im = row + dim;
-      int col = iinit_global;
-      MatSetValue(W_re, row, col, lin_final_state_ptr[row_re], INSERT_VALUES);
-      MatSetValue(W_im, row, col, lin_final_state_ptr[row_im], INSERT_VALUES);
-    }
-    VecRestoreArrayRead(lin_final_state, &lin_final_state_ptr);
-  }
-  MatAssemblyBegin(W_re, MAT_FINAL_ASSEMBLY); MatAssemblyEnd(W_re, MAT_FINAL_ASSEMBLY);
-  MatAssemblyBegin(W_im, MAT_FINAL_ASSEMBLY); MatAssemblyEnd(W_im, MAT_FINAL_ASSEMBLY);
-
-
-  // Leftmultiply by U^dagger: Omega = U^dagger Lv
-  Mat Omega_re, Omega_im;
-  ComputeAdagB(U_final_re, U_final_im, W_re, W_im, &Omega_re, &Omega_im);
-
-  // Test if Omega is skew Hermitian: Omega^d = -Omega
-  double maxerr = 0.0;
-  for (int i = 0; i < dim; i++) {
-    for (int j = 0; j < dim; j++) {
-      PetscScalar Omega_re_ij, Omega_re_ji, Omega_im_ij, Omega_im_ji;
-      MatGetValue(Omega_re, i, j, &Omega_re_ij);
-      MatGetValue(Omega_re, j, i, &Omega_re_ji);
-      MatGetValue(Omega_im, i, j, &Omega_im_ij);
-      MatGetValue(Omega_im, j, i, &Omega_im_ji);
-      double Omega_re_diff = Omega_re_ij + Omega_re_ji;
-      double Omega_im_diff = Omega_im_ij - Omega_im_ji;
-      // printf("%d, %d : Omega_re_diff = %g, Omega_im_diff = %g\n", i, j, Omega_re_diff, Omega_im_diff);
-      maxerr = std::max(maxerr, std::fabs(Omega_re_diff));
-      maxerr = std::max(maxerr, std::fabs(Omega_im_diff));
-    }
-  }
-  if (maxerr > 1e-6) {
-    printf("ERROR: Omega is not skew-Hermitian.\n");
-    printf("Max error = %g\n", maxerr);
-    exit(1);
-  }
-
-  /* --- Set the tangent space projection from Omega ----*/
-  GellMann::projectMatToTangentSpace(Omega_re, Omega_im, dim, y);
-
-  // printf("Projected Lv:\n");
+  // printf("MAT Projected Lv:\n");
   // VecView(y, PETSC_VIEWER_STDOUT_WORLD);
 
-  MatDestroy(&Omega_re);
-  MatDestroy(&Omega_im);
-  MatDestroy(&W_re);
-  MatDestroy(&W_im);
+  // MatDestroy(&W_re);
+  // MatDestroy(&W_im);
 
   // exit(1);
+  // /* ----- END TEST: Project Lv onto tangent space  ----*/
 
   // Apply W^1/2 to local buffer if needed
   // NOTE: includeHessUJ is disabled (set to false in constructor), so this branch is unlikely

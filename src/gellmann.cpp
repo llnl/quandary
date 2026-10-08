@@ -1,6 +1,4 @@
 #include "gellmann.hpp"
-#include <cmath>
-#include <cassert>
 
 namespace GellMann {
 
@@ -64,22 +62,37 @@ void projectVecToTangentSpace(Vec X_vec, Mat U_final_re, Mat U_final_im, PetscIn
 
   PetscInt j = columnID + 1;  // Convert to 1-based indexing
 
-  // Off-diagonal: h_S = √2 * Im(omega_k), h_A = -√2 * Re(omega_k) for k > j
-  for (PetscInt k = j+1; k <= dim; ++k) {
-    PetscScalar Omega_kj_re = 0.0;
-    PetscScalar Omega_kj_im = 0.0;
+  // Off-diagonal: accumulate h_S, h_A from this column's entries without assuming
+  // that omega (= U^† X) is skew-Hermitian. Each row k != j contributes to the pair
+  // (min(j,k), max(j,k)); which of the two terms (X_kj or X_jk) it represents depends
+  // on whether this column j is the smaller or larger index of the pair, which flips
+  // the sign of the antisymmetric contribution (matches projectMatToTangentSpace's
+  // h_S = 1/√2 * Im(X_kj + X_jk), h_A = 1/√2 * Re(X_jk - X_kj) for j < k).
+  const PetscReal invsqrt2 = 1.0 / PetscSqrtReal(2.0);
+  for (PetscInt k = 1; k <= dim; ++k) {
+    if (k == j) continue;
+
+    PetscScalar Omega_re = 0.0;
+    PetscScalar Omega_im = 0.0;
 
     PetscInt elem_idx = k - 1;
     if (ilow <= elem_idx && elem_idx < ilow + localsize_u) {
       PetscInt local_offset = elem_idx - ilow;
       PetscInt id_global_re = ilow * 2 + local_offset;
       PetscInt id_global_im = ilow * 2 + localsize_u + local_offset;
-      VecGetValues(omega, 1, &id_global_re, &Omega_kj_re);
-      VecGetValues(omega, 1, &id_global_im, &Omega_kj_im);
+      VecGetValues(omega, 1, &id_global_re, &Omega_re);
+      VecGetValues(omega, 1, &id_global_im, &Omega_im);
     }
 
-    h_out[idxS(j,k)] += PetscSqrtReal(2.0) * Omega_kj_im;
-    h_out[idxA(j,k)] += -PetscSqrtReal(2.0) * Omega_kj_re;
+    if (k > j) {
+      // omega_k = X_kj for pair (j, k)
+      h_out[idxS(j,k)] += invsqrt2 * Omega_im;
+      h_out[idxA(j,k)] += -invsqrt2 * Omega_re;
+    } else {
+      // omega_k = X_jk (here k < j) for pair (k, j)
+      h_out[idxS(k,j)] += invsqrt2 * Omega_im;
+      h_out[idxA(k,j)] += invsqrt2 * Omega_re;
+    }
   }
 
   // Diagonal: extract Im(omega_j) and scatter to D_l coefficients
@@ -222,29 +235,33 @@ void reconstructVecFromTangentSpace(const PetscScalar *h_in, Mat U_final_re, Mat
 
 
 
-void projectMatToTangentSpace(Mat X_re, Mat X_im, PetscInt N, Vec h_out){
+void projectMatToTangentSpace(Mat X_re, Mat X_im, Mat U_final_re, Mat U_final_im, PetscInt N, Vec h_out){
 
-  // Set up h[a] = Im(Tr(G_a^† * X)) where G_a are the generalized Gell-Mann matrices, a=1,...,N²-1
+  // Compute coefficients h[a] = Im(Tr(G_a^† * U^dagger X)) where G_a are the generalized Gell-Mann matrices, a=1,...,N²-1
 
-  /*  1) symmetric part:     1/sqrt(2) * Im( (X_kj + X_jk) )       for j < k  */
-  /*  2) antisymmetric part: 1/sqrt(2) * Im( i*(X_jk - X_kj) ) = 1/sqrt(2) * Re(X_jk - X_kj) for j < k  */
-  /*  3) diagonal part:      1/sqrt(l(l+1)) * Im( \sum_{j=1}^{l} X_jj - l * X_(l+1)(l+1) ) for l = 1,...,N-1 */
+  /*  1) symmetric part:     1/sqrt(2) * Im( (UdX_kj + UdX_jk) )       for j < k  */
+  /*  2) antisymmetric part: 1/sqrt(2) * Im( i*(UdX_jk - UdX_kj) ) = 1/sqrt(2) * Re(UdX_jk - UdX_kj) for j < k  */
+  /*  3) diagonal part:      1/sqrt(l(l+1)) * Im( \sum_{j=1}^{l} UdX_jj - l * UdX_(l+1)(l+1) ) for l = 1,...,N-1 */
 
-  PetscInt nSA_pairs = N*(N-1)/2; // number of symmetric/antisymmetric pairs
+  // First left multipy by U^dagger to get UdX = U^dagger X
+  Mat UdX_re, UdX_im;
+  ComputeAdagB(U_final_re, U_final_im, X_re, X_im, &UdX_re, &UdX_im);
 
   // Reset h_out
   VecZeroEntries(h_out);
 
-  // Entry (row,col) of X (0-based);
+  // Entry (row,col) of UdX (0-based);
   auto getEntry = [&](PetscInt row, PetscInt col, PetscScalar &re, PetscScalar &im) {
     re = 0.0; im = 0.0;
-    MatGetValues(X_re, 1, &row, 1, &col, &re);
-    MatGetValues(X_im, 1, &row, 1, &col, &im);
+    MatGetValues(UdX_re, 1, &row, 1, &col, &re);
+    MatGetValues(UdX_im, 1, &row, 1, &col, &im);
   };
 
-  const PetscReal invsqrt2 = 1.0 / PetscSqrtReal(2.0);
+  // number of symmetric/antisymmetric pairs 
+  PetscInt nSA_pairs = N*(N-1)/2; 
 
   // Symmetric and antisymmetric parts, ordered as in idxS/idxA of projectVecToTangentSpace
+  const PetscReal invsqrt2 = 1.0 / PetscSqrtReal(2.0); // prefactor 
   for (PetscInt j = 1; j <= N; ++j) {
     for (PetscInt k = j+1; k <= N; ++k) {
       PetscInt jj = j-1, kk = k-1;
@@ -268,6 +285,9 @@ void projectMatToTangentSpace(Mat X_re, Mat X_im, PetscInt N, Vec h_out){
   }
   VecAssemblyBegin(h_out);
   VecAssemblyEnd(h_out);
+
+  MatDestroy(&UdX_re);
+  MatDestroy(&UdX_im);
 }
 
 } // namespace GellMann
