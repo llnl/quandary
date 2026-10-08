@@ -1,0 +1,2 @@
+To compile the test_gellmann_ortho code do:
+g++ -std=c++14 -o test_gellmann test_gellmann_orthonormality.cpp

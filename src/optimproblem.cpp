@@ -1357,7 +1357,7 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
 
     VecDestroy(&residual);
 
-  } else{
+  } else if (ls_solver == "LSQR"){
     // Set the matrix again, just in case, for reset.
     KSPSetOperators(ksp_LeastSquares, GNLeastSquaresShell, GNLeastSquaresShell);
 
