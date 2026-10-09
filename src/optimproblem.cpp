@@ -1009,6 +1009,7 @@ void OptimProblem::solve(Vec xinit) {
         // solveGaussNewtonKSP(x_GN, v_zero, G, Gprec);
         // solveGaussNewtonEPS(x_GN, G, Gprec);
         solveGaussNewtonLeastSquares(x_GN, v_zero, Gprec);
+        VecScale(Gprec, -1.0); // For some reason, for the LeastSquares solver, the direction is -Gprec. TODO: Check. 
 
         // Backtracking Armijo line search along -Gprec, projected onto the bound constraints
         double alpha = armijoLineSearch(x_GN, f, G, Gprec, xnew, step);
@@ -1230,8 +1231,8 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
   VecCopy(xinit, xeval_GN);
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
 
-  // Fill the RHS: b = \nabla_U J projected to tangent space
-  // \nabla_J = 2/n U - 2/n^2Tr(V^dU)V = 2/n(I-P)U
+  // Fill the RHS: b = -\nabla_U J projected to tangent space
+  // \nabla_J = -2/n U - 2/n^2Tr(V^dU)V = 2/n(I-P)U
 
   Vec b; // RHS 
   GNLeastSquaresShell_MatCreateVecs(GNLeastSquaresShell, nullptr, &b);
@@ -1287,6 +1288,9 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
   // Allreduce b across all comm_init processors
   MPI_Allreduce(MPI_IN_PLACE, b_data, tangent_dim, MPIU_SCALAR, MPI_SUM, comm_init);
   VecRestoreArray(b, &b_data);
+
+  // Scale 
+  VecScale(b, -1.0);
 
   // /*------ TEST setup of \nabla_U J and tangent space projection ----- */
   // if (mpisize_world > 1) {
