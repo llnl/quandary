@@ -1,5 +1,6 @@
 #include "optimproblem.hpp"
 #include "gellmann.hpp"
+#include <algorithm>
 
 OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, TimeStepper* timestepper_, MasterEq* mastereq_, MPI_Comm comm_init_, MPI_Comm comm_optim_, Output* output_, bool quietmode_){
 
@@ -219,17 +220,16 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   KSPCreate(PETSC_COMM_SELF, &ksp_GN);
   KSPSetOperators(ksp_GN, GaussNewtonMatShell, GaussNewtonMatShell);
 
-  // Set KSP type from configuration
+  // Set KSP type from configuration (case-insensitive)
   std::string ksp_type_str = config.getGnKspType();
-  if (ksp_type_str == "CG") {
+  std::string ksp_type_lower = ksp_type_str;
+  std::transform(ksp_type_lower.begin(), ksp_type_lower.end(), ksp_type_lower.begin(), ::tolower);
+
+  if (ksp_type_lower == "cg") {
     KSPSetType(ksp_GN, KSPCG);
-  } else if (ksp_type_str == "MINRES") {
-    if (config.getGnMinresQlp()) {
-      KSPSetType(ksp_GN, "minres-qlp");  // MINRES-QLP variant
-    } else {
-      KSPSetType(ksp_GN, KSPMINRES);
-    }
-  } else if (ksp_type_str == "GMRES") {
+  } else if (ksp_type_lower == "minres") {
+    KSPSetType(ksp_GN, KSPMINRES);
+  } else if (ksp_type_lower == "gmres") {
     KSPSetType(ksp_GN, KSPGMRES);
   } else {
     // Default or try to use the string directly for other types
@@ -240,6 +240,16 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   }
 
   KSPSetInitialGuessNonzero(ksp_GN, PETSC_FALSE);
+
+  // Enable MINRES-QLP if requested
+  if (ksp_type_lower == "minres" && config.getGnMinresQlp()) {
+    PetscBool set;
+    PetscOptionsHasName(NULL, NULL, "-ksp_minres_qlp", &set);
+    if (!set) {
+      PetscOptionsSetValue(NULL, "-ksp_minres_qlp", NULL);
+    }
+  }
+
   KSPSetFromOptions(ksp_GN);
   PC  pc;
   KSPGetPC(ksp_GN, &pc);
