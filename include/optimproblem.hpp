@@ -263,9 +263,9 @@ class OptimProblem {
   static PetscErrorCode TaoBRGN_Monitor(Tao tao, void *ctx);
 
   // For the Gauss-Newton least-squares MatShell operations
-  static void GN_LeastSquares_MatMult(Mat A, Vec v, Vec y); // Apply y = W^1/2Lv
-  static void GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec vout); // Apply vout = L* W^1/2 w
-  static void GN_LeastSquares_MatCreateVecs(Mat A, Vec *right, Vec *left);
+  static PetscErrorCode GN_LeastSquares_MatMult(Mat A, Vec v, Vec y); // Apply y = W^1/2Lv
+  static PetscErrorCode GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec vout); // Apply vout = L* W^1/2 w
+  static PetscErrorCode GN_LeastSquares_MatCreateVecs(Mat A, Vec *right, Vec *left);
 
   /**
    * @brief MatMult operation for MatShell Gauss-Newton Normal Equation L^*Lv: Linearized forward + adjoint operator. 
@@ -275,7 +275,7 @@ class OptimProblem {
    * @param[in] v Direction vector
    * @param[out] Av Resulting vector after applying the linearized forward and adjoint operators
    */
-  static void GN_NormalEq_MatMult(Mat A, const Vec v, Vec Av);
+  static PetscErrorCode GN_NormalEq_MatMult(Mat A, const Vec v, Vec Av);
 
   /**
    * @brief Updates the dense full  Gauss-Newton matrix based on the current point of evaluation xeval_GN by calling GN_NormalEqShell_MatMult on each unit vectoor.

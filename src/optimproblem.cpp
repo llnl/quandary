@@ -685,7 +685,7 @@ void OptimProblem::evalLinearizedForward(const Vec x, const Vec v){
   nonlinear_forward_valid = true;
 }
 
-void OptimProblem::GN_NormalEq_MatMult(Mat A, const Vec v, Vec Av){
+PetscErrorCode OptimProblem::GN_NormalEq_MatMult(Mat A, const Vec v, Vec Av){
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
   // if (self->mpirank_world == 0) printf("APPLYING GAUSS-NEWTON...\n");
@@ -761,6 +761,7 @@ void OptimProblem::GN_NormalEq_MatMult(Mat A, const Vec v, Vec Av){
   MPI_Allreduce(MPI_IN_PLACE, Av_data, self->ndesign, MPIU_SCALAR, MPI_SUM, self->comm_init);
   VecRestoreArray(Av, &Av_data);
 
+  return 0;
 }
 
 
@@ -1488,7 +1489,7 @@ PetscErrorCode OptimProblem::TaoBRGN_Monitor(Tao tao, void *ctx) {
 }
 
 
-void OptimProblem::GN_LeastSquares_MatMult(Mat A, Vec v, Vec y)
+PetscErrorCode OptimProblem::GN_LeastSquares_MatMult(Mat A, Vec v, Vec y)
 {
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
@@ -1572,9 +1573,11 @@ void OptimProblem::GN_LeastSquares_MatMult(Mat A, Vec v, Vec y)
       printf("WARNING: includeHessUJ is not implemented for tangent space projection. Skipping W^1/2 application.\n");
     }
   }
+
+  return 0;
 }
 
-void OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec vout)
+PetscErrorCode OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec vout)
 {
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
@@ -1627,9 +1630,10 @@ void OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec vout)
   VecGetArray(vout, &vout_data);
   MPI_Allreduce(MPI_IN_PLACE, vout_data, self->ndesign, MPIU_SCALAR, MPI_SUM, self->comm_init);
   VecRestoreArray(vout, &vout_data);
+  return 0;
 }
 
-void OptimProblem::GN_LeastSquares_MatCreateVecs(Mat A, Vec *right, Vec *left)
+PetscErrorCode OptimProblem::GN_LeastSquares_MatCreateVecs(Mat A, Vec *right, Vec *left)
 {
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
@@ -1641,4 +1645,5 @@ void OptimProblem::GN_LeastSquares_MatCreateVecs(Mat A, Vec *right, Vec *left)
     PetscInt tangent_dim = N * N - 1;
     VecCreateSeq(PETSC_COMM_SELF, tangent_dim, left);
   }
+  return 0;
 }
