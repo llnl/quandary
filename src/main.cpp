@@ -313,6 +313,8 @@ int main(int argc,char **argv)
     VecDuplicate(xinit, &v_zero);
     VecDuplicate(xinit, &v_result); // for testing
     VecZeroEntries(v_zero); // Zero initial guess
+
+    if (mpirank_world == 0 && !quietmode) printf("\nCalling solveGaussNewtonLeastSquares\n");
     optimctx->solveGaussNewtonLeastSquares(xinit, v_zero, v_LeastSquares);
     double v_LeastSquares_norm;
     VecNorm(v_LeastSquares, NORM_2, &v_LeastSquares_norm);
@@ -344,6 +346,7 @@ int main(int argc,char **argv)
     // Solve Gauss-Newton linear system with KSP
     Vec v_KSP;
     VecDuplicate(grad, &v_KSP);
+    if (mpirank_world == 0 && !quietmode) printf("\nCalling solveGaussNewtonKSP\n");
     optimctx->solveGaussNewtonKSP(xinit, v_zero, gnrhs, v_KSP);
 
     // call the Gauss-Newton solver again to re-evaluate the residual
@@ -356,8 +359,17 @@ int main(int argc,char **argv)
       printf("Norm of re-evaluated KSP solution: %1.14e\n", v_LeastSquares_norm);
     }
 
-    // check if the solution from the least squares routine gives a small residual?
-    if (mpirank_world == 0 && !quietmode) printf("\nTesting: call solveGNKSP with converged search direction from solveGNLS\n");
+    // check if the solution from the least squares routine gives a small residual in KSP and vv?
+    if (mpirank_world == 0 && !quietmode){
+      printf("\n");
+      printf("Testing: call solveGNLS with converged search direction from solveGNKSP\n");
+    }
+    optimctx->solveGaussNewtonLeastSquares(xinit, v_KSP, v_result);
+  
+    if (mpirank_world == 0 && !quietmode){
+      printf("\n");
+       printf("Testing: call solveGNKSP with converged search direction from solveGNLS\n");
+    }   
     optimctx->solveGaussNewtonKSP(xinit, v_LeastSquares, gnrhs, v_result);
 
     // Evaluate residuals from Least Squares solution
