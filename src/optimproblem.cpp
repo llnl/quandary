@@ -177,6 +177,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
 
     // Create storage for RHS vector (used in residual callback)
     GNLeastSquaresShell_MatCreateVecs(GNLeastSquaresShell, nullptr, &brgn_rhs);
+    VecDuplicate(brgn_rhs, &brgn_residual);
 
     // Set convergence tolerances (reuse KSP settings)
     TaoSetTolerances(tao_brgn, config.getOptimKSPRtol(), PETSC_DEFAULT, PETSC_DEFAULT);
@@ -185,6 +186,9 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
     // Set damping parameter for regularization term λ||v||²
     brgn_damping = config.getBrgnDamping();
     TaoBRGNSetRegularizerWeight(tao_brgn, brgn_damping);
+
+    // Set Residual routine F(v) = Lv - b 
+    TaoSetResidualRoutine(tao_brgn, brgn_residual, TaoBRGN_EvalResidual, (void*)this);
 
     // Set Jacobian (the matrix L = GNLeastSquaresShell, constant for this problem)
     TaoSetJacobianResidualRoutine(tao_brgn, GNLeastSquaresShell, GNLeastSquaresShell,
@@ -198,6 +202,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   } else {
     tao_brgn = nullptr;
     brgn_rhs = nullptr;
+    brgn_residual = nullptr;
   }
 
   // Cache state dimension for efficiency
@@ -256,21 +261,6 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   EPSSetTolerances(eps_GN, eps_tol, config.getOptimKSPMaxiter());
   EPSSetFromOptions(eps_GN);
 
-  // Notes from Slepc documentation:
-  // The characteristics of the problem can be determined with the functions EPSIsGeneralized(), EPSIsHermitian(),EPSIsPositive(), and EPSIsStructured().
-
-  // EPSSetThreshold() as alternative to EPSSetWhichEigenpairs! This function internally calls EPSSetStoppingTest() to set a special stopping test based on the threshold, where eigenvalues are computed in sequence until one of the computed eigenvalues is below the threshold thres (in magnitude). This is the interpretation in case of searching for largest eigenvalues in magnitude, see EPSSetWhichEigenpairs().
-
-  // The eigenvectors are normalized so that they have a unit 2-norm,
-
-  // In the case of non-Hermitian problems, SLEPc provides the alternative of retrieving an orthonormal basis of an invariant subspace instead of getting individual eigenvectors. This is done with the following function:
-  // EPSGetInvariantSubspace(EPS eps,Vec v[]);
-  // This is sufficient in some applications and is safer from the numerical point of view.
-
-  // Error estimates can be displayed during execution of the solution algorithm, as a way of monitoring convergence. There are several such monitors available. The user can activate them via the options database (see examples below),orwithinthecodewith EPSMonitorSet(). Bydefault,thesolversrunsilentlywithoutdisplayinginformation about the iteration. Also, application programmers can provide their own routines to perform the monitoring by using the function EPSMonitorSet().
-  // command line: -eps_monitor or -eps_monitor_all
-
-  // forlargevaluesof nev,itmaybe enough setting ncvtobeslightlylargerthan nev.
 }
 
 
@@ -295,6 +285,7 @@ OptimProblem::~OptimProblem() {
   if (tao_brgn) {
     TaoDestroy(&tao_brgn);
     VecDestroy(&brgn_rhs);
+    VecDestroy(&brgn_residual);
   }
   TaoDestroy(&tao);
 
@@ -319,7 +310,10 @@ void OptimProblem::setGaussNewtonMaxiter(int maxiter) {
 
   // 2. Set for Least Squares solver (used in solveGaussNewtonLeastSquares)
   if (ls_solver == "BRGN") {
-    TaoSetMaximumIterations(tao_brgn, maxiter);
+    // For BRGN, this applies to the sub-solver, since BRGN does Newton steps (so only one anyways)
+    Tao tao_sub;
+    TaoBRGNGetSubsolver(tao_brgn, &tao_sub);
+    TaoSetMaximumIterations(tao_sub, maxiter);
   } else {
     KSPGetTolerances(ksp_LeastSquares, &rtol, &abstol, &dtol, &current_maxits);
     KSPSetTolerances(ksp_LeastSquares, rtol, abstol, dtol, maxiter);
@@ -1001,10 +995,9 @@ void OptimProblem::solve(Vec xinit) {
         double f = objective;
         VecNorm(G, NORM_2, &gnorm);
 
-        // Precondition the gradient: solve the Gauss-Newton system A(x)*Gprec = G via KSP
-        // solveGaussNewtonKSP(x_GN, G, Gprec);
+        // Precondition the gradient: solve the Gauss-Newton system A(x)*Gprec = -G via KSP
+        // solveGaussNewtonKSP(x_GN, v_zero, G, Gprec);
         // solveGaussNewtonEPS(x_GN, G, Gprec);
-        // VecCopy(G, Gprec); // Steepest descent, no preconditioner
         solveGaussNewtonLeastSquares(x_GN, v_zero, Gprec);
 
         // Backtracking Armijo line search along -Gprec, projected onto the bound constraints
@@ -1227,7 +1220,7 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
   VecCopy(xinit, xeval_GN);
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
 
-  // Fill the RHS: b = -\nabla_U J projected to tangent space
+  // Fill the RHS: b = \nabla_U J projected to tangent space
   // \nabla_J = 2/n U - 2/n^2Tr(V^dU)V = 2/n(I-P)U
 
   Vec b; // RHS 
@@ -1278,9 +1271,6 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
     double scale = 1.0 / mastereq->getDim();
     optim_target->evalJ_diff(ui, b_iinit, scale*obj_cost_re_bar, scale*obj_cost_im_bar);
 
-    // Scale by -1 to get -nabla_U J
-    VecScale(b_iinit, -1.0);
-
     GellMann::projectVecToTangentSpace(b_iinit, U_final_re, U_final_im, mastereq->getDim(), iinit_global, b_data);
   }
 
@@ -1321,9 +1311,6 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
  
   // // Project onto tangent space
   // GellMann::projectMatToTangentSpace(nablaUJ_re, nablaUJ_im, U_final_re, U_final_im, mastereq->getDim(), b);
-
-  // // Scale RHS by -1
-  // VecScale(b, -1.0);
 
   // printf("MAT Projected RHS:\n");
   // VecView(b, PETSC_VIEWER_STDOUT_WORLD);
@@ -1369,39 +1356,36 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
 
     // Cache the RHS for residual evaluations (store -b for F(v) = L*v - b)
     VecCopy(b, brgn_rhs);
-    // Create residual vector (same size as b)
-    Vec residual;
-    VecDuplicate(brgn_rhs, &residual);
-
-    // Set up Tao solver for this specific problem
-    TaoSetResidualRoutine(tao_brgn, residual, TaoBRGN_EvalResidual, (void*)this);
 
     // Set initial guess from initial_guess parameter
     VecCopy(initial_guess, v_LeastSquares);
     TaoSetSolution(tao_brgn, v_LeastSquares);
+    TaoSetUp(tao_brgn);
+    // Forward initial guess to the inner solver  
+    Tao tao_sub;
+    TaoBRGNGetSubsolver(tao_brgn, &tao_sub);
+    TaoSetSolution(tao_sub, v_LeastSquares);
 
     // Solve the regularized least-squares problem: min_v ||L*v - b||² + λ||v||²
     TaoSolve(tao_brgn);
 
-    // Report convergence
+    // Report convergence. Tao iterations are outer Newton steps (one suffices for a linear problem), the actual cost is in the inner linear solver iterations.
     TaoConvergedReason reason;
-    PetscInt iters;
+    PetscInt newton_iters, lin_iters;
     TaoGetConvergedReason(tao_brgn, &reason);
-    TaoGetIterationNumber(tao_brgn, &iters);
+    TaoGetIterationNumber(tao_brgn, &newton_iters);
+    TaoGetLinearSolveIterations(tao_sub, &lin_iters);
+    ksp_iters_last = lin_iters;
 
-    // Compute actual residual norm at final solution: ||L*v - b||
-    // (TaoGetResidualNorm may not return the correct value after convergence)
-    MatMult(GNLeastSquaresShell, v_LeastSquares, residual);  // residual = L*v
-    VecAXPY(residual, -1.0, brgn_rhs);                       // residual = L*v - b
+    // TaoGetResidualNorm is not updated by TAOBRGN, so compute ||L*v - b|| directly
     PetscReal rnorm;
-    VecNorm(residual, NORM_2, &rnorm);
+    MatMult(GNLeastSquaresShell, v_LeastSquares, brgn_residual);
+    VecAXPY(brgn_residual, -1.0, brgn_rhs);
+    VecNorm(brgn_residual, NORM_2, &rnorm);
 
     if (mpirank_world == 0 && !quietmode) {
-      printf("Tao BRGN Least-Squares stats: iterations = %d, residual norm = %1.14e, reason = %d\n",
-             (int)iters, rnorm, reason);
+      printf("Tao BRGN Least-Squares stats: newton iterations = %d, linear iterations = %d, residual norm = %1.14e, reason = %d\n", (int)newton_iters, (int)lin_iters, rnorm, reason);
     }
-
-    VecDestroy(&residual);
 
   } else if (ls_solver == "LSQR"){
     // Set the matrix again, just in case, for reset.
