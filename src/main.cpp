@@ -346,6 +346,7 @@ int main(int argc,char **argv)
     // Solve Gauss-Newton Normal Equation with KSP
     Vec v_KSP;
     VecDuplicate(grad, &v_KSP);
+    if (mpirank_world == 0 && !quietmode) printf("\nCalling solveGaussNewtonNormalEqKSP\n");
     optimctx->solveGaussNewtonNormalEqKSP(xinit, v_zero, gnrhs, v_KSP);
 
     // call the Gauss-Newton solver again to re-evaluate the residual
