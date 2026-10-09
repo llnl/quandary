@@ -130,26 +130,6 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   VecDuplicate(xinit, &xprev);
   VecZeroEntries(xprev);
 
-  /* Create MatShell for Gauss-Newton least-squares problem */
-  // Create MatShell for GNLeastSquares solve
-  PetscInt M = mastereq->getDim()*mastereq->getDim() - 1; 
-  MatCreateShell(PETSC_COMM_SELF, M, ndesign, M, ndesign, this, &GNLeastSquaresShell);
-  MatShellSetOperation(GNLeastSquaresShell, MATOP_MULT, (void(*)(void))GNLeastSquaresShell_MatMult);
-  MatShellSetOperation(GNLeastSquaresShell, MATOP_MULT_TRANSPOSE, (void(*)(void))GNLeastSquaresShell_MatMultTranspose);
-  MatShellSetOperation(GNLeastSquaresShell, MATOP_CREATE_VECS,     (void(*)(void))GNLeastSquaresShell_MatCreateVecs);
-
-
-  /* Create MatShell for Gauss-Newton A=L^*L */
-  MatCreateShell(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign, this, &GaussNewtonMatShell);
-  MatShellSetOperation(GaussNewtonMatShell, MATOP_MULT, (void(*) (void)) applyGaussNewtonMatShell);
-  VecDuplicate(xinit, &xeval_GN);
-  VecZeroEntries(xeval_GN);
-  VecAssemblyBegin(xeval_GN); VecAssemblyEnd(xeval_GN);
-
-  /* Create dense matrix for Gauss-Newton */
-  MatCreateDense(PETSC_COMM_SELF, ndesign, ndesign, ndesign, ndesign, NULL, &GaussNewtonMatDense);
-  MatZeroEntries(GaussNewtonMatDense);
-
   // Include hessian of generalized J_inf wrt U in GaussNewton Approximation (for Jtrace only)
   includeHessUJ = false;
   if (optim_solver_type == OptimSolverType::GAUSS_NEWTON){
@@ -160,40 +140,50 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   // DISABLE includeHessUJ: Using L^*L instead of L^*\nabla_U^2JL!
   includeHessUJ = false;
 
+  /* Create MatShell for Gauss-Newton least-squares problem */
+  PetscInt M = mastereq->getDim()*mastereq->getDim() - 1; 
+  MatCreateShell(PETSC_COMM_SELF, M, ndesign, M, ndesign, this, &GN_LeastSquares_MatShell);
+  MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_MULT, (void(*)(void))GN_LeastSquares_MatMult);
+  MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_MULT_TRANSPOSE, (void(*)(void))GN_LeastSquares_MatMultTranspose);
+  MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_CREATE_VECS,     (void(*)(void))GN_LeastSquares_MatCreateVecs);
+
   // Create the KSP solver for the Gauss-Newton least-squares problem
   KSPCreate(PETSC_COMM_SELF, &ksp_LeastSquares);
-  KSPSetOperators(ksp_LeastSquares, GNLeastSquaresShell, GNLeastSquaresShell);
+  KSPSetOperators(ksp_LeastSquares, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell);
   // KSPSetNormType(ksp_LeastSquares, KSP_NORM_UNPRECONDITIONED); // Unconditioned ressidual norm
   KSPSetType(ksp_LeastSquares, KSPLSQR);
-  KSPSetTolerances(ksp_LeastSquares,config.getOptimKSPRtol(),PETSC_DEFAULT,PETSC_DEFAULT,config.getOptimKSPMaxiter());
+  KSPSetTolerances(ksp_LeastSquares,config.getGnRtol(),PETSC_DEFAULT,PETSC_DEFAULT,config.getGnMaxiter());
   // KSPSetComputeSingularValues(ksp_LeastSquares, PETSC_TRUE);
   KSPSetFromOptions(ksp_LeastSquares);
 
   // Initialize Tao BRGN solver for least-squares problem if configured
-  ls_solver = config.getLeastSquaresSolver();
-  if (ls_solver == "BRGN") {
+  gn_leastsquares_solver = config.getGnLeastSquaresSolver();
+  if (gn_leastsquares_solver == "brgn") {
     // Create Tao solver on PETSC_COMM_SELF (same as ksp_LeastSquares)
     TaoCreate(PETSC_COMM_SELF, &tao_brgn);
     TaoSetType(tao_brgn, TAOBRGN);
 
     // Create storage for RHS vector (used in residual callback)
-    GNLeastSquaresShell_MatCreateVecs(GNLeastSquaresShell, nullptr, &brgn_rhs);
+    GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &brgn_rhs);
     VecDuplicate(brgn_rhs, &brgn_residual);
 
-    // Set convergence tolerances (reuse KSP settings)
-    TaoSetTolerances(tao_brgn, config.getOptimKSPRtol(), PETSC_DEFAULT, PETSC_DEFAULT);
-    TaoSetMaximumIterations(tao_brgn, config.getOptimKSPMaxiter());
+    // Set BRGN convergence tolerances. TODO: THIS NEEDS FIX! BRGN is a newton solver, so it will only need one outer newton step. The inner linear solver is the actual workhorse. Need to pass appropriate tolerances to the subsolver, not the BRGN solver. However, somehow, the below crashes when running on multiple processes. TODO: Check parallel implementation.
+    // Tao tao_sub;
+    // TaoBRGNGetSubsolver(tao_brgn, &tao_sub);
+    // TaoSetTolerances(tao_sub, config.getGnRtol(), PETSC_DEFAULT, PETSC_DEFAULT);
+    // TaoSetMaximumIterations(tao_sub, config.getGnMaxiter());
+    TaoSetTolerances(tao_brgn, config.getGnRtol(), PETSC_DEFAULT, PETSC_DEFAULT);
+    TaoSetMaximumIterations(tao_brgn, config.getGnMaxiter());
 
     // Set damping parameter for regularization term λ||v||²
-    brgn_damping = config.getBrgnDamping();
-    TaoBRGNSetRegularizerWeight(tao_brgn, brgn_damping);
+    gn_leastsquares_brgn_damping = config.getGnLeastSquaresBrgnDamping();
+    TaoBRGNSetRegularizerWeight(tao_brgn, gn_leastsquares_brgn_damping);
 
     // Set Residual routine F(v) = Lv - b 
     TaoSetResidualRoutine(tao_brgn, brgn_residual, TaoBRGN_EvalResidual, (void*)this);
 
-    // Set Jacobian (the matrix L = GNLeastSquaresShell, constant for this problem)
-    TaoSetJacobianResidualRoutine(tao_brgn, GNLeastSquaresShell, GNLeastSquaresShell,
-                                   TaoBRGN_EvalJacobianResidual, (void*)this);
+    // Set Jacobian (the matrix L = GN_LeastSquares_MatShell, constant for this problem)
+    TaoSetJacobianResidualRoutine(tao_brgn, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell, TaoBRGN_EvalJacobianResidual, (void*)this);
 
     // Set monitor function to track progress
     TaoMonitorSet(tao_brgn, TaoBRGN_Monitor, (void*)this, NULL);
@@ -209,67 +199,75 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   // Cache state dimension for efficiency
   VecGetSize(rho_t0_bar, &state_dim_cached);
 
-  // Pre-allocate workspace vectors for GNLeastSquaresShell operations
+  // Pre-allocate workspace vectors for GN_LeastSquares_MatShell operations
   wsub_workspace = new Vec[ninit_local];
   for (int iinit = 0; iinit < ninit_local; iinit++) {
     VecDuplicate(rho_t0_bar, &wsub_workspace[iinit]);
   }
 
-  /* Create linear solver for solving Gauss-Newton Ax=b */
-  ksp_damping = config.getGnKspDamping();
-  KSPCreate(PETSC_COMM_SELF, &ksp_GN);
-  KSPSetOperators(ksp_GN, GaussNewtonMatShell, GaussNewtonMatShell);
+  /* Create MatShell for Gauss-Newton normal equation A=L^*L */
+  MatCreateShell(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign, this, &GN_NormalEq_MatShell);
+  MatShellSetOperation(GN_NormalEq_MatShell, MATOP_MULT, (void(*) (void)) GN_NormalEq_MatMult);
+  VecDuplicate(xinit, &xeval_GN);
+  VecZeroEntries(xeval_GN);
+  VecAssemblyBegin(xeval_GN); VecAssemblyEnd(xeval_GN);
 
-  // Set KSP type from configuration (case-insensitive)
-  std::string ksp_type_str = config.getGnKspType();
-  std::string ksp_type_lower = ksp_type_str;
-  std::transform(ksp_type_lower.begin(), ksp_type_lower.end(), ksp_type_lower.begin(), ::tolower);
+  /* Create dense matrix for Gauss-Newton normal equation */
+  MatCreateDense(PETSC_COMM_SELF, ndesign, ndesign, ndesign, ndesign, NULL, &GN_NormalEq_MatDense);
+  MatZeroEntries(GN_NormalEq_MatDense);
 
-  if (ksp_type_lower == "cg") {
-    KSPSetType(ksp_GN, KSPCG);
-  } else if (ksp_type_lower == "minres") {
-    KSPSetType(ksp_GN, KSPMINRES);
-  } else if (ksp_type_lower == "gmres") {
-    KSPSetType(ksp_GN, KSPGMRES);
+  gn_normaleq_damping = config.getGnNormaleqDamping();
+
+  /* Create GN Normal equation linear solver: L^*Lv=b */
+  KSPCreate(PETSC_COMM_SELF, &ksp_GN_NormalEq);
+  KSPSetOperators(ksp_GN_NormalEq, GN_NormalEq_MatShell, GN_NormalEq_MatShell);
+  std::string ksp_normaleq_solver_str = config.getGnNormaleqSolver();
+  std::string ksp_normaleq_solver_lower = ksp_normaleq_solver_str;
+  std::transform(ksp_normaleq_solver_lower.begin(), ksp_normaleq_solver_lower.end(), ksp_normaleq_solver_lower.begin(), ::tolower);
+  if (ksp_normaleq_solver_lower == "cg") {
+    KSPSetType(ksp_GN_NormalEq, KSPCG);
+  } else if (ksp_normaleq_solver_lower == "minres") {
+    KSPSetType(ksp_GN_NormalEq, KSPMINRES);
+  } else if (ksp_normaleq_solver_lower == "gmres") {
+    KSPSetType(ksp_GN_NormalEq, KSPGMRES);
   } else {
     // Default or try to use the string directly for other types
     if (mpirank_world == 0 && !quietmode) {
-      printf("Warning: Unknown gn_ksp_type '%s', using it directly with PETSc\n", ksp_type_str.c_str());
+      printf("Warning: Unknown gn_normaleq_solver '%s', using it directly with PETSc\n", ksp_normaleq_solver_str.c_str());
     }
-    KSPSetType(ksp_GN, ksp_type_str.c_str());
+    KSPSetType(ksp_GN_NormalEq, ksp_normaleq_solver_str.c_str());
   }
-
-  KSPSetInitialGuessNonzero(ksp_GN, PETSC_FALSE);
+  // Allow for non-zero initial guess
+  KSPSetInitialGuessNonzero(ksp_GN_NormalEq, PETSC_TRUE);
 
   // Enable MINRES-QLP if requested
-  if (ksp_type_lower == "minres" && config.getGnMinresQlp()) {
+  if (ksp_normaleq_solver_lower == "minres" && config.getGnNormaleqMinresQlp()) {
     PetscBool set;
     PetscOptionsHasName(NULL, NULL, "-ksp_minres_qlp", &set);
     if (!set) {
       PetscOptionsSetValue(NULL, "-ksp_minres_qlp", NULL);
     }
   }
-
-  KSPSetFromOptions(ksp_GN);
+  KSPSetFromOptions(ksp_GN_NormalEq);
   PC  pc;
-  KSPGetPC(ksp_GN, &pc);
+  KSPGetPC(ksp_GN_NormalEq, &pc);
   PCSetType(pc, PCNONE); // Disable preconditioner
-  KSPSetNormType(ksp_GN, KSP_NORM_UNPRECONDITIONED); // Unconditioned ressidual norm
-  KSPSetTolerances(ksp_GN,config.getOptimKSPRtol(),PETSC_DEFAULT,PETSC_DEFAULT,config.getOptimKSPMaxiter());
+  KSPSetNormType(ksp_GN_NormalEq, KSP_NORM_UNPRECONDITIONED); // Unconditioned ressidual norm
+  KSPSetTolerances(ksp_GN_NormalEq,config.getGnRtol(),PETSC_DEFAULT,PETSC_DEFAULT,config.getGnMaxiter());
 
-  /* Create eigenvalues solver for Gauss-Newton Ax=b */
-  EPSCreate(PETSC_COMM_SELF, &eps_GN);
-  EPSSetOperators(eps_GN, GaussNewtonMatShell, NULL);
-  EPSSetProblemType(eps_GN, EPS_HEP); // Hermitian
-  EPSSetWhichEigenpairs(eps_GN, EPS_LARGEST_REAL); // largest eigenvalues
+  /* Create eigenvalues solver for Gauss-Newton normal equation Ax=b */
+  EPSCreate(PETSC_COMM_SELF, &eps_GN_NormalEq);
+  EPSSetOperators(eps_GN_NormalEq, GN_NormalEq_MatShell, NULL);
+  EPSSetProblemType(eps_GN_NormalEq, EPS_HEP); // Hermitian
+  EPSSetWhichEigenpairs(eps_GN_NormalEq, EPS_LARGEST_REAL); // largest eigenvalues
   double eps_thresh = eps_evals_cutoff;
-  EPSSetThreshold(eps_GN, eps_thresh, PETSC_FALSE);  // absolute threshold
+  EPSSetThreshold(eps_GN_NormalEq, eps_thresh, PETSC_FALSE);  // absolute threshold
   neigvals = mastereq->getDim()*mastereq->getDim() - 1;
   // ncv = neigvals + 2; // Max Krylov dimension. How to set??
   ncv = 2*neigvals ; // Max Krylov dimension. How to set??
-  EPSSetDimensions(eps_GN, neigvals, ncv, PETSC_DEFAULT);
-  EPSSetTolerances(eps_GN, eps_tol, config.getOptimKSPMaxiter());
-  EPSSetFromOptions(eps_GN);
+  EPSSetDimensions(eps_GN_NormalEq, neigvals, ncv, PETSC_DEFAULT);
+  EPSSetTolerances(eps_GN_NormalEq, eps_tol, config.getGnMaxiter());
+  EPSSetFromOptions(eps_GN_NormalEq);
 
 }
 
@@ -285,12 +283,12 @@ OptimProblem::~OptimProblem() {
   VecDestroy(&x_GN);
   VecDestroy(&xprev);
 
-  MatDestroy(&GaussNewtonMatDense);
-  MatDestroy(&GaussNewtonMatShell);
-  MatDestroy(&GNLeastSquaresShell);
+  MatDestroy(&GN_NormalEq_MatDense);
+  MatDestroy(&GN_NormalEq_MatShell);
+  MatDestroy(&GN_LeastSquares_MatShell);
   VecDestroy(&xeval_GN);
-  KSPDestroy(&ksp_GN);
-  EPSDestroy(&eps_GN);
+  KSPDestroy(&ksp_GN_NormalEq);
+  EPSDestroy(&eps_GN_NormalEq);
   KSPDestroy(&ksp_LeastSquares);
   if (tao_brgn) {
     TaoDestroy(&tao_brgn);
@@ -312,35 +310,36 @@ void OptimProblem::setGaussNewtonMaxiter(int maxiter) {
     printf("Setting max iterations for all Gauss-Newton solvers to: %d\n", maxiter);
   }
 
-  // 1. Set for KSP solver (used in solveGaussNewtonKSP)
+  // 1. Set for for solveGaussNewtonNormalEqKSP KSP solver
   PetscReal rtol, abstol, dtol;
   PetscInt current_maxits;
-  KSPGetTolerances(ksp_GN, &rtol, &abstol, &dtol, &current_maxits);
-  KSPSetTolerances(ksp_GN, rtol, abstol, dtol, maxiter);
+  KSPGetTolerances(ksp_GN_NormalEq, &rtol, &abstol, &dtol, &current_maxits);
+  KSPSetTolerances(ksp_GN_NormalEq, rtol, abstol, dtol, maxiter);
 
-  // 2. Set for Least Squares solver (used in solveGaussNewtonLeastSquares)
-  if (ls_solver == "BRGN") {
-    // For BRGN, this applies to the sub-solver, since BRGN does Newton steps (so only one anyways)
-    Tao tao_sub;
-    TaoBRGNGetSubsolver(tao_brgn, &tao_sub);
-    TaoSetMaximumIterations(tao_sub, maxiter);
+  // 2. Set for solveGaussNewtonLeastSquares solvers
+  if (gn_leastsquares_solver == "brgn") {
+    // For BRGN, this should apply to the sub-solver, since BRGN does Newton steps (so only one anyways). This crashes though. TODO: Fix. 
+    // Tao tao_sub;
+    // TaoBRGNGetSubsolver(tao_brgn, &tao_sub);
+    // TaoSetMaximumIterations(tao_sub, maxiter);
+    TaoSetMaximumIterations(tao_brgn, maxiter); // no effect
   } else {
     KSPGetTolerances(ksp_LeastSquares, &rtol, &abstol, &dtol, &current_maxits);
     KSPSetTolerances(ksp_LeastSquares, rtol, abstol, dtol, maxiter);
   }
 
-  // 3. Set for EPS eigenvalue solver (used in solveGaussNewtonEPS)
+  // 3. Set for EPS eigenvalue solver (used in solveGaussNewtonNormalEqEPS)
   PetscReal eps_tol;
-  EPSGetTolerances(eps_GN, &eps_tol, &current_maxits);
-  EPSSetTolerances(eps_GN, eps_tol, maxiter);
+  EPSGetTolerances(eps_GN_NormalEq, &eps_tol, &current_maxits);
+  EPSSetTolerances(eps_GN_NormalEq, eps_tol, maxiter);
 }
 
 
 int OptimProblem::getGaussNewtonMaxiter() {
-  // Return the current max iterations from ksp_GN (they should all be the same)
+  // Return the current max iterations from ksp_GN_NormalEq (they should all be the same)
   PetscReal rtol, abstol, dtol;
   PetscInt maxits;
-  KSPGetTolerances(ksp_GN, &rtol, &abstol, &dtol, &maxits);
+  KSPGetTolerances(ksp_GN_NormalEq, &rtol, &abstol, &dtol, &maxits);
   return (int)maxits;
 }
 
@@ -686,11 +685,10 @@ void OptimProblem::evalLinearizedForward(const Vec x, const Vec v){
   nonlinear_forward_valid = true;
 }
 
-void OptimProblem::applyGaussNewtonMatShell(Mat A, const Vec v, Vec Av){
+void OptimProblem::GN_NormalEq_MatMult(Mat A, const Vec v, Vec Av){
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
   // if (self->mpirank_world == 0) printf("APPLYING GAUSS-NEWTON...\n");
-  self->GN_MatVec_counter++;
 
   // Grab the point of evaluation from the shell
   Vec x = self->xeval_GN;
@@ -766,54 +764,52 @@ void OptimProblem::applyGaussNewtonMatShell(Mat A, const Vec v, Vec Av){
 }
 
 
-void OptimProblem::solveGaussNewtonKSP(Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b){
+void OptimProblem::solveGaussNewtonNormalEqKSP(Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b){
 
   // Store the point of evaluation for the Gauss-Newton matrix shell A(xinit)
   VecCopy(xinit, xeval_GN);
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
 
   // Set the matrix again, just in case, for reset.
-  KSPSetOperators(ksp_GN, GaussNewtonMatShell, GaussNewtonMatShell);
+  KSPSetOperators(ksp_GN_NormalEq, GN_NormalEq_MatShell, GN_NormalEq_MatShell);
 
   // Set initial guess from initial_guess parameter
   VecCopy(initial_guess, Ainv_b);
-  KSPSetInitialGuessNonzero(ksp_GN, PETSC_TRUE);
 
   // Monitor residual and solution norm at every iteration
-  KSPMonitorCancel(ksp_GN);
-  KSPMonitorSet(ksp_GN, KSPMonitorResidualAndSolution, (void*)this, NULL);
+  KSPMonitorCancel(ksp_GN_NormalEq);
+  KSPMonitorSet(ksp_GN_NormalEq, KSPMonitorResidualAndSolution, (void*)this, NULL);
 
   // Optional Levenberg-Marquardt damping: A += mu I
-  if (ksp_damping > 0.0) MatShift(GaussNewtonMatShell, ksp_damping);
+  if (gn_normaleq_damping > 0.0) MatShift(GN_NormalEq_MatShell, gn_normaleq_damping);
 
   // Solve the linear system L^*L x = b
-  GN_MatVec_counter = 0;
-  KSPSolve(ksp_GN, b, Ainv_b);
+  KSPSolve(ksp_GN_NormalEq, b, Ainv_b);
 
   // Revert the optional scaling
-  if (ksp_damping > 0.0) MatShift(GaussNewtonMatShell, -ksp_damping);
+  if (gn_normaleq_damping > 0.0) MatShift(GN_NormalEq_MatShell, -gn_normaleq_damping);
 
   // Report convergence
   KSPConvergedReason reason;
   int iters;
   double rnorm;
-  KSPGetConvergedReason(ksp_GN, &reason);
-  KSPGetIterationNumber(ksp_GN, &iters);
-  KSPGetResidualNorm(ksp_GN, &rnorm);
+  KSPGetConvergedReason(ksp_GN_NormalEq, &reason);
+  KSPGetIterationNumber(ksp_GN_NormalEq, &iters);
+  KSPGetResidualNorm(ksp_GN_NormalEq, &rnorm);
   ksp_iters_last = iters;
   if (mpirank_world == 0 && !quietmode) {
     KSPType ksp_type;
-    KSPGetType(ksp_GN, &ksp_type);
-    printf("Gauss-Newton KSP (%s) stats: iterations = %d, MatVec counter = %d, residual norm = %1.14e\n", ksp_type, iters, GN_MatVec_counter, rnorm);
+    KSPGetType(ksp_GN_NormalEq, &ksp_type);
+    printf("Gauss-Newton KSP (%s) stats: iterations = %d, residual norm = %1.14e\n", ksp_type, iters, rnorm);
   }
 }
 
 
-void OptimProblem::solveGaussNewtonEPS(Vec xinit, const Vec b, Vec Ainv_b){
+void OptimProblem::solveGaussNewtonNormalEqEPS(Vec xinit, const Vec b, Vec Ainv_b){
 
   // Get eigenvalues and eigenvectors of the Gauss-Newton matrix
   Mat evecs;
-  std::vector<double> evals = computeGaussNewtonEvals(xinit, &evecs);
+  std::vector<double> evals = computeGaussNewtonNormalEqEvals(xinit, &evecs);
 
   // Print the eigenvalues
   // for (int i=0; i<evals.size(); i++) {
@@ -830,7 +826,7 @@ void OptimProblem::solveGaussNewtonEPS(Vec xinit, const Vec b, Vec Ainv_b){
   VecGetArray(tmp, &tmp_data);
   for (int i=0; i<evals.size(); i++) {
     if (evals[i] > eps_evals_cutoff) {
-      tmp_data[i] /= (evals[i] + eps_damping);
+      tmp_data[i] /= (evals[i] + eps_normaleq_damping);
     } else {
       tmp_data[i] = 0.0;
     }
@@ -859,30 +855,29 @@ PetscErrorCode KSPMonitorResidualAndSolution(KSP ksp, PetscInt it, PetscReal rno
   return 0;
 }
 
-std::vector<double> OptimProblem::computeGaussNewtonEvals(Vec xinit, Mat* evecs_out){
+std::vector<double> OptimProblem::computeGaussNewtonNormalEqEvals(Vec xinit, Mat* evecs_out){
 
   // Store xinit so the MatShell can use it as point of evaluation.
   VecCopy(xinit, xeval_GN);
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
 
   // Update EPS for a fresh solve on the new xeval_GN. 
-  if (!GN_densemat) { 
+  if (!GN_NormalEq_usedensemat) { 
     // use MatShell 
-    EPSSetOperators(eps_GN, GaussNewtonMatShell, NULL);
+    EPSSetOperators(eps_GN_NormalEq, GN_NormalEq_MatShell, NULL);
   } else {
     // use dense Matrix representation of the Gauss-Newton matrix
     updateGaussNewtonMatDense(); // does N2-1 applications of the MatShell
-    EPSSetOperators(eps_GN, GaussNewtonMatDense, NULL);
+    EPSSetOperators(eps_GN_NormalEq, GN_NormalEq_MatDense, NULL);
   }
 
   // Solve the eigenvalue problem for the Gauss-Newton matrix
-  GN_MatVec_counter = 0;
-  EPSSolve(eps_GN);
+  EPSSolve(eps_GN_NormalEq);
   PetscInt numConv;
   PetscInt iters_taken;
-  EPSGetConverged(eps_GN, &numConv);
-  EPSGetIterationNumber(eps_GN,&iters_taken);
-  if (mpirank_world == 0 && !quietmode) printf("Gauss-Newton EPS converged %d eigenvalues in %d iterations. MatVec counter = %d\n", numConv, iters_taken, GN_MatVec_counter);
+  EPSGetConverged(eps_GN_NormalEq, &numConv);
+  EPSGetIterationNumber(eps_GN_NormalEq,&iters_taken);
+  if (mpirank_world == 0 && !quietmode) printf("Gauss-Newton EPS converged %d eigenvalues in %d iterations.\n", numConv, iters_taken);
   if (numConv < neigvals) {
       if (mpirank_world==0 && !quietmode) printf("WARNING: Only %d eigenvalues out of %d eigenvalues converged.\n", numConv, neigvals);
   }
@@ -891,18 +886,18 @@ std::vector<double> OptimProblem::computeGaussNewtonEvals(Vec xinit, Mat* evecs_
   std::vector<double> evals_re(neigvals);
   std::vector<Vec> evec_re(neigvals);
   for (int ix = 0; ix < neigvals; ix++) {
-    MatCreateVecs(GaussNewtonMatShell, &evec_re[ix], NULL);
+    MatCreateVecs(GN_NormalEq_MatShell, &evec_re[ix], NULL);
   }
 
   // Retrieve eigenpairs of M and compute error. 
   for (PetscInt i = 0; i < numConv && i < neigvals; i++) {
 
     // Retrieve the eigenvalue (is real) and eigenvector
-    EPSGetEigenpair(eps_GN, i, &evals_re[i], NULL, evec_re[i], NULL);
+    EPSGetEigenpair(eps_GN_NormalEq, i, &evals_re[i], NULL, evec_re[i], NULL);
 
     // Estimate the errror (needs one more application of A)
     double error = 0.0;
-    EPSComputeError(eps_GN,i,EPS_ERROR_RELATIVE,&error);
+    EPSComputeError(eps_GN_NormalEq,i,EPS_ERROR_RELATIVE,&error);
     if (error > eps_tol) {
       if (mpirank_world==0) printf("ERROR: Relative error of eigenpair %d is large (error=%1.4e)\n", i, error);
     }
@@ -1006,8 +1001,8 @@ void OptimProblem::solve(Vec xinit) {
         VecNorm(G, NORM_2, &gnorm);
 
         // Precondition the gradient: solve the Gauss-Newton system A(x)*Gprec = -G via KSP
-        // solveGaussNewtonKSP(x_GN, v_zero, G, Gprec);
-        // solveGaussNewtonEPS(x_GN, G, Gprec);
+        // solveGaussNewtonNormalEqKSP(x_GN, v_zero, G, Gprec);
+        // solveGaussNewtonNormalEqEPS(x_GN, G, Gprec);
         solveGaussNewtonLeastSquares(x_GN, v_zero, Gprec);
         VecScale(Gprec, -1.0); // For some reason, for the LeastSquares solver, the direction is -Gprec. TODO: Check. 
 
@@ -1177,7 +1172,7 @@ PetscErrorCode TaoEvalGradient(Tao /*tao*/, Vec x, Vec G, void*ptr){
 
 
 void OptimProblem::updateGaussNewtonMatDense(){
-  MatZeroEntries(GaussNewtonMatDense);
+  MatZeroEntries(GN_NormalEq_MatDense);
 
   Vec e;
   VecDuplicate(xeval_GN, &e);
@@ -1201,26 +1196,25 @@ void OptimProblem::updateGaussNewtonMatDense(){
     VecSetValue(e, ix, 1.0, INSERT_VALUES);
     VecAssemblyBegin(e);
     VecAssemblyEnd(e);
-    // applyGaussNewtonMatShell(GaussNewtonMatDense, e, Av);
-    MatMult(this->getGaussNewtonMatShell(), e, Av);
+    MatMult(this->getGN_NormalEq_MatShell(), e, Av);
     for (int jx = 0; jx < ndesign; ++jx) {
       PetscScalar val;
       VecGetValues(Av, 1, &jx, &val);
-      MatSetValue(GaussNewtonMatDense, jx, ix, val, INSERT_VALUES);
+      MatSetValue(GN_NormalEq_MatDense, jx, ix, val, INSERT_VALUES);
     }
   }
   VecDestroy(&e);
   VecDestroy(&Av);
 
-  MatAssemblyBegin(GaussNewtonMatDense, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(GaussNewtonMatDense, MAT_FINAL_ASSEMBLY);
+  MatAssemblyBegin(GN_NormalEq_MatDense, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(GN_NormalEq_MatDense, MAT_FINAL_ASSEMBLY);
 
   // Allreduce to combine contributions from all MPI ranks
   PetscScalar *data;
-  MatDenseGetArray(GaussNewtonMatDense, &data);
+  MatDenseGetArray(GN_NormalEq_MatDense, &data);
   int size = ndesign * ndesign;
   MPI_Allreduce(MPI_IN_PLACE, data, size, MPIU_SCALAR, MPI_SUM, comm_optim);
-  MatDenseRestoreArray(GaussNewtonMatDense, &data);
+  MatDenseRestoreArray(GN_NormalEq_MatDense, &data);
 
 }
 
@@ -1235,7 +1229,7 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
   // \nabla_J = -2/n U - 2/n^2Tr(V^dU)V = 2/n(I-P)U
 
   Vec b; // RHS 
-  GNLeastSquaresShell_MatCreateVecs(GNLeastSquaresShell, nullptr, &b);
+  GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &b);
 
   PetscInt tangent_dim;;
   VecGetSize(b, &tangent_dim);
@@ -1346,14 +1340,14 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
   // // Adjoint test: <w, A v> should equal <A^T w, v>  (all real)
   // printf("GN Least-Squares: Adjoint test\n");
   // Vec v_test, w_test, Av, ATw;
-  // GNLeastSquaresShell_MatCreateVecs(GNLeastSquaresShell, &v_test, nullptr);
-  // GNLeastSquaresShell_MatCreateVecs(GNLeastSquaresShell, nullptr, &w_test);
+  // GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, &v_test, nullptr);
+  // GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &w_test);
   // VecSetRandom(v_test, nullptr);
   // VecSetRandom(w_test, nullptr);
-  // GNLeastSquaresShell_MatCreateVecs(GNLeastSquaresShell, nullptr, &Av);
-  // GNLeastSquaresShell_MatMult(GNLeastSquaresShell, v_test, Av);
-  // GNLeastSquaresShell_MatCreateVecs(GNLeastSquaresShell, &ATw, nullptr);
-  // GNLeastSquaresShell_MatMultTranspose(GNLeastSquaresShell, w_test, ATw);
+  // GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &Av);
+  // GN_LeastSquares_MatMult(GN_LeastSquares_MatShell, v_test, Av);
+  // GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, &ATw, nullptr);
+  // GN_LeastSquares_MatMultTranspose(GN_LeastSquares_MatShell, w_test, ATw);
 
   // PetscScalar lhs, rhs;
   // VecDot(w_test, Av, &lhs);
@@ -1366,7 +1360,7 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
 
 
   // Solve the Least Squares system with either TAOBRGN or KSPLSQR
-  if (ls_solver == "BRGN") {
+  if (gn_leastsquares_solver == "brgn") {
 
     // Cache the RHS for residual evaluations (store -b for F(v) = L*v - b)
     VecCopy(b, brgn_rhs);
@@ -1393,7 +1387,7 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
 
     // TaoGetResidualNorm is not updated by TAOBRGN, so compute ||L*v - b|| directly
     PetscReal rnorm;
-    MatMult(GNLeastSquaresShell, v_LeastSquares, brgn_residual);
+    MatMult(GN_LeastSquares_MatShell, v_LeastSquares, brgn_residual);
     VecAXPY(brgn_residual, -1.0, brgn_rhs);
     VecNorm(brgn_residual, NORM_2, &rnorm);
 
@@ -1401,9 +1395,9 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
       printf("Tao BRGN Least-Squares stats: newton iterations = %d, linear iterations = %d, residual norm = %1.14e, reason = %d\n", (int)newton_iters, (int)lin_iters, rnorm, reason);
     }
 
-  } else if (ls_solver == "LSQR"){
+  } else if (gn_leastsquares_solver == "lsqr"){
     // Set the matrix again, just in case, for reset.
-    KSPSetOperators(ksp_LeastSquares, GNLeastSquaresShell, GNLeastSquaresShell);
+    KSPSetOperators(ksp_LeastSquares, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell);
 
     // Set initial guess from initial_guess parameter
     VecCopy(initial_guess, v_LeastSquares);
@@ -1427,6 +1421,11 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
     if (mpirank_world == 0 && !quietmode) {
       printf("Gauss-Newton Least-Squares stats: iterations = %d, residual norm = %1.14e\n", iters, rnorm);
     }
+  } else {
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Unknown Gauss-Newton least-squares solver: %s\n", gn_leastsquares_solver.c_str());
+      exit(1);
+    }
   }
 
   // Clean up
@@ -1441,7 +1440,7 @@ PetscErrorCode OptimProblem::TaoBRGN_EvalResidual(Tao tao, Vec v, Vec F, void *c
   OptimProblem* self = (OptimProblem*)ctx;
 
   // Compute residual: F(v) = L*v - b
-  MatMult(self->GNLeastSquaresShell, v, F);  // F = L*v (use MatMult, not direct call)
+  MatMult(self->GN_LeastSquares_MatShell, v, F);  // F = L*v (use MatMult, not direct call)
   VecAXPY(F, -1.0, self->brgn_rhs);          // F = L*v - b
 
   PetscFunctionReturn(0);
@@ -1451,7 +1450,7 @@ PetscErrorCode OptimProblem::TaoBRGN_EvalResidual(Tao tao, Vec v, Vec F, void *c
 PetscErrorCode OptimProblem::TaoBRGN_EvalJacobianResidual(Tao tao, Vec v, Mat J, Mat Jpre, void *ctx) {
   PetscFunctionBeginUser;
 
-  // The Jacobian is L = GNLeastSquaresShell, which is constant
+  // The Jacobian is L = GN_LeastSquares_MatShell, which is constant
   // Already set via TaoSetJacobianResidualRoutine, nothing to compute
 
   PetscFunctionReturn(0);
@@ -1489,7 +1488,7 @@ PetscErrorCode OptimProblem::TaoBRGN_Monitor(Tao tao, void *ctx) {
 }
 
 
-void OptimProblem::GNLeastSquaresShell_MatMult(Mat A, Vec v, Vec y)
+void OptimProblem::GN_LeastSquares_MatMult(Mat A, Vec v, Vec y)
 {
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
@@ -1575,7 +1574,7 @@ void OptimProblem::GNLeastSquaresShell_MatMult(Mat A, Vec v, Vec y)
   }
 }
 
-void OptimProblem::GNLeastSquaresShell_MatMultTranspose(Mat A, Vec w, Vec vout)
+void OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec vout)
 {
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
@@ -1630,7 +1629,7 @@ void OptimProblem::GNLeastSquaresShell_MatMultTranspose(Mat A, Vec w, Vec vout)
   VecRestoreArray(vout, &vout_data);
 }
 
-void OptimProblem::GNLeastSquaresShell_MatCreateVecs(Mat A, Vec *right, Vec *left)
+void OptimProblem::GN_LeastSquares_MatCreateVecs(Mat A, Vec *right, Vec *left)
 {
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);

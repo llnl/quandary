@@ -96,11 +96,14 @@ class OptimProblem {
   Output* output; ///< Pointer to output handler
   MasterEq* mastereq; ///< Pointer to master equation solver
 
-  Mat GaussNewtonMatShell; ///< MatShell for applying Gauss-Newtonmatrix A=L^L to a vector
-  Vec xeval_GN; ///< Point of evaluation for Gauss-Newtonapply A 
-  int GN_MatVec_counter; ///< Counter for Gauss-Newton MatVec multiplications
-  Vec x_GN; ///< Current iterate for the GN optimization. Holds solution after finished. 
-  int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton linear solve
+  Mat GN_NormalEq_MatShell; ///< MatShell for applying Gauss-Newton normal equations matrix A(x)=L(x)^* L(x) to a vector v 
+  Mat GN_NormalEq_MatDense; ///< Dense matrix representation of the Gauss-Newton normal equation matrix
+  bool GN_NormalEq_usedensemat = false; ///< Flag indicating if the dense matrix representation of the Gauss-Newton normal equation matrix is used. Always false.
+
+  Vec xeval_GN; ///< Point of evaluation for Gauss-Newton (evaluate L(x) at this x) 
+
+  Vec x_GN; ///< Current iterate for GN optimization. Holds solution after finished. 
+  int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton normal or least squares solvers 
   bool nonlinear_forward_valid; ///< True once the nonlinear forward has been solved and stored for the current xeval_GN, reset whenever xeval_GN changes
   bool includeHessUJ; ///< Flag to include Hessian of J(U) in the terminal adjoint condition
 
@@ -110,7 +113,7 @@ class OptimProblem {
   const int max_ls_iter = 20; ///< Maximum number of backtracking steps
 
   // Gauss-Newton least squares solver
-  Mat GNLeastSquaresShell; ///< MatShell for the Gauss-Newton least-squares problem
+  Mat GN_LeastSquares_MatShell; ///< MatShell for the Gauss-Newton least-squares problem
   KSP ksp_LeastSquares;
   Vec *wsub_workspace; ///< Pre-allocated workspace vectors for MatMultTranspose (size: ninit_local)
   PetscInt state_dim_cached; ///< Cached state dimension for efficiency
@@ -119,20 +122,17 @@ class OptimProblem {
   Tao tao_brgn;        ///< Tao BRGN solver (alternative to KSPLSQR)
   Vec brgn_rhs;        ///< Cached RHS vector for BRGN residual evaluation
   Vec brgn_residual;   ///< Cached Residual vector for BRGN solver
-  double brgn_damping; ///< Damping parameter λ for BRGN regularization
-  std::string ls_solver; ///< Least-squares solver name: "BRGN" or "LSQR"
+  double gn_leastsquares_brgn_damping; ///< Damping parameter λ for BRGN regularization
+  std::string gn_leastsquares_solver; ///< Least-squares solver name: "brgn" or "lsqr"
 
   // KSP linear solver
-  KSP ksp_GN;  ///< Linear solver for Gauss-Newton system
-  double ksp_damping; ///< Damping parameter for Gauss-Newton matrix shift (configurable via gn_ksp_damping)
+  KSP ksp_GN_NormalEq;  ///< Linear solver for Gauss-Newton Normal Equation solver
+  double gn_normaleq_damping; ///< Damping parameter for Gauss-Newton matrix shift 
 
-  // EPS eigenvalue solver
-  EPS eps_GN;
-  bool GN_densemat = false; ///< Flag indicating if the dense matrix representation of the Gauss-Newton matrix is used
-  Mat GaussNewtonMatDense; ///< Dense matrix representation of the Gauss-Newton matrix
+  EPS eps_GN_NormalEq; // EPS solver for the Gauss-Newton Normal Equation matrix
   PetscReal eps_tol = 1e-4; ///< Tolerance for EPS eigenvalue solver
   double eps_evals_cutoff = 1e-5; ///< Cutoff for eigenvalues of the Gauss-Newton matrix
-  double eps_damping = 1e-3; ///< Damping for eigenvalues of the Gauss-Newton matrix
+  double eps_normaleq_damping = 1e-3; ///< Damping for eigenvalues of the Gauss-Newton matrix
   int neigvals; ///< Number of eigenvalues to compute (=N^2-1)
   int ncv; ///< Number of Lanczos vectors to use in EPS solver. HOW TO CHOOSE?? 
 
@@ -174,9 +174,9 @@ class OptimProblem {
   int getMPIrank_world() { return mpirank_world;};
   int getMaxIter()     { return maxiter; };
   OptimTarget* getOptimTarget() { return optim_target; };
-  Mat getGaussNewtonMatShell() { return GaussNewtonMatShell; };
-  Mat getGaussNewtonMatDense() { return GaussNewtonMatDense; };
-  Mat getGNLeastSquaresShell() { return GNLeastSquaresShell; };
+  Mat getGN_NormalEq_MatShell() { return GN_NormalEq_MatShell; };
+  Mat getGN_NormalEq_MatDense() { return GN_NormalEq_MatDense; };
+  Mat getGN_LeastSquares_MatShell() { return GN_LeastSquares_MatShell; };
   bool getQuietmode() { return quietmode; };
 
   int getOutputOptimizationStride() { return output_optimization_stride; };
@@ -189,9 +189,9 @@ class OptimProblem {
    * @brief Override the maximum number of iterations for all Gauss-Newton solvers.
    *
    * This sets the maximum iterations for:
-   * - KSP solver (used in solveGaussNewtonKSP)
+   * - KSP solver (used in solveGaussNewtonNormalEqKSP)
    * - Least Squares solver (used in solveGaussNewtonLeastSquares)
-   * - EPS eigenvalue solver (used in solveGaussNewtonEPS)
+   * - EPS eigenvalue solver (used in solveGaussNewtonNormalEqEPS)
    *
    * @param maxiter Maximum number of iterations
    */
@@ -263,43 +263,43 @@ class OptimProblem {
   static PetscErrorCode TaoBRGN_Monitor(Tao tao, void *ctx);
 
   // For the Gauss-Newton least-squares MatShell operations
-  static void GNLeastSquaresShell_MatMult(Mat A, Vec v, Vec y); // Apply y = W^1/2Lv
-  static void GNLeastSquaresShell_MatMultTranspose(Mat A, Vec w, Vec vout); // Apply vout = L* W^1/2 w
-  static void GNLeastSquaresShell_MatCreateVecs(Mat A, Vec *right, Vec *left);
+  static void GN_LeastSquares_MatMult(Mat A, Vec v, Vec y); // Apply y = W^1/2Lv
+  static void GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec vout); // Apply vout = L* W^1/2 w
+  static void GN_LeastSquares_MatCreateVecs(Mat A, Vec *right, Vec *left);
 
   /**
-   * @brief MatMult operation for MatShell Gauss-Newton Av = L*Lv: Linearized forward + adjoint operator. 
+   * @brief MatMult operation for MatShell Gauss-Newton Normal Equation L^*Lv: Linearized forward + adjoint operator. 
    * 
    * The point of evaluation xeval_GN must be set correctly in the OptimProblem before calling this.
    * 
    * @param[in] v Direction vector
    * @param[out] Av Resulting vector after applying the linearized forward and adjoint operators
    */
-  static void applyGaussNewtonMatShell(Mat A, const Vec v, Vec Av);
+  static void GN_NormalEq_MatMult(Mat A, const Vec v, Vec Av);
 
   /**
-   * @brief Updates the dense full  Gauss-Newton matrix based on the current point of evaluation xeval_GN by calling applyGaussNewtonMatShell on each unit vectoor.
+   * @brief Updates the dense full  Gauss-Newton matrix based on the current point of evaluation xeval_GN by calling GN_NormalEqShell_MatMult on each unit vectoor.
    * @note This operation can be expensive as it involves N^2-1 applications of the MatShell.
    */
   void updateGaussNewtonMatDense();
 
   /**
-   * @brief Solves the Gauss-Newton linear system A(x) v = b for v using CG iterations
+   * @brief Solves the Gauss-Newton normal equation L^* L(x) v = b for v using CG iterations
    * 
    * @param xinit Point of evaluation for the Gauss-Newton matrix
    * @param b Right-hand side vector
    * @param Ainv_b Solution vector to store the result
    */
-  void solveGaussNewtonKSP(Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b);
+  void solveGaussNewtonNormalEqKSP(Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b);
 
   /**
-   * @brief Solves the Gauss-Newton linear system A(x) v = b via eigenvalue decomposition
+   * @brief Solves the Gauss-Newton normal equation L^* L(x) v = b via eigenvalue decomposition
    * 
    * @param xinit Point of evaluation for the Gauss-Newton matrix
    * @param b Right-hand side vector
    * @param Ainv_b Solution vector to store the result
    */
-  void solveGaussNewtonEPS(Vec xinit, const Vec b, Vec Ainv_b);
+  void solveGaussNewtonNormalEqEPS(Vec xinit, const Vec b, Vec Ainv_b);
 
   /**
    * @brief Backtracking Armijo line search along a descent direction, projected onto bound constraints.
@@ -319,13 +319,13 @@ class OptimProblem {
 
 
   /**
-   * @brief Compute evals and evecs of Gauss-Newton A=L^*L matrix
+   * @brief Compute evals and evecs of Gauss-Newton Normal Equation A=L^*L matrix
    * 
    * @param[in] xinit Point of evaluation
    * @param[out] evecs_out Newly created dense matrix (ndesign x number-of-converged-evals) holding one eigenvector per column
    * @return Eigenvalues of Gauss-Newton matrix
    */
-  std::vector<double> computeGaussNewtonEvals(Vec xinit, Mat* evecs_out);
+  std::vector<double> computeGaussNewtonNormalEqEvals(Vec xinit, Mat* evecs_out);
 
   /**
    * @brief Runs the optimization solver.

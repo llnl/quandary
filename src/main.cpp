@@ -241,7 +241,7 @@ int main(int argc,char **argv)
     optimctx->getStartingPoint(xinit);
 
     Mat evecs;
-    std::vector<double> evals = optimctx->computeGaussNewtonEvals(xinit, &evecs);
+    std::vector<double> evals = optimctx->computeGaussNewtonNormalEqEvals(xinit, &evecs);
     // Print the eigenvalues to file:
     snprintf(filename, 254, "%s/eigenvalues.dat", output->output_dir.c_str());
     std::ofstream evalfile(filename);
@@ -301,7 +301,7 @@ int main(int argc,char **argv)
     }
     optimctx->getStartingPoint(xinit);
     // Example: Override max iterations for all Gauss-Newton solvers at once
-    // (All three solvers use ksp_maxiter from config by default)
+    // (All three solvers use gn_maxiter from config by default)
     // optimctx->setGaussNewtonMaxiter(200);
 
     // Do one gradient evaluation first to store the forward states and get the right hand side
@@ -326,7 +326,7 @@ int main(int argc,char **argv)
     // Save current max iterations, set to 1 for residual check, then restore
     int saved_maxiter = optimctx->getGaussNewtonMaxiter();
     optimctx->setGaussNewtonMaxiter(1); // just for checking the residual
-    if (mpirank_world == 0 && !quietmode) printf("\nTesting: call solveGNLS again with converged search direction\n");
+    if (mpirank_world == 0 && !quietmode) printf("\nTesting: call solveGaussNewtonLeastSquares again with converged search direction\n");
     optimctx->solveGaussNewtonLeastSquares(xinit, v_LeastSquares, v_result);
     // check if the solution norm has changed
     VecNorm(v_result, NORM_2, &v_LeastSquares_norm);
@@ -343,43 +343,43 @@ int main(int argc,char **argv)
     VecCopy(grad, gnrhs);
     VecScale(gnrhs, -1.0);
     
-    // Solve Gauss-Newton linear system with KSP
+    // Solve Gauss-Newton Normal Equation with KSP
     Vec v_KSP;
     VecDuplicate(grad, &v_KSP);
-    if (mpirank_world == 0 && !quietmode) printf("\nCalling solveGaussNewtonKSP\n");
-    optimctx->solveGaussNewtonKSP(xinit, v_zero, gnrhs, v_KSP);
+    optimctx->solveGaussNewtonNormalEqKSP(xinit, v_zero, gnrhs, v_KSP);
 
     // call the Gauss-Newton solver again to re-evaluate the residual
     optimctx->setGaussNewtonMaxiter(1); // just for checking the residual
-    if (mpirank_world == 0 && !quietmode) printf("\nTesting: call solveGNKSP again with converged search direction\n");
-    optimctx->solveGaussNewtonKSP(xinit, v_KSP, gnrhs, v_result);
+    if (mpirank_world == 0 && !quietmode) printf("\nTesting: call solveGaussNewtonNormalEqKSP again with converged search direction\n");
+    optimctx->solveGaussNewtonNormalEqKSP(xinit, v_KSP, gnrhs, v_result);
     // check if the solution norm has changed
     VecNorm(v_result, NORM_2, &v_LeastSquares_norm);
     if (mpirank_world == 0 && !quietmode) {
-      printf("Norm of re-evaluated KSP solution: %1.14e\n", v_LeastSquares_norm);
+      printf("Norm of re-evaluated NormalEq solution: %1.14e\n", v_LeastSquares_norm);
     }
 
     // check if the solution from the least squares routine gives a small residual in KSP and vv?
     if (mpirank_world == 0 && !quietmode){
       printf("\n");
-      printf("Testing: call solveGNLS with converged search direction from solveGNKSP\n");
+      printf("Testing: call solveGaussNewtonLeastSquares with converged search direction from solveGaussNewtonNormalEqKSP\n");
     }
     optimctx->solveGaussNewtonLeastSquares(xinit, v_KSP, v_result);
   
+    // check if the solution from the least squares routine gives a small residual?
     if (mpirank_world == 0 && !quietmode){
-      printf("\n");
-       printf("Testing: call solveGNKSP with converged search direction from solveGNLS\n");
-    }   
-    optimctx->solveGaussNewtonKSP(xinit, v_LeastSquares, gnrhs, v_result);
+        printf("\n");
+        printf("Testing: call solveGaussNewtonNormalEqKSP with converged search direction from solveGaussNewtonLeastSquares\n");
+    }
+    optimctx->solveGaussNewtonNormalEqKSP(xinit, v_LeastSquares, gnrhs, v_result);
 
     // Evaluate residuals from Least Squares solution
     Vec v_test_1;
     VecDuplicate(grad, &v_test_1);
-    MatMult(optimctx->getGaussNewtonMatShell(), v_LeastSquares, v_test_1);
+    MatMult(optimctx->getGN_NormalEq_MatShell(), v_LeastSquares, v_test_1);
     VecAXPY(v_test_1, -1.0, gnrhs);
     VecNorm(v_test_1, NORM_2, &v_LeastSquares_norm);
     if (mpirank_world == 0 && !quietmode) {
-      printf("Norm of direct KSP residual on the LS solution: %1.14e\n", v_LeastSquares_norm);
+      printf("Norm of Normal equation residual on the LeastSquares solution: %1.14e\n", v_LeastSquares_norm);
       printf("End test\n\n");
     }
 
@@ -389,7 +389,7 @@ int main(int argc,char **argv)
     // Solve Gauss-Newton via SVD
     Vec v_EPS;
     VecDuplicate(grad, &v_EPS);
-    optimctx->solveGaussNewtonEPS(xinit, gnrhs, v_EPS);
+    optimctx->solveGaussNewtonNormalEqEPS(xinit, gnrhs, v_EPS);
 
     // Compare the solutions from KSP and EPS and v_LeastSquares
     if (mpirank_world == 0 && !quietmode) {
@@ -402,13 +402,13 @@ int main(int argc,char **argv)
       double vnorm;
       VecNorm(v_KSP, NORM_2, &vnorm);
       printf("\n");
-      printf("Least-squares solver type: %s\n", config.getLeastSquaresSolver().c_str());
-      printf("GN KSP solver type: %s", config.getGnKspType().c_str());
-      if (config.getGnKspType() == "MINRES" && config.getGnMinresQlp()) {
+      printf("GN Least-squares solver type: %s\n", config.getGnLeastSquaresSolver().c_str());
+      printf("GN NormalEq solver type: %s", config.getGnNormaleqSolver().c_str());
+      if (config.getGnNormaleqSolver() == "minres" && config.getGnNormaleqMinresQlp()) {
         printf(" (QLP variant)");
       }
       printf("\n");
-      printf("GN KSP damping: %1.4e\n", config.getGnKspDamping());
+      printf("GN NormalEq damping: %1.4e\n", config.getGnNormaleqDamping());
       printf("\n");
       printf("Relative difference norm between KSP and EPS solutions: %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
       VecCopy(v_KSP, diff);
@@ -740,7 +740,7 @@ int main(int argc,char **argv)
   int ndesign = optimctx->getNdesign();
 
   // Create vectors with correct dimensions using MatCreateVecs
-  MatCreateVecs(optimctx->getGNLeastSquaresShell(), &v, &Av);
+  MatCreateVecs(optimctx->getGN_LeastSquares_MatShell(), &v, &Av);
 
   // Get the dimension of the output vector (nested vector with ninit subvectors)
   PetscInt nrows;
@@ -754,13 +754,13 @@ int main(int argc,char **argv)
   MatSetUp(A_LeastSquares);
   MatZeroEntries(A_LeastSquares);
 
-  // Apply GNLeastSquaresShell operator to each unit vector, storing the resulting matrix
+  // Apply GN_LeastSquares_MatShell operator to each unit vector, storing the resulting matrix
   for (int ix = 0; ix < ndesign; ix++){
     VecZeroEntries(v);
     VecSetValue(v, ix, 1.0, INSERT_VALUES);
     VecAssemblyBegin(v); VecAssemblyEnd(v);
 
-    MatMult(optimctx->getGNLeastSquaresShell(), v, Av);
+    MatMult(optimctx->getGN_LeastSquares_MatShell(), v, Av);
 
     // Store Av in ix-th column of A_LeastSquares
     const PetscScalar *Av_ptr;
@@ -852,7 +852,7 @@ int main(int argc,char **argv)
     VecAssemblyBegin(v_GN); VecAssemblyEnd(v_GN);
 
     // Evaluate Av_GN = A * e_ix
-    MatMult(optimctx->getGaussNewtonMatShell(), v_GN, Av_GN);
+    MatMult(optimctx->getGN_NormalEq_MatShell(), v_GN, Av_GN);
 
     // Store Av_GN in ix-th column of A_GaussNewton
     const PetscScalar *Av_ptr;

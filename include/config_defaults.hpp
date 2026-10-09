@@ -57,13 +57,13 @@ const double OPTIM_PENALTY_DPDM = 0.0; ///< Default second derivative penalty co
 const double OPTIM_PENALTY_ENERGY = 0.0; ///< Default energy penalty coefficient
 const double OPTIM_PENALTY_VARIATION = 0.01; ///< Default amplitude variation penalty coefficient
 const OptimSolverType OPTIM_SOLVER_TYPE = OptimSolverType::TAO_LBFGS; ///< Default optimization solver type
-const double OPTIM_KSP_RTOL = 1e-3; ///< Default relative tolerance for the KSP solver
-const int OPTIM_KSP_MAXITER = 100; ///< Default maximum iterations for the KSP solver
-inline const std::string LS_SOLVER = "BRGN"; ///< Default least-squares solver for Gauss-Newton ("BRGN" or "LSQR")
-const double BRGN_DAMPING = 1e-3; ///< Default damping parameter for BRGN regularization
-const double GN_KSP_DAMPING = 1e-3; ///< Default damping parameter for Gauss-Newton KSP solver (Levenberg-Marquardt)
-inline const std::string GN_KSP_TYPE = "CG"; ///< Default KSP solver type for Gauss-Newton ("CG", "MINRES", "GMRES", etc.)
+const double GN_RTOL = 1e-3; ///< Default relative tolerance for Gauss-Newton inner solver
+const int GN_MAXITER = 100; ///< Default maximum iterations for the Gauss-Newton inner solver
+inline const std::string GN_LEASTSQUARES_SOLVER = "brgn"; ///< Default solver for Gauss-Newton Least Squares problem ("brgn" or "lsqr")
+const double GN_LEASTSQUARES_BRGN_DAMPING = 1e-3; ///< Default damping parameter for Gauss-Newton LeastSquares TAOBRGN regularization
+inline const std::string GN_NORMALEQ_SOLVER = "CG"; ///< Default KSP solver type for Gauss-Newton Normal Equation ("CG", "MINRES", "GMRES", etc.)
 const bool GN_MINRES_QLP = false; ///< Use MINRES-QLP variant (more robust than standard MINRES)
+const double GN_NORMALEQ_DAMPING = 1e-3; ///< Default damping parameter for Gauss-Newton KSP solver (Levenberg-Marquardt)
 
 inline const std::string OUTPUT_DIRECTORY = "./data_out"; ///< Default output directory
 
