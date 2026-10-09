@@ -56,7 +56,7 @@ gn_normaleq_minres_qlp = true
 # Those apply to solving the Least Squares problem
 # gn_leastsquares_solver = "BRGN"
 gn_leastsquares_solver = "LSQR"
-gn_leastsquares_brgn_damping = 1e-3
+gn_leastsquares_damping = 1e-3
 
 [output]
 directory = "./"

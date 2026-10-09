@@ -122,7 +122,7 @@ class OptimProblem {
   Tao tao_brgn;        ///< Tao BRGN solver (alternative to KSPLSQR)
   Vec brgn_rhs;        ///< Cached RHS vector for BRGN residual evaluation
   Vec brgn_residual;   ///< Cached Residual vector for BRGN solver
-  double gn_leastsquares_brgn_damping; ///< Damping parameter λ for BRGN regularization
+  double gn_leastsquares_damping; ///< Damping parameter λ for BRGN regularization
   std::string gn_leastsquares_solver; ///< Least-squares solver name: "brgn" or "lsqr"
 
   // KSP linear solver

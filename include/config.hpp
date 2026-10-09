@@ -109,7 +109,7 @@ class Config {
   double gn_rtol; ///< Relative tolerance for inner Gauss-Newton iterations (Normal or Least Squares)
   int gn_maxiter; ///< Maximum iterations for inner Gauss-Newton iterations (Normal or Least Squares)
   std::string gn_leastsquares_solver; ///< Least-squares solver for Gauss-Newton: "brgn" or "lsqr"
-  double gn_leastsquares_brgn_damping; ///< Damping parameter for BRGN regularization
+  double gn_leastsquares_damping; ///< Damping parameter for BRGN regularization
   double gn_normaleq_damping; ///< Damping parameter for Gauss-Newton Normal Equation solves (Levenberg-Marquardt)
   std::string gn_normaleq_solver; ///< KSP solver type for Gauss-Newton Normal equation: "CG", "MINRES", "GMRES", etc.
   bool gn_normaleq_minres_qlp; ///< Use MINRES-QLP variant (more robust than standard MINRES)
@@ -190,7 +190,7 @@ class Config {
   double getOptimPenaltyVariation() const { return optim_penalty_variation; }
   OptimSolverType getOptimSolverType() const { return optim_solver_type; }
   const std::string& getGnLeastSquaresSolver() const { return gn_leastsquares_solver; }
-  double getGnLeastSquaresBrgnDamping() const { return gn_leastsquares_brgn_damping; }
+  double getGnLeastSquaresDamping() const { return gn_leastsquares_damping; }
   double getGnNormaleqDamping() const { return gn_normaleq_damping; }
   const std::string& getGnNormaleqSolver() const { return gn_normaleq_solver; }
   bool getGnNormaleqMinresQlp() const { return gn_normaleq_minres_qlp; }

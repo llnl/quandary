@@ -311,7 +311,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     gn_leastsquares_solver = validators::field<std::string>(optimization_table, "gn_leastsquares_solver").valueOr(ConfigDefaults::GN_LEASTSQUARES_SOLVER);
     std::string gn_leastsquares_solver_lower = toLower(gn_leastsquares_solver);
     gn_leastsquares_solver = gn_leastsquares_solver_lower;
-    gn_leastsquares_brgn_damping = validators::field<double>(optimization_table, "gn_leastsquares_brgn_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::GN_LEASTSQUARES_BRGN_DAMPING);
+    gn_leastsquares_damping = validators::field<double>(optimization_table, "gn_leastsquares_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::GN_LEASTSQUARES_DAMPING);
     gn_normaleq_damping = validators::field<double>(optimization_table, "gn_normaleq_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::GN_NORMALEQ_DAMPING);
     gn_normaleq_solver = validators::field<std::string>(optimization_table, "gn_normaleq_solver").valueOr(ConfigDefaults::GN_NORMALEQ_SOLVER);
     gn_normaleq_minres_qlp = validators::field<bool>(optimization_table, "gn_normaleq_minres_qlp").valueOr(ConfigDefaults::GN_MINRES_QLP);
@@ -701,9 +701,7 @@ void Config::printConfig(std::stringstream& log) const {
     log << "gn_normaleq_solver = \"" << gn_normaleq_solver << "\"\n";
     log << "gn_normaleq_minres_qlp = " << (gn_normaleq_minres_qlp ? "true" : "false") << "\n";
     log << "gn_leastsquares_solver = \"" << gn_leastsquares_solver << "\"\n";
-    if (gn_leastsquares_solver == "brgn") {
-      log << "gn_leastsquares_brgn_damping = " << gn_leastsquares_brgn_damping << "\n";
-    }
+    log << "gn_leastsquares_damping = " << gn_leastsquares_damping << "\n";
   }
 
   log << "\n";

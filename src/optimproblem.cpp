@@ -141,8 +141,14 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   includeHessUJ = false;
 
   /* Create MatShell for Gauss-Newton least-squares problem */
+  gn_leastsquares_damping = config.getGnLeastSquaresDamping();
+  int N = ndesign;
   PetscInt M = mastereq->getDim()*mastereq->getDim() - 1; 
-  MatCreateShell(PETSC_COMM_SELF, M, ndesign, M, ndesign, this, &GN_LeastSquares_MatShell);
+  // enlarge the output space if damping is enabled
+  if (gn_leastsquares_damping > 0.0) {
+    M += ndesign;
+  }
+  MatCreateShell(PETSC_COMM_SELF, M, N, M, N, this, &GN_LeastSquares_MatShell);
   MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_MULT, (void(*)(void))GN_LeastSquares_MatMult);
   MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_MULT_TRANSPOSE, (void(*)(void))GN_LeastSquares_MatMultTranspose);
   MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_CREATE_VECS,     (void(*)(void))GN_LeastSquares_MatCreateVecs);
@@ -176,8 +182,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
     TaoSetMaximumIterations(tao_brgn, config.getGnMaxiter());
 
     // Set damping parameter for regularization term λ||v||²
-    gn_leastsquares_brgn_damping = config.getGnLeastSquaresBrgnDamping();
-    TaoBRGNSetRegularizerWeight(tao_brgn, gn_leastsquares_brgn_damping);
+    TaoBRGNSetRegularizerWeight(tao_brgn, gn_leastsquares_damping);
 
     // Set Residual routine F(v) = Lv - b 
     TaoSetResidualRoutine(tao_brgn, brgn_residual, TaoBRGN_EvalResidual, (void*)this);
@@ -1232,9 +1237,6 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
   Vec b; // RHS 
   GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &b);
 
-  PetscInt tangent_dim;;
-  VecGetSize(b, &tangent_dim);
-
   // Get U(T) from optim_target
   Mat U_final_re = optim_target->getFinalUnitaryRe();
   Mat U_final_im = optim_target->getFinalUnitaryIm();
@@ -1281,6 +1283,7 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
   }
 
   // Allreduce b across all comm_init processors
+  PetscInt tangent_dim = mastereq->getDim()*mastereq->getDim()-1;
   MPI_Allreduce(MPI_IN_PLACE, b_data, tangent_dim, MPIU_SCALAR, MPI_SUM, comm_init);
   VecRestoreArray(b, &b_data);
 
@@ -1494,11 +1497,11 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMult(Mat A, Vec v, Vec y)
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
 
+  PetscInt M, N;
+  MatGetSize(A, &M, &N);
+
   // Reset output
   VecZeroEntries(y);
-
-  PetscInt tangent_dim;
-  VecGetSize(y, &tangent_dim);
 
   // Apply linearized forward to get dU/dalpha x v
   // assumes that the timestepper's trajectory_states are already populated and computes all lin_trajectory_states.
@@ -1519,7 +1522,16 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMult(Mat A, Vec v, Vec y)
   }
 
   // Allreduce the data in y across all comm_init processors
-  MPI_Allreduce(MPI_IN_PLACE, y_data, tangent_dim, MPIU_SCALAR, MPI_SUM, self->comm_init);
+  MPI_Allreduce(MPI_IN_PLACE, y_data, M, MPIU_SCALAR, MPI_SUM, self->comm_init);
+
+  // Fill the bottom of y with damping: lambda * v
+  int tangentdim = self->mastereq->getDim()*self->mastereq->getDim() - 1;
+  const PetscScalar *v_data;
+  VecGetArrayRead(v, &v_data);
+  for (int i=0; i<M - tangentdim; i++) {
+    y_data[i + tangentdim] = self->gn_leastsquares_damping * v_data[i];
+  }
+  VecRestoreArrayRead(v, &v_data);
   VecRestoreArray(y, &y_data);
 
   //   /* ----- TEST: Project Lv onto tangent space  ----*/
@@ -1577,13 +1589,32 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMult(Mat A, Vec v, Vec y)
   return 0;
 }
 
-PetscErrorCode OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec vout)
+PetscErrorCode OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w_long, Vec vout)
 {
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
 
   // Reset output
   VecZeroEntries(vout);
+
+  int M,N;
+  MatGetSize(A, &M, &N);
+
+  // Create a tangent space vector w and fill it will the first part of w_long
+  Vec w;
+  int tangentdim = self->mastereq->getDim()*self->mastereq->getDim() - 1;
+  VecCreateSeq(PETSC_COMM_SELF, tangentdim, &w);
+  VecSetFromOptions(w);
+  VecAssemblyBegin(w); VecAssemblyEnd(w);
+  PetscScalar *w_ptr;
+  const PetscScalar *wl_data;
+  VecGetArrayRead(w_long, &wl_data);
+  VecGetArray(w, &w_ptr);
+  for (int i=0; i<tangentdim; i++) {
+    w_ptr[i] = wl_data[i];
+  }
+  VecRestoreArray(w, &w_ptr);
+  VecRestoreArrayRead(w_long, &wl_data);
 
   // Get read access to w (in reduced tangent space) Note: w has size tangent_dim, 
   const PetscScalar *w_data;
@@ -1629,7 +1660,15 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec 
   PetscScalar* vout_data;
   VecGetArray(vout, &vout_data);
   MPI_Allreduce(MPI_IN_PLACE, vout_data, self->ndesign, MPIU_SCALAR, MPI_SUM, self->comm_init);
+
+  // Add damping lambda * w_long[tangentdim:end] contribution to the output
+  VecGetArrayRead(w_long, &wl_data);
+  for (int i=0; i<self->ndesign; i++) {
+    vout_data[i] += self->gn_leastsquares_damping * wl_data[i + tangentdim];
+  }
   VecRestoreArray(vout, &vout_data);
+  VecRestoreArrayRead(w_long, &wl_data);
+  VecDestroy(&w);
   return 0;
 }
 
@@ -1638,12 +1677,16 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatCreateVecs(Mat A, Vec *right, Ve
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
 
-  if (right) VecCreateSeq(PETSC_COMM_SELF, self->ndesign, right);
+  PetscInt M,N;
+  MatGetSize(A, &M, &N);
+
+  if (right) {
+    // Create a control pulse vector
+    VecCreateSeq(PETSC_COMM_SELF, N, right);
+  }
   if (left) {
     // Create a reduced tangent space
-    PetscInt N = self->mastereq->getDim();
-    PetscInt tangent_dim = N * N - 1;
-    VecCreateSeq(PETSC_COMM_SELF, tangent_dim, left);
+    VecCreateSeq(PETSC_COMM_SELF, M, left);
   }
   return 0;
 }
