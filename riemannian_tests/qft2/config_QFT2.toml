@@ -31,29 +31,36 @@ zero_boundary_condition = false
 target = { type = "gate", gate_type= "qft", gate_rot_freq = [0.0, 0.0] }
 objective = "Jtrace"
 tolerance = { grad_abs = 1e-05, grad_rel = 1e-05, final_cost = 1e-08, infidelity = 1e-05 }
-maxiter = 1
+maxiter = 100
 tikhonov = { coeff = 1e-05, use_x0 = false }
 penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0 }
 
 # Switch between lbfgs and gauss_newton optimization
 solver_type = "gauss_newton"
 
+# experimental preconditioner
+gn_prec_update_interval = 10
+
 # Those apply to all gn solver (normal eq and least squares)
 gn_rtol = 1e-5
 gn_maxiter = 100
+# gn_solver_mode = "primal"
+gn_solver_mode = "dual"
 
 # Those apply to solving the normal equation
+# minres-qlp
 gn_normaleq_damping = 1e-5
 gn_normaleq_solver = "minres"
 gn_normaleq_minres_qlp = true
 
+# Conjugate gradient
+#gn_normaleq_solver = "cg"
+#gn_normaleq_damping = 1e-3
+
 # Those apply to solving the Least Squares problem
 # gn_leastsquares_solver = "brgn"
-gn_leastsquares_solver = "lsqr"   
-gn_leastsquares_brgn_damping = 1e-3
-
-# gn_normaleq_solver = "cg"
-# gn_normaleq_damping = 1e-3
+# gn_leastsquares_solver = "lsqr"   
+# gn_leastsquares_brgn_damping = 1e-3
 
 
 [output]
@@ -64,8 +71,9 @@ timestep_stride = 1
 optimization_stride = 1
 
 [solver]
-runtype = "gaussnewton_ls"
-#runtype = "simulation"
+# runtype = "gaussnewton_ls"
+runtype = "optimization"
+# runtype = "matrix_save"
 usematfree = true
 linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"

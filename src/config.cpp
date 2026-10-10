@@ -315,6 +315,10 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     gn_normaleq_damping = validators::field<double>(optimization_table, "gn_normaleq_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::GN_NORMALEQ_DAMPING);
     gn_normaleq_solver = validators::field<std::string>(optimization_table, "gn_normaleq_solver").valueOr(ConfigDefaults::GN_NORMALEQ_SOLVER);
     gn_normaleq_minres_qlp = validators::field<bool>(optimization_table, "gn_normaleq_minres_qlp").valueOr(ConfigDefaults::GN_MINRES_QLP);
+    gn_solver_mode = validators::field<std::string>(optimization_table, "gn_solver_mode").valueOr(ConfigDefaults::GN_SOLVER_MODE);
+    std::string gn_solver_mode_lower = toLower(gn_solver_mode);
+    gn_solver_mode = gn_solver_mode_lower;
+    gn_prec_update_interval = validators::field<int>(optimization_table, "gn_prec_update_interval").greaterThanEqual(-1).valueOr(ConfigDefaults::GN_PREC_UPDATE_INTERVAL);
 
     // Parse output options from [output] table
     output_directory = output_table["directory"].value_or(ConfigDefaults::OUTPUT_DIRECTORY);
@@ -700,6 +704,8 @@ void Config::printConfig(std::stringstream& log) const {
     log << "gn_normaleq_damping = " << gn_normaleq_damping << "\n";
     log << "gn_normaleq_solver = \"" << gn_normaleq_solver << "\"\n";
     log << "gn_normaleq_minres_qlp = " << (gn_normaleq_minres_qlp ? "true" : "false") << "\n";
+    log << "gn_solver_mode = \"" << gn_solver_mode << "\"\n";
+    log << "gn_prec_update_interval = " << gn_prec_update_interval << "\n";
     log << "gn_leastsquares_solver = \"" << gn_leastsquares_solver << "\"\n";
     if (gn_leastsquares_solver == "brgn") {
       log << "gn_leastsquares_brgn_damping = " << gn_leastsquares_brgn_damping << "\n";

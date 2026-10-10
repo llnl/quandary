@@ -127,7 +127,17 @@ class OptimProblem {
 
   // KSP linear solver
   KSP ksp_GN_NormalEq;  ///< Linear solver for Gauss-Newton Normal Equation solver
-  double gn_normaleq_damping; ///< Damping parameter for Gauss-Newton matrix shift 
+  double gn_normaleq_damping; ///< Damping parameter for Gauss-Newton matrix shift
+
+  // Dual Gauss-Newton solver
+  Mat GN_Dual_MatShell; ///< MatShell for the dual Gauss-Newton problem (L L^T + λI)
+  Mat GN_Dual_MatDense; ///< Dense matrix representation of L L^T
+  KSP ksp_GN_Dual;  ///< Linear solver for dual Gauss-Newton system
+  Vec y_dual_workspace; ///< Workspace vector for dual solver (tangent space, size dim²-1)
+  Vec v_dual_workspace; ///< Workspace vector for intermediate L^T y computation (design space)
+  Vec gn_dual_precond_diag; ///< Diagonal of (L L^T + λI) for Jacobi preconditioning
+  std::string gn_solver_mode; ///< Gauss-Newton solver mode: "primal" or "dual"
+  int gn_prec_update_interval; ///< Preconditioner update interval (0 = startup only)
 
   EPS eps_GN_NormalEq; // EPS solver for the Gauss-Newton Normal Equation matrix
   PetscReal eps_tol = 1e-4; ///< Tolerance for EPS eigenvalue solver
@@ -176,6 +186,8 @@ class OptimProblem {
   OptimTarget* getOptimTarget() { return optim_target; };
   Mat getGN_NormalEq_MatShell() { return GN_NormalEq_MatShell; };
   Mat getGN_NormalEq_MatDense() { return GN_NormalEq_MatDense; };
+  Mat getGN_Dual_MatDense() { return GN_Dual_MatDense; };
+  Mat getGNLeastSquaresShell() { return GN_LeastSquares_MatShell; };
   Mat getGN_LeastSquares_MatShell() { return GN_LeastSquares_MatShell; };
   bool getQuietmode() { return quietmode; };
 
@@ -196,6 +208,15 @@ class OptimProblem {
    * @param maxiter Maximum number of iterations
    */
   void setGaussNewtonMaxiter(int maxiter);
+
+  /**
+   * @brief Sets the evaluation point for Gauss-Newton matrix operators
+   *
+   * Copies xinit to xeval_GN and invalidates the nonlinear forward solve cache.
+   *
+   * @param xinit Design parameter vector to use as evaluation point
+   */
+  void setGaussNewtonEvalPoint(Vec xinit);
 
   /**
    * @brief Get the current maximum number of iterations for Gauss-Newton solvers.
@@ -268,14 +289,36 @@ class OptimProblem {
   static void GN_LeastSquares_MatCreateVecs(Mat A, Vec *right, Vec *left);
 
   /**
-   * @brief MatMult operation for MatShell Gauss-Newton Normal Equation L^*Lv: Linearized forward + adjoint operator. 
-   * 
+   * @brief MatMult operation for MatShell Gauss-Newton Normal Equation L^*Lv: Linearized forward + adjoint operator.
+   *
    * The point of evaluation xeval_GN must be set correctly in the OptimProblem before calling this.
-   * 
+   *
    * @param[in] v Direction vector
    * @param[out] Av Resulting vector after applying the linearized forward and adjoint operators
    */
   static void GN_NormalEq_MatMult(Mat A, const Vec v, Vec Av);
+
+  /**
+   * @brief MatMult operation for MatShell dual Gauss-Newton problem (L L^T + λI) y
+   *
+   * Computes y_out = L L^T y_in by calling GN_LeastSquares_MatMultTranspose followed by GN_LeastSquares_MatMult.
+   * Damping is handled separately via MatShift on the shell.
+   *
+   * @param[in] A MatShell containing OptimProblem context
+   * @param[in] y Input vector (tangent space, size dim²-1)
+   * @param[out] Ay Output vector after applying L L^T (tangent space, size dim²-1)
+   */
+  static void GN_Dual_MatMult(Mat A, const Vec y, Vec Ay);
+
+  /**
+   * @brief GetDiagonal operation for MatShell dual Gauss-Newton problem
+   *
+   * Returns the precomputed diagonal of (L L^T + λI) for use by preconditioners.
+   *
+   * @param[in] A MatShell containing OptimProblem context
+   * @param[out] diag Diagonal vector (tangent space, size dim²-1)
+   */
+  static PetscErrorCode GN_Dual_GetDiagonal(Mat A, Vec diag);
 
   /**
    * @brief Updates the dense full  Gauss-Newton matrix based on the current point of evaluation xeval_GN by calling GN_NormalEqShell_MatMult on each unit vectoor.
@@ -284,17 +327,51 @@ class OptimProblem {
   void updateGaussNewtonMatDense();
 
   /**
+   * @brief Assembles the dense dual Gauss-Newton matrix L L^T in GN_Dual_MatDense
+   *
+   * Uses matrix-vector products with GN_Dual_MatShell to build the dense representation.
+   * Dimensions: (dim²-1) × (dim²-1) where dim is the Hilbert space dimension.
+   *
+   * @note This operation can be expensive as it involves (dim²-1) applications of the dual MatShell.
+   */
+  void updateGaussNewtonDualMatDense();
+
+  /**
+   * @brief Extracts diagonal of (L L^T + λI) for dual Gauss-Newton preconditioner
+   *
+   * Computes diagonal entries by applying GN_Dual_MatShell to unit vectors.
+   * Stores result in gn_dual_precond_diag and updates the KSP preconditioner.
+   */
+  void updateGaussNewtonDualPreconditioner();
+
+  /**
    * @brief Solves the Gauss-Newton normal equation L^* L(x) v = b for v using CG iterations
-   * 
+   *
    * @param xinit Point of evaluation for the Gauss-Newton matrix
+   * @param initial_guess Initial guess for iterative solver
    * @param b Right-hand side vector
    * @param Ainv_b Solution vector to store the result
    */
   void solveGaussNewtonNormalEqKSP(Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b);
 
   /**
+   * @brief Solves the dual Gauss-Newton problem: (L L^T + λI) y = -∇_U J, then v = L^T y
+   *
+   * This is the dual formulation of the Gauss-Newton problem. It can be more efficient
+   * when dim²-1 < ndesign, as the system size is (dim²-1) × (dim²-1) instead of ndesign × ndesign.
+   *
+   * Computes the RHS b = -∇_U J projected to tangent space internally (Riemannian gradient),
+   * similar to how solveGaussNewtonLeastSquares() works.
+   *
+   * @param xinit Point of evaluation for the Gauss-Newton matrix
+   * @param initial_guess Initial guess for iterative solver (in tangent space, size dim²-1)
+   * @param v_out Solution vector (in design space, size ndesign)
+   */
+  void solveGaussNewtonDual(Vec xinit, const Vec initial_guess, Vec v_out);
+
+  /**
    * @brief Solves the Gauss-Newton normal equation L^* L(x) v = b via eigenvalue decomposition
-   * 
+   *
    * @param xinit Point of evaluation for the Gauss-Newton matrix
    * @param b Right-hand side vector
    * @param Ainv_b Solution vector to store the result

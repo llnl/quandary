@@ -1,7 +1,7 @@
 #include "timestepper.hpp"
 #include "defs.hpp"
 #include <string>
-#include "oscillator.hpp" 
+#include "oscillator.hpp"
 #include "mastereq.hpp"
 #include "config.hpp"
 #include <stdlib.h>
@@ -14,6 +14,7 @@
 #include "petsc.h"
 #include <random>
 #include "util.hpp"
+#include "gellmann.hpp"
 #ifdef WITH_SLEPC
 #include <slepceps.h>
 #include <slepcsvd.h>
@@ -236,6 +237,71 @@ int main(int argc,char **argv)
   } 
 
   /* Test Gauss-Newton eigenvalue computation */
+  /* Save Gauss-Newton matrix to file */
+  if (config.getRuntype() == RunType::MATRIX_SAVE) {
+    if (mpirank_world == 0 && !quietmode) printf("\nSaving Gauss-Newton matrix to file...\n");
+    optimctx->getStartingPoint(xinit);
+
+    // Set evaluation point and compute gradient
+    if (mpirank_world == 0 && !quietmode) printf("Setting up evaluation point and computing gradient...\n");
+    optimctx->setGaussNewtonEvalPoint(xinit);
+    optimctx->evalGradF(xinit, grad);
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Objective value: %1.14e\n", optimctx->getObjective());
+      double gnorm;
+      VecNorm(grad, NORM_2, &gnorm);
+      printf("Gradient norm: %1.14e\n", gnorm);
+    }
+
+    std::string mode = config.getGnSolverMode();
+    if (mpirank_world == 0 && !quietmode) printf("gn_solver_mode = \"%s\"\n", mode.c_str());
+    if (mode == "dual") {
+      // Save dual matrix L L^T (tangent space dimension: dim²-1)
+      if (mpirank_world == 0 && !quietmode) printf("\nAssembling dual Gauss-Newton matrix (L L^T)...\n");
+      optimctx->updateGaussNewtonDualMatDense();
+      Mat mat_dual = optimctx->getGN_Dual_MatDense();
+
+      // Only rank 0 writes to file (matrix is replicated on all ranks after MPI_Allreduce)
+      if (mpirank_world == 0) {
+        snprintf(filename, 254, "%s/GN_dual_matrix.dat", output->output_dir.c_str());
+        PetscViewer viewer;
+        PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
+        PetscViewerBinarySetSkipInfo(viewer, PETSC_TRUE);  // Suppress .info file
+        MatView(mat_dual, viewer);
+        PetscViewerDestroy(&viewer);
+
+        if (!quietmode) {
+          PetscInt dim;
+          MatGetSize(mat_dual, &dim, NULL);
+          printf("Dual matrix (L L^T) saved to: %s\n", filename);
+          printf("Matrix dimensions: %d x %d (tangent space)\n", dim, dim);
+        }
+      }
+    } else {
+      // Save primal matrix L^T L (design space dimension: ndesign)
+      if (mpirank_world == 0 && !quietmode) printf("\nAssembling primal Gauss-Newton matrix (L^T L)...\n");
+      optimctx->updateGaussNewtonMatDense();
+      Mat mat_primal = optimctx->getGN_NormalEq_MatDense();
+
+      // Only rank 0 writes to file (matrix is replicated on all ranks after MPI_Allreduce)
+      if (mpirank_world == 0) {
+        snprintf(filename, 254, "%s/GN_primal_matrix.dat", output->output_dir.c_str());
+        PetscViewer viewer;
+        PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
+        PetscViewerBinarySetSkipInfo(viewer, PETSC_TRUE);  // Suppress .info file
+        MatView(mat_primal, viewer);
+        PetscViewerDestroy(&viewer);
+
+        if (!quietmode) {
+          PetscInt dim;
+          MatGetSize(mat_primal, &dim, NULL);
+          printf("Primal matrix (L^T L) saved to: %s\n", filename);
+          printf("Matrix dimensions: %d x %d (design space)\n", dim, dim);
+        }
+      }
+    }
+  }
+
   if (config.getRuntype() == RunType::GAUSSNEWTON_EVALS) {
     if (mpirank_world == 0 && !quietmode) printf("\nStarting Gauss-Newton eigenvalue computation...\n");
     optimctx->getStartingPoint(xinit);
@@ -359,7 +425,7 @@ int main(int argc,char **argv)
       printf("Norm of re-evaluated NormalEq solution: %1.14e\n", v_LeastSquares_norm);
     }
 
-    // check if the solution from the least squares routine gives a small residual in KSP and vv?
+    // check if the solution from the least squares routine gives a small residual in KSP and vice versa?
     if (mpirank_world == 0 && !quietmode){
       printf("\n");
       printf("Testing: call solveGaussNewtonLeastSquares with converged search direction from solveGaussNewtonNormalEqKSP\n");
@@ -386,23 +452,40 @@ int main(int argc,char **argv)
 
     optimctx->setGaussNewtonMaxiter(saved_maxiter); // reset max iterations
 
+    // Test dual Gauss-Newton solver
+    if (mpirank_world == 0 && !quietmode) {
+      printf("\n=== Testing Dual Gauss-Newton Solver ===\n");
+      printf("RHS computed internally: b = -∇_U J projected to tangent space (Riemannian gradient)\n");
+    }
+
+    // Create zero initial guess in tangent space
+    Mat GNLeastSquaresShell = optimctx->getGNLeastSquaresShell();
+    Vec right_dummy, y_zero_dual;
+    MatCreateVecs(GNLeastSquaresShell, &right_dummy, &y_zero_dual);
+    VecDestroy(&right_dummy);
+    VecZeroEntries(y_zero_dual);
+
+    // Solve dual problem: RHS computed internally, just like solveGaussNewtonLeastSquares
+    Vec v_Dual;
+    VecDuplicate(grad, &v_Dual);
+    if (mpirank_world == 0 && !quietmode) printf("Calling solveGaussNewtonDual\n");
+    optimctx->solveGaussNewtonDual(xinit, y_zero_dual, v_Dual);
+
+    VecDestroy(&y_zero_dual);
 
     // Solve Gauss-Newton via SVD
     Vec v_EPS;
     VecDuplicate(grad, &v_EPS);
+        // Test dual Gauss-Newton solver
+    if (mpirank_world == 0 && !quietmode) {
+      printf("\n=== Testing Gauss-Newton EPS Solver ===\n");
+    }
     optimctx->solveGaussNewtonNormalEqEPS(xinit, gnrhs, v_EPS);
 
-    // Compare the solutions from KSP and EPS and v_LeastSquares
+    // ==== Summary of all methods ====
     if (mpirank_world == 0 && !quietmode) {
-      Vec diff;
-      VecDuplicate(grad, &diff);
-      VecCopy(v_KSP, diff);
-      VecAXPY(diff, -1.0, v_EPS);
-      double diff_norm;
-      VecNorm(diff, NORM_2, &diff_norm);
-      double vnorm;
-      VecNorm(v_KSP, NORM_2, &vnorm);
       printf("\n");
+      printf("=== Summary: Comparison of All Gauss-Newton Solvers ===\n");
       printf("GN Least-squares solver type: %s\n", config.getGnLeastSquaresSolver().c_str());
       printf("GN NormalEq solver type: %s", config.getGnNormaleqSolver().c_str());
       if (config.getGnNormaleqSolver() == "minres" && config.getGnNormaleqMinresQlp()) {
@@ -411,30 +494,58 @@ int main(int argc,char **argv)
       printf("\n");
       printf("GN NormalEq damping: %1.4e\n", config.getGnNormaleqDamping());
       printf("\n");
-      printf("Relative difference norm between KSP and EPS solutions: %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
+
+      // Compute all pairwise differences
+      Vec diff;
+      VecDuplicate(grad, &diff);
+      double diff_norm, vnorm;
+
+      printf("--- Relative Differences Between Solutions ---\n");
+
+      // Dual vs KSP
+      VecCopy(v_Dual, diff);
+      VecAXPY(diff, -1.0, v_KSP);
+      VecNorm(diff, NORM_2, &diff_norm);
+      VecNorm(v_Dual, NORM_2, &vnorm);
+      printf("Dual vs NormalEq KSP:      %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
+
+      // KSP vs EPS
+      VecCopy(v_KSP, diff);
+      VecAXPY(diff, -1.0, v_EPS);
+      VecNorm(diff, NORM_2, &diff_norm);
+      VecNorm(v_KSP, NORM_2, &vnorm);
+      printf("KSP vs EPS:                %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
+
+      // KSP vs LeastSquares
       VecCopy(v_KSP, diff);
       VecAXPY(diff, -1.0, v_LeastSquares);
       VecNorm(diff, NORM_2, &diff_norm);
       VecNorm(v_KSP, NORM_2, &vnorm);
-      printf("Relative difference norm between KSP and LeastSquares solutions: %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
+      printf("KSP vs LeastSquares:       %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
+
+      // EPS vs LeastSquares
       VecCopy(v_EPS, diff);
       VecAXPY(diff, -1.0, v_LeastSquares);
       VecNorm(diff, NORM_2, &diff_norm);
       VecNorm(v_EPS, NORM_2, &vnorm);
-      printf("Relative difference norm between EPS and LeastSquares solutions: %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
+      printf("EPS vs LeastSquares:       %1.14e (absolute: %1.14e)\n", diff_norm/vnorm, diff_norm);
+
       VecDestroy(&diff);
+
+      // Compute all dot products with gradient
+      printf("\n--- Dot Products with Gradient (should be negative for descent) ---\n");
+      double dot_dual, dot_ksp, dot_eps, dot_ls;
+      VecDot(grad, v_Dual, &dot_dual);
+      VecDot(grad, v_KSP, &dot_ksp);
+      VecDot(grad, v_EPS, &dot_eps);
+      VecDot(grad, v_LeastSquares, &dot_ls);
+      printf("Dual solution:             %1.14e\n", dot_dual);
+      printf("NormalEq KSP solution:     %1.14e\n", dot_ksp);
+      printf("EPS solution:              %1.14e\n", dot_eps);
+      printf("LeastSquares solution:     %1.14e\n", dot_ls);
     }
-    
-    // Check if v_KSP is a descent direction
-    double dot_ksp, dot_eps, dot_ls;
-    VecDot(grad, v_KSP, &dot_ksp);
-    VecDot(grad, v_EPS, &dot_eps);
-    VecDot(grad, v_LeastSquares, &dot_ls);
-    if (mpirank_world == 0 && !quietmode) {
-      printf("\n Dot product of gradient and KSP solution (should be negative for descent): %1.14e\n", dot_ksp);
-      printf(" Dot product of gradient and EPS solution (should be negative for descent): %1.14e\n", dot_eps);
-      printf(" Dot product of gradient and LeastSquares solution (should be negative for descent): %1.14e\n", dot_ls);
-    }
+
+    VecDestroy(&v_Dual);
 
     VecDestroy(&v_KSP);
     VecDestroy(&v_EPS);

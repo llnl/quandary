@@ -113,6 +113,8 @@ class Config {
   double gn_normaleq_damping; ///< Damping parameter for Gauss-Newton Normal Equation solves (Levenberg-Marquardt)
   std::string gn_normaleq_solver; ///< KSP solver type for Gauss-Newton Normal equation: "CG", "MINRES", "GMRES", etc.
   bool gn_normaleq_minres_qlp; ///< Use MINRES-QLP variant (more robust than standard MINRES)
+  std::string gn_solver_mode; ///< Gauss-Newton solver mode: "primal" or "dual"
+  int gn_prec_update_interval; ///< Preconditioner update interval (0 = only at startup, n>0 = every n iterations)
 
   // Output and runtypes
   std::string output_directory; ///< Directory for output files
@@ -194,6 +196,8 @@ class Config {
   double getGnNormaleqDamping() const { return gn_normaleq_damping; }
   const std::string& getGnNormaleqSolver() const { return gn_normaleq_solver; }
   bool getGnNormaleqMinresQlp() const { return gn_normaleq_minres_qlp; }
+  const std::string& getGnSolverMode() const { return gn_solver_mode; }
+  int getGnPrecUpdateInterval() const { return gn_prec_update_interval; }
   double getGnRtol() const { return gn_rtol; }
   int getGnMaxiter() const { return gn_maxiter; }
 
