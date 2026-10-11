@@ -256,8 +256,21 @@ int main(int argc,char **argv)
     std::string mode = config.getGnSolverMode();
     if (mpirank_world == 0 && !quietmode) printf("gn_solver_mode = \"%s\"\n", mode.c_str());
     if (mode == "dual") {
-      // Save dual matrix L L^T (tangent space dimension: dim²-1)
-      if (mpirank_world == 0 && !quietmode) printf("\nAssembling dual Gauss-Newton matrix (L L^T)...\n");
+      // Save dual matrix L L^T + λI (tangent space dimension: dim²-1)
+      // Apply damping before assembling
+      double damping = config.getGnNormaleqDamping();
+      if (damping > 0.0) {
+        Mat GN_Dual_MatShell = optimctx->getGN_Dual_MatShell();
+        MatShift(GN_Dual_MatShell, damping);
+      }
+
+      if (mpirank_world == 0 && !quietmode) {
+        if (damping > 0.0) {
+          printf("\nAssembling dual Gauss-Newton matrix (L L^T + λI) with λ = %1.6e...\n", damping);
+        } else {
+          printf("\nAssembling dual Gauss-Newton matrix (L L^T)...\n");
+        }
+      }
       optimctx->updateGaussNewtonDualMatDense();
       Mat mat_dual = optimctx->getGN_Dual_MatDense();
 
@@ -273,10 +286,118 @@ int main(int argc,char **argv)
         if (!quietmode) {
           PetscInt dim;
           MatGetSize(mat_dual, &dim, NULL);
-          printf("Dual matrix (L L^T) saved to: %s\n", filename);
+          if (damping > 0.0) {
+            printf("Dual matrix (L L^T + λI) saved to: %s\n", filename);
+          } else {
+            printf("Dual matrix (L L^T) saved to: %s\n", filename);
+          }
           printf("Matrix dimensions: %d x %d (tangent space)\n", dim, dim);
         }
       }
+
+      // Optionally save preconditioned matrix if preconditioner is enabled
+      if (config.getGnPrecUpdateInterval() >= 0) {
+        std::string precond_type = config.getGnDualPrecondType();
+        bool is_symmetric = (precond_type == "symmetric");
+        bool is_low_rank = (precond_type == "low_rank");
+
+        if (mpirank_world == 0 && !quietmode) {
+          if (is_low_rank) {
+            printf("\nAssembling low-rank preconditioned dual matrix (M^{-1/2} (L L^T + λI) M^{-1/2}) with rank=%d...\n",
+                   config.getGnDualPrecondRank());
+          } else if (is_symmetric) {
+            printf("\nAssembling symmetrically preconditioned dual matrix (D^{-1/2} (L L^T + λI) D^{-1/2})...\n");
+          } else {
+            printf("\nAssembling left preconditioned dual matrix (D^{-1} (L L^T + λI))...\n");
+          }
+        }
+
+        // Damping was already applied above, and also needs to be applied to precond shell
+        if (damping > 0.0) {
+          if (is_low_rank) {
+            Mat GN_Dual_MatShell = optimctx->getGN_Dual_MatShell();
+            Mat GN_Dual_LowRank_MatShell = optimctx->getGN_Dual_LowRank_MatShell();
+            MatShift(GN_Dual_MatShell, damping);  // Need to shift base matrix for low-rank
+            MatShift(GN_Dual_LowRank_MatShell, damping);
+          } else {
+            Mat GN_Dual_Precond_MatShell = optimctx->getGN_Dual_Precond_MatShell();
+            MatShift(GN_Dual_Precond_MatShell, damping);
+          }
+        }
+
+        // Update preconditioner
+        if (is_low_rank) {
+          optimctx->updateGaussNewtonDualPreconditionerLowRank(config.getGnDualPrecondRank());
+        } else {
+          optimctx->updateGaussNewtonDualPreconditioner();
+        }
+
+        // Assemble the preconditioned dense matrix
+        Mat mat_dual_precond = optimctx->getGN_Dual_Precond_MatDense();
+        MatZeroEntries(mat_dual_precond);
+
+        if (is_low_rank) {
+          // For low-rank, manually assemble by applying GN_Dual_LowRank_MatShell to unit vectors
+          Mat lowrank_shell = optimctx->getGN_Dual_LowRank_MatShell();
+          PetscInt tangent_dim;
+          MatGetSize(lowrank_shell, &tangent_dim, NULL);
+
+          Vec e, Ay;
+          VecCreateSeq(PETSC_COMM_SELF, tangent_dim, &e);
+          VecCreateSeq(PETSC_COMM_SELF, tangent_dim, &Ay);
+
+          for (int ix = 0; ix < tangent_dim; ++ix) {
+            VecSet(e, 0.0);
+            VecSetValue(e, ix, 1.0, INSERT_VALUES);
+            VecAssemblyBegin(e);
+            VecAssemblyEnd(e);
+            MatMult(lowrank_shell, e, Ay);
+
+            for (int jy = 0; jy < tangent_dim; ++jy) {
+              PetscScalar val;
+              VecGetValues(Ay, 1, &jy, &val);
+              MatSetValue(mat_dual_precond, jy, ix, val, INSERT_VALUES);
+            }
+          }
+          VecDestroy(&e);
+          VecDestroy(&Ay);
+
+          MatAssemblyBegin(mat_dual_precond, MAT_FINAL_ASSEMBLY);
+          MatAssemblyEnd(mat_dual_precond, MAT_FINAL_ASSEMBLY);
+        } else {
+          optimctx->updateGaussNewtonDualPrecondMatDense();
+        }
+
+        // Only rank 0 writes to file
+        if (mpirank_world == 0) {
+          snprintf(filename, 254, "%s/GN_dual_matrix_preconditioned.dat", output->output_dir.c_str());
+          PetscViewer viewer;
+          PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
+          PetscViewerBinarySetSkipInfo(viewer, PETSC_TRUE);  // Suppress .info file
+          MatView(mat_dual_precond, viewer);
+          PetscViewerDestroy(&viewer);
+
+          if (!quietmode) {
+            PetscInt dim;
+            MatGetSize(mat_dual_precond, &dim, NULL);
+            if (is_low_rank) {
+              printf("Preconditioned dual matrix (M^{-1/2} (L L^T + λI) M^{-1/2}, rank=%d) saved to: %s\n",
+                     config.getGnDualPrecondRank(), filename);
+            } else if (is_symmetric) {
+              printf("Preconditioned dual matrix (D^{-1/2} (L L^T + λI) D^{-1/2}) saved to: %s\n", filename);
+            } else {
+              printf("Preconditioned dual matrix (D^{-1} (L L^T + λI)) saved to: %s\n", filename);
+            }
+            printf("Matrix dimensions: %d x %d (tangent space)\n", dim, dim);
+            printf("Preconditioner type: %s\n", precond_type.c_str());
+            if (damping > 0.0) {
+              printf("Damping parameter λ = %1.6e included in preconditioner\n", damping);
+            }
+          }
+        }
+      }
+
+      // Note: No need to revert damping - we're in matrix_save mode and the program exits after this
     } else {
       // Save primal matrix L^T L (design space dimension: ndesign)
       if (mpirank_world == 0 && !quietmode) printf("\nAssembling primal Gauss-Newton matrix (L^T L)...\n");

@@ -38,22 +38,25 @@ penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedco
 # Switch between lbfgs and gauss_newton optimization
 solver_type = "gauss_newton"
 
-# experimental preconditioner
-gn_prec_update_interval = 10
-
 # Those apply to all gn solver (normal eq and least squares)
-gn_rtol = 1e-5
 gn_maxiter = 100
 # gn_solver_mode = "primal"
 gn_solver_mode = "dual"
 
+# experimental preconditioner
+gn_prec_update_interval = 5
+gn_dual_precond_type="low_rank"
+gn_dual_precond_rank = 5
+
 # Those apply to solving the normal equation
 # minres-qlp
+gn_rtol = 1e-5
 gn_normaleq_damping = 1e-5
 gn_normaleq_solver = "minres"
 gn_normaleq_minres_qlp = true
 
 # Conjugate gradient
+#gn_rtol = 1e-1
 #gn_normaleq_solver = "cg"
 #gn_normaleq_damping = 1e-3
 

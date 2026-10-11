@@ -66,6 +66,8 @@ const bool GN_MINRES_QLP = false; ///< Use MINRES-QLP variant (more robust than 
 const double GN_NORMALEQ_DAMPING = 1e-3; ///< Default damping parameter for Gauss-Newton KSP solver (Levenberg-Marquardt)
 inline const std::string GN_SOLVER_MODE = "primal"; ///< Default: use primal formulation for Gauss-Newton ("primal" or "dual")
 const int GN_PREC_UPDATE_INTERVAL = -1; ///< Default preconditioner update interval (-1 = disabled, 0 = only at startup, n>0 = every n iterations)
+inline const std::string GN_DUAL_PRECOND_TYPE = "symmetric"; ///< Default: use symmetric preconditioning ("symmetric", "left", or "low_rank")
+const int GN_DUAL_PRECOND_RANK = 10; ///< Default rank for low-rank preconditioner
 
 inline const std::string OUTPUT_DIRECTORY = "./data_out"; ///< Default output directory
 

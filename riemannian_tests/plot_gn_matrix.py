@@ -187,7 +187,13 @@ def plot_eigenvalue_distribution(matrix, output_file=None, num_top_eigs=20, show
 
     print(f"Largest eigenvalue: {eigenvalues[0]:.6e}")
     print(f"Smallest eigenvalue: {eigenvalues[-1]:.6e}")
-    print(f"Condition number: {eigenvalues[0] / eigenvalues[-1]:.6e}")
+
+    # Compute condition number
+    if eigenvalues[-1] != 0:
+        condition_number = eigenvalues[0] / abs(eigenvalues[-1])
+    else:
+        condition_number = float('inf')
+    print(f"Condition number: {condition_number:.6e}")
 
     # Get base filename for title
     import os
@@ -202,30 +208,36 @@ def plot_eigenvalue_distribution(matrix, output_file=None, num_top_eigs=20, show
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
 
         # Plot 1: Full eigenvalue spectrum
-        ax1.semilogy(range(len(eigenvalues)), eigenvalues, 'b.-', linewidth=1, markersize=3)
+        ax1.semilogy(range(len(eigenvalues)), eigenvalues, 'b.-', linewidth=1, markersize=3,
+                     label=f'κ = {condition_number:.2e}')
         ax1.set_xlabel('Eigenvalue index')
         ax1.set_ylabel('Eigenvalue (log scale)')
         ax1.set_title(f'Full Eigenvalue Spectrum\n{base_filename}')
+        ax1.legend(loc='best', fontsize=10)
         ax1.grid(True, alpha=0.3)
 
         # Plot 2: First N eigenvalues (clamped to available)
-        ax2.semilogy(range(num_top_eigs_clamped), eigenvalues[:num_top_eigs_clamped], 'r.-', linewidth=1, markersize=3)
+        ax2.semilogy(range(num_top_eigs_clamped), eigenvalues[:num_top_eigs_clamped], 'r.-', linewidth=1, markersize=3,
+                     label=f'κ = {condition_number:.2e}')
         ax2.set_xlabel('Eigenvalue index')
         ax2.set_ylabel('Eigenvalue (log scale)')
         if num_top_eigs_clamped < num_top_eigs:
             ax2.set_title(f'First {num_top_eigs_clamped} Eigenvalues (all available)\n{base_filename}')
         else:
             ax2.set_title(f'First {num_top_eigs_clamped} Eigenvalues\n{base_filename}')
+        ax2.legend(loc='best', fontsize=10)
         ax2.grid(True, alpha=0.3)
     else:
         # For dual or small matrices, show only full spectrum
         fig, ax = plt.subplots(figsize=(10, 6))
 
-        # Plot eigenvalue spectrum
-        ax.semilogy(range(len(eigenvalues)), eigenvalues, 'b.-', linewidth=1, markersize=3)
+        # Plot eigenvalue spectrum with condition number in legend
+        ax.semilogy(range(len(eigenvalues)), eigenvalues, 'b.-', linewidth=1, markersize=3,
+                    label=f'κ = {condition_number:.2e}')
         ax.set_xlabel('Eigenvalue index')
         ax.set_ylabel('Eigenvalue (log scale)')
         ax.set_title(f'Eigenvalue Spectrum\n{base_filename}')
+        ax.legend(loc='best', fontsize=10)
         ax.grid(True, alpha=0.3)
 
     plt.tight_layout()
