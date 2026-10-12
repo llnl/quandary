@@ -18,7 +18,8 @@ initial_condition = { type = "basis" }
 
 [control]
 control_only_p_drive = false
-parameterization = { type = "spline", num = 69 }
+# num = 69, 36, 49
+parameterization = { type = "spline", num = 49 }
 carrier_frequency = [
   { subsystem = 0, value = [0.06041522986797246, 0.0, -0.06041522986797243] },
   { subsystem = 1, value = [0.06041522986797246, 0.0, -0.06041522986797243] },
@@ -45,10 +46,9 @@ penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedco
 solver_type = "gauss_newton"
 
 # experimental preconditioner (dual mode only)
-gn_prec_update_interval = 5
+gn_prec_update_interval = -1
 gn_dual_precond_type="low_rank"
-gn_dual_precond_rank = 30
-
+gn_dual_precond_rank = 36
 
 # Those apply to all gn solvers (normal eq and least squares)
 gn_maxiter = 100

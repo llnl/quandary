@@ -281,6 +281,8 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   gn_prec_update_interval = config.getGnPrecUpdateInterval();
   gn_dual_precond_type = config.getGnDualPrecondType();
   gn_dual_precond_rank = config.getGnDualPrecondRank();
+  gn_dual_ksp_baseline = 0;  // Will be set after first preconditioner formation
+  gn_dual_ksp_excess_accum = 0;  // Accumulated excess KSP iterations
 
   /* Create low-rank preconditioner data structures */
   MatCreateDense(PETSC_COMM_SELF, M, gn_dual_precond_rank, M, gn_dual_precond_rank, NULL, &gn_dual_lowrank_U);
@@ -1023,14 +1025,14 @@ void OptimProblem::solveGaussNewtonDual(Vec xinit, const Vec initial_guess, Vec 
   if (gn_normaleq_damping > 0.0) {
     MatShift(GN_Dual_MatShell, gn_normaleq_damping);
     // Also shift the preconditioned operator
-    if (gn_prec_update_interval >= 0) {
+    if (gn_prec_update_interval >= 0 || gn_prec_update_interval == -1) {
       MatShift(GN_Dual_Precond_MatShell, gn_normaleq_damping);
     }
   }
 
-  // Apply preconditioning if enabled
+  // Apply preconditioning if enabled (interval >= 0 or adaptive mode = -1)
   Vec b_scaled, z_solution;
-  bool use_precond = (gn_prec_update_interval >= 0);
+  bool use_precond = (gn_prec_update_interval >= 0 || gn_prec_update_interval == -1);
   bool use_symmetric_precond = use_precond && (gn_dual_precond_type == "symmetric");
   bool use_left_precond = use_precond && (gn_dual_precond_type == "left");
   bool use_lowrank_precond = use_precond && (gn_dual_precond_type == "low_rank");
@@ -1114,7 +1116,7 @@ void OptimProblem::solveGaussNewtonDual(Vec xinit, const Vec initial_guess, Vec 
   // Revert the damping
   if (gn_normaleq_damping > 0.0) {
     MatShift(GN_Dual_MatShell, -gn_normaleq_damping);
-    if (gn_prec_update_interval >= 0) {
+    if (gn_prec_update_interval >= 0 || gn_prec_update_interval == -1) {
       MatShift(GN_Dual_Precond_MatShell, -gn_normaleq_damping);
     }
   }
@@ -1333,7 +1335,8 @@ void OptimProblem::solve(Vec xinit) {
       bool stop = false;
       for (int iter = 0; !stop; iter++) {
         // Initialize dual preconditioner on first iteration (after gradient is computed)
-        if (iter == 0 && gn_solver_mode == "dual" && gn_prec_update_interval >= 0 && gn_dual_precond_type != "low_rank") {
+        bool enable_precond = (gn_prec_update_interval >= 0 || gn_prec_update_interval == -1);
+        if (iter == 0 && gn_solver_mode == "dual" && enable_precond && gn_dual_precond_type != "low_rank") {
           // Diagonal preconditioner can be initialized before gradient eval
           if (mpirank_world == 0 && !quietmode) {
             printf("Initializing dual Gauss-Newton Jacobi preconditioner...\n");
@@ -1341,16 +1344,47 @@ void OptimProblem::solve(Vec xinit) {
           setGaussNewtonEvalPoint(x_GN);
           updateGaussNewtonDualPreconditioner();
         }
-        // Update dual preconditioner periodically (if enabled and in dual mode)
-        if (gn_solver_mode == "dual" && gn_prec_update_interval > 0 && iter > 0 && iter % gn_prec_update_interval == 0) {
-          if (mpirank_world == 0 && !quietmode) {
-            printf("Iteration %d: Updating dual Gauss-Newton preconditioner\n", iter);
+        // Update dual preconditioner: fixed interval or adaptive
+        bool should_update = false;
+        if (gn_solver_mode == "dual" && iter > 0) {
+          if (gn_prec_update_interval > 0 && iter % gn_prec_update_interval == 0) {
+            // Fixed interval update
+            should_update = true;
+            if (mpirank_world == 0 && !quietmode) {
+              printf("Iteration %d: Updating preconditioner (fixed interval = %d)\n", iter, gn_prec_update_interval);
+            }
+          } else if (gn_prec_update_interval == -1 && gn_dual_ksp_baseline > 0) {
+            // Adaptive update: accumulate excess KSP iterations beyond n_0
+            int excess = ksp_iters_last - gn_dual_ksp_baseline;
+            if (excess > 0) {
+              gn_dual_ksp_excess_accum += excess;
+              if (mpirank_world == 0 && !quietmode) {
+                printf("Iteration %d: KSP excess = %d (accumulated = %d, threshold = %d)\n",
+                       iter, excess, gn_dual_ksp_excess_accum, gn_dual_precond_rank);
+              }
+            }
+
+            // Update when accumulated excess exceeds r
+            if (gn_dual_ksp_excess_accum >= gn_dual_precond_rank) {
+              should_update = true;
+              if (mpirank_world == 0 && !quietmode) {
+                printf("Iteration %d: Updating preconditioner (accumulated excess %d >= r = %d)\n",
+                       iter, gn_dual_ksp_excess_accum, gn_dual_precond_rank);
+              }
+            }
           }
-          setGaussNewtonEvalPoint(x_GN);
-          if (gn_dual_precond_type == "low_rank") {
-            updateGaussNewtonDualPreconditionerLowRank(gn_dual_precond_rank);
-          } else {
-            updateGaussNewtonDualPreconditioner();
+
+          if (should_update) {
+            setGaussNewtonEvalPoint(x_GN);
+            if (gn_dual_precond_type == "low_rank") {
+              updateGaussNewtonDualPreconditionerLowRank(gn_dual_precond_rank);
+            } else {
+              updateGaussNewtonDualPreconditioner();
+            }
+            // Reset accumulator after update
+            if (gn_prec_update_interval == -1) {
+              gn_dual_ksp_excess_accum = 0;
+            }
           }
         }
 
@@ -1360,7 +1394,7 @@ void OptimProblem::solve(Vec xinit) {
         VecNorm(G, NORM_2, &gnorm);
 
         // Initialize low-rank preconditioner on first iteration (after gradient is available)
-        if (iter == 0 && gn_solver_mode == "dual" && gn_prec_update_interval >= 0 && gn_dual_precond_type == "low_rank") {
+        if (iter == 0 && gn_solver_mode == "dual" && enable_precond && gn_dual_precond_type == "low_rank") {
           if (mpirank_world == 0 && !quietmode) {
             printf("Initializing dual Gauss-Newton low-rank preconditioner (rank=%d)...\n", gn_dual_precond_rank);
           }
@@ -1377,6 +1411,14 @@ void OptimProblem::solve(Vec xinit) {
           solveGaussNewtonDual(x_GN, y_zero_dual, Gprec);
           VecDestroy(&y_zero_dual);
           VecScale(Gprec, -1.0);
+
+          // Update baseline KSP iterations after preconditioner formation
+          if ((iter == 0 && enable_precond) || should_update) {
+            gn_dual_ksp_baseline = ksp_iters_last;
+            if (mpirank_world == 0 && !quietmode) {
+              printf("  Baseline KSP iterations set to n_0 = %d\n", gn_dual_ksp_baseline);
+            }
+          }
         } else {
           // Use primal formulation via normal equations KSP solver: (L^T L + λI) v = -G
           VecDuplicate(x_GN, &v_zero);

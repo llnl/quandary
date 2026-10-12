@@ -141,9 +141,11 @@ class OptimProblem {
   Vec gn_dual_precond_diag; ///< D^{-1/2} where D = diag(L L^T + λI) for symmetric preconditioning
   Vec gn_dual_temp; ///< Temporary vector for symmetric preconditioning operations
   std::string gn_solver_mode; ///< Gauss-Newton solver mode: "primal" or "dual"
-  int gn_prec_update_interval; ///< Preconditioner update interval (0 = startup only)
+  int gn_prec_update_interval; ///< Preconditioner update interval (0 = startup only, -1 = adaptive)
   std::string gn_dual_precond_type; ///< Dual preconditioner type: "symmetric", "left", or "low_rank"
   int gn_dual_precond_rank; ///< Rank for low-rank preconditioner
+  int gn_dual_ksp_baseline; ///< Baseline KSP iterations right after preconditioner formation (for adaptive update)
+  int gn_dual_ksp_excess_accum; ///< Accumulated excess KSP iterations beyond n_0 (for adaptive update)
 
   // Low-rank preconditioner data: M = V_r Σ_r V_r^T + μ(I - V_r V_r^T)
   Mat gn_dual_lowrank_U; ///< V_r: first r eigenvectors (tangent_dim × rank, dense)
@@ -201,6 +203,9 @@ class OptimProblem {
   Mat getGN_Dual_MatShell() { return GN_Dual_MatShell; };
   Mat getGN_Dual_Precond_MatShell() { return GN_Dual_Precond_MatShell; };
   Mat getGN_Dual_LowRank_MatShell() { return GN_Dual_LowRank_MatShell; };
+  Mat getGN_Dual_LowRank_U() { return gn_dual_lowrank_U; };
+  Vec getGN_Dual_LowRank_Sigma_InvSqrt() { return gn_dual_lowrank_sigma_invsqrt; };
+  PetscScalar getGN_Dual_Precond_Mu() { return gn_dual_precond_mu; };
   Mat getGN_Dual_MatDense() { return GN_Dual_MatDense; };
   Mat getGN_Dual_Precond_MatDense() { return GN_Dual_Precond_MatDense; };
   Mat getGNLeastSquaresShell() { return GN_LeastSquares_MatShell; };
