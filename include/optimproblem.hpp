@@ -141,11 +141,14 @@ class OptimProblem {
   Vec gn_dual_precond_diag; ///< D^{-1/2} where D = diag(L L^T + λI) for symmetric preconditioning
   Vec gn_dual_temp; ///< Temporary vector for symmetric preconditioning operations
   std::string gn_solver_mode; ///< Gauss-Newton solver mode: "primal" or "dual"
+  std::string gn_normaleq_solver; ///< Normal equation solver: "minres", "cg", "gmres", or "proj"
   int gn_prec_update_interval; ///< Preconditioner update interval (0 = startup only, -1 = adaptive)
   std::string gn_dual_precond_type; ///< Dual preconditioner type: "symmetric", "left", or "low_rank"
   int gn_dual_precond_rank; ///< Rank for low-rank preconditioner
   int gn_dual_ksp_baseline; ///< Baseline KSP iterations right after preconditioner formation (for adaptive update)
   int gn_dual_ksp_excess_accum; ///< Accumulated excess KSP iterations beyond n_0 (for adaptive update)
+  int gn_maxiter; ///< Maximum iterations for Gauss-Newton KSP solver
+  double gn_rtol; ///< Relative tolerance for Gauss-Newton KSP solver
 
   // Low-rank preconditioner data: M = V_r Σ_r V_r^T + μ(I - V_r V_r^T)
   Mat gn_dual_lowrank_U; ///< V_r: first r eigenvectors (tangent_dim × rank, dense)
@@ -446,6 +449,7 @@ class OptimProblem {
    * @param v_out Solution vector (in design space, size ndesign)
    */
   void solveGaussNewtonDual(Vec xinit, const Vec initial_guess, Vec v_out);
+  void solveGaussNewtonDualProjected(Vec xinit, Vec v_out);
 
   /**
    * @brief Solves the Gauss-Newton normal equation L^* L(x) v = b via eigenvalue decomposition

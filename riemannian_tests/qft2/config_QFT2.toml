@@ -44,15 +44,16 @@ gn_maxiter = 100
 gn_solver_mode = "dual"
 
 # experimental preconditioner
-gn_prec_update_interval = 5
+gn_prec_update_interval = -1
 gn_dual_precond_type="low_rank"
-gn_dual_precond_rank = 5
+gn_dual_precond_rank = 10
 
 # Those apply to solving the normal equation
 # minres-qlp
 gn_rtol = 1e-5
+gn_proj_refine_iters = 20
 gn_normaleq_damping = 1e-5
-gn_normaleq_solver = "minres"
+gn_normaleq_solver = "proj"
 gn_normaleq_minres_qlp = true
 
 # Conjugate gradient

@@ -217,37 +217,46 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   MatZeroEntries(GN_NormalEq_MatDense);
 
   gn_normaleq_damping = config.getGnNormaleqDamping();
+  gn_rtol = config.getGnRtol();
   gn_solver_mode = config.getGnSolverMode();
 
   /* Create GN Normal equation linear solver: L^*Lv=b */
   KSPCreate(PETSC_COMM_SELF, &ksp_GN_NormalEq);
   KSPSetOperators(ksp_GN_NormalEq, GN_NormalEq_MatShell, GN_NormalEq_MatShell);
   std::string ksp_normaleq_solver_str = config.getGnNormaleqSolver();
+  gn_normaleq_solver = ksp_normaleq_solver_str;  // Store as member variable
   std::string ksp_normaleq_solver_lower = ksp_normaleq_solver_str;
   std::transform(ksp_normaleq_solver_lower.begin(), ksp_normaleq_solver_lower.end(), ksp_normaleq_solver_lower.begin(), ::tolower);
-  if (ksp_normaleq_solver_lower == "cg") {
-    KSPSetType(ksp_GN_NormalEq, KSPCG);
-  } else if (ksp_normaleq_solver_lower == "minres") {
-    KSPSetType(ksp_GN_NormalEq, KSPMINRES);
-  } else if (ksp_normaleq_solver_lower == "gmres") {
-    KSPSetType(ksp_GN_NormalEq, KSPGMRES);
-  } else {
-    // Default or try to use the string directly for other types
-    if (mpirank_world == 0 && !quietmode) {
-      printf("Warning: Unknown gn_normaleq_solver '%s', using it directly with PETSc\n", ksp_normaleq_solver_str.c_str());
-    }
-    KSPSetType(ksp_GN_NormalEq, ksp_normaleq_solver_str.c_str());
-  }
-  // Allow for non-zero initial guess
-  KSPSetInitialGuessNonzero(ksp_GN_NormalEq, PETSC_TRUE);
 
-  // Enable MINRES-QLP if requested
-  if (ksp_normaleq_solver_lower == "minres" && config.getGnNormaleqMinresQlp()) {
-    PetscBool set;
-    PetscOptionsHasName(NULL, NULL, "-ksp_minres_qlp", &set);
-    if (!set) {
-      PetscOptionsSetValue(NULL, "-ksp_minres_qlp", NULL);
+  // Skip KSP configuration for projected solver (only applies to dual mode)
+  if (ksp_normaleq_solver_lower != "proj") {
+    if (ksp_normaleq_solver_lower == "cg") {
+      KSPSetType(ksp_GN_NormalEq, KSPCG);
+    } else if (ksp_normaleq_solver_lower == "minres") {
+      KSPSetType(ksp_GN_NormalEq, KSPMINRES);
+    } else if (ksp_normaleq_solver_lower == "gmres") {
+      KSPSetType(ksp_GN_NormalEq, KSPGMRES);
+    } else {
+      // Default or try to use the string directly for other types
+      if (mpirank_world == 0 && !quietmode) {
+        printf("Warning: Unknown gn_normaleq_solver '%s', using it directly with PETSc\n", ksp_normaleq_solver_str.c_str());
+      }
+      KSPSetType(ksp_GN_NormalEq, ksp_normaleq_solver_str.c_str());
     }
+    // Allow for non-zero initial guess
+    KSPSetInitialGuessNonzero(ksp_GN_NormalEq, PETSC_TRUE);
+
+    // Enable MINRES-QLP if requested
+    if (ksp_normaleq_solver_lower == "minres" && config.getGnNormaleqMinresQlp()) {
+      PetscBool set;
+      PetscOptionsHasName(NULL, NULL, "-ksp_minres_qlp", &set);
+      if (!set) {
+        PetscOptionsSetValue(NULL, "-ksp_minres_qlp", NULL);
+      }
+    }
+  } else {
+    // For projected solver, set a default type (won't be used, but needs to be valid)
+    KSPSetType(ksp_GN_NormalEq, KSPMINRES);
   }
   KSPSetFromOptions(ksp_GN_NormalEq);
   PC  pc;
@@ -281,6 +290,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   gn_prec_update_interval = config.getGnPrecUpdateInterval();
   gn_dual_precond_type = config.getGnDualPrecondType();
   gn_dual_precond_rank = config.getGnDualPrecondRank();
+  gn_maxiter = config.getGnMaxiter();
   gn_dual_ksp_baseline = 0;  // Will be set after first preconditioner formation
   gn_dual_ksp_excess_accum = 0;  // Accumulated excess KSP iterations
 
@@ -298,28 +308,33 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   // Operators will be set at solve time depending on whether preconditioning is enabled
   KSPSetOperators(ksp_GN_Dual, GN_Dual_MatShell, GN_Dual_MatShell);
 
-  // Use same solver type configuration as normal equation solver
-  if (ksp_normaleq_solver_lower == "cg") {
-    KSPSetType(ksp_GN_Dual, KSPCG);
-  } else if (ksp_normaleq_solver_lower == "minres") {
-    KSPSetType(ksp_GN_Dual, KSPMINRES);
-  } else if (ksp_normaleq_solver_lower == "gmres") {
-    KSPSetType(ksp_GN_Dual, KSPGMRES);
-  } else {
-    if (mpirank_world == 0 && !quietmode) {
-      printf("Warning: Unknown gn_normaleq_solver '%s' for dual solver, using it directly with PETSc\n", ksp_normaleq_solver_str.c_str());
+  // Use same solver type configuration as normal equation solver (skip if using projected solver)
+  if (ksp_normaleq_solver_lower != "proj") {
+    if (ksp_normaleq_solver_lower == "cg") {
+      KSPSetType(ksp_GN_Dual, KSPCG);
+    } else if (ksp_normaleq_solver_lower == "minres") {
+      KSPSetType(ksp_GN_Dual, KSPMINRES);
+    } else if (ksp_normaleq_solver_lower == "gmres") {
+      KSPSetType(ksp_GN_Dual, KSPGMRES);
+    } else {
+      if (mpirank_world == 0 && !quietmode) {
+        printf("Warning: Unknown gn_normaleq_solver '%s' for dual solver, using it directly with PETSc\n", ksp_normaleq_solver_str.c_str());
+      }
+      KSPSetType(ksp_GN_Dual, ksp_normaleq_solver_str.c_str());
     }
-    KSPSetType(ksp_GN_Dual, ksp_normaleq_solver_str.c_str());
-  }
-  KSPSetInitialGuessNonzero(ksp_GN_Dual, PETSC_TRUE);
+    KSPSetInitialGuessNonzero(ksp_GN_Dual, PETSC_TRUE);
 
-  // Apply MINRES-QLP if configured
-  if (ksp_normaleq_solver_lower == "minres" && config.getGnNormaleqMinresQlp()) {
-    PetscBool set;
-    PetscOptionsHasName(NULL, NULL, "-ksp_minres_qlp", &set);
-    if (!set) {
-      PetscOptionsSetValue(NULL, "-ksp_minres_qlp", NULL);
+    // Apply MINRES-QLP if configured
+    if (ksp_normaleq_solver_lower == "minres" && config.getGnNormaleqMinresQlp()) {
+      PetscBool set;
+      PetscOptionsHasName(NULL, NULL, "-ksp_minres_qlp", &set);
+      if (!set) {
+        PetscOptionsSetValue(NULL, "-ksp_minres_qlp", NULL);
+      }
     }
+  } else {
+    // For projected solver, set a default type (won't be used, but needs to be valid)
+    KSPSetType(ksp_GN_Dual, KSPMINRES);
   }
 
   KSPSetFromOptions(ksp_GN_Dual);
@@ -946,6 +961,19 @@ void OptimProblem::solveGaussNewtonNormalEqKSP(Vec xinit, const Vec initial_gues
 
 void OptimProblem::solveGaussNewtonDual(Vec xinit, const Vec initial_guess, Vec v_out){
 
+  // Check if using projected subspace solver instead of iterative KSP
+  std::string solver = gn_normaleq_solver;
+  std::string solver_lower;
+  for (char c : solver) solver_lower += std::tolower(c);
+
+  if (solver_lower == "proj") {
+    // Use projected subspace solver (no KSP iterations)
+    solveGaussNewtonDualProjected(xinit, v_out);
+    return;
+  }
+
+  // Otherwise proceed with standard KSP-based solver
+
   // Store the point of evaluation for the Gauss-Newton matrix shell
   VecCopy(xinit, xeval_GN);
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
@@ -1143,6 +1171,262 @@ void OptimProblem::solveGaussNewtonDual(Vec xinit, const Vec initial_guess, Vec 
 }
 
 
+void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, Vec v_out){
+  // Projected subspace solver for dual Gauss-Newton system
+  // Algorithm:
+  //   1. Compute eigendecomposition: (L L^T + λI) V_r = Σ_r V_r (r largest eigenvalues)
+  //   2. Form RHS: b = -∇_U J in tangent space
+  //   3. Project: b̃ = V_r^T b
+  //   4. Solve in subspace: ỹ = Σ_r^{-1} b̃ (direct diagonal solve)
+  //   5. Lift to full space: y = V_r ỹ
+  //   6. Recover primal: v = L^T y
+
+  // Store the point of evaluation
+  VecCopy(xinit, xeval_GN);
+  nonlinear_forward_valid = false;
+
+  // Compute RHS: b = -∇_U J (same as in solveGaussNewtonDual)
+  Vec b;
+  GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &b);
+
+  PetscInt tangent_dim;
+  VecGetSize(b, &tangent_dim);
+
+  // Get U(T) from optim_target
+  Mat U_final_re = optim_target->getFinalUnitaryRe();
+  Mat U_final_im = optim_target->getFinalUnitaryIm();
+
+  // Compute J(U(T)) needed for ∇_U J
+  double obj_cost_re = 0.0;
+  double obj_cost_im = 0.0;
+  for (int iinit = 0; iinit < ninit_local; iinit++) {
+    int iinit_global = mpirank_init * ninit_local + iinit;
+    optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
+    double obj_lin_iinit_re = 0.0;
+    double obj_lin_iinit_im = 0.0;
+    Vec ui = timestepper->getFinalState(iinit);
+    optim_target->evalJ(ui, &obj_lin_iinit_re, &obj_lin_iinit_im);
+    obj_cost_re += obj_weights[iinit] * obj_lin_iinit_re;
+    obj_cost_im += obj_weights[iinit] * obj_lin_iinit_im;
+  }
+  MPI_Allreduce(MPI_IN_PLACE, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+  MPI_Allreduce(MPI_IN_PLACE, &obj_cost_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+
+  // Compute -∇_U J and project to tangent space
+  PetscScalar *b_data;
+  VecGetArray(b, &b_data);
+  for (int iinit = 0; iinit < ninit_local; iinit++) {
+    int iinit_global = mpirank_init * ninit_local + iinit;
+    Vec ui = timestepper->getFinalState(iinit);
+    Vec b_iinit = wsub_workspace[iinit];
+    VecCopy(ui, b_iinit);
+    double obj_cost_re_bar, obj_cost_im_bar;
+    VecScale(b_iinit, 2.0 / mastereq->getDim());
+    optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
+    optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
+    double scale = 1.0 / mastereq->getDim();
+    optim_target->evalJ_diff(ui, b_iinit, scale*obj_cost_re_bar, scale*obj_cost_im_bar);
+    GellMann::projectVecToTangentSpace(b_iinit, U_final_re, U_final_im, mastereq->getDim(), iinit_global, b_data);
+  }
+  MPI_Allreduce(MPI_IN_PLACE, b_data, tangent_dim, MPIU_SCALAR, MPI_SUM, comm_init);
+  VecRestoreArray(b, &b_data);
+  VecScale(b, -1.0);
+
+  // Apply damping to the operator
+  if (gn_normaleq_damping > 0.0) {
+    MatShift(GN_Dual_MatShell, gn_normaleq_damping);
+  }
+
+  // Compute eigendecomposition: (L L^T + λI) V_{r+1} = Σ_{r+1} V_{r+1}
+  // We compute r+1 eigenvalues to get μ = λ_{r+1} for the complement space
+  int rank = gn_dual_precond_rank;
+  int num_eigs = (rank < tangent_dim) ? rank + 1 : rank;  // Compute r+1 unless at full rank
+
+  if (mpirank_world == 0 && !quietmode) {
+    printf("Computing %d largest eigenvalues/eigenvectors of dual GN matrix (n=%d)...\n", num_eigs, (int)tangent_dim);
+  }
+
+  EPS eps;
+  EPSCreate(PETSC_COMM_SELF, &eps);
+  EPSSetOperators(eps, GN_Dual_MatShell, NULL);
+  EPSSetProblemType(eps, EPS_HEP);
+  EPSSetWhichEigenpairs(eps, EPS_LARGEST_REAL);
+  EPSSetDimensions(eps, num_eigs, PETSC_DEFAULT, PETSC_DEFAULT);
+  EPSSetFromOptions(eps);
+  EPSSolve(eps);
+
+  PetscInt nconv;
+  EPSGetConverged(eps, &nconv);
+
+  if (mpirank_world == 0 && !quietmode) {
+    printf("EPS converged %d/%d eigenvalues\n", (int)nconv, num_eigs);
+  }
+
+  // Check if we got enough eigenvalues
+  bool have_complement = false;
+  PetscScalar mu = 0.0;  // μ = λ_{r+1} for complement space
+
+  if (nconv < rank) {
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Warning: Only %d eigenvalues converged (requested rank %d). Using rank %d.\n", (int)nconv, rank, (int)nconv);
+    }
+    rank = nconv;
+    have_complement = false;
+  } else if (rank < tangent_dim && nconv >= rank + 1) {
+    // We have r+1 eigenvalues, use the (r+1)-th for complement
+    have_complement = true;
+  }
+
+  // Extract eigenvectors into V_r (only first r)
+  Mat V_r;
+  MatCreateSeqDense(PETSC_COMM_SELF, tangent_dim, rank, NULL, &V_r);
+
+  Vec eigvec_real, eigvec_imag;
+  VecCreateSeq(PETSC_COMM_SELF, tangent_dim, &eigvec_real);
+  VecCreateSeq(PETSC_COMM_SELF, tangent_dim, &eigvec_imag);
+
+  // Allocate eigenvalues array for actual number converged (may be > num_eigs requested)
+  PetscScalar *eigenvalues = new PetscScalar[nconv];
+
+  for (int i = 0; i < nconv; i++) {
+    PetscScalar eigval_r, eigval_i;
+    EPSGetEigenpair(eps, i, &eigval_r, &eigval_i, eigvec_real, eigvec_imag);
+    eigenvalues[i] = PetscRealPart(eigval_r);
+
+    // Store only first r eigenvectors in V_r
+    if (i < rank) {
+      Vec v_col;
+      MatDenseGetColumnVecWrite(V_r, i, &v_col);
+      VecCopy(eigvec_real, v_col);
+      MatDenseRestoreColumnVecWrite(V_r, i, &v_col);
+    } else if (i == rank && have_complement) {
+      // This is λ_{r+1}, use it for μ
+      mu = eigenvalues[i];
+    }
+  }
+
+  MatAssemblyBegin(V_r, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(V_r, MAT_FINAL_ASSEMBLY);
+
+  VecDestroy(&eigvec_real);
+  VecDestroy(&eigvec_imag);
+  EPSDestroy(&eps);
+
+  if (mpirank_world == 0 && !quietmode) {
+    printf("Eigenvalue range: λ_1 = %e (largest), λ_%d = %e (smallest)\n",
+           eigenvalues[0], rank, eigenvalues[rank-1]);
+    if (have_complement) {
+      printf("Using μ = λ_%d = %e for complement space approximation\n", rank+1, mu);
+    }
+  }
+
+  // Project RHS: b̃ = V_r^T b
+  Vec b_tilde;
+  VecCreateSeq(PETSC_COMM_SELF, rank, &b_tilde);
+  MatMultTranspose(V_r, b, b_tilde);
+
+  // Solve in subspace: ỹ = Σ_r^{-1} b̃ (direct diagonal solve)
+  Vec y_tilde;
+  VecDuplicate(b_tilde, &y_tilde);
+
+  PetscScalar *b_tilde_data, *y_tilde_data;
+  VecGetArray(b_tilde, &b_tilde_data);
+  VecGetArray(y_tilde, &y_tilde_data);
+
+  for (int i = 0; i < rank; i++) {
+    if (eigenvalues[i] > 1e-14) {
+      y_tilde_data[i] = b_tilde_data[i] / eigenvalues[i];
+    } else {
+      y_tilde_data[i] = 0.0;
+      if (mpirank_world == 0 && !quietmode) {
+        printf("Warning: Eigenvalue %d = %e is too small, setting component to zero\n", i, eigenvalues[i]);
+      }
+    }
+  }
+
+  VecRestoreArray(b_tilde, &b_tilde_data);
+  VecRestoreArray(y_tilde, &y_tilde_data);
+
+  // Lift to full space: y = V_r ỹ (top-r subspace part)
+  MatMult(V_r, y_tilde, y_dual_workspace);
+
+  // Add complement space contribution: y += μ^{-1} (I - V_r V_r^T) b
+  if (have_complement && mu > 1e-14) {
+    Vec temp;
+    VecDuplicate(b, &temp);
+
+    // Compute V_r^T b (already have this in b_tilde)
+    // Compute V_r (V_r^T b) to get projection onto top-r subspace
+    Vec b_proj;
+    VecDuplicate(b, &b_proj);
+    MatMult(V_r, b_tilde, b_proj);
+
+    // Compute complement: (I - V_r V_r^T) b = b - V_r (V_r^T b)
+    VecWAXPY(temp, -1.0, b_proj, b);  // temp = b - b_proj
+
+    // Add scaled complement to solution: y += μ^{-1} * temp
+    VecAXPY(y_dual_workspace, 1.0/mu, temp);
+
+    VecDestroy(&temp);
+    VecDestroy(&b_proj);
+  }
+
+  // Optional iterative refinement: refine the projected solution with KSP iterations
+  // Refinement is enabled when gn_maxiter > 0
+  int refine_iters = 0;
+  if (gn_maxiter > 0) {
+    // Store projected solution as initial guess
+    Vec y_proj;
+    VecDuplicate(y_dual_workspace, &y_proj);
+    VecCopy(y_dual_workspace, y_proj);
+
+    // Configure KSP for refinement using gn_rtol tolerance
+    KSPSetOperators(ksp_GN_Dual, GN_Dual_MatShell, GN_Dual_MatShell);
+    KSPSetInitialGuessNonzero(ksp_GN_Dual, PETSC_TRUE);
+
+    // Use gn_rtol for convergence, with max iterations = gn_maxiter
+    KSPSetTolerances(ksp_GN_Dual, gn_rtol, PETSC_DEFAULT, PETSC_DEFAULT, gn_maxiter);
+
+    // Solve: (L L^T + λI) y = b with y_proj as initial guess
+    // Note: damping is already applied to GN_Dual_MatShell
+    KSPSolve(ksp_GN_Dual, b, y_dual_workspace);
+
+    // Get actual number of iterations performed
+    KSPGetIterationNumber(ksp_GN_Dual, &refine_iters);
+
+    VecDestroy(&y_proj);
+  }
+
+  // Revert damping
+  if (gn_normaleq_damping > 0.0) {
+    MatShift(GN_Dual_MatShell, -gn_normaleq_damping);
+  }
+
+  // Cleanup
+  VecDestroy(&b);
+  VecDestroy(&b_tilde);
+  VecDestroy(&y_tilde);
+  MatDestroy(&V_r);
+  delete[] eigenvalues;
+
+  // Recover primal solution: v = L^T y
+  GN_LeastSquares_MatMultTranspose(GN_LeastSquares_MatShell, y_dual_workspace, v_out);
+
+  // Store KSP iterations for reporting in optimization history
+  ksp_iters_last = refine_iters;
+
+  if (mpirank_world == 0 && !quietmode) {
+    if (refine_iters > 0) {
+      printf("Gauss-Newton Dual Projected: solved using rank-%d subspace + %d refinement iterations\n", rank, refine_iters);
+    } else if (have_complement) {
+      printf("Gauss-Newton Dual Projected: solved using rank-%d subspace + complement approximation (no KSP iterations)\n", rank);
+    } else {
+      printf("Gauss-Newton Dual Projected: solved in rank-%d subspace (no KSP iterations)\n", rank);
+    }
+  }
+}
+
+
 void OptimProblem::solveGaussNewtonNormalEqEPS(Vec xinit, const Vec b, Vec Ainv_b){
 
   // Get eigenvalues and eigenvectors of the Gauss-Newton matrix
@@ -1335,7 +1619,8 @@ void OptimProblem::solve(Vec xinit) {
       bool stop = false;
       for (int iter = 0; !stop; iter++) {
         // Initialize dual preconditioner on first iteration (after gradient is computed)
-        bool enable_precond = (gn_prec_update_interval >= 0 || gn_prec_update_interval == -1);
+        // Skip preconditioner initialization when using projected solver
+        bool enable_precond = (gn_prec_update_interval >= 0 || gn_prec_update_interval == -1) && (gn_normaleq_solver != "proj");
         if (iter == 0 && gn_solver_mode == "dual" && enable_precond && gn_dual_precond_type != "low_rank") {
           // Diagonal preconditioner can be initialized before gradient eval
           if (mpirank_world == 0 && !quietmode) {
