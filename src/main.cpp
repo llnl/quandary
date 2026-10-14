@@ -659,7 +659,7 @@ int main(int argc,char **argv)
     if (mpirank_world == 0 && !quietmode) {
       printf("\n");
       printf("=== Summary: Comparison of All Gauss-Newton Solvers ===\n");
-      printf("GN Least-squares solver type: %s\n", config.getGnLeastSquaresSolver().c_str());
+      printf("Least-squares solver type: %s\n", config.getLeastSquaresSolver().c_str());
       printf("GN NormalEq solver type: %s", config.getGnNormaleqSolver().c_str());
       if (config.getGnNormaleqSolver() == "minres" && config.getGnNormaleqMinresQlp()) {
         printf(" (QLP variant)");

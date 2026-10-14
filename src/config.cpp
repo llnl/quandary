@@ -308,10 +308,10 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     // Parse Gauss-Newton solver options
     gn_rtol = validators::field<double>(optimization_table, "gn_rtol").greaterThan(0.0).valueOr(ConfigDefaults::GN_RTOL);
     gn_maxiter = validators::field<int>(optimization_table, "gn_maxiter").greaterThan(0).valueOr(ConfigDefaults::GN_MAXITER);
-    gn_leastsquares_solver = validators::field<std::string>(optimization_table, "gn_leastsquares_solver").valueOr(ConfigDefaults::GN_LEASTSQUARES_SOLVER);
-    std::string gn_leastsquares_solver_lower = toLower(gn_leastsquares_solver);
-    gn_leastsquares_solver = gn_leastsquares_solver_lower;
-    gn_leastsquares_damping = validators::field<double>(optimization_table, "gn_leastsquares_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::GN_LEASTSQUARES_DAMPING);
+    leastsquares_solver = validators::field<std::string>(optimization_table, "leastsquares_solver").valueOr(ConfigDefaults::LEASTSQUARES_SOLVER);
+    std::string leastsquares_solver_lower = toLower(leastsquares_solver);
+    leastsquares_solver = leastsquares_solver_lower;
+    leastsquares_damping = validators::field<double>(optimization_table, "leastsquares_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::LEASTSQUARES_DAMPING);
     gn_normaleq_damping = validators::field<double>(optimization_table, "gn_normaleq_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::GN_NORMALEQ_DAMPING);
     gn_normaleq_solver = validators::field<std::string>(optimization_table, "gn_normaleq_solver").valueOr(ConfigDefaults::GN_NORMALEQ_SOLVER);
     gn_normaleq_minres_qlp = validators::field<bool>(optimization_table, "gn_normaleq_minres_qlp").valueOr(ConfigDefaults::GN_MINRES_QLP);
@@ -716,8 +716,8 @@ void Config::printConfig(std::stringstream& log) const {
         log << "gn_dual_precond_rank = " << gn_dual_precond_rank << "\n";
       }
     }
-    log << "gn_leastsquares_solver = \"" << gn_leastsquares_solver << "\"\n";
-    log << "gn_leastsquares_damping = " << gn_leastsquares_damping << "\n";
+    log << "leastsquares_solver = \"" << leastsquares_solver << "\"\n";
+    log << "leastsquares_damping = " << leastsquares_damping << "\n";
   }
 
   log << "\n";

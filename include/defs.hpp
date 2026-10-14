@@ -47,12 +47,14 @@ const std::map<std::string, DecoherenceType> DECOHERENCE_TYPE_MAP = {
  */
 enum class OptimSolverType {
   TAO_LBFGS, ///< TAO Limited-memory BFGS optimization solver
-  GAUSS_NEWTON ///< Gauss-Newton optimization solver
+  GAUSS_NEWTON, ///< Gauss-Newton optimization solver (primal or dual normal equations)
+  LEAST_SQUARES ///< Gauss-Newton least-squares solver (LSQR or BRGN)
 };
 
 const std::map<std::string, OptimSolverType> OPTIM_SOLVER_TYPE_MAP = {
     {"tao_lbfgs", OptimSolverType::TAO_LBFGS},
-    {"gauss_newton", OptimSolverType::GAUSS_NEWTON}
+    {"gauss_newton", OptimSolverType::GAUSS_NEWTON},
+    {"least_squares", OptimSolverType::LEAST_SQUARES}
 };
 
 /**

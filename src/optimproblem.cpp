@@ -132,7 +132,8 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
 
   // Include hessian of generalized J_inf wrt U in GaussNewton Approximation (for Jtrace only)
   includeHessUJ = false;
-  if (optim_solver_type == OptimSolverType::GAUSS_NEWTON){
+  if (optim_solver_type == OptimSolverType::GAUSS_NEWTON ||
+      optim_solver_type == OptimSolverType::LEAST_SQUARES){
     if (optim_target->getObjectiveType() == ObjectiveType::JTRACE) {
       includeHessUJ = true;
     }
@@ -141,12 +142,16 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   includeHessUJ = false;
 
   /* Create MatShell for Gauss-Newton least-squares problem */
-  gn_leastsquares_damping = config.getGnLeastSquaresDamping();
+  leastsquares_damping = config.getLeastSquaresDamping();
   int N = ndesign;
-  PetscInt M = mastereq->getDim()*mastereq->getDim() - 1; 
+  PetscInt M = mastereq->getDim()*mastereq->getDim() - 1;
   // enlarge the output space if damping is enabled
-  if (gn_leastsquares_damping > 0.0) {
+  if (leastsquares_damping > 0.0) {
     M += ndesign;
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Least-squares damping enabled: λ = %e, augmented matrix size = %d × %d\n",
+             leastsquares_damping, (int)M, N);
+    }
   }
   MatCreateShell(PETSC_COMM_SELF, M, N, M, N, this, &GN_LeastSquares_MatShell);
   MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_MULT, (void(*)(void))GN_LeastSquares_MatMult);
@@ -163,8 +168,8 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   KSPSetFromOptions(ksp_LeastSquares);
 
   // Initialize Tao BRGN solver for least-squares problem if configured
-  gn_leastsquares_solver = config.getGnLeastSquaresSolver();
-  if (gn_leastsquares_solver == "brgn") {
+  leastsquares_solver = config.getLeastSquaresSolver();
+  if (leastsquares_solver == "brgn") {
     // Create Tao solver on PETSC_COMM_SELF (same as ksp_LeastSquares)
     TaoCreate(PETSC_COMM_SELF, &tao_brgn);
     TaoSetType(tao_brgn, TAOBRGN);
@@ -182,7 +187,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
     TaoSetMaximumIterations(tao_brgn, config.getGnMaxiter());
 
     // Set damping parameter for regularization term λ||v||²
-    TaoBRGNSetRegularizerWeight(tao_brgn, gn_leastsquares_damping);
+    TaoBRGNSetRegularizerWeight(tao_brgn, leastsquares_damping);
 
     // Set Residual routine F(v) = Lv - b 
     TaoSetResidualRoutine(tao_brgn, brgn_residual, TaoBRGN_EvalResidual, (void*)this);
@@ -270,25 +275,29 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   KSPSetNormType(ksp_GN_NormalEq, KSP_NORM_UNPRECONDITIONED); // Unconditioned ressidual norm
   KSPSetTolerances(ksp_GN_NormalEq,config.getGnRtol(),PETSC_DEFAULT,PETSC_DEFAULT,config.getGnMaxiter());
 
+  /* Dual mode uses pure tangent space (not augmented) */
+  PetscInt M_dual = mastereq->getDim() * mastereq->getDim() - 1;
+
   /* Create MatShell for dual Gauss-Newton problem (L L^T + λI) */
-  MatCreateShell(PETSC_COMM_SELF, M, M, M, M, this, &GN_Dual_MatShell);
+  MatCreateShell(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, this, &GN_Dual_MatShell);
   MatShellSetOperation(GN_Dual_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_MatMult);
   MatShellSetOperation(GN_Dual_MatShell, MATOP_GET_DIAGONAL, (void(*)(void))GN_Dual_GetDiagonal);
+  MatShellSetOperation(GN_Dual_MatShell, MATOP_CREATE_VECS, (void(*)(void))GN_Dual_MatCreateVecs);
 
   /* Create dense matrices for dual Gauss-Newton problem */
-  MatCreateDense(PETSC_COMM_SELF, M, M, M, M, NULL, &GN_Dual_MatDense);
+  MatCreateDense(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, NULL, &GN_Dual_MatDense);
   MatZeroEntries(GN_Dual_MatDense);
-  MatCreateDense(PETSC_COMM_SELF, M, M, M, M, NULL, &GN_Dual_Precond_MatDense);
+  MatCreateDense(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, NULL, &GN_Dual_Precond_MatDense);
   MatZeroEntries(GN_Dual_Precond_MatDense);
 
   /* Create workspace vectors for dual solver */
-  VecCreateSeq(PETSC_COMM_SELF, M, &y_dual_workspace);  // tangent space
+  VecCreateSeq(PETSC_COMM_SELF, M_dual, &y_dual_workspace);  // tangent space
   VecDuplicate(xinit, &v_dual_workspace);  // design space
-  VecCreateSeq(PETSC_COMM_SELF, M, &gn_dual_precond_diag);  // D^{-1/2} for symmetric preconditioning
-  VecCreateSeq(PETSC_COMM_SELF, M, &gn_dual_temp);  // temp vector for preconditioning ops
+  VecCreateSeq(PETSC_COMM_SELF, M_dual, &gn_dual_precond_diag);  // D^{-1/2} for symmetric preconditioning
+  VecCreateSeq(PETSC_COMM_SELF, M_dual, &gn_dual_temp);  // temp vector for preconditioning ops
 
   /* Create MatShell for symmetrically preconditioned operator D^{-1/2} A D^{-1/2} */
-  MatCreateShell(PETSC_COMM_SELF, M, M, M, M, this, &GN_Dual_Precond_MatShell);
+  MatCreateShell(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, this, &GN_Dual_Precond_MatShell);
   MatShellSetOperation(GN_Dual_Precond_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_Precond_MatMult);
 
   /* Store preconditioner settings */
@@ -300,12 +309,12 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   gn_dual_ksp_excess_accum = 0;  // Accumulated excess KSP iterations
 
   /* Create low-rank preconditioner data structures */
-  MatCreateDense(PETSC_COMM_SELF, M, gn_dual_precond_rank, M, gn_dual_precond_rank, NULL, &gn_dual_lowrank_U);
+  MatCreateDense(PETSC_COMM_SELF, M_dual, gn_dual_precond_rank, M_dual, gn_dual_precond_rank, NULL, &gn_dual_lowrank_U);
   VecCreateSeq(PETSC_COMM_SELF, gn_dual_precond_rank, &gn_dual_lowrank_sigma_invsqrt);
   VecCreateSeq(PETSC_COMM_SELF, gn_dual_precond_rank, &gn_dual_lowrank_temp);
 
   /* Create MatShell for low-rank preconditioned operator M^{-1/2} A M^{-1/2} */
-  MatCreateShell(PETSC_COMM_SELF, M, M, M, M, this, &GN_Dual_LowRank_MatShell);
+  MatCreateShell(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, this, &GN_Dual_LowRank_MatShell);
   MatShellSetOperation(GN_Dual_LowRank_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_LowRank_MatMult);
 
   /* Create KSP solver for dual Gauss-Newton problem */
@@ -430,7 +439,7 @@ void OptimProblem::setGaussNewtonMaxiter(int maxiter) {
   KSPSetTolerances(ksp_GN_NormalEq, rtol, abstol, dtol, maxiter);
 
   // 2. Set for solveGaussNewtonLeastSquares solvers
-  if (gn_leastsquares_solver == "brgn") {
+  if (leastsquares_solver == "brgn") {
     // For BRGN, this should apply to the sub-solver, since BRGN does Newton steps (so only one anyways). This crashes though. TODO: Fix. 
     // Tao tao_sub;
     // TaoBRGNGetSubsolver(tao_brgn, &tao_sub);
@@ -888,12 +897,13 @@ void OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
   // Reset output
   VecZeroEntries(Ay);
 
-  // Compute Ay = L L^T y
+  // Compute Ay = L L^T y (using pure Jacobian operations for dual mode)
+  // Note: We need to pass a matrix for context, but the functions use VecGetSize to get dimensions
   // Step 1: Compute v_temp = L^T y (tangent space → design space)
-  GN_LeastSquares_MatMultTranspose(self->GN_LeastSquares_MatShell, y, self->v_dual_workspace);
+  GN_Jacobian_MatMultTranspose(A, y, self->v_dual_workspace);
 
   // Step 2: Compute Ay = L v_temp (design space → tangent space)
-  GN_LeastSquares_MatMult(self->GN_LeastSquares_MatShell, self->v_dual_workspace, Ay);
+  GN_Jacobian_MatMult(A, self->v_dual_workspace, Ay);
 
   // Note: Damping (λI) is applied separately via MatShift on the shell
 }
@@ -984,9 +994,9 @@ void OptimProblem::solveGaussNewtonDual(Vec xinit, const Vec initial_guess, Vec 
   VecCopy(xinit, xeval_GN);
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
 
-  // Compute RHS: b = -∇_U J projected to tangent space (same as in solveGaussNewtonLeastSquares)
+  // Compute RHS: b = -∇_U J projected to tangent space
   Vec b;
-  GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &b);
+  GN_Dual_MatCreateVecs(GN_Dual_MatShell, nullptr, &b);
 
   PetscInt tangent_dim;
   VecGetSize(b, &tangent_dim);
@@ -1158,8 +1168,8 @@ void OptimProblem::solveGaussNewtonDual(Vec xinit, const Vec initial_guess, Vec 
   // Cleanup
   VecDestroy(&b);
 
-  // Recover primal solution: v = L^T y
-  GN_LeastSquares_MatMultTranspose(GN_LeastSquares_MatShell, y_dual_workspace, v_out);
+  // Recover primal solution: v = L^T y (use pure Jacobian transpose for dual mode)
+  GN_Jacobian_MatMultTranspose(GN_Dual_MatShell, y_dual_workspace, v_out);
 
   // Report convergence
   KSPConvergedReason reason;
@@ -1191,9 +1201,9 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, Vec v_out){
   VecCopy(xinit, xeval_GN);
   nonlinear_forward_valid = false;
 
-  // Compute RHS: b = -∇_U J (same as in solveGaussNewtonDual)
+  // Compute RHS: b = -∇_U J
   Vec b;
-  GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &b);
+  GN_Dual_MatCreateVecs(GN_Dual_MatShell, nullptr, &b);
 
   PetscInt tangent_dim;
   VecGetSize(b, &tangent_dim);
@@ -1487,8 +1497,8 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, Vec v_out){
   MatDestroy(&V_r);
   delete[] eigenvalues;
 
-  // Recover primal solution: v = L^T y
-  GN_LeastSquares_MatMultTranspose(GN_LeastSquares_MatShell, y_dual_workspace, v_out);
+  // Recover primal solution: v = L^T y (use pure Jacobian transpose for dual mode)
+  GN_Jacobian_MatMultTranspose(GN_Dual_MatShell, y_dual_workspace, v_out);
 
   // Store KSP iterations for reporting in optimization history
   ksp_iters_last = refine_iters;
@@ -1769,7 +1779,7 @@ void OptimProblem::solve(Vec xinit) {
         // Choose solver based on gn_solver_mode configuration ("primal" or "dual")
         if (gn_solver_mode == "dual") {
           // Use dual formulation: (L L^T + λI) y = -∇_U J, then v = L^T y
-          MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &y_zero_dual);
+          MatCreateVecs(GN_Dual_MatShell, nullptr, &y_zero_dual);
           VecZeroEntries(y_zero_dual);
           solveGaussNewtonDual(x_GN, y_zero_dual, Gprec);
           VecDestroy(&y_zero_dual);
@@ -1814,6 +1824,52 @@ void OptimProblem::solve(Vec xinit) {
       break;
     }
 
+    case OptimSolverType::LEAST_SQUARES: {
+      // Least-squares Gauss-Newton solver: min ||L*v - b||²
+      // Uses either LSQR or TAO BRGN depending on leastsquares_solver config
+
+      // Set the initial guess for the Gauss-Newton solver
+      VecCopy(xinit, x_GN);
+
+      // Work vectors for gradient, preconditioned search direction, and line search
+      Vec G, Gprec, xnew, step, v_zero;
+      VecDuplicate(x_GN, &G);
+      VecDuplicate(x_GN, &Gprec);
+      VecDuplicate(x_GN, &xnew);
+      VecDuplicate(x_GN, &step);
+      VecDuplicate(x_GN, &v_zero);
+      VecZeroEntries(v_zero);
+
+      bool stop = false;
+      for (int iter = 0; !stop; iter++) {
+        // Compute the gradient (and objective) at the current iterate
+        evalGradF(x_GN, G);
+        double f = objective;
+        VecNorm(G, NORM_2, &gnorm);
+
+        // Solve the least-squares Gauss-Newton system: min ||L*v - b||²
+        solveGaussNewtonLeastSquares(x_GN, v_zero, Gprec);
+        VecScale(Gprec, -1.0);
+
+        // Backtracking Armijo line search along -Gprec, projected onto the bound constraints
+        double alpha = armijoLineSearch(x_GN, f, G, Gprec, xnew, step);
+
+        // Accept the step
+        VecCopy(x_GN, xprev);
+        VecCopy(xnew, x_GN);
+
+        // Monitor progress and check stopping criteria
+        stop = monitor(iter, f, gnorm, alpha);
+      }
+
+      VecDestroy(&G);
+      VecDestroy(&Gprec);
+      VecDestroy(&xnew);
+      VecDestroy(&step);
+      VecDestroy(&v_zero);
+      break;
+    }
+
     default:
       printf("Unsupported optimization solver type.\n");
       break;
@@ -1851,7 +1907,8 @@ void OptimProblem::getSolution(Vec* xopt){
     Vec params;
     TaoGetSolution(tao, &params);
     *xopt = params;
-  } else if (optim_solver_type == OptimSolverType::GAUSS_NEWTON) {
+  } else if (optim_solver_type == OptimSolverType::GAUSS_NEWTON ||
+             optim_solver_type == OptimSolverType::LEAST_SQUARES) {
     *xopt = x_GN;
   } else {
     printf("Unsupported optimization solver type.\n");
@@ -2369,8 +2426,9 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
   // Fill the RHS: b = -\nabla_U J projected to tangent space
   // \nabla_J = -2/n U - 2/n^2Tr(V^dU)V = 2/n(I-P)U
 
-  Vec b; // RHS 
+  Vec b; // RHS
   GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &b);
+  VecZeroEntries(b);  // Ensure bottom part (for damping rows) is initialized to zero
 
   // Get U(T) from optim_target
   Mat U_final_re = optim_target->getFinalUnitaryRe();
@@ -2499,7 +2557,7 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
 
 
   // Solve the Least Squares system with either TAOBRGN or KSPLSQR
-  if (gn_leastsquares_solver == "brgn") {
+  if (leastsquares_solver == "brgn") {
 
     // Cache the RHS for residual evaluations (store -b for F(v) = L*v - b)
     VecCopy(b, brgn_rhs);
@@ -2534,7 +2592,7 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
       printf("Tao BRGN Least-Squares stats: newton iterations = %d, linear iterations = %d, residual norm = %1.14e, reason = %d\n", (int)newton_iters, (int)lin_iters, rnorm, reason);
     }
 
-  } else if (gn_leastsquares_solver == "lsqr"){
+  } else if (leastsquares_solver == "lsqr"){
     // Set the matrix again, just in case, for reset.
     KSPSetOperators(ksp_LeastSquares, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell);
 
@@ -2562,7 +2620,7 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
     }
   } else {
     if (mpirank_world == 0 && !quietmode) {
-      printf("Unknown Gauss-Newton least-squares solver: %s\n", gn_leastsquares_solver.c_str());
+      printf("Unknown Gauss-Newton least-squares solver: %s\n", leastsquares_solver.c_str());
       exit(1);
     }
   }
@@ -2664,7 +2722,7 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMult(Mat A, Vec v, Vec y)
   const PetscScalar *v_data;
   VecGetArrayRead(v, &v_data);
   for (int i=0; i<M - tangentdim; i++) {
-    y_data[i + tangentdim] = self->gn_leastsquares_damping * v_data[i];
+    y_data[i + tangentdim] = self->leastsquares_damping * v_data[i];
   }
   VecRestoreArrayRead(v, &v_data);
   VecRestoreArray(y, &y_data);
@@ -2799,7 +2857,7 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w_long,
   // Add damping lambda * w_long[tangentdim:end] contribution to the output
   VecGetArrayRead(w_long, &wl_data);
   for (int i=0; i<self->ndesign; i++) {
-    vout_data[i] += self->gn_leastsquares_damping * wl_data[i + tangentdim];
+    vout_data[i] += self->leastsquares_damping * wl_data[i + tangentdim];
   }
   VecRestoreArray(vout, &vout_data);
   VecRestoreArrayRead(w_long, &wl_data);
@@ -2820,8 +2878,103 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatCreateVecs(Mat A, Vec *right, Ve
     VecCreateSeq(PETSC_COMM_SELF, N, right);
   }
   if (left) {
-    // Create a reduced tangent space
+    // Create a reduced tangent space (augmented with ndesign rows for least-squares damping)
     VecCreateSeq(PETSC_COMM_SELF, M, left);
   }
   return 0;
+}
+
+PetscErrorCode OptimProblem::GN_Dual_MatCreateVecs(Mat A, Vec *right, Vec *left)
+{
+  OptimProblem *self;
+  MatShellGetContext(A, (void**)&self);
+
+  // Always use pure tangent space dimension (never augmented)
+  PetscInt tangent_dim = self->mastereq->getDim() * self->mastereq->getDim() - 1;
+  PetscInt N = self->ndesign;
+
+  if (right) {
+    // Create a control pulse vector
+    VecCreateSeq(PETSC_COMM_SELF, N, right);
+  }
+  if (left) {
+    // Create a pure tangent space vector (not augmented)
+    VecCreateSeq(PETSC_COMM_SELF, tangent_dim, left);
+  }
+  return 0;
+}
+
+void OptimProblem::GN_Jacobian_MatMult(Mat A, Vec v, Vec y)
+{
+  // Pure Jacobian forward: y = L*v (no augmentation for dual mode)
+  OptimProblem *self;
+  MatShellGetContext(A, (void**)&self);
+
+  // Reset output
+  VecZeroEntries(y);
+
+  PetscInt tangent_dim;
+  VecGetSize(y, &tangent_dim);
+
+  // Apply linearized forward to get dU/dalpha * v
+  self->evalLinearizedForward(self->xeval_GN, v);
+
+  // Get U_final matrices
+  Mat U_final_re = self->optim_target->getFinalUnitaryRe();
+  Mat U_final_im = self->optim_target->getFinalUnitaryIm();
+
+  // Project onto tangent space
+  PetscScalar *y_data;
+  VecGetArray(y, &y_data);
+  for (int iinit = 0; iinit < self->ninit_local; iinit++) {
+    int iinit_global = self->mpirank_init * self->ninit_local + iinit;
+    Vec lin_final_state = self->timestepper->getLinearizedFinalState(iinit);
+    GellMann::projectVecToTangentSpace(lin_final_state, U_final_re, U_final_im, self->mastereq->getDim(), iinit_global, y_data);
+  }
+
+  // Allreduce across comm_init processors
+  MPI_Allreduce(MPI_IN_PLACE, y_data, tangent_dim, MPIU_SCALAR, MPI_SUM, self->comm_init);
+  VecRestoreArray(y, &y_data);
+
+  // No damping rows - pure Jacobian only
+}
+
+void OptimProblem::GN_Jacobian_MatMultTranspose(Mat A, Vec w, Vec vout)
+{
+  // Pure Jacobian transpose: vout = L^T*w (no augmentation for dual mode)
+  OptimProblem *self;
+  MatShellGetContext(A, (void**)&self);
+
+  // Reset output
+  VecZeroEntries(vout);
+
+  // Get read access to w (tangent space)
+  const PetscScalar *w_data;
+  VecGetArrayRead(w, &w_data);
+
+  // Reconstruct full state vectors from tangent space coefficients
+  for (int iinit = 0; iinit < self->ninit_local; iinit++) {
+    int iinit_global = self->mpirank_init * self->ninit_local + iinit;
+    Mat U_final_re = self->optim_target->getFinalUnitaryRe();
+    Mat U_final_im = self->optim_target->getFinalUnitaryIm();
+
+    // Reconstruct full state vector (adjoint of projectVecToTangentSpace)
+    GellMann::reconstructVecFromTangentSpace(w_data, U_final_re, U_final_im, self->mastereq->getDim(), iinit_global, self->wsub_workspace[iinit]);
+  }
+
+  VecRestoreArrayRead(w, &w_data);
+
+  // Solve adjoint backward ODE for each terminal condition
+  for (int iinit = 0; iinit < self->ninit_local; iinit++) {
+    self->timestepper->solveAdjointODE(iinit, self->wsub_workspace[iinit], 0.0, 0.0, 0.0, 0.0);
+    VecAXPY(vout, 1.0, self->timestepper->getReducedGradient());
+  }
+
+  // Sum up the gradient from all initial condition processors
+  PetscScalar* vout_data;
+  VecGetArray(vout, &vout_data);
+  MPI_Allreduce(MPI_IN_PLACE, vout_data, self->ndesign, MPIU_SCALAR, MPI_SUM, self->comm_init);
+  VecRestoreArray(vout, &vout_data);
+
+  // No damping contribution - pure Jacobian transpose only
 }

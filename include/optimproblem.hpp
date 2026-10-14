@@ -122,8 +122,8 @@ class OptimProblem {
   Tao tao_brgn;        ///< Tao BRGN solver (alternative to KSPLSQR)
   Vec brgn_rhs;        ///< Cached RHS vector for BRGN residual evaluation
   Vec brgn_residual;   ///< Cached Residual vector for BRGN solver
-  double gn_leastsquares_damping; ///< Damping parameter λ for BRGN regularization
-  std::string gn_leastsquares_solver; ///< Least-squares solver name: "brgn" or "lsqr"
+  double leastsquares_damping; ///< Damping parameter λ for Least Squares regularization
+  std::string leastsquares_solver; ///< Least-squares solver name: "brgn" or "lsqr"
 
   // KSP linear solver
   KSP ksp_GN_NormalEq;  ///< Linear solver for Gauss-Newton Normal Equation solver
@@ -311,6 +311,11 @@ class OptimProblem {
   static PetscErrorCode GN_LeastSquares_MatMult(Mat A, Vec v, Vec y); // Apply y = W^1/2Lv
   static PetscErrorCode GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec vout); // Apply vout = L* W^1/2 w
   static PetscErrorCode GN_LeastSquares_MatCreateVecs(Mat A, Vec *right, Vec *left);
+
+  // For the dual Gauss-Newton MatShell operations
+  static PetscErrorCode GN_Dual_MatCreateVecs(Mat A, Vec *right, Vec *left);
+  static void GN_Jacobian_MatMult(Mat A, Vec v, Vec y); // Pure Jacobian L*v (no augmentation)
+  static void GN_Jacobian_MatMultTranspose(Mat A, Vec w, Vec vout); // Pure Jacobian L^T*w (no augmentation)
 
   /**
    * @brief MatMult operation for MatShell Gauss-Newton Normal Equation L^*Lv: Linearized forward + adjoint operator.

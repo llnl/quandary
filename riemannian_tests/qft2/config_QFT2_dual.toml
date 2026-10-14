@@ -35,7 +35,7 @@ maxiter = 100
 tikhonov = { coeff = 1e-05, use_x0 = false }
 penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0 }
 
-# Switch between lbfgs and gauss_newton optimization
+# Switch between lbfgs, gauss_newton, and least_squares optimization
 solver_type = "gauss_newton"
 
 # Those apply to all gn solver (normal eq and least squares)
@@ -56,9 +56,9 @@ gn_normaleq_solver = "proj"
 gn_normaleq_minres_qlp = true
 
 # Those apply to solving the Least Squares problem
-# gn_leastsquares_solver = "brgn"
-# gn_leastsquares_solver = "lsqr"   
-# gn_leastsquares_damping = 1e-3
+# leastsquares_solver = "brgn"
+# leastsquares_solver = "lsqr"
+# leastsquares_damping = 1e-3
 
 [output]
 directory = "."
