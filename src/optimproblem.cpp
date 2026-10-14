@@ -1373,28 +1373,100 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, Vec v_out){
 
   // Optional iterative refinement: refine the projected solution with KSP iterations
   // Refinement is enabled when gn_maxiter > 0
+  // Reuse the eigendecomposition (V_r, Σ_r, μ) to construct low-rank preconditioner at zero cost
   int refine_iters = 0;
   if (gn_maxiter > 0) {
-    // Store projected solution as initial guess
-    Vec y_proj;
-    VecDuplicate(y_dual_workspace, &y_proj);
-    VecCopy(y_dual_workspace, y_proj);
+    // Normalize the RHS to avoid small ||b|| issues near optimum
+    // Solve: (L L^T + λI) y = b_normalized, then scale: y_final = y * bnorm
+    double bnorm;
+    VecNorm(b, NORM_2, &bnorm);
 
-    // Configure KSP for refinement using gn_rtol tolerance
-    KSPSetOperators(ksp_GN_Dual, GN_Dual_MatShell, GN_Dual_MatShell);
-    KSPSetInitialGuessNonzero(ksp_GN_Dual, PETSC_TRUE);
+    // Only refine if RHS is non-negligible
+    if (bnorm > 1e-14) {
+      // Normalize RHS: b_normalized = b / ||b||
+      Vec b_normalized;
+      VecDuplicate(b, &b_normalized);
+      VecCopy(b, b_normalized);
+      VecScale(b_normalized, 1.0 / bnorm);
 
-    // Use gn_rtol for convergence, with max iterations = gn_maxiter
-    KSPSetTolerances(ksp_GN_Dual, gn_rtol, PETSC_DEFAULT, PETSC_DEFAULT, gn_maxiter);
+      // Store projected solution as initial guess (also needs normalization)
+      Vec y_proj;
+      VecDuplicate(y_dual_workspace, &y_proj);
+      VecCopy(y_dual_workspace, y_proj);
+      VecScale(y_proj, 1.0 / bnorm);  // Normalize to match normalized RHS
 
-    // Solve: (L L^T + λI) y = b with y_proj as initial guess
-    // Note: damping is already applied to GN_Dual_MatShell
-    KSPSolve(ksp_GN_Dual, b, y_dual_workspace);
+      // Construct low-rank preconditioner M = V_r Σ_r V_r^T + μ(I - V_r V_r^T)
+      // using the eigendecomposition already computed above (zero additional cost!)
+
+      // Store eigenvalues^{-1/2} for preconditioning
+      Vec sigma_invsqrt_temp;
+      VecCreateSeq(PETSC_COMM_SELF, rank, &sigma_invsqrt_temp);
+      PetscScalar *sigma_data;
+      VecGetArray(sigma_invsqrt_temp, &sigma_data);
+      for (int i = 0; i < rank; i++) {
+        sigma_data[i] = 1.0 / sqrt(eigenvalues[i]);
+      }
+      VecRestoreArray(sigma_invsqrt_temp, &sigma_data);
+
+      // Temporarily store the eigendecomposition in the preconditioner data structures
+      // Save current state
+      Mat V_r_saved = gn_dual_lowrank_U;
+      Vec sigma_saved = gn_dual_lowrank_sigma_invsqrt;
+      PetscScalar mu_saved = gn_dual_precond_mu;
+
+      // Set preconditioner data to current eigendecomposition
+      gn_dual_lowrank_U = V_r;  // V_r already computed above
+      gn_dual_lowrank_sigma_invsqrt = sigma_invsqrt_temp;
+      gn_dual_precond_mu = have_complement ? mu : eigenvalues[rank-1];  // Use μ if available
+
+      // Apply symmetric low-rank preconditioning: M^{-1/2} A M^{-1/2} z = M^{-1/2} b_normalized
+      Vec b_scaled, z_solution;
+      VecDuplicate(b_normalized, &b_scaled);
+      VecDuplicate(y_proj, &z_solution);
+
+      // Scale normalized RHS: b_scaled = M^{-1/2} * b_normalized
+      GN_Dual_LowRank_ApplyPrecond(GN_Dual_LowRank_MatShell, b_normalized, b_scaled);
+
+      // Scale initial guess
+      VecCopy(y_proj, z_solution);
+
+      // Configure KSP for refinement with preconditioned operator
+      KSPSetOperators(ksp_GN_Dual, GN_Dual_LowRank_MatShell, GN_Dual_LowRank_MatShell);
+      KSPSetInitialGuessNonzero(ksp_GN_Dual, PETSC_TRUE);
+
+      // Use pure relative tolerance - no absolute tolerance needed since ||b_normalized|| = 1
+      KSPSetTolerances(ksp_GN_Dual, gn_rtol, PETSC_DEFAULT, PETSC_DEFAULT, gn_maxiter);
+
+      // Solve preconditioned system: M^{-1/2} A M^{-1/2} z = M^{-1/2} b_normalized
+      KSPSolve(ksp_GN_Dual, b_scaled, z_solution);
+
+      // Recover y = M^{-1/2} * z
+      GN_Dual_LowRank_ApplyPrecond(GN_Dual_LowRank_MatShell, z_solution, y_dual_workspace);
+
+      // Scale back by ||b|| to get the actual solution
+      VecScale(y_dual_workspace, bnorm);
 
     // Get actual number of iterations performed
     KSPGetIterationNumber(ksp_GN_Dual, &refine_iters);
 
-    VecDestroy(&y_proj);
+      // Get actual number of iterations performed
+      KSPGetIterationNumber(ksp_GN_Dual, &refine_iters);
+
+      // Restore preconditioner data structures
+      gn_dual_lowrank_U = V_r_saved;
+      gn_dual_lowrank_sigma_invsqrt = sigma_saved;
+      gn_dual_precond_mu = mu_saved;
+
+      // Cleanup
+      VecDestroy(&b_scaled);
+      VecDestroy(&z_solution);
+      VecDestroy(&sigma_invsqrt_temp);
+      VecDestroy(&y_proj);
+      VecDestroy(&b_normalized);
+
+      // Reset KSP operators to unpreconditioned for next time
+      KSPSetOperators(ksp_GN_Dual, GN_Dual_MatShell, GN_Dual_MatShell);
+    }
   }
 
   // Revert damping

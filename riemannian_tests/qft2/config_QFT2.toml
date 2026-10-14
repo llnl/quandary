@@ -49,23 +49,16 @@ gn_dual_precond_type="low_rank"
 gn_dual_precond_rank = 10
 
 # Those apply to solving the normal equation
-# minres-qlp
 gn_rtol = 1e-5
-gn_proj_refine_iters = 20
 gn_normaleq_damping = 1e-5
 gn_normaleq_solver = "proj"
+# minres-qlp
 gn_normaleq_minres_qlp = true
-
-# Conjugate gradient
-#gn_rtol = 1e-1
-#gn_normaleq_solver = "cg"
-#gn_normaleq_damping = 1e-3
 
 # Those apply to solving the Least Squares problem
 # gn_leastsquares_solver = "brgn"
 # gn_leastsquares_solver = "lsqr"   
 # gn_leastsquares_brgn_damping = 1e-3
-
 
 [output]
 directory = "."
