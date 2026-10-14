@@ -210,7 +210,7 @@ solve() [optimproblem.cpp:1820]
 
 | Aspect | Primal Mode | Dual Mode | Least-Squares Mode |
 |--------|-------------|-----------|-------------------|
-| **System solved** | `(L^T L + λI) v = -G` | `(L L^T + λI) y = b` then `v = L^T y` | `min ||L*v - b||²` or `min ||[L; λI]*v - [b; 0]||²` |
+| **System solved** | `(L^T L + λI) v = -G` | `(L L^T + λI) y = b`<br/>then `v = L^T y` | `min` ‖`L*v - b`‖² <br/>(optionally augmented) |
 | **System size** | `ndesign × ndesign` | `tangent_dim × tangent_dim` | `tangent_dim × ndesign` (or augmented) |
 | **System matrix** | GN_NormalEq_MatShell | GN_Dual_MatShell | GN_LeastSquares_MatShell |
 | **Solver** | KSP (CG, MINRES, etc.) | KSP or Projected eigenspace | LSQR or TAO BRGN |
