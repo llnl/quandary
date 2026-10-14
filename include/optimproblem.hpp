@@ -122,7 +122,7 @@ class OptimProblem {
   Tao tao_brgn;        ///< Tao BRGN solver (alternative to KSPLSQR)
   Vec brgn_rhs;        ///< Cached RHS vector for BRGN residual evaluation
   Vec brgn_residual;   ///< Cached Residual vector for BRGN solver
-  double gn_leastsquares_brgn_damping; ///< Damping parameter λ for BRGN regularization
+  double gn_leastsquares_damping; ///< Damping parameter λ for BRGN regularization
   std::string gn_leastsquares_solver; ///< Least-squares solver name: "brgn" or "lsqr"
 
   // KSP linear solver
@@ -308,9 +308,9 @@ class OptimProblem {
   static PetscErrorCode TaoBRGN_Monitor(Tao tao, void *ctx);
 
   // For the Gauss-Newton least-squares MatShell operations
-  static void GN_LeastSquares_MatMult(Mat A, Vec v, Vec y); // Apply y = W^1/2Lv
-  static void GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec vout); // Apply vout = L* W^1/2 w
-  static void GN_LeastSquares_MatCreateVecs(Mat A, Vec *right, Vec *left);
+  static PetscErrorCode GN_LeastSquares_MatMult(Mat A, Vec v, Vec y); // Apply y = W^1/2Lv
+  static PetscErrorCode GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec vout); // Apply vout = L* W^1/2 w
+  static PetscErrorCode GN_LeastSquares_MatCreateVecs(Mat A, Vec *right, Vec *left);
 
   /**
    * @brief MatMult operation for MatShell Gauss-Newton Normal Equation L^*Lv: Linearized forward + adjoint operator.
@@ -320,7 +320,7 @@ class OptimProblem {
    * @param[in] v Direction vector
    * @param[out] Av Resulting vector after applying the linearized forward and adjoint operators
    */
-  static void GN_NormalEq_MatMult(Mat A, const Vec v, Vec Av);
+  static PetscErrorCode GN_NormalEq_MatMult(Mat A, const Vec v, Vec Av);
 
   /**
    * @brief MatMult operation for MatShell dual Gauss-Newton problem (L L^T + λI) y
