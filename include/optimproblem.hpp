@@ -337,7 +337,7 @@ class OptimProblem {
    * @param[in] y Input vector (tangent space, size dim²-1)
    * @param[out] Ay Output vector after applying L L^T (tangent space, size dim²-1)
    */
-  static void GN_Dual_MatMult(Mat A, const Vec y, Vec Ay);
+  static PetscErrorCode GN_Dual_MatMult(Mat A, const Vec y, Vec Ay);
 
   /**
    * @brief GetDiagonal operation for MatShell dual Gauss-Newton problem
@@ -359,7 +359,7 @@ class OptimProblem {
    * @param[in] z Input vector (tangent space, size dim²-1)
    * @param[out] output Output vector after applying D^{-1/2} A D^{-1/2} (tangent space)
    */
-  static void GN_Dual_Precond_MatMult(Mat A, const Vec z, Vec output);
+  static PetscErrorCode GN_Dual_Precond_MatMult(Mat A, const Vec z, Vec output);
 
   /**
    * @brief Updates the dense full  Gauss-Newton matrix based on the current point of evaluation xeval_GN by calling GN_NormalEqShell_MatMult on each unit vectoor.

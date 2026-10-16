@@ -138,8 +138,8 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
       includeHessUJ = true;
     }
   }
-  // DISABLE includeHessUJ: Using L^*L instead of L^*\nabla_U^2JL!
-  includeHessUJ = false;
+  includeHessUJ = true;
+  // includeHessUJ = false;
 
   /* Create MatShell for Gauss-Newton least-squares problem */
   leastsquares_damping = config.getLeastSquaresDamping();
@@ -826,32 +826,25 @@ PetscErrorCode OptimProblem::GN_NormalEq_MatMult(Mat A, const Vec v, Vec Av){
   // assumes that the timestepper's trajectory_states are already populated and computes all lin_trajectory_states.
   self->evalLinearizedForward(x, v);
 
-  // Optionally, include \nabla^2_U J(U) in the terminal adjoint condition. 
-  double obj_cost_re = 0.0;
-  double obj_cost_im = 0.0;
+  // If include W^1/2, precompute z = 1/n<V,LinStates> 
+  double z_re = 0.0;
+  double z_im = 0.0;
   if (self->includeHessUJ){
-    // Only available for J_Inf (Generalized)
-    assert(self->optim_target->getObjectiveType() == ObjectiveType::JTRACE);
-
-    // Compute J_inf(W(T))
     for (int iinit=0; iinit<self->ninit_local; iinit++) {
-      // Need to recompute the target (and initial) state
       int iinit_global = self->mpirank_init * self->ninit_local + iinit;
       self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
-      // eval J_inf(w(T))
+      double tmp_re = 0.0;
+      double tmp_im = 0.0;
       Vec wT = self->timestepper->getLinearizedFinalState(iinit);
-      double obj_lin_iinit_re = 0.0;
-      double obj_lin_iinit_im = 0.0;
-      self->optim_target->evalJ(wT,  &obj_lin_iinit_re, &obj_lin_iinit_im);
-      obj_cost_re += self->obj_weights[iinit] * obj_lin_iinit_re;
-      obj_cost_im += self->obj_weights[iinit] * obj_lin_iinit_im;
+      self->optim_target->HilbertSchmidtOverlap(wT, false, &tmp_re, &tmp_im);
+      z_re +=  tmp_re / self->mastereq->getDim();
+      z_im +=  tmp_im / self->mastereq->getDim();
     }
     // Gather result J_inf(W(T))
-    double mycost_re = obj_cost_re;
-    double mycost_im = obj_cost_im;
-    MPI_Allreduce(&mycost_re, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
-    MPI_Allreduce(&mycost_im, &obj_cost_im, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
-    
+    double myz_re = z_re;
+    double myz_im = z_im;
+    MPI_Allreduce(&myz_re, &z_re, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
+    MPI_Allreduce(&myz_im, &z_im, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
   }
 
   // Solve the adjoint ODE for initial condition 
@@ -863,15 +856,13 @@ PetscErrorCode OptimProblem::GN_NormalEq_MatMult(Mat A, const Vec v, Vec Av){
     // Set the terminal condition 
     VecCopy(lin_final_state, self->rho_t0_bar);  // w_i(T)
 
+    // Include W = 2/n(I-<V,cdot>V), if requested
     if (self->includeHessUJ){
-      // scale w_i(t) by 2/n (contribution from 1/n||U||^2)
-      VecScale(self->rho_t0_bar, 2.0 / self->mastereq->getDim());
-      // Add derivative of Jinf -2/n^2 Re tr(...)
+      double scale = 2.0 / self->mastereq->getDim();
+      VecScale(self->rho_t0_bar, scale);
       int iinit_global = self->mpirank_init * self->ninit_local + iinit;
       self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
-      double obj_cost_re_bar, obj_cost_im_bar;
-      self->optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
-      self->optim_target->evalJ_diff(lin_final_state, self->rho_t0_bar, self->obj_weights[iinit]*obj_cost_re_bar, self->obj_weights[iinit]*obj_cost_im_bar); 
+      self->optim_target->HilbertSchmidtOverlap_diff(self->rho_t0_bar, false, -scale*z_re, -scale*z_im);
     }
 
     // Solve adjoint backward ODE
@@ -890,7 +881,7 @@ PetscErrorCode OptimProblem::GN_NormalEq_MatMult(Mat A, const Vec v, Vec Av){
   return 0;
 }
 
-void OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
+PetscErrorCode OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
 
@@ -906,6 +897,8 @@ void OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
   GN_Jacobian_MatMult(A, self->v_dual_workspace, Ay);
 
   // Note: Damping (λI) is applied separately via MatShift on the shell
+
+  return 0;
 }
 
 PetscErrorCode OptimProblem::GN_Dual_GetDiagonal(Mat A, Vec diag){
@@ -918,7 +911,7 @@ PetscErrorCode OptimProblem::GN_Dual_GetDiagonal(Mat A, Vec diag){
   return 0;
 }
 
-void OptimProblem::GN_Dual_Precond_MatMult(Mat A, const Vec z, Vec output){
+PetscErrorCode OptimProblem::GN_Dual_Precond_MatMult(Mat A, const Vec z, Vec output){
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
 
@@ -932,6 +925,8 @@ void OptimProblem::GN_Dual_Precond_MatMult(Mat A, const Vec z, Vec output){
 
   // Step 3: output = D^{-1/2} * output
   VecPointwiseMult(output, self->gn_dual_precond_diag, output);
+
+  return 0;
 }
 
 
@@ -2525,12 +2520,10 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
 
   // ----- END TANGENT SPACE PROJECTION SECTION -----
 
-
-  // Note: includeHessUJ is disabled (set to false in constructor)
   if (includeHessUJ) {
     // TODO: Implement W^1/2 in tangent space if needed
     if (mpirank_world == 0) {
-      printf("WARNING: includeHessUJ is not implemented for tangent space projection.\n");
+      printf("WARNING: W^1/2 is not implemented for LeastSquares solver tangent space projection.\n");
     }
   }
 
@@ -2766,16 +2759,10 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMult(Mat A, Vec v, Vec y)
   // exit(1);
   // /* ----- END TEST: Project Lv onto tangent space  ----*/
 
-  // Apply W^1/2 to local buffer if needed
-  // NOTE: includeHessUJ is disabled (set to false in constructor), so this branch is unlikely
   if (self->includeHessUJ){
-    // Only available for J_Inf (Generalized)
-    assert(self->optim_target->getObjectiveType() == ObjectiveType::JTRACE);
-
     // TODO: Need to implement W^1/2 in tangent space representation
-    // For now, this is disabled as includeHessUJ = false in the constructor
     if (self->mpirank_world == 0) {
-      printf("WARNING: includeHessUJ is not implemented for tangent space projection. Skipping W^1/2 application.\n");
+      printf("WARNING: W^1/2 is not implemented for Least Squares solver tangent space projection. Skipping.\n");
     }
   }
 
@@ -2814,15 +2801,9 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w_long,
   VecGetArrayRead(w, &w_data);
 
   // Optional, apply W^1/2 to w before reconstruction
-  // NOTE: includeHessUJ is disabled (set to false in constructor)
   if (self->includeHessUJ){
-    // Only available for J_Inf (Generalized)
-    assert(self->optim_target->getObjectiveType() == ObjectiveType::JTRACE);
-
-    // TODO: Need to implement W^1/2 in tangent space representation
-    // For now, this is disabled as includeHessUJ = false in the constructor
     if (self->mpirank_world == 0) {
-      printf("WARNING: includeHessUJ is not implemented for tangent space projection. Skipping W^1/2 application.\n");
+      printf("WARNING: W^1/2 is not implemented for Least Squarestangent space projection. Skipping.\n");
     }
   }
 
@@ -2906,7 +2887,8 @@ PetscErrorCode OptimProblem::GN_Dual_MatCreateVecs(Mat A, Vec *right, Vec *left)
 
 void OptimProblem::GN_Jacobian_MatMult(Mat A, Vec v, Vec y)
 {
-  // Pure Jacobian forward: y = L*v (no augmentation for dual mode)
+  // Jacobian forward: y = P_G W^1/2 Lv 
+
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
 
@@ -2919,17 +2901,52 @@ void OptimProblem::GN_Jacobian_MatMult(Mat A, Vec v, Vec y)
   // Apply linearized forward to get dU/dalpha * v
   self->evalLinearizedForward(self->xeval_GN, v);
 
+  // If include W^1/2, precompute z = 1/n<V,W> 
+  double z_re = 0.0;
+  double z_im = 0.0;
+  if (self->includeHessUJ){
+    for (int iinit=0; iinit<self->ninit_local; iinit++) {
+      int iinit_global = self->mpirank_init * self->ninit_local + iinit;
+      self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
+      double tmp_re = 0.0;
+      double tmp_im = 0.0;
+      Vec wT = self->timestepper->getLinearizedFinalState(iinit);
+      self->optim_target->HilbertSchmidtOverlap(wT, false, &tmp_re, &tmp_im);
+      z_re +=  tmp_re / self->mastereq->getDim();
+      z_im +=  tmp_im / self->mastereq->getDim();
+    }
+    // Gather result J_inf(W(T))
+    double myz_re = z_re;
+    double myz_im = z_im;
+    MPI_Allreduce(&myz_re, &z_re, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
+    MPI_Allreduce(&myz_im, &z_im, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
+  }
+
   // Get U_final matrices
   Mat U_final_re = self->optim_target->getFinalUnitaryRe();
   Mat U_final_im = self->optim_target->getFinalUnitaryIm();
 
-  // Project onto tangent space
+  // For each initial condition, apply W^1/2 and Project onto tangent space
   PetscScalar *y_data;
   VecGetArray(y, &y_data);
   for (int iinit = 0; iinit < self->ninit_local; iinit++) {
     int iinit_global = self->mpirank_init * self->ninit_local + iinit;
+
+    // w_i(T). Use rho_t0_bar as temporary storage
     Vec lin_final_state = self->timestepper->getLinearizedFinalState(iinit);
-    GellMann::projectVecToTangentSpace(lin_final_state, U_final_re, U_final_im, self->mastereq->getDim(), iinit_global, y_data);
+    VecCopy(lin_final_state, self->rho_t0_bar);  
+
+    // Include W^1/2 = sqrt(2/n)(I-z*V), if requested
+    if (self->includeHessUJ){
+      double scale = sqrt(2.0 / self->mastereq->getDim());
+      VecScale(self->rho_t0_bar, scale);
+      int iinit_global = self->mpirank_init * self->ninit_local + iinit;
+      self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
+      self->optim_target->HilbertSchmidtOverlap_diff(self->rho_t0_bar, false, -scale*z_re, -scale*z_im);
+    }
+
+    // Project onto tangent space -> fills the appropriate entries in y_data
+    GellMann::projectVecToTangentSpace(self->rho_t0_bar, U_final_re, U_final_im, self->mastereq->getDim(), iinit_global, y_data);
   }
 
   // Allreduce across comm_init processors
@@ -2941,7 +2958,8 @@ void OptimProblem::GN_Jacobian_MatMult(Mat A, Vec v, Vec y)
 
 void OptimProblem::GN_Jacobian_MatMultTranspose(Mat A, Vec w, Vec vout)
 {
-  // Pure Jacobian transpose: vout = L^T*w (no augmentation for dual mode)
+  // Jacobian transpose: vout = L^T W^1/2 P_G^{-1} w 
+
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
 
@@ -2952,20 +2970,49 @@ void OptimProblem::GN_Jacobian_MatMultTranspose(Mat A, Vec w, Vec vout)
   const PetscScalar *w_data;
   VecGetArrayRead(w, &w_data);
 
-  // Reconstruct full state vectors from tangent space coefficients
+  // P_G^{-1}: For each initial condition, reconstruct full state vectors from tangent space coefficients
   for (int iinit = 0; iinit < self->ninit_local; iinit++) {
     int iinit_global = self->mpirank_init * self->ninit_local + iinit;
     Mat U_final_re = self->optim_target->getFinalUnitaryRe();
     Mat U_final_im = self->optim_target->getFinalUnitaryIm();
 
-    // Reconstruct full state vector (adjoint of projectVecToTangentSpace)
+    // Reconstruct full state vector (adjoint of projectVecToTangentSpace) -> fills wsub_workspace[iinit]
     GellMann::reconstructVecFromTangentSpace(w_data, U_final_re, U_final_im, self->mastereq->getDim(), iinit_global, self->wsub_workspace[iinit]);
   }
-
   VecRestoreArrayRead(w, &w_data);
+
+  // If include W^1/2, precompute z = 1/n<V,wsub_workspace> 
+  double z_re = 0.0;
+  double z_im = 0.0;
+  if (self->includeHessUJ){
+    for (int iinit=0; iinit<self->ninit_local; iinit++) {
+      int iinit_global = self->mpirank_init * self->ninit_local + iinit;
+      self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
+      double tmp_re = 0.0;
+      double tmp_im = 0.0;
+      self->optim_target->HilbertSchmidtOverlap(self->wsub_workspace[iinit], false, &tmp_re, &tmp_im);
+      z_re +=  tmp_re / self->mastereq->getDim();
+      z_im +=  tmp_im / self->mastereq->getDim();
+    }
+    // Gather result J_inf(W(T))
+    double myz_re = z_re;
+    double myz_im = z_im;
+    MPI_Allreduce(&myz_re, &z_re, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
+    MPI_Allreduce(&myz_im, &z_im, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
+  }
 
   // Solve adjoint backward ODE for each terminal condition
   for (int iinit = 0; iinit < self->ninit_local; iinit++) {
+
+    // Include W = sqrt(2/n)(I-<V,cdot>V), if requested
+    if (self->includeHessUJ){
+      double scale = sqrt(2.0 / self->mastereq->getDim());
+      VecScale(self->wsub_workspace[iinit], scale);
+      int iinit_global = self->mpirank_init * self->ninit_local + iinit;
+      self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
+      self->optim_target->HilbertSchmidtOverlap_diff(self->wsub_workspace[iinit], false, -scale*z_re, -scale*z_im);
+    }
+
     self->timestepper->solveAdjointODE(iinit, self->wsub_workspace[iinit], 0.0, 0.0, 0.0, 0.0);
     VecAXPY(vout, 1.0, self->timestepper->getReducedGradient());
   }
