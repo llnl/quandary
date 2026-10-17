@@ -55,15 +55,15 @@ penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedco
 # Switch between lbfgs and gauss_newton optimization
 solver_type = "gauss_newton"
 
-# experimental preconditioner (dual mode only)
-gn_prec_update_interval = -1
-gn_dual_precond_type="low_rank"
-gn_dual_precond_rank = 100
-
 # Those apply to all gn solvers (normal eq and least squares)
 gn_maxiter = 300
 # gn_solver_mode = "primal"
 gn_solver_mode = "dual"
+
+# experimental preconditioner (dual mode only)
+gn_prec_update_interval = -1
+gn_dual_precond_type="low_rank"
+gn_dual_precond_rank = 100
 
 # Those apply to solving the normal equation
 # minres-qlp

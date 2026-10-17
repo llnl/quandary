@@ -305,6 +305,9 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     // Parse optimization solver type
     optim_solver_type = parseEnum(optimization_table["solver_type"].value<std::string>(), OPTIM_SOLVER_TYPE_MAP, ConfigDefaults::OPTIM_SOLVER_TYPE);
 
+    // Parse L-BFGS options
+    lbfgs_lmm_vectors = validators::field<int>(optimization_table, "lbfgs_lmm_vectors").greaterThan(0).valueOr(ConfigDefaults::LBFGS_LMM_VECTORS);
+
     // Parse Gauss-Newton solver options
     gn_rtol = validators::field<double>(optimization_table, "gn_rtol").greaterThan(0.0).valueOr(ConfigDefaults::GN_RTOL);
     gn_maxiter = validators::field<int>(optimization_table, "gn_maxiter").greaterThan(0).valueOr(ConfigDefaults::GN_MAXITER);
@@ -702,6 +705,9 @@ void Config::printConfig(std::stringstream& log) const {
       << ", weightedcost_width = " << optim_penalty_weightedcost_width 
       << " }\n";
   log << "solver_type = \"" << enumToString(optim_solver_type, OPTIM_SOLVER_TYPE_MAP) << "\"\n";
+  if (optim_solver_type == OptimSolverType::TAO_LBFGS) {
+    log << "lbfgs_lmm_vectors = " << lbfgs_lmm_vectors << "\n";
+  }
   if (optim_solver_type == OptimSolverType::GAUSS_NEWTON) {
     log << "gn_rtol = " << gn_rtol << "\n";
     log << "gn_maxiter = " << gn_maxiter << "\n";

@@ -109,6 +109,15 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   TaoSetTolerances(tao, tol_grad_abs, PETSC_DEFAULT, tol_grad_rel);
   TaoMonitorSet(tao, TaoMonitor, (void*)this, NULL);
   TaoSetVariableBounds(tao, xlower, xupper);
+
+  // Set L-BFGS limited memory vectors (only for L-BFGS solver)
+  if (optim_solver_type == OptimSolverType::TAO_LBFGS) {
+    int lbfgs_lmm_vectors = config.getLbfgsLmmVectors();
+    char lmm_str[16];
+    snprintf(lmm_str, sizeof(lmm_str), "%d", lbfgs_lmm_vectors);
+    PetscOptionsSetValue(NULL, "-tao_lmm_vectors", lmm_str);
+  }
+
   TaoSetFromOptions(tao);
   /* Set user-defined objective and gradient evaluation routines */
   TaoSetObjective(tao, TaoEvalObjective, (void *)this);
@@ -145,8 +154,8 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   leastsquares_damping = config.getLeastSquaresDamping();
   int N = ndesign;
   PetscInt M = mastereq->getDim()*mastereq->getDim() - 1;
-  // enlarge the output space if damping is enabled
-  if (leastsquares_damping > 0.0) {
+  // enlarge the output space if damping is enabled (only for least-squares mode)
+  if (optim_solver_type == OptimSolverType::LEAST_SQUARES && leastsquares_damping > 0.0) {
     M += ndesign;
     if (mpirank_world == 0 && !quietmode) {
       printf("Least-squares damping enabled: λ = %e, augmented matrix size = %d × %d\n",

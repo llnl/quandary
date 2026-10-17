@@ -106,6 +106,7 @@ class Config {
   double optim_penalty_energy; ///< Energy penalty coefficient
   double optim_penalty_variation; ///< Amplitude variation penalty coefficient
   OptimSolverType optim_solver_type; ///< Type of optimization solver to use
+  int lbfgs_lmm_vectors; ///< Number of vector pairs stored in L-BFGS limited memory
   double gn_rtol; ///< Relative tolerance for inner Gauss-Newton iterations (Normal or Least Squares)
   int gn_maxiter; ///< Maximum iterations for inner Gauss-Newton iterations (Normal or Least Squares)
   std::string leastsquares_solver; ///< Least-squares solver: "brgn" or "lsqr"
@@ -193,6 +194,7 @@ class Config {
   double getOptimPenaltyEnergy() const { return optim_penalty_energy; }
   double getOptimPenaltyVariation() const { return optim_penalty_variation; }
   OptimSolverType getOptimSolverType() const { return optim_solver_type; }
+  int getLbfgsLmmVectors() const { return lbfgs_lmm_vectors; }
   const std::string& getLeastSquaresSolver() const { return leastsquares_solver; }
   double getLeastSquaresDamping() const { return leastsquares_damping; }
   double getGnNormaleqDamping() const { return gn_normaleq_damping; }
