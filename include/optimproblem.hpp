@@ -455,6 +455,9 @@ class OptimProblem {
    */
   void solveGaussNewtonDual(Vec xinit, const Vec initial_guess, Vec v_out);
   void solveGaussNewtonDualProjected(Vec xinit, Vec v_out);
+  void computeEigenspaceApproximation(const Vec b, const Mat V_r,
+      const PetscScalar* eigenvalues, int rank, bool have_complement,
+      PetscScalar mu, Vec y_approx);
 
   /**
    * @brief Solves the Gauss-Newton normal equation L^* L(x) v = b via eigenvalue decomposition

@@ -104,20 +104,11 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   /* Create TAO optimization solver */
   TaoCreate(PETSC_COMM_SELF, &tao);
   /* Set optimization type and parameters */
-  TaoSetType(tao,TAOBQNLS);         // Optim type: taoblmvm vs BQNLS ??
+  TaoSetType(tao, TAOBQNLS);
   TaoSetMaximumIterations(tao, maxiter);
   TaoSetTolerances(tao, tol_grad_abs, PETSC_DEFAULT, tol_grad_rel);
   TaoMonitorSet(tao, TaoMonitor, (void*)this, NULL);
   TaoSetVariableBounds(tao, xlower, xupper);
-
-  // Set L-BFGS limited memory vectors (only for L-BFGS solver)
-  if (optim_solver_type == OptimSolverType::TAO_LBFGS) {
-    int lbfgs_lmm_vectors = config.getLbfgsLmmVectors();
-    char lmm_str[16];
-    snprintf(lmm_str, sizeof(lmm_str), "%d", lbfgs_lmm_vectors);
-    PetscOptionsSetValue(NULL, "-tao_lmm_vectors", lmm_str);
-  }
-
   TaoSetFromOptions(tao);
   /* Set user-defined objective and gradient evaluation routines */
   TaoSetObjective(tao, TaoEvalObjective, (void *)this);
@@ -1061,8 +1052,40 @@ void OptimProblem::solveGaussNewtonDual(Vec xinit, const Vec initial_guess, Vec 
   // Set the matrix operators
   KSPSetOperators(ksp_GN_Dual, GN_Dual_MatShell, GN_Dual_MatShell);
 
-  // Set initial guess from initial_guess parameter (in tangent space)
-  VecCopy(initial_guess, y_dual_workspace);
+  // Set initial guess (in tangent space)
+  // Check if low-rank preconditioner will be used (defined later but needed here)
+  bool use_lowrank_check = (gn_prec_update_interval >= 0 || gn_prec_update_interval == -1) && (gn_dual_precond_type == "low_rank");
+
+  if (use_lowrank_check && gn_dual_lowrank_U != nullptr) {
+    // Convert stored eigendata to format needed by computeEigenspaceApproximation
+    // Eigenvalues: need Σ_r (not Σ_r^{-1/2}) for the function
+    int rank = gn_dual_precond_rank;
+    PetscScalar *eigenvalues = new PetscScalar[rank];
+
+    // Extract eigenvalues from stored Σ_r^{-1/2}: Σ_r = (Σ_r^{-1/2})^{-2}
+    PetscScalar *sigma_invsqrt_data;
+    VecGetArray(gn_dual_lowrank_sigma_invsqrt, &sigma_invsqrt_data);
+    for (int i = 0; i < rank; i++) {
+        eigenvalues[i] = 1.0 / (sigma_invsqrt_data[i] * sigma_invsqrt_data[i]);
+    }
+    VecRestoreArray(gn_dual_lowrank_sigma_invsqrt, &sigma_invsqrt_data);
+
+    // Check if complement is available (μ > 0)
+    bool have_complement = (gn_dual_precond_mu > 0.0);
+
+    // Compute eigenspace approximation from RHS b and stored eigendecomposition
+    computeEigenspaceApproximation(b, gn_dual_lowrank_U, eigenvalues, rank,
+                                   have_complement, gn_dual_precond_mu, y_dual_workspace);
+
+    delete[] eigenvalues;
+
+    if (mpirank_world == 0 && !quietmode) {
+        printf("  Using precomputed eigenspace approximation as initial guess (rank %d)\n", rank);
+    }
+  } else {
+    // Use provided initial guess (typically zero)
+    VecCopy(initial_guess, y_dual_workspace);
+  }
   KSPSetInitialGuessNonzero(ksp_GN_Dual, PETSC_TRUE);
 
   // Monitor residual and solution norm at every iteration
@@ -1093,10 +1116,11 @@ void OptimProblem::solveGaussNewtonDual(Vec xinit, const Vec initial_guess, Vec 
     VecDuplicate(b, &b_scaled);
     GN_Dual_LowRank_ApplyPrecond(GN_Dual_LowRank_MatShell, b, b_scaled);
 
-    // Scale initial guess: z0 = M^{1/2} * y0 ≈ M^{-1/2} * y0 (using M^{-1/2} as approx)
+    // Transform initial guess from y-space to z-space: z0 = M^{1/2} * y0
+    // Mathematical insight: If y0 ≈ M^{-1} * b, then z0 = M^{1/2} * M^{-1} * b = M^{-1/2} * b
+    // Therefore z0 should be b_scaled (the preconditioned RHS)
     VecDuplicate(y_dual_workspace, &z_solution);
-    // For initial guess, just copy (could improve with better scaling)
-    VecCopy(y_dual_workspace, z_solution);
+    VecCopy(b_scaled, z_solution);  // Use preconditioned RHS as initial guess in z-space
 
     // Use the low-rank preconditioned operator
     KSPSetOperators(ksp_GN_Dual, GN_Dual_LowRank_MatShell, GN_Dual_LowRank_MatShell);
@@ -1340,56 +1364,8 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, Vec v_out){
     }
   }
 
-  // Project RHS: b̃ = V_r^T b
-  Vec b_tilde;
-  VecCreateSeq(PETSC_COMM_SELF, rank, &b_tilde);
-  MatMultTranspose(V_r, b, b_tilde);
-
-  // Solve in subspace: ỹ = Σ_r^{-1} b̃ (direct diagonal solve)
-  Vec y_tilde;
-  VecDuplicate(b_tilde, &y_tilde);
-
-  PetscScalar *b_tilde_data, *y_tilde_data;
-  VecGetArray(b_tilde, &b_tilde_data);
-  VecGetArray(y_tilde, &y_tilde_data);
-
-  for (int i = 0; i < rank; i++) {
-    if (eigenvalues[i] > 1e-14) {
-      y_tilde_data[i] = b_tilde_data[i] / eigenvalues[i];
-    } else {
-      y_tilde_data[i] = 0.0;
-      if (mpirank_world == 0 && !quietmode) {
-        printf("Warning: Eigenvalue %d = %e is too small, setting component to zero\n", i, eigenvalues[i]);
-      }
-    }
-  }
-
-  VecRestoreArray(b_tilde, &b_tilde_data);
-  VecRestoreArray(y_tilde, &y_tilde_data);
-
-  // Lift to full space: y = V_r ỹ (top-r subspace part)
-  MatMult(V_r, y_tilde, y_dual_workspace);
-
-  // Add complement space contribution: y += μ^{-1} (I - V_r V_r^T) b
-  if (have_complement && mu > 1e-14) {
-    Vec temp;
-    VecDuplicate(b, &temp);
-
-    // Compute V_r^T b (already have this in b_tilde)
-    // Compute V_r (V_r^T b) to get projection onto top-r subspace
-    Vec b_proj;
-    VecDuplicate(b, &b_proj);
-    MatMult(V_r, b_tilde, b_proj);
-
-    // Compute complement: (I - V_r V_r^T) b = b - V_r (V_r^T b)
-    VecWAXPY(temp, -1.0, b_proj, b);  // temp = b - b_proj
-
-    // Add scaled complement to solution: y += μ^{-1} * temp
-    VecAXPY(y_dual_workspace, 1.0/mu, temp);
-
-    VecDestroy(&temp);
-    VecDestroy(&b_proj);
-  }
+  // Compute eigenspace approximation: y = M^{-1} * b
+  computeEigenspaceApproximation(b, V_r, eigenvalues, rank, have_complement, mu, y_dual_workspace);
 
   // Optional iterative refinement: refine the projected solution with KSP iterations
   // Refinement is enabled when gn_maxiter > 0
@@ -1496,8 +1472,6 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, Vec v_out){
 
   // Cleanup
   VecDestroy(&b);
-  VecDestroy(&b_tilde);
-  VecDestroy(&y_tilde);
   MatDestroy(&V_r);
   delete[] eigenvalues;
 
@@ -2395,6 +2369,74 @@ void OptimProblem::GN_Dual_LowRank_ApplyPrecond(Mat A, const Vec x, Vec y){
 
   VecDestroy(&vr_proj);
   VecDestroy(&complement);
+}
+
+
+// Compute eigenspace approximation: y_approx = M^{-1} * b
+// where M = V_r Σ_r V_r^T + μ(I - V_r V_r^T)
+void OptimProblem::computeEigenspaceApproximation(
+    const Vec b,                      // RHS vector (tangent space)
+    const Mat V_r,                    // Eigenvectors (tangent_dim × rank)
+    const PetscScalar* eigenvalues,   // Eigenvalues Σ_r (rank), NOT inverse
+    int rank,                         // Number of eigenpairs
+    bool have_complement,             // Whether we have μ = λ_{r+1}
+    PetscScalar mu,                   // Complement eigenvalue
+    Vec y_approx)                     // Output: eigenspace approximation
+{
+    // Step 1: Project RHS: b̃ = V_r^T b
+    Vec b_tilde;
+    VecCreateSeq(PETSC_COMM_SELF, rank, &b_tilde);
+    MatMultTranspose(V_r, b, b_tilde);
+
+    // Step 2: Solve in subspace: ỹ = Σ_r^{-1} b̃ (direct diagonal solve)
+    Vec y_tilde;
+    VecDuplicate(b_tilde, &y_tilde);
+
+    PetscScalar *b_tilde_data, *y_tilde_data;
+    VecGetArray(b_tilde, &b_tilde_data);
+    VecGetArray(y_tilde, &y_tilde_data);
+
+    for (int i = 0; i < rank; i++) {
+        if (eigenvalues[i] > 1e-14) {
+            y_tilde_data[i] = b_tilde_data[i] / eigenvalues[i];
+        } else {
+            y_tilde_data[i] = 0.0;
+            if (mpirank_world == 0 && !quietmode) {
+                printf("Warning: Eigenvalue %d = %e is too small, setting component to zero\n",
+                       i, eigenvalues[i]);
+            }
+        }
+    }
+
+    VecRestoreArray(b_tilde, &b_tilde_data);
+    VecRestoreArray(y_tilde, &y_tilde_data);
+
+    // Step 3: Lift to full space: y = V_r ỹ (top-r subspace part)
+    MatMult(V_r, y_tilde, y_approx);
+
+    // Step 4: Add complement space contribution: y += μ^{-1} (I - V_r V_r^T) b
+    if (have_complement && mu > 1e-14) {
+        Vec temp;
+        VecDuplicate(b, &temp);
+
+        // Compute V_r (V_r^T b) to get projection onto top-r subspace
+        Vec b_proj;
+        VecDuplicate(b, &b_proj);
+        MatMult(V_r, b_tilde, b_proj);  // Reuse b_tilde = V_r^T b from Step 1
+
+        // Compute complement: (I - V_r V_r^T) b = b - V_r (V_r^T b)
+        VecWAXPY(temp, -1.0, b_proj, b);  // temp = b - b_proj
+
+        // Add scaled complement to solution: y += μ^{-1} * temp
+        VecAXPY(y_approx, 1.0/mu, temp);
+
+        VecDestroy(&temp);
+        VecDestroy(&b_proj);
+    }
+
+    // Cleanup
+    VecDestroy(&b_tilde);
+    VecDestroy(&y_tilde);
 }
 
 

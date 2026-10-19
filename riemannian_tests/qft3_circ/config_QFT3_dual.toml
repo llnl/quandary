@@ -38,7 +38,7 @@ target = { type = "gate", gate_type = "qft", gate_rot_freq = [0.0, 0.0, 0.0] }
 objective = "Jtrace"
 # objective = "Jgeodesic_phasefree"
 tolerance = { grad_abs = 1e-05, grad_rel = 1e-05, final_cost = 1e-08, infidelity = 1e-06 }
-maxiter = 100
+maxiter = 200
 tikhonov = { coeff = 1e-05, use_x0 = false }
 penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0 }
 
@@ -46,33 +46,27 @@ penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedco
 solver_type = "gauss_newton"
 
 # Those apply to all gn solvers (normal eq and least squares)
-gn_maxiter = 100
-# gn_solver_mode = "primal"
+# gn_normaleq_damping = 1e-3
+gn_normaleq_damping = 1e-5
 gn_solver_mode = "dual"
 
-# experimental preconditioner (dual mode only)
+# options are "minres", "cg", "gmres", or "proj"
+gn_normaleq_solver = "minres"
+gn_normaleq_minres_qlp = true 
+gn_maxiter = 100 
+gn_rtol = 1e-5
+
+# Low-rank preconditioner
+gn_dual_precond_type="low_rank"
+gn_dual_precond_rank = 30
+gn_prec_update_interval = -1
+
+# preconditioner update interval (dual mode only)
 # keyword gn_prec_update_interval:
 # Disable: -2
 # Enable adaptive: -1
 # Only at first iteration: 0
 # every n iteration: n
-gn_prec_update_interval = -1
-gn_dual_precond_type="low_rank"
-gn_dual_precond_rank = 30
-
-# Those apply to solving the normal equation
-# gn_normaleq_damping = 1e-5
-gn_rtol = 1e-5
-gn_normaleq_damping = 1e-3
-# options are "minres", "cg", "gmres", or "proj"
-gn_normaleq_solver = "minres"
-# minres-qlp
-gn_normaleq_minres_qlp = true  
-
-# Those apply to solving the Least Squares problem
-# gn_leastsquares_solver = "BRGN"
-# gn_leastsquares_solver = "LSQR"
-# gn_leastsquares_damping = 1e-3
 
 [output]
 directory = "./"
@@ -87,4 +81,4 @@ runtype = "optimization"
 usematfree = true
 linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"
-rand_seed = 1122
+rand_seed = 1

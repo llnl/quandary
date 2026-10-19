@@ -54,7 +54,6 @@ penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedco
 
 # Switch between lbfgs and gauss_newton optimization
 solver_type = "lbfgs"
-lbfgs_lmm_vectors = 10   # Number of vector pairs stored in L-BFGS (default: 5)
 
 [output]
 directory = "./"

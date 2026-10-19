@@ -39,26 +39,20 @@ penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedco
 solver_type = "gauss_newton"
 
 # Those apply to all gn solver (normal eq and least squares)
-gn_maxiter = 100
-# gn_solver_mode = "primal"
+gn_normaleq_damping = 1e-5
 gn_solver_mode = "dual"
 
-# experimental preconditioner
+# Those apply to solving the normal equation
+# Iterative solve with given eigen-decomp
+gn_normaleq_solver = "minres"
+gn_normaleq_minres_qlp = true
+gn_maxiter = 100
+gn_rtol = 1e-5
+
+# Low-rank preconditioner
 gn_prec_update_interval = -1
 gn_dual_precond_type="low_rank"
 gn_dual_precond_rank = 10
-
-# Those apply to solving the normal equation
-gn_rtol = 1e-5
-gn_normaleq_damping = 1e-5
-gn_normaleq_solver = "proj"
-# minres-qlp
-gn_normaleq_minres_qlp = true
-
-# Those apply to solving the Least Squares problem
-# leastsquares_solver = "brgn"
-# leastsquares_solver = "lsqr"
-# leastsquares_damping = 1e-3
 
 [output]
 directory = "."

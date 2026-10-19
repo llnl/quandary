@@ -24,7 +24,8 @@ initial_condition = { type = "basis" }
 
 [control]
 control_only_p_drive = false
-parameterization = { type = "spline", num = 69 }
+# try piecewise constant basis functions
+parameterization = { type = "spline0", num = 69 }
 # parameterization = { type = "spline", num = 135 }
 carrier_frequency = [
   { subsystem = 0, value = [0.09041523150627062, -0.030001431826955832, -0.09041523150627152] },
@@ -55,22 +56,20 @@ penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedco
 # Switch between lbfgs and gauss_newton optimization
 solver_type = "gauss_newton"
 
-# Those apply to all gn solvers (normal eq and least squares)
-gn_maxiter = 300
-# gn_solver_mode = "primal"
-gn_solver_mode = "dual"
-
-# experimental preconditioner (dual mode only)
-gn_prec_update_interval = -1
-gn_dual_precond_type="low_rank"
-gn_dual_precond_rank = 100
-
 # Those apply to solving the normal equation
 gn_normaleq_damping = 1e-4
-gn_rtol = 1e-5
-# minres-qlp
+gn_solver_mode = "dual"
+
+# Those apply to all gn solvers (normal eq and least squares)
 gn_normaleq_solver = "minres"
-gn_normaleq_minres_qlp = true  
+gn_normaleq_minres_qlp = true 
+gn_maxiter = 300 
+gn_rtol = 1e-5
+
+# Low-rank preconditioner
+gn_dual_precond_type="low_rank"
+gn_dual_precond_rank = 150
+gn_prec_update_interval = -1
 
 [output]
 directory = "./"
@@ -80,7 +79,7 @@ optimization_stride = 1
 
 [solver]
 runtype = "optimization"
-# runtype = "matrix_save"
+#runtype = "matrix_save"
 usematfree = true
 linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"

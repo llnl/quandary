@@ -57,7 +57,6 @@ const double OPTIM_PENALTY_DPDM = 0.0; ///< Default second derivative penalty co
 const double OPTIM_PENALTY_ENERGY = 0.0; ///< Default energy penalty coefficient
 const double OPTIM_PENALTY_VARIATION = 0.01; ///< Default amplitude variation penalty coefficient
 const OptimSolverType OPTIM_SOLVER_TYPE = OptimSolverType::TAO_LBFGS; ///< Default optimization solver type
-const int LBFGS_LMM_VECTORS = 10; ///< Default number of vector pairs stored in L-BFGS limited memory
 const double GN_RTOL = 1e-3; ///< Default relative tolerance for Gauss-Newton inner solver
 const int GN_MAXITER = 100; ///< Default maximum iterations for the Gauss-Newton inner solver
 inline const std::string LEASTSQUARES_SOLVER = "lsqr"; ///< Default solver for Least Squares problem ("brgn" or "lsqr")
