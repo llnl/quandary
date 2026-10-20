@@ -79,7 +79,7 @@ def read_infidelity(seed_dir):
         print(f"Warning: Error reading {history_file}: {e}")
         return None
 
-def plot_seeds_infidelity(parent_dir='.', basename='seed', title_suffix='', show_individual=True, show_statistics=True):
+def plot_seeds_infidelity(parent_dir='.', basenames=None, title_suffix='', show_individual=True, show_statistics=True):
     """
     Plot infidelity convergence from all seed directories.
 
@@ -91,8 +91,8 @@ def plot_seeds_infidelity(parent_dir='.', basename='seed', title_suffix='', show
     ----------
     parent_dir : str
         Parent directory containing seed directories
-    basename : str
-        Basename pattern for seed directories (default: 'seed')
+    basenames : list of str
+        List of basename patterns for seed directories (default: ['seed'])
     title_suffix : str
         Optional suffix to add to title after directory name (default: '')
     show_individual : bool
@@ -100,119 +100,152 @@ def plot_seeds_infidelity(parent_dir='.', basename='seed', title_suffix='', show
     show_statistics : bool
         If True, plot mean and std bands (default: True)
     """
-    # Find all seed directories
-    seed_dirs = find_seed_directories(parent_dir, basename)
+    if basenames is None:
+        basenames = ['seed']
 
-    if len(seed_dirs) == 0:
-        print(f"Error: No {basename}_* directories found in {parent_dir}")
-        return
-
-    print(f"Found {len(seed_dirs)} seed directories")
-
-    # Read data from all seeds
-    all_data = []
-    for seed_dir in seed_dirs:
-        result = read_infidelity(seed_dir)
-        if result is not None:
-            all_data.append(result)
-
-    if len(all_data) == 0:
-        print("Error: No valid data found in any seed directory")
-        return
-
-    print(f"Successfully read data from {len(all_data)} seeds")
+    # Ensure basenames is a list
+    if isinstance(basenames, str):
+        basenames = [basenames]
 
     # Create figure
     fig, ax = plt.subplots(1, 1, figsize=(10, 6))
 
-    # Plot individual seeds
-    if show_individual:
-        for iteration, infidelity, seed_num in all_data:
-            ax.plot(iteration, infidelity,
-                   linestyle='-', linewidth=0.8, alpha=0.3,
-                   color='C0', label='_nolegend_')
+    # Color cycle for different basenames
+    colors = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
 
-        # Add one labeled line for the legend
-        ax.plot([], [], linestyle='-', linewidth=0.8, alpha=0.3,
-               color='C0', label=f'Individual seeds (n={len(all_data)})')
+    # Process each basename separately
+    for basename_idx, basename in enumerate(basenames):
+        color = colors[basename_idx % len(colors)]
 
-    # Compute and plot statistics on interpolated grid
-    if show_statistics and len(all_data) > 1:
-        # Find global infidelity range across all seeds
-        all_infidelities = np.concatenate([data[1] for data in all_data])
-        min_infidelity_global = np.min(all_infidelities)
-        max_infidelity_global = np.max(all_infidelities)
+        # Find all seed directories for this basename
+        seed_dirs = find_seed_directories(parent_dir, basename)
 
-        # Create infidelity grid (logarithmically spaced)
-        n_grid = 100
-        infidelity_grid = np.logspace(np.log10(min_infidelity_global),
-                                      np.log10(max_infidelity_global),
-                                      n_grid)
+        if len(seed_dirs) == 0:
+            print(f"Warning: No {basename}_* directories found in {parent_dir}")
+            continue
 
-        # For each seed, interpolate to find iteration at each infidelity level
-        iteration_at_infidelity = []
+        print(f"Found {len(seed_dirs)} directories for basename '{basename}'")
 
-        for iteration, infidelity, seed_num in all_data:
-            # Infidelity should be monotonically decreasing, but might have small increases
-            # Use only the decreasing envelope to avoid interpolation issues
+        # Read data from all seeds for this basename
+        all_data = []
+        for seed_dir in seed_dirs:
+            result = read_infidelity(seed_dir)
+            if result is not None:
+                all_data.append(result)
 
-            # Create monotonic decreasing infidelity by taking cumulative minimum
-            infidelity_mono = np.minimum.accumulate(infidelity)
+        if len(all_data) == 0:
+            print(f"Warning: No valid data found for basename '{basename}'")
+            continue
 
-            # Interpolate in log space (more stable for log-scale data)
-            # Need to reverse arrays since np.interp requires x to be increasing
-            iter_interp = np.interp(
-                np.log10(infidelity_grid),           # x values to interpolate at
-                np.log10(infidelity_mono)[::-1],     # x data (reversed - increasing)
-                iteration[::-1],                      # y data (reversed)
-                left=np.nan, right=np.nan             # NaN for out-of-range values
-            )
+        print(f"Successfully read data from {len(all_data)} seeds for '{basename}'")
 
-            iteration_at_infidelity.append(iter_interp)
+        # Create label for this dataset
+        if len(basenames) > 1:
+            dataset_label = basename.replace('_seed', '').replace('config_', '')
+        else:
+            dataset_label = None
 
-        # Convert to array: shape (n_seeds, n_grid)
-        iteration_at_infidelity = np.array(iteration_at_infidelity)
+        # Plot individual seeds
+        if show_individual:
+            for iteration, infidelity, seed_num in all_data:
+                ax.plot(iteration, infidelity,
+                       linestyle='-', linewidth=0.8, alpha=0.3,
+                       color=color, label='_nolegend_')
 
-        # Compute statistics (ignoring NaN values)
-        with np.errstate(invalid='ignore'):  # Suppress warnings for all-NaN slices
-            mean_iterations = np.nanmean(iteration_at_infidelity, axis=0)
-            std_iterations = np.nanstd(iteration_at_infidelity, axis=0)
-            min_iterations = np.nanmin(iteration_at_infidelity, axis=0)
-            max_iterations = np.nanmax(iteration_at_infidelity, axis=0)
+            # Add one labeled line for the legend
+            if dataset_label:
+                label = f'{dataset_label} individuals (n={len(all_data)})'
+            else:
+                label = f'Individual seeds (n={len(all_data)})'
+            ax.plot([], [], linestyle='-', linewidth=0.8, alpha=0.3,
+                   color=color, label=label)
 
-        # Only plot where we have valid data from ALL seeds
-        n_valid = np.sum(~np.isnan(iteration_at_infidelity), axis=0)
-        valid_mask = (n_valid == len(all_data))
+        # Compute and plot statistics on interpolated grid
+        if show_statistics and len(all_data) > 1:
+            # Find global infidelity range across all seeds
+            all_infidelities = np.concatenate([data[1] for data in all_data])
+            min_infidelity_global = np.min(all_infidelities)
+            max_infidelity_global = np.max(all_infidelities)
 
-        if np.any(valid_mask):
-            infidelity_valid = infidelity_grid[valid_mask]
-            mean_iter_valid = mean_iterations[valid_mask]
-            std_iter_valid = std_iterations[valid_mask]
-            min_iter_valid = min_iterations[valid_mask]
-            max_iter_valid = max_iterations[valid_mask]
+            # Create infidelity grid (logarithmically spaced)
+            n_grid = 100
+            infidelity_grid = np.logspace(np.log10(min_infidelity_global),
+                                          np.log10(max_infidelity_global),
+                                          n_grid)
 
-            # Plot mean
-            ax.plot(mean_iter_valid, infidelity_valid,
-                   linestyle='-', linewidth=2.5, color='red',
-                   marker='o', markersize=5, markevery=max(1, len(mean_iter_valid)//20),
-                   label='Mean', zorder=10)
+            # For each seed, interpolate to find iteration at each infidelity level
+            iteration_at_infidelity = []
 
-            # Plot standard deviation band
-            ax.fill_betweenx(infidelity_valid,
-                           mean_iter_valid - std_iter_valid,
-                           mean_iter_valid + std_iter_valid,
-                           alpha=0.2, color='red', label='±1 std dev')
+            for iteration, infidelity, seed_num in all_data:
+                # Infidelity should be monotonically decreasing, but might have small increases
+                # Use only the decreasing envelope to avoid interpolation issues
 
-            # Also show min and max
-            ax.plot(min_iter_valid, infidelity_valid,
-                   linestyle='--', linewidth=1.5, color='green',
-                   alpha=0.6, label='Min/Max', zorder=5)
-            ax.plot(max_iter_valid, infidelity_valid,
-                   linestyle='--', linewidth=1.5, color='green',
-                   alpha=0.6, label='_nolegend_', zorder=5)
+                # Create monotonic decreasing infidelity by taking cumulative minimum
+                infidelity_mono = np.minimum.accumulate(infidelity)
 
-            # Set y-axis limits: start where all seeds have data, end at 1.0
-            ax.set_ylim([np.min(infidelity_valid), 1.0])
+                # Interpolate in log space (more stable for log-scale data)
+                # Need to reverse arrays since np.interp requires x to be increasing
+                iter_interp = np.interp(
+                    np.log10(infidelity_grid),           # x values to interpolate at
+                    np.log10(infidelity_mono)[::-1],     # x data (reversed - increasing)
+                    iteration[::-1],                      # y data (reversed)
+                    left=np.nan, right=np.nan             # NaN for out-of-range values
+                )
+
+                iteration_at_infidelity.append(iter_interp)
+
+            # Convert to array: shape (n_seeds, n_grid)
+            iteration_at_infidelity = np.array(iteration_at_infidelity)
+
+            # Compute statistics (ignoring NaN values)
+            with np.errstate(invalid='ignore'):  # Suppress warnings for all-NaN slices
+                mean_iterations = np.nanmean(iteration_at_infidelity, axis=0)
+                std_iterations = np.nanstd(iteration_at_infidelity, axis=0)
+                min_iterations = np.nanmin(iteration_at_infidelity, axis=0)
+                max_iterations = np.nanmax(iteration_at_infidelity, axis=0)
+
+            # Only plot where we have valid data from ALL seeds
+            n_valid = np.sum(~np.isnan(iteration_at_infidelity), axis=0)
+            valid_mask = (n_valid == len(all_data))
+
+            if np.any(valid_mask):
+                infidelity_valid = infidelity_grid[valid_mask]
+                mean_iter_valid = mean_iterations[valid_mask]
+                std_iter_valid = std_iterations[valid_mask]
+                min_iter_valid = min_iterations[valid_mask]
+                max_iter_valid = max_iterations[valid_mask]
+
+                # Plot mean with dataset-specific color
+                if dataset_label:
+                    mean_label = f'{dataset_label} mean'
+                    std_label = f'{dataset_label} ±1σ'
+                else:
+                    mean_label = 'Mean'
+                    std_label = '±1 std dev'
+
+                ax.plot(mean_iter_valid, infidelity_valid,
+                       linestyle='-', linewidth=2.5, color=color,
+                       marker='o', markersize=5, markevery=max(1, len(mean_iter_valid)//20),
+                       label=mean_label, zorder=10)
+
+                # Plot standard deviation band
+                ax.fill_betweenx(infidelity_valid,
+                               mean_iter_valid - std_iter_valid,
+                               mean_iter_valid + std_iter_valid,
+                               alpha=0.2, color=color, label=std_label)
+
+                # Also show min and max
+                if dataset_label:
+                    minmax_label = f'{dataset_label} min/max'
+                else:
+                    minmax_label = 'Min/Max'
+
+                ax.plot(min_iter_valid, infidelity_valid,
+                       linestyle='--', linewidth=1.5, color=color,
+                       alpha=0.4, label=minmax_label, zorder=5)
+                ax.plot(max_iter_valid, infidelity_valid,
+                       linestyle='--', linewidth=1.5, color=color,
+                       alpha=0.4, label='_nolegend_', zorder=5)
 
     # Format plot
     # Get directory name for title
@@ -220,15 +253,15 @@ def plot_seeds_infidelity(parent_dir='.', basename='seed', title_suffix='', show
 
     # Build title with optional suffix
     if title_suffix:
-        title = f'Infidelity Convergence: {dir_name} {title_suffix} (n={len(all_data)} seeds)'
+        title = f'Infidelity Convergence: {dir_name} {title_suffix}'
     else:
-        title = f'Infidelity Convergence: {dir_name} (n={len(all_data)} seeds)'
+        title = f'Infidelity Convergence: {dir_name}'
 
     ax.set_xlabel('Iteration', fontsize=12)
     ax.set_ylabel('Infidelity', fontsize=12)
     ax.set_title(title, fontsize=14)
     ax.grid(True, alpha=0.3)
-    ax.legend(fontsize=10, loc='best')
+    ax.legend(fontsize=9, loc='best')
     ax.set_yscale('log')
 
     # Set y-axis limits and ticks to ensure 10^-6 and 1.0 are visible
@@ -246,25 +279,20 @@ def plot_seeds_infidelity(parent_dir='.', basename='seed', title_suffix='', show
     plt.tight_layout()
 
     # Save the figure
-    n_seeds = len(all_data)
+    # Create filename based on basenames
+    if len(basenames) == 1:
+        basename_str = basenames[0].replace('_seed', '')
+    else:
+        basename_str = 'comparison'
+
     if title_suffix:
         # Create filename-safe version of suffix (replace spaces and special chars)
         suffix_safe = title_suffix.replace(' ', '_').replace('/', '_').replace('\\', '_')
-        output_filename = os.path.join(parent_dir, f'seeds_infidelity_convergence_{suffix_safe}_n{n_seeds}.png')
+        output_filename = os.path.join(parent_dir, f'seeds_infidelity_{basename_str}_{suffix_safe}.png')
     else:
-        output_filename = os.path.join(parent_dir, f'seeds_infidelity_convergence_n{n_seeds}.png')
+        output_filename = os.path.join(parent_dir, f'seeds_infidelity_{basename_str}.png')
     plt.savefig(output_filename, dpi=300, bbox_inches='tight')
     print(f"Plot saved to: {output_filename}")
-
-    # Print summary statistics
-    if show_statistics and len(all_data) > 1:
-        print("\nSummary Statistics (Final Infidelity):")
-        final_infidelities = [data[1][-1] for data in all_data]
-        print(f"  Mean:   {np.mean(final_infidelities):.6e}")
-        print(f"  Std:    {np.std(final_infidelities):.6e}")
-        print(f"  Min:    {np.min(final_infidelities):.6e}")
-        print(f"  Max:    {np.max(final_infidelities):.6e}")
-        print(f"  Median: {np.median(final_infidelities):.6e}")
 
     # Show the plot
     print("\nDisplaying plot... Close the window to exit.")
@@ -276,11 +304,12 @@ if __name__ == "__main__":
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s                                                # Use current directory, default basename
-  %(prog)s qft2                                           # Specify parent directory
-  %(prog)s qft2 --suffix "MINRES+LR"                      # Add title suffix
-  %(prog)s . --basename "config_QFT2_dual_seed"           # Custom seed directory basename
-  %(prog)s . --basename "config_QFT2_lbfgs_seed" --suffix "L-BFGS"
+  %(prog)s                                                          # Default: current directory, seed_*
+  %(prog)s qft2                                                     # Specify parent directory
+  %(prog)s qft2 --suffix "MINRES+LR"                                # Add title suffix
+  %(prog)s . --basename "config_QFT2_dual_seed"                     # Single basename
+  %(prog)s . --basename "config_QFT2_lbfgs_seed" --suffix "L-BFGS"  # Single basename with suffix
+  %(prog)s . --basename "config_QFT2_dual_seed" "config_QFT2_lbfgs_seed"  # Compare two datasets
 
 Statistics:
   Mean and standard deviation are computed by interpolating on an infidelity grid.
@@ -306,8 +335,9 @@ Output:
     parser.add_argument(
         '--basename',
         type=str,
-        default='seed',
-        help='Basename pattern for seed directories (default: "seed", looks for seed_*)'
+        nargs='+',
+        default=['seed'],
+        help='Basename pattern(s) for seed directories (default: "seed", looks for seed_*). Can specify multiple for comparison.'
     )
 
     parser.add_argument(
