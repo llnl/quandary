@@ -324,11 +324,6 @@ void TimeStepper::solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_l
     /* Get the state at n-1. If Schroedinger solver, recompute it by taking a step backwards with the forward solver, otherwise get it from storage. */
     if (trajectory_states.size() > 0) VecCopy(trajectory_states[iinit_local][n-1], xprimal);
     else evolveFWD(tstop, tstart, xprimal);
-// printf("TEST: n = %d\n", n);
-// evolveFWD(tstop, tstart, xprimal);
-// VecView(xprimal, PETSC_VIEWER_STDOUT_WORLD);
-// VecCopy(trajectory_states[iinit_local][n-1], xprimal);
-// VecView(xprimal, PETSC_VIEWER_STDOUT_WORLD);
 
     /* Take one time step backwards for the adjoint */
     evolveBWD(tstop, tstart, xprimal, xadj, redgrad, true);

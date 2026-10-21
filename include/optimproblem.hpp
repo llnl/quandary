@@ -87,7 +87,7 @@ class OptimProblem {
   double tol_final_cost; ///< Stopping criterion based on objective function value
   double tol_infidelity; ///< Stopping criterion based on infidelity
   int maxiter; ///< Stopping criterion based on maximum number of iterations
-  Tao tao; ///< PETSc's TAO optimization solver
+  Tao tao_lbfgs; ///< PETSc's TAO LBFGS optimization solver
   double* mygrad; ///< Auxiliary gradient storage
   Vec xtmp; ///< Temporary vector storage
   int output_optimization_stride; ///< Write output files every N optimization iterations
@@ -199,6 +199,7 @@ class OptimProblem {
   double getTolGradAbs()    { return tol_grad_abs; };
   double getTolInfidelity()   { return tol_infidelity; };
   int getMPIrank_world() { return mpirank_world;};
+  int getMPIsize_world() { return mpisize_world;};
   int getMaxIter()     { return maxiter; };
   OptimTarget* getOptimTarget() { return optim_target; };
   Mat getGN_NormalEq_MatShell() { return GN_NormalEq_MatShell; };
@@ -541,27 +542,16 @@ class OptimProblem {
  */
 PetscErrorCode TaoMonitor(Tao tao,void*ptr);
 
-/**
- * @brief PETSc TAO interface routine for objective function evaluation.
- *
- * @param tao TAO solver object
- * @param x Design vector
- * @param f Pointer to store objective function value
- * @param ptr Pointer to user context (OptimProblem instance)
- * @return PetscErrorCode Error code
- */
-PetscErrorCode TaoEvalObjective(Tao tao, Vec x, PetscReal *f, void*ptr);
 
 /**
- * @brief PETSc TAO interface routine for gradient evaluation.
+ * @brief Synchronizes the solution vector across all MPI ranks at the start of each iteration. 
  *
  * @param tao TAO solver object
- * @param x Design vector
- * @param G Gradient vector
+ * @param iter Current iteration number
  * @param ptr Pointer to user context (OptimProblem instance)
  * @return PetscErrorCode Error code
  */
-PetscErrorCode TaoEvalGradient(Tao tao, Vec x, Vec G, void*ptr);
+PetscErrorCode TaoSynchronize(Tao tao, PetscInt iter, void*ptr);
 
 /**
  * @brief PETSc TAO interface routine for combined objective and gradient evaluation.
