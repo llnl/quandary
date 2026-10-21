@@ -417,7 +417,7 @@ class OptimProblem {
    * @param[in] z Input vector (preconditioned space)
    * @param[out] output Output vector (preconditioned space)
    */
-  static void GN_Dual_LowRank_MatMult(Mat A, const Vec z, Vec output);
+  static PetscErrorCode GN_Dual_LowRank_MatMult(Mat A, const Vec z, Vec output);
 
   /**
    * @brief Assembles the dense symmetrically preconditioned dual Gauss-Newton matrix

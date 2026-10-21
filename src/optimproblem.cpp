@@ -1744,7 +1744,7 @@ void OptimProblem::solve(Vec xinit) {
         double f = objective;
         VecNorm(G, NORM_2, &gnorm);
 
-        // Initialize low-rank preconditioner on first iteration (after gradient is available)
+        // Initialize low-rank preconditioner on first iteration (after forward solve is available)
         if (iter == 0 && gn_solver_mode == "dual" && enable_precond && gn_dual_precond_type == "low_rank") {
           if (mpirank_world == 0 && !quietmode) {
             printf("Initializing dual Gauss-Newton low-rank preconditioner (rank=%d)...\n", gn_dual_precond_rank);
@@ -1753,12 +1753,13 @@ void OptimProblem::solve(Vec xinit) {
           updateGaussNewtonDualPreconditionerLowRank(gn_dual_precond_rank);
         }
 
-        // Precondition the gradient: solve the Gauss-Newton system A(x)*Gprec = -G
+        // Solve for the Gauss-Newton system A(x)*Gprec = -G for the search direction (Gprec)
         // Choose solver based on gn_solver_mode configuration ("primal" or "dual")
         if (gn_solver_mode == "dual") {
           // Use dual formulation: (L L^T + λI) y = -∇_U J, then v = L^T y
           MatCreateVecs(GN_Dual_MatShell, nullptr, &y_zero_dual);
           VecZeroEntries(y_zero_dual);
+          // Calculate the initial guess for y_zero before the following call
           solveGaussNewtonDual(x_GN, y_zero_dual, Gprec);
           VecDestroy(&y_zero_dual);
           VecScale(Gprec, -1.0);
@@ -2441,7 +2442,7 @@ void OptimProblem::computeEigenspaceApproximation(
 
 
 // Apply M^{-1/2} A M^{-1/2} z
-void OptimProblem::GN_Dual_LowRank_MatMult(Mat A, const Vec z, Vec output){
+PetscErrorCode OptimProblem::GN_Dual_LowRank_MatMult(Mat A, const Vec z, Vec output){
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
 
@@ -2459,6 +2460,7 @@ void OptimProblem::GN_Dual_LowRank_MatMult(Mat A, const Vec z, Vec output){
   GN_Dual_LowRank_ApplyPrecond(A, temp, output);
 
   VecDestroy(&temp);
+  return 0;
 }
 
 
