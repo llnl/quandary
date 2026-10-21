@@ -101,19 +101,17 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   VecAssemblyBegin(xlower); VecAssemblyEnd(xlower);
   VecAssemblyBegin(xupper); VecAssemblyEnd(xupper);
 
-  /* Create TAO optimization solver */
-  TaoCreate(PETSC_COMM_SELF, &tao);
-  /* Set optimization type and parameters */
-  TaoSetType(tao, TAOBQNLS);
-  TaoSetMaximumIterations(tao, maxiter);
-  TaoSetTolerances(tao, tol_grad_abs, PETSC_DEFAULT, tol_grad_rel);
-  TaoMonitorSet(tao, TaoMonitor, (void*)this, NULL);
-  TaoSetVariableBounds(tao, xlower, xupper);
-  TaoSetFromOptions(tao);
-  /* Set user-defined objective and gradient evaluation routines */
-  TaoSetObjective(tao, TaoEvalObjective, (void *)this);
-  TaoSetGradient(tao, NULL, TaoEvalGradient,(void *)this);
-  TaoSetObjectiveAndGradient(tao, NULL, TaoEvalObjectiveAndGradient, (void*) this);
+  /* Create TAO optimization solver. */
+  // Each processor runs an independent TAO solver on the same replicated control vector. The control vector x is synchronized via the TaoSynchronize callback which is called at the start of each evaluation.
+  TaoCreate(PETSC_COMM_SELF, &tao_lbfgs);
+  TaoSetType(tao_lbfgs, TAOBQNLS);
+  TaoSetMaximumIterations(tao_lbfgs, maxiter);
+  TaoSetTolerances(tao_lbfgs, tol_grad_abs, PETSC_DEFAULT, tol_grad_rel);
+  TaoSetUpdate(tao_lbfgs, TaoSynchronize, (void*)this);  
+  TaoMonitorSet(tao_lbfgs, TaoMonitor, (void*)this, NULL);
+  TaoSetVariableBounds(tao_lbfgs, xlower, xupper);
+  TaoSetFromOptions(tao_lbfgs);
+  TaoSetObjectiveAndGradient(tao_lbfgs, NULL, TaoEvalObjectiveAndGradient, (void*) this);
 
   /* Allocate auxiliary vector */
   mygrad = new double[ndesign];
@@ -412,7 +410,7 @@ OptimProblem::~OptimProblem() {
     VecDestroy(&brgn_rhs);
     VecDestroy(&brgn_residual);
   }
-  TaoDestroy(&tao);
+  TaoDestroy(&tao_lbfgs);
 
   // Clean up workspace vectors
   for (int iinit = 0; iinit < ninit_local; iinit++) {
@@ -1664,8 +1662,8 @@ void OptimProblem::solve(Vec xinit) {
 
   switch (optim_solver_type) {
     case OptimSolverType::TAO_LBFGS:
-      TaoSetSolution(tao, xinit);
-      TaoSolve(tao);
+      TaoSetSolution(tao_lbfgs, xinit);
+      TaoSolve(tao_lbfgs);
       break;
 
     case OptimSolverType::GAUSS_NEWTON: {
@@ -1884,7 +1882,7 @@ void OptimProblem::getSolution(Vec* xopt){
   /* Get ref to optimized parameters */
   if (optim_solver_type == OptimSolverType::TAO_LBFGS) {
     Vec params;
-    TaoGetSolution(tao, &params);
+    TaoGetSolution(tao_lbfgs, &params);
     *xopt = params;
   } else if (optim_solver_type == OptimSolverType::GAUSS_NEWTON ||
              optim_solver_type == OptimSolverType::LEAST_SQUARES) {
@@ -1949,6 +1947,23 @@ bool OptimProblem::monitor(int iter, double f, double gnorm, double deltax){
   return lastIter;
 }
 
+PetscErrorCode TaoSynchronize(Tao tao, PetscInt iter, void*ptr){
+  OptimProblem* ctx = (OptimProblem*) ptr;
+
+  /* Get solution vector */
+  Vec x;
+  TaoGetSolution(tao, &x);
+
+  /* Synchronize x across all processors: Average solution from each rank. */
+  PetscScalar* xdata;
+  PetscErrorCode ierr = VecGetArray(x, &xdata);
+  MPI_Allreduce(MPI_IN_PLACE, xdata, ctx->getNdesign(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  VecRestoreArray(x, &xdata);
+  VecScale(x, 1.0 / ctx->getMPIsize_world());
+  return 0;
+}
+
+
 PetscErrorCode TaoMonitor(Tao tao,void*ptr){
   OptimProblem* ctx = (OptimProblem*) ptr;
 
@@ -1969,32 +1984,13 @@ PetscErrorCode TaoMonitor(Tao tao,void*ptr){
 
 
 PetscErrorCode TaoEvalObjectiveAndGradient(Tao tao, Vec x, PetscReal *f, Vec G, void*ptr){
-
-  TaoEvalGradient(tao, x, G, ptr);
   OptimProblem* ctx = (OptimProblem*) ptr;
-  *f = ctx->getObjective();
-  // *f = 1.0 - ctx->getFidelity();
 
-  return 0;
-}
-
-PetscErrorCode TaoEvalObjective(Tao /*tao*/, Vec x, PetscReal *f, void*ptr){
-
-  OptimProblem* ctx = (OptimProblem*) ptr;
-  *f = ctx->evalF(x, false);
-  
-  return 0;
-}
-
-
-PetscErrorCode TaoEvalGradient(Tao /*tao*/, Vec x, Vec G, void*ptr){
-
-  OptimProblem* ctx = (OptimProblem*) ptr;
   ctx->evalGradF(x, G, false);
-  
+  *f = ctx->getObjective();
+
   return 0;
 }
-
 
 void OptimProblem::updateGaussNewtonMatDense(){
   MatZeroEntries(GN_NormalEq_MatDense);
