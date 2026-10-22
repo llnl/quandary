@@ -312,7 +312,6 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     std::string leastsquares_solver_lower = toLower(leastsquares_solver);
     leastsquares_solver = leastsquares_solver_lower;
     leastsquares_damping = validators::field<double>(optimization_table, "leastsquares_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::LEASTSQUARES_DAMPING);
-    gn_normaleq_damping = validators::field<double>(optimization_table, "gn_normaleq_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::GN_NORMALEQ_DAMPING);
     gn_normaleq_solver = validators::field<std::string>(optimization_table, "gn_normaleq_solver").valueOr(ConfigDefaults::GN_NORMALEQ_SOLVER);
     gn_normaleq_minres_qlp = validators::field<bool>(optimization_table, "gn_normaleq_minres_qlp").valueOr(ConfigDefaults::GN_MINRES_QLP);
     gn_solver_mode = validators::field<std::string>(optimization_table, "gn_solver_mode").valueOr(ConfigDefaults::GN_SOLVER_MODE);
@@ -705,7 +704,6 @@ void Config::printConfig(std::stringstream& log) const {
   if (optim_solver_type == OptimSolverType::GAUSS_NEWTON) {
     log << "gn_rtol = " << gn_rtol << "\n";
     log << "gn_maxiter = " << gn_maxiter << "\n";
-    log << "gn_normaleq_damping = " << gn_normaleq_damping << "\n";
     log << "gn_normaleq_solver = \"" << gn_normaleq_solver << "\"\n";
     log << "gn_normaleq_minres_qlp = " << (gn_normaleq_minres_qlp ? "true" : "false") << "\n";
     log << "gn_solver_mode = \"" << gn_solver_mode << "\"\n";
