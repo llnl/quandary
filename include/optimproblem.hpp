@@ -454,11 +454,13 @@ class OptimProblem {
    * @param initial_guess Initial guess for iterative solver (in tangent space, size dim²-1)
    * @param v_out Solution vector (in design space, size ndesign)
    */
-  void solveGaussNewtonDual(Vec xinit, const Vec initial_guess, Vec v_out);
-  void solveGaussNewtonDualProjected(Vec xinit, Vec v_out);
+  Vec computeDualRHS();
   void computeEigenspaceApproximation(const Vec b, const Mat V_r,
       const PetscScalar* eigenvalues, int rank, bool have_complement,
       PetscScalar mu, Vec y_approx);
+  Vec computeEigenspaceInitialGuessFromStored(const Vec b_rhs);
+  bool solveGaussNewtonDual(Vec xinit, const Vec initial_guess, const Vec b_rhs, Vec v_out);
+  void solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec v_out);
 
   /**
    * @brief Solves the Gauss-Newton normal equation L^* L(x) v = b via eigenvalue decomposition

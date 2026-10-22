@@ -55,11 +55,6 @@ gn_normaleq_solver = "minres"
 # minres-qlp
 gn_normaleq_minres_qlp = true
 
-# Those apply to solving the Least Squares problem
-# leastsquares_solver = "brgn"
-# leastsquares_solver = "lsqr"
-# leastsquares_damping = 1e-3
-
 [output]
 directory = "."
 #directory = "./QFT2_includeW_params_init"

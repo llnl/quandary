@@ -967,27 +967,10 @@ void OptimProblem::solveGaussNewtonNormalEqKSP(Vec xinit, const Vec initial_gues
     printf("Gauss-Newton KSP (%s) stats: iterations = %d, residual norm = %1.14e\n", ksp_type, iters, rnorm);
   }
 }
-
-void OptimProblem::solveGaussNewtonDual(Vec xinit, const Vec initial_guess, Vec v_out){
-
-  // Check if using projected subspace solver instead of iterative KSP
-  std::string solver = gn_normaleq_solver;
-  std::string solver_lower;
-  for (char c : solver) solver_lower += std::tolower(c);
-
-  if (solver_lower == "proj") {
-    // Use projected subspace solver (no KSP iterations)
-    solveGaussNewtonDualProjected(xinit, v_out);
-    return;
-  }
-
-  // Otherwise proceed with standard KSP-based solver
-
-  // Store the point of evaluation for the Gauss-Newton matrix shell
-  VecCopy(xinit, xeval_GN);
-  nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
-
+Vec OptimProblem::computeDualRHS(){
   // Compute RHS: b = -∇_U J projected to tangent space
+  // This assumes evalGradF() has already been called, so final states are available
+
   Vec b;
   GN_Dual_MatCreateVecs(GN_Dual_MatShell, nullptr, &b);
 
@@ -1047,43 +1030,25 @@ void OptimProblem::solveGaussNewtonDual(Vec xinit, const Vec initial_guess, Vec 
   // Scale to get b = -∇_U J
   VecScale(b, -1.0);
 
+  return b;
+}
+
+bool OptimProblem::solveGaussNewtonDual(Vec xinit, const Vec initial_guess, const Vec b_rhs, Vec v_out){
+
+  // KSP-based dual solver (solver mode dispatch handled by caller)
+  // Returns: true if eigendecomposition appears stale, false otherwise
+  // Store the point of evaluation for the Gauss-Newton matrix shell
+  VecCopy(xinit, xeval_GN);
+  nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
+
+  // Use passed RHS (computed by caller)
+  const Vec b = b_rhs;
+
   // Set the matrix operators
   KSPSetOperators(ksp_GN_Dual, GN_Dual_MatShell, GN_Dual_MatShell);
 
-  // Set initial guess (in tangent space)
-  // Check if low-rank preconditioner will be used (defined later but needed here)
-  bool use_lowrank_check = (gn_prec_update_interval >= 0 || gn_prec_update_interval == -1) && (gn_dual_precond_type == "low_rank");
-
-  if (use_lowrank_check && gn_dual_lowrank_U != nullptr) {
-    // Convert stored eigendata to format needed by computeEigenspaceApproximation
-    // Eigenvalues: need Σ_r (not Σ_r^{-1/2}) for the function
-    int rank = gn_dual_precond_rank;
-    PetscScalar *eigenvalues = new PetscScalar[rank];
-
-    // Extract eigenvalues from stored Σ_r^{-1/2}: Σ_r = (Σ_r^{-1/2})^{-2}
-    PetscScalar *sigma_invsqrt_data;
-    VecGetArray(gn_dual_lowrank_sigma_invsqrt, &sigma_invsqrt_data);
-    for (int i = 0; i < rank; i++) {
-        eigenvalues[i] = 1.0 / (sigma_invsqrt_data[i] * sigma_invsqrt_data[i]);
-    }
-    VecRestoreArray(gn_dual_lowrank_sigma_invsqrt, &sigma_invsqrt_data);
-
-    // Check if complement is available (μ > 0)
-    bool have_complement = (gn_dual_precond_mu > 0.0);
-
-    // Compute eigenspace approximation from RHS b and stored eigendecomposition
-    computeEigenspaceApproximation(b, gn_dual_lowrank_U, eigenvalues, rank,
-                                   have_complement, gn_dual_precond_mu, y_dual_workspace);
-
-    delete[] eigenvalues;
-
-    if (mpirank_world == 0 && !quietmode) {
-        printf("  Using precomputed eigenspace approximation as initial guess (rank %d)\n", rank);
-    }
-  } else {
-    // Use provided initial guess (typically zero)
-    VecCopy(initial_guess, y_dual_workspace);
-  }
+  // Use provided initial guess (computed by caller with eigenspace approximation if appropriate)
+  VecCopy(initial_guess, y_dual_workspace);
   KSPSetInitialGuessNonzero(ksp_GN_Dual, PETSC_TRUE);
 
   // Monitor residual and solution norm at every iteration
@@ -1191,10 +1156,8 @@ void OptimProblem::solveGaussNewtonDual(Vec xinit, const Vec initial_guess, Vec 
     }
   }
 
-  // Cleanup
-  VecDestroy(&b);
-
   // Recover primal solution: v = L^T y (use pure Jacobian transpose for dual mode)
+  // Note: b is not destroyed here since it's passed as a parameter
   GN_Jacobian_MatMultTranspose(GN_Dual_MatShell, y_dual_workspace, v_out);
 
   // Report convergence
@@ -1209,15 +1172,59 @@ void OptimProblem::solveGaussNewtonDual(Vec xinit, const Vec initial_guess, Vec 
     KSPType ksp_type;
     KSPGetType(ksp_GN_Dual, &ksp_type);
     printf("Gauss-Newton Dual KSP (%s) stats: iterations = %d, residual norm = %1.14e\n", ksp_type, iters, rnorm);
+
+    // Print convergence reason for debugging
+    const char* reason_str = KSPConvergedReasons[reason];
+    printf("  KSP Convergence Reason: %s (code %d)\n", reason_str, (int)reason);
+
+    // Print tolerances for debugging DTOL issues
+    PetscReal rtol, abstol, dtol;
+    PetscInt maxits;
+    KSPGetTolerances(ksp_GN_Dual, &rtol, &abstol, &dtol, &maxits);
+    printf("  KSP Tolerances: rtol=%e, abstol=%e, dtol=%e, maxits=%d\n", rtol, abstol, dtol, (int)maxits);
   }
+
+  // Detect stale eigendecomposition and return flag to caller
+  bool eigendecomp_is_stale = false;
+  std::string stale_reason = "";
+
+  // Check 1: KSP diverged
+  if (reason < 0) {
+    eigendecomp_is_stale = true;
+    stale_reason = "KSP diverged";
+  }
+
+  // Check 2: Large initial residual (only if we used low-rank preconditioner)
+  if (!eigendecomp_is_stale && use_lowrank_precond) {
+    // Check if initial guess led to huge residual
+    // For well-conditioned eigenspace approximation, initial residual should be moderate
+    // If r_0 is very large compared to ||b||, eigendecomposition is likely stale
+
+    double b_norm;
+    VecNorm(b_rhs, NORM_2, &b_norm);
+
+    // Heuristic: if initial residual > 100 * ||b||, eigendecomposition is suspect
+    if (iters == 0 && rnorm > 100.0 * b_norm) {
+      eigendecomp_is_stale = true;
+      stale_reason = "Initial residual too large";
+    }
+  }
+
+  if (eigendecomp_is_stale && mpirank_world == 0 && !quietmode) {
+    printf("  WARNING: Stale eigendecomposition detected (%s)\n", stale_reason.c_str());
+    printf("  Signaling preconditioner recomputation needed\n");
+  }
+
+  return eigendecomp_is_stale;
 }
 
 
-void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, Vec v_out){
+void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec v_out){
   // Projected subspace solver for dual Gauss-Newton system
+  // NOTE: Re-computes the eigendecomposition at every call
   // Algorithm:
   //   1. Compute eigendecomposition: (L L^T + λI) V_r = Σ_r V_r (r largest eigenvalues)
-  //   2. Form RHS: b = -∇_U J in tangent space
+  //   2. Use passed RHS: b = -∇_U J in tangent space
   //   3. Project: b̃ = V_r^T b
   //   4. Solve in subspace: ỹ = Σ_r^{-1} b̃ (direct diagonal solve)
   //   5. Lift to full space: y = V_r ỹ
@@ -1227,52 +1234,11 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, Vec v_out){
   VecCopy(xinit, xeval_GN);
   nonlinear_forward_valid = false;
 
-  // Compute RHS: b = -∇_U J
-  Vec b;
-  GN_Dual_MatCreateVecs(GN_Dual_MatShell, nullptr, &b);
+  // Use passed RHS
+  const Vec b = b_rhs;
 
   PetscInt tangent_dim;
   VecGetSize(b, &tangent_dim);
-
-  // Get U(T) from optim_target
-  Mat U_final_re = optim_target->getFinalUnitaryRe();
-  Mat U_final_im = optim_target->getFinalUnitaryIm();
-
-  // Compute J(U(T)) needed for ∇_U J
-  double obj_cost_re = 0.0;
-  double obj_cost_im = 0.0;
-  for (int iinit = 0; iinit < ninit_local; iinit++) {
-    int iinit_global = mpirank_init * ninit_local + iinit;
-    optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
-    double obj_lin_iinit_re = 0.0;
-    double obj_lin_iinit_im = 0.0;
-    Vec ui = timestepper->getFinalState(iinit);
-    optim_target->evalJ(ui, &obj_lin_iinit_re, &obj_lin_iinit_im);
-    obj_cost_re += obj_weights[iinit] * obj_lin_iinit_re;
-    obj_cost_im += obj_weights[iinit] * obj_lin_iinit_im;
-  }
-  MPI_Allreduce(MPI_IN_PLACE, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, comm_init);
-  MPI_Allreduce(MPI_IN_PLACE, &obj_cost_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
-
-  // Compute -∇_U J and project to tangent space
-  PetscScalar *b_data;
-  VecGetArray(b, &b_data);
-  for (int iinit = 0; iinit < ninit_local; iinit++) {
-    int iinit_global = mpirank_init * ninit_local + iinit;
-    Vec ui = timestepper->getFinalState(iinit);
-    Vec b_iinit = wsub_workspace[iinit];
-    VecCopy(ui, b_iinit);
-    double obj_cost_re_bar, obj_cost_im_bar;
-    VecScale(b_iinit, 2.0 / mastereq->getDim());
-    optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
-    optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
-    double scale = 1.0 / mastereq->getDim();
-    optim_target->evalJ_diff(ui, b_iinit, scale*obj_cost_re_bar, scale*obj_cost_im_bar);
-    GellMann::projectVecToTangentSpace(b_iinit, U_final_re, U_final_im, mastereq->getDim(), iinit_global, b_data);
-  }
-  MPI_Allreduce(MPI_IN_PLACE, b_data, tangent_dim, MPIU_SCALAR, MPI_SUM, comm_init);
-  VecRestoreArray(b, &b_data);
-  VecScale(b, -1.0);
 
   // Apply damping to the operator
   if (gn_normaleq_damping > 0.0) {
@@ -1468,8 +1434,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, Vec v_out){
     MatShift(GN_Dual_MatShell, -gn_normaleq_damping);
   }
 
-  // Cleanup
-  VecDestroy(&b);
+  // Cleanup (b_rhs is destroyed by caller)
   MatDestroy(&V_r);
   delete[] eigenvalues;
 
@@ -1752,14 +1717,83 @@ void OptimProblem::solve(Vec xinit) {
         }
 
         // Solve for the Gauss-Newton system A(x)*Gprec = -G for the search direction (Gprec)
-        // Choose solver based on gn_solver_mode configuration ("primal" or "dual")
-        if (gn_solver_mode == "dual") {
-          // Use dual formulation: (L L^T + λI) y = -∇_U J, then v = L^T y
-          MatCreateVecs(GN_Dual_MatShell, nullptr, &y_zero_dual);
-          VecZeroEntries(y_zero_dual);
-          // Calculate the initial guess for y_zero before the following call
-          solveGaussNewtonDual(x_GN, y_zero_dual, Gprec);
-          VecDestroy(&y_zero_dual);
+        // Dispatch based on solver configuration
+        std::string solver = gn_normaleq_solver;
+        std::string solver_lower;
+        for (char c : solver) solver_lower += std::tolower(c);
+
+        if (gn_solver_mode == "dual" && solver_lower == "proj") {
+          // Projected eigenspace solver: compute RHS, then solve
+          Vec b_rhs = computeDualRHS();
+          solveGaussNewtonDualProjected(x_GN, b_rhs, Gprec);
+          VecDestroy(&b_rhs);
+          VecScale(Gprec, -1.0);
+        } else if (gn_solver_mode == "dual") {
+          // KSP-based dual solver: prepare RHS and initial guess
+
+          // 1. Compute RHS: b = -∇_U J projected to tangent space
+          Vec b_rhs = computeDualRHS();
+
+          // 2. Compute initial guess using precomputed eigendecomposition
+          Vec y_initial;
+          bool use_lowrank = (gn_prec_update_interval >= 0 || gn_prec_update_interval == -1) &&
+                             (gn_dual_precond_type == "low_rank");
+
+          if (use_lowrank && gn_dual_lowrank_U != nullptr) {
+            // Compute initial guess from stored eigendecomposition
+            y_initial = computeEigenspaceInitialGuessFromStored(b_rhs);
+
+            if (mpirank_world == 0 && !quietmode) {
+              printf("  Using precomputed eigenspace approximation as initial guess (rank %d)\n", gn_dual_precond_rank);
+            }
+          } else {
+            // Use zero initial guess
+            VecDuplicate(b_rhs, &y_initial);
+            VecZeroEntries(y_initial);
+          }
+
+          // 3. Solve system with prepared data
+          bool precond_is_stale = solveGaussNewtonDual(x_GN, y_initial, b_rhs, Gprec);
+
+          // If eigendecomposition is stale, force immediate recomputation and retry
+          if (precond_is_stale && gn_dual_precond_type == "low_rank") {
+            if (mpirank_world == 0 && !quietmode) {
+              printf("  Recomputing eigendecomposition at current point...\n");
+            }
+
+            // Recompute eigendecomposition
+            setGaussNewtonEvalPoint(x_GN);
+            updateGaussNewtonDualPreconditionerLowRank(gn_dual_precond_rank);
+
+            // Recompute initial guess with fresh eigendecomposition
+            VecDestroy(&y_initial);
+            if (gn_dual_lowrank_U != nullptr) {
+              y_initial = computeEigenspaceInitialGuessFromStored(b_rhs);
+
+              if (mpirank_world == 0 && !quietmode) {
+                printf("  Retrying solve with fresh eigenspace approximation...\n");
+              }
+            } else {
+              // Fallback to zero initial guess
+              VecDuplicate(b_rhs, &y_initial);
+              VecZeroEntries(y_initial);
+            }
+
+            // Retry solve with fresh preconditioner
+            precond_is_stale = solveGaussNewtonDual(x_GN, y_initial, b_rhs, Gprec);
+
+            if (precond_is_stale && mpirank_world == 0 && !quietmode) {
+              printf("  WARNING: Solve still problematic after eigendecomposition update\n");
+            }
+
+            // Reset accumulator since we just updated
+            if (gn_prec_update_interval == -1) {
+              gn_dual_ksp_excess_accum = 0;
+            }
+          }
+
+          VecDestroy(&b_rhs);
+          VecDestroy(&y_initial);
           VecScale(Gprec, -1.0);
 
           // Update baseline KSP iterations after preconditioner formation
@@ -1770,7 +1804,7 @@ void OptimProblem::solve(Vec xinit) {
             }
           }
         } else {
-          // Use primal formulation via normal equations KSP solver: (L^T L + λI) v = -G
+          // Primal formulation via normal equations KSP solver: (L^T L + λI) v = -G
           VecDuplicate(x_GN, &v_zero);
           Vec neg_G;
           VecDuplicate(G, &neg_G);
@@ -1928,8 +1962,20 @@ bool OptimProblem::monitor(int iter, double f, double gnorm, double deltax){
 
   /* Every <output_optimization_stride> iterations: Output of optimization history */
   if (iter % getOutputOptimizationStride() == 0 || lastIter) {
-    // Add to optimization history file 
-    getOutput()->writeOptimFile(iter, f, gnorm, deltax, F_avg, obj_cost, obj_regul, obj_penal_leakage, obj_penal_dpdm, obj_penal_energy, obj_penal_variation, obj_penal_weightedcost, ksp_iters_last);
+    // Compute norm of control vector, normalized by sqrt(D)
+    double xnorm;
+    if (optim_solver_type == OptimSolverType::TAO_LBFGS) {
+      Vec params;
+      TaoGetSolution(tao_lbfgs, &params);
+      VecNorm(params, NORM_2, &xnorm);
+    } else {
+      VecNorm(x_GN, NORM_2, &xnorm);
+    }
+    // Normalize by sqrt(D) where D is the dimension
+    xnorm /= std::sqrt(static_cast<double>(ndesign));
+
+    // Add to optimization history file
+    getOutput()->writeOptimFile(iter, f, gnorm, deltax, F_avg, obj_cost, obj_regul, obj_penal_leakage, obj_penal_dpdm, obj_penal_energy, obj_penal_variation, obj_penal_weightedcost, ksp_iters_last, xnorm);
     // Screen output 
     if (getMPIrank_world() == 0) {
       std::cout<< iter <<  "  " << std::scientific<<std::setprecision(14) << obj_cost << " + " << obj_regul << " + " << obj_penal_leakage << " + " << obj_penal_dpdm << " + " << obj_penal_energy << " + " << obj_penal_variation << " + " << obj_penal_weightedcost;
@@ -2434,6 +2480,33 @@ void OptimProblem::computeEigenspaceApproximation(
     // Cleanup
     VecDestroy(&b_tilde);
     VecDestroy(&y_tilde);
+}
+
+Vec OptimProblem::computeEigenspaceInitialGuessFromStored(const Vec b_rhs){
+  // Compute initial guess using stored low-rank eigendecomposition
+  // Requires: gn_dual_lowrank_U, gn_dual_lowrank_sigma_invsqrt, gn_dual_precond_mu
+  // to be already computed by updateGaussNewtonDualPreconditionerLowRank()
+
+  int rank = gn_dual_precond_rank;
+
+  // Convert stored Σ_r^{-1/2} to Σ_r for eigenspace approximation
+  PetscScalar *eigenvalues = new PetscScalar[rank];
+  PetscScalar *sigma_invsqrt_data;
+  VecGetArray(gn_dual_lowrank_sigma_invsqrt, &sigma_invsqrt_data);
+  for (int i = 0; i < rank; i++) {
+    eigenvalues[i] = 1.0 / (sigma_invsqrt_data[i] * sigma_invsqrt_data[i]);
+  }
+  VecRestoreArray(gn_dual_lowrank_sigma_invsqrt, &sigma_invsqrt_data);
+
+  // Compute eigenspace approximation: y ≈ M^{-1} b
+  Vec y_initial;
+  VecDuplicate(b_rhs, &y_initial);
+  bool have_complement = (gn_dual_precond_mu > 0.0);
+  computeEigenspaceApproximation(b_rhs, gn_dual_lowrank_U, eigenvalues, rank,
+                                 have_complement, gn_dual_precond_mu, y_initial);
+  delete[] eigenvalues;
+
+  return y_initial;
 }
 
 

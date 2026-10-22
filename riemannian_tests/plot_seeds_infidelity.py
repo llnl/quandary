@@ -49,7 +49,7 @@ def read_infidelity(seed_dir):
 
     Returns
     -------
-    tuple (iteration, infidelity, seed_num) or None if file not found/readable
+    tuple (iteration, infidelity, seed_num, x0_norm) or None if file not found/readable
     """
     history_file = os.path.join(seed_dir, 'optim_history.dat')
 
@@ -67,13 +67,16 @@ def read_infidelity(seed_dir):
         iteration = data[:, 0].astype(int)
         infidelity = data[:, 5]  # Column 6 (1-indexed) = index 5 (0-indexed)
 
+        # Extract initial control vector norm (column 13 = index 12)
+        x0_norm = data[0, 12] if data.shape[1] >= 13 else None
+
         # Extract seed number from directory name
         # Pattern: {basename}_XXXX -> extract XXXX as integer
         seed_name = os.path.basename(seed_dir)
         # Get the part after the last underscore
         seed_num = int(seed_name.split('_')[-1])
 
-        return (iteration, infidelity, seed_num)
+        return (iteration, infidelity, seed_num, x0_norm)
 
     except Exception as e:
         print(f"Warning: Error reading {history_file}: {e}")
@@ -139,6 +142,25 @@ def plot_seeds_infidelity(parent_dir='.', basenames=None, title_suffix='', show_
 
         print(f"Successfully read data from {len(all_data)} seeds for '{basename}'")
 
+        # Filter out traces that stop at infidelity > 1.2e-6
+        filtered_data = []
+        threshold = 1.2e-6
+        for iteration, infidelity, seed_num, x0_norm in all_data:
+            final_infidelity = infidelity[-1]
+            if final_infidelity <= threshold:
+                filtered_data.append((iteration, infidelity, seed_num, x0_norm))
+            else:
+                print(f"  Excluding seed {seed_num}: stopped at infidelity {final_infidelity:.2e} > {threshold:.2e}")
+
+        if len(filtered_data) == 0:
+            print(f"Warning: No seeds reached infidelity <= {threshold:.2e} for basename '{basename}'")
+            continue
+
+        print(f"Using {len(filtered_data)} seeds that reached infidelity <= {threshold:.2e} (excluded {len(all_data) - len(filtered_data)})")
+
+        # Use filtered data from here on
+        all_data = filtered_data
+
         # Create label for this dataset
         if len(basenames) > 1:
             dataset_label = basename.replace('_seed', '').replace('config_', '')
@@ -147,7 +169,7 @@ def plot_seeds_infidelity(parent_dir='.', basenames=None, title_suffix='', show_
 
         # Plot individual seeds
         if show_individual:
-            for iteration, infidelity, seed_num in all_data:
+            for iteration, infidelity, seed_num, x0_norm in all_data:
                 ax.plot(iteration, infidelity,
                        linestyle='-', linewidth=0.8, alpha=0.3,
                        color=color, label='_nolegend_')
@@ -176,7 +198,7 @@ def plot_seeds_infidelity(parent_dir='.', basenames=None, title_suffix='', show_
             # For each seed, interpolate to find iteration at each infidelity level
             iteration_at_infidelity = []
 
-            for iteration, infidelity, seed_num in all_data:
+            for iteration, infidelity, seed_num, x0_norm in all_data:
                 # Infidelity should be monotonically decreasing, but might have small increases
                 # Use only the decreasing envelope to avoid interpolation issues
 
@@ -298,6 +320,158 @@ def plot_seeds_infidelity(parent_dir='.', basenames=None, title_suffix='', show_
     print("\nDisplaying plot... Close the window to exit.")
     plt.show(block=True)
 
+def plot_convergence_vs_initial_norm(parent_dir='.', basenames=None, title_suffix=''):
+    """
+    Create scatter plot of iterations to convergence vs initial control vector norm.
+
+    Parameters
+    ----------
+    parent_dir : str
+        Parent directory containing seed subdirectories
+    basenames : list of str
+        List of basename patterns for seed directories (default: ['seed'])
+    title_suffix : str
+        Optional suffix to add to title and filename (default: '')
+    """
+    if basenames is None:
+        basenames = ['seed']
+
+    # Ensure basenames is a list
+    if isinstance(basenames, str):
+        basenames = [basenames]
+
+    # Create figure
+    fig, ax = plt.subplots(1, 1, figsize=(10, 6))
+
+    # Color cycle for different basenames
+    colors = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
+
+    # Process each basename separately
+    for basename_idx, basename in enumerate(basenames):
+        color = colors[basename_idx % len(colors)]
+
+        # Find all seed directories for this basename
+        seed_dirs = find_seed_directories(parent_dir, basename)
+
+        if len(seed_dirs) == 0:
+            print(f"Warning: No {basename}_* directories found in {parent_dir}")
+            continue
+
+        print(f"Found {len(seed_dirs)} directories for basename '{basename}'")
+
+        # Read data from all seeds for this basename
+        all_data = []
+        for seed_dir in seed_dirs:
+            result = read_infidelity(seed_dir)
+            if result is not None:
+                all_data.append(result)
+
+        if len(all_data) == 0:
+            print(f"Warning: No valid data found for basename '{basename}'")
+            continue
+
+        print(f"Successfully read data from {len(all_data)} seeds for '{basename}'")
+
+        # Filter out traces that stop at infidelity > 1.2e-6 and extract convergence data
+        threshold = 1.2e-6
+        x0_norms = []
+        xf_norms = []
+        iters_to_converge = []
+
+        for iteration, infidelity, seed_num, x0_norm in all_data:
+            final_infidelity = infidelity[-1]
+            if final_infidelity <= threshold and x0_norm is not None:
+                # Read final control norm from the same file
+                seed_dir = seed_dirs[seed_num - 1] if seed_num <= len(seed_dirs) else None
+                if seed_dir:
+                    history_file = os.path.join(seed_dir, 'optim_history.dat')
+                    try:
+                        data = np.loadtxt(history_file, skiprows=1)
+                        if data.ndim == 1:
+                            data = data.reshape(1, -1)
+                        xf_norm = data[-1, 12] if data.shape[1] >= 13 else None
+                        if xf_norm is not None:
+                            x0_norms.append(x0_norm)
+                            xf_norms.append(xf_norm)
+                            iters_to_converge.append(iteration[-1])  # Last iteration number
+                        else:
+                            print(f"  Excluding seed {seed_num}: no final norm data")
+                    except:
+                        print(f"  Excluding seed {seed_num}: error reading final norm")
+            else:
+                if x0_norm is None:
+                    print(f"  Excluding seed {seed_num}: no initial norm data")
+                else:
+                    print(f"  Excluding seed {seed_num}: stopped at infidelity {final_infidelity:.2e} > {threshold:.2e}")
+
+        if len(x0_norms) == 0:
+            print(f"Warning: No seeds with valid convergence data for basename '{basename}'")
+            continue
+
+        print(f"Using {len(x0_norms)} seeds with valid convergence data (excluded {len(all_data) - len(x0_norms)})")
+
+        # Create label for this dataset
+        if len(basenames) > 1:
+            dataset_label = basename.replace('_seed', '').replace('config_', '')
+        else:
+            dataset_label = None
+
+        # Scatter plot - initial and final norms
+        if dataset_label:
+            label_init = f'{dataset_label} initial (n={len(x0_norms)})'
+            label_final = f'{dataset_label} final'
+        else:
+            label_init = f'Initial norm (n={len(x0_norms)})'
+            label_final = f'Final norm'
+
+        # Plot initial norms with circles
+        ax.scatter(x0_norms, iters_to_converge,
+                  s=80, alpha=0.6, color=color, label=label_init,
+                  marker='o', edgecolors='black', linewidth=0.5)
+
+        # Plot final norms with squares
+        ax.scatter(xf_norms, iters_to_converge,
+                  s=80, alpha=0.6, color=color, label=label_final,
+                  marker='s', edgecolors='black', linewidth=0.5)
+
+    # Format plot
+    # Get directory name for title
+    dir_name = os.path.basename(os.path.abspath(parent_dir))
+
+    # Build title with optional suffix
+    if title_suffix:
+        title = f'Convergence vs Initial Control Norm: {dir_name} {title_suffix}'
+    else:
+        title = f'Convergence vs Initial Control Norm: {dir_name}'
+
+    ax.set_xlabel('Control Vector Norm ||x||/√D', fontsize=12)
+    ax.set_ylabel('Iterations to Convergence', fontsize=12)
+    ax.set_title(title, fontsize=14)
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=9, loc='best', ncol=2)
+
+    plt.tight_layout()
+
+    # Save the figure
+    # Create filename based on basenames
+    if len(basenames) == 1:
+        basename_str = basenames[0].replace('_seed', '')
+    else:
+        basename_str = 'comparison'
+
+    if title_suffix:
+        # Create filename-safe version of suffix (replace spaces and special chars)
+        suffix_safe = title_suffix.replace(' ', '_').replace('/', '_').replace('\\', '_')
+        output_filename = os.path.join(parent_dir, f'convergence_vs_x0norm_{basename_str}_{suffix_safe}.png')
+    else:
+        output_filename = os.path.join(parent_dir, f'convergence_vs_x0norm_{basename_str}.png')
+    plt.savefig(output_filename, dpi=300, bbox_inches='tight')
+    print(f"Scatter plot saved to: {output_filename}")
+
+    # Show the plot
+    print("\nDisplaying scatter plot... Close the window to exit.")
+    plt.show(block=True)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Plot infidelity convergence from multiple seed directories.',
@@ -366,10 +540,18 @@ Output:
         print(f"Error: Directory '{args.directory}' does not exist")
         sys.exit(1)
 
+    # Plot infidelity convergence
     plot_seeds_infidelity(
         args.directory,
         args.basename,
         args.suffix,
         show_individual=not args.no_individual,
         show_statistics=not args.no_statistics
+    )
+
+    # Plot convergence vs initial norm scatter plot
+    plot_convergence_vs_initial_norm(
+        args.directory,
+        args.basename,
+        args.suffix
     )

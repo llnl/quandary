@@ -20,16 +20,16 @@ def plot_objective(filenames):
     if isinstance(filenames, str):
         filenames = [filenames]
 
-    # First pass: check if inner residual column exists (column 13 = index 12)
-    has_inner_residual = False
+    # First pass: check if control norm column exists (column 13 = index 12)
+    has_control_norm = False
     for filename in filenames:
         data = np.loadtxt(filename, skiprows=1)
         if data.ndim == 2 and data.shape[1] >= 13:
-            has_inner_residual = True
+            has_control_norm = True
             break
 
     # Create figure with three or four subplots depending on data availability
-    if has_inner_residual:
+    if has_control_norm:
         fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(10, 18))
     else:
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 14))
@@ -55,11 +55,11 @@ def plot_objective(filenames):
         tikhonov = data[:, 6]    # Column 7 (1-indexed) = index 6 (0-indexed)
         ksp_iters = data[:, 11].astype(int)
 
-        # Extract inner residual if available
-        if has_inner_residual and data.shape[1] >= 13:
-            inner_residual = data[:, 12]  # Column 13 (1-indexed) = index 12 (0-indexed)
+        # Extract control norm if available
+        if has_control_norm and data.shape[1] >= 13:
+            control_norm = data[:, 12]  # Column 13 (1-indexed) = index 12 (0-indexed)
         else:
-            inner_residual = None
+            control_norm = None
 
         # Extract label from filename (remove path and extension)
         import os
@@ -87,9 +87,9 @@ def plot_objective(filenames):
                 linewidth=2, markersize=4, alpha=0.7,
                 label=label, color=f'C{idx}', markevery=marker_every)
 
-        # Fourth subplot: Inner residual (linear scale) - only if data available
-        if has_inner_residual and inner_residual is not None:
-            ax4.plot(iteration, inner_residual, marker='o', linestyle=linestyles[idx % len(linestyles)],
+        # Fourth subplot: Control vector norm (linear scale) - only if data available
+        if has_control_norm and control_norm is not None:
+            ax4.plot(iteration, control_norm, marker='o', linestyle=linestyles[idx % len(linestyles)],
                     linewidth=2, markersize=4, alpha=0.7,
                     label=label, color=f'C{idx}', markevery=marker_every)
 
@@ -116,11 +116,11 @@ def plot_objective(filenames):
     ax3.grid(True, alpha=0.3)
     ax3.legend(fontsize=10)
 
-    # Format fourth subplot (Inner residual - linear scale) - only if data available
-    if has_inner_residual:
+    # Format fourth subplot (Control vector norm - linear scale) - only if data available
+    if has_control_norm:
         ax4.set_xlabel('Iteration', fontsize=12)
-        ax4.set_ylabel('Relative Inner Residual', fontsize=12)
-        ax4.set_title('Relative Inner Residual ||Lv + ∇_U J|| / ||∇_U J|| (Linear Scale)', fontsize=14)
+        ax4.set_ylabel('||x||', fontsize=12)
+        ax4.set_title('Control Vector Norm', fontsize=14)
         ax4.grid(True, alpha=0.3)
         ax4.legend(fontsize=10)
 

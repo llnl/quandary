@@ -638,12 +638,18 @@ int main(int argc,char **argv)
     VecDestroy(&right_dummy);
     VecZeroEntries(y_zero_dual);
 
-    // Solve dual problem: RHS computed internally, just like solveGaussNewtonLeastSquares
+    // Solve dual problem: compute RHS, then solve system
     Vec v_Dual;
     VecDuplicate(grad, &v_Dual);
     if (mpirank_world == 0 && !quietmode) printf("Calling solveGaussNewtonDual\n");
-    optimctx->solveGaussNewtonDual(xinit, y_zero_dual, v_Dual);
 
+    // Compute RHS
+    Vec b_rhs = optimctx->computeDualRHS();
+
+    // Solve with zero initial guess (ignore staleness flag in matrix_save mode)
+    (void) optimctx->solveGaussNewtonDual(xinit, y_zero_dual, b_rhs, v_Dual);
+
+    VecDestroy(&b_rhs);
     VecDestroy(&y_zero_dual);
 
     // Solve Gauss-Newton via SVD
@@ -776,7 +782,9 @@ int main(int argc,char **argv)
 
   /* Output */
   if (config.getRuntype() != RunType::OPTIMIZATION) {
-    output->writeOptimFile(0, optimctx->getObjective(), gnorm, 0.0, optimctx->getFidelity(), optimctx->getCostT(), optimctx->getRegul(), optimctx->getPenaltyLeakage(), optimctx->getPenaltyDpDm(), optimctx->getPenaltyEnergy(), optimctx->getPenaltyVariation(), optimctx->getPenaltyWeightedCost(), 0);
+    double xnorm;
+    VecNorm(xinit, NORM_2, &xnorm);
+    output->writeOptimFile(0, optimctx->getObjective(), gnorm, 0.0, optimctx->getFidelity(), optimctx->getCostT(), optimctx->getRegul(), optimctx->getPenaltyLeakage(), optimctx->getPenaltyDpDm(), optimctx->getPenaltyEnergy(), optimctx->getPenaltyVariation(), optimctx->getPenaltyWeightedCost(), 0, xnorm);
   }
 
   /* --- Finalize --- */
