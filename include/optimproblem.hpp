@@ -127,7 +127,6 @@ class OptimProblem {
 
   // KSP linear solver
   KSP ksp_GN_NormalEq;  ///< Linear solver for Gauss-Newton Normal Equation solver
-  double gn_normaleq_damping; ///< Damping parameter for Gauss-Newton matrix shift
 
   // Dual Gauss-Newton solver
   Mat GN_Dual_MatShell; ///< MatShell for the dual Gauss-Newton problem (L L^T + λI)
@@ -159,7 +158,6 @@ class OptimProblem {
   EPS eps_GN_NormalEq; // EPS solver for the Gauss-Newton Normal Equation matrix
   PetscReal eps_tol = 1e-4; ///< Tolerance for EPS eigenvalue solver
   double eps_evals_cutoff = 1e-5; ///< Cutoff for eigenvalues of the Gauss-Newton matrix
-  double eps_normaleq_damping = 1e-3; ///< Damping for eigenvalues of the Gauss-Newton matrix
   int neigvals; ///< Number of eigenvalues to compute (=N^2-1)
   int ncv; ///< Number of Lanczos vectors to use in EPS solver. HOW TO CHOOSE?? 
 

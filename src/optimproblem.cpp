@@ -224,7 +224,6 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   MatCreateDense(PETSC_COMM_SELF, ndesign, ndesign, ndesign, ndesign, NULL, &GN_NormalEq_MatDense);
   MatZeroEntries(GN_NormalEq_MatDense);
 
-  gn_normaleq_damping = config.getGnNormaleqDamping();
   gn_rtol = config.getGnRtol();
   gn_solver_mode = config.getGnSolverMode();
 
@@ -944,14 +943,14 @@ void OptimProblem::solveGaussNewtonNormalEqKSP(Vec xinit, const Vec initial_gues
   KSPMonitorCancel(ksp_GN_NormalEq);
   KSPMonitorSet(ksp_GN_NormalEq, KSPMonitorResidualAndSolution, (void*)this, NULL);
 
-  // Optional Levenberg-Marquardt damping: A += mu I
-  if (gn_normaleq_damping > 0.0) MatShift(GN_NormalEq_MatShell, gn_normaleq_damping);
+  // Levenberg-Marquardt damping from Tikhonov regularization: A += mu I
+  if (gamma_tikhonov> 0.0) MatShift(GN_NormalEq_MatShell, gamma_tikhonov);
 
   // Solve the linear system L^*L x = b
   KSPSolve(ksp_GN_NormalEq, b, Ainv_b);
 
-  // Revert the optional scaling
-  if (gn_normaleq_damping > 0.0) MatShift(GN_NormalEq_MatShell, -gn_normaleq_damping);
+  // Revert the diagonal shift 
+  if (gamma_tikhonov > 0.0) MatShift(GN_NormalEq_MatShell, -gamma_tikhonov);
 
   // Report convergence
   KSPConvergedReason reason;
@@ -1056,11 +1055,11 @@ bool OptimProblem::solveGaussNewtonDual(Vec xinit, const Vec initial_guess, cons
   KSPMonitorSet(ksp_GN_Dual, KSPMonitorResidualAndSolution, (void*)this, NULL);
 
   // Optional Levenberg-Marquardt damping: (L L^T + λI)
-  if (gn_normaleq_damping > 0.0) {
-    MatShift(GN_Dual_MatShell, gn_normaleq_damping);
+  if (gamma_tikhonov> 0.0) {
+    MatShift(GN_Dual_MatShell, gamma_tikhonov);
     // Also shift the preconditioned operator
     if (gn_prec_update_interval >= 0 || gn_prec_update_interval == -1) {
-      MatShift(GN_Dual_Precond_MatShell, gn_normaleq_damping);
+      MatShift(GN_Dual_Precond_MatShell, gamma_tikhonov);
     }
   }
 
@@ -1149,10 +1148,10 @@ bool OptimProblem::solveGaussNewtonDual(Vec xinit, const Vec initial_guess, cons
   }
 
   // Revert the damping
-  if (gn_normaleq_damping > 0.0) {
-    MatShift(GN_Dual_MatShell, -gn_normaleq_damping);
+  if (gamma_tikhonov > 0.0) {
+    MatShift(GN_Dual_MatShell, -gamma_tikhonov);
     if (gn_prec_update_interval >= 0 || gn_prec_update_interval == -1) {
-      MatShift(GN_Dual_Precond_MatShell, -gn_normaleq_damping);
+      MatShift(GN_Dual_Precond_MatShell, -gamma_tikhonov);
     }
   }
 
@@ -1241,8 +1240,8 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   VecGetSize(b, &tangent_dim);
 
   // Apply damping to the operator
-  if (gn_normaleq_damping > 0.0) {
-    MatShift(GN_Dual_MatShell, gn_normaleq_damping);
+  if (gamma_tikhonov > 0.0) {
+    MatShift(GN_Dual_MatShell, gamma_tikhonov);
   }
 
   // Compute eigendecomposition: (L L^T + λI) V_{r+1} = Σ_{r+1} V_{r+1}
@@ -1430,8 +1429,8 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   }
 
   // Revert damping
-  if (gn_normaleq_damping > 0.0) {
-    MatShift(GN_Dual_MatShell, -gn_normaleq_damping);
+  if (gamma_tikhonov > 0.0) {
+    MatShift(GN_Dual_MatShell, -gamma_tikhonov);
   }
 
   // Cleanup (b_rhs is destroyed by caller)
@@ -1477,7 +1476,7 @@ void OptimProblem::solveGaussNewtonNormalEqEPS(Vec xinit, const Vec b, Vec Ainv_
   VecGetArray(tmp, &tmp_data);
   for (int i=0; i<evals.size(); i++) {
     if (evals[i] > eps_evals_cutoff) {
-      tmp_data[i] /= (evals[i] + eps_normaleq_damping);
+      tmp_data[i] /= (evals[i] + gamma_tikhonov);
     } else {
       tmp_data[i] = 0.0;
     }
