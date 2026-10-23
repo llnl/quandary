@@ -1635,21 +1635,17 @@ void OptimProblem::solve(Vec xinit) {
       // Set the initial iterate for Gauss-Newton optimization
       VecCopy(xinit, x_GN);
 
-      // TODO: This call to evalGradF is only needed for updating the low-rank preconditioner in the very first iteraion. TODO: Figure out whether evalGradF can (and SHOULD) be call BEFORE ANY updatePreconditioner. I believe it should, but it gives slightly different results than the current version. Bug? 
-      evalGradF(x_GN, G);  
-
       bool stop = false;
       for (int iter = 0; !stop; iter++) {
         // Set the current evaluation point for the Gauss-Newton matrix
         setGaussNewtonEvalPoint(x_GN);
+        
+        // Compute gradient and objective at the current iterate
+        evalGradF(x_GN, G);
+        double f = objective;
 
         // Update the preconditioner if needed. Currently only available for the dual solve.
         bool did_update_PC = updateGaussNewtonDualPreconditioner(iter);
-
-        // Compute gradient and objective at the current iterate
-        // TODO: I think this should come BEFORE updating the preconditioner. It sets and stores U(T;alpha)! 
-        evalGradF(x_GN, G);
-        double f = objective;
 
         // Solve for the Gauss-Newton system A(x)*Gprec = -G for the search direction (Gprec). Either "primal", or "dual", or "least_squares" mode.
         if (gn_solver_mode == "primal") {// Primal via normal equations: (L^*L + λI) v = G
