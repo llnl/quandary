@@ -117,16 +117,16 @@ class OptimProblem {
   Mat GN_Dual_LowRank_MatShell; ///< Applies low-rank preconditioned dual: M^{-1/2} (L L^T + λI) M^{-1/2}
 
   // Solvers for the inner Gauss-Newton equations
+  KSP ksp_gn_normaleq;  ///< Linear solver for Gauss-Newton normal equation (primal or dual)
   KSP ksp_gn_leastsquares; ///< Linear solver for Gauss-Newton least-squares problem
-  KSP ksp_gn_primal;  ///< Linear solver for Gauss-Newton Normal Equation solver
-  KSP ksp_gn_dual;  ///< Linear solver for dual Gauss-Newton system
-  Tao tao_brgn;        ///< Tao BRGN solver (alternative to KSPLSQR)
-  EPS eps_gn_primal; // EPS solver for the Gauss-Newton Normal Equation matrix
+  Tao tao_gn_leastsquares_brgn;        ///< Tao BRGN solver for least squares
+  EPS eps_gn_primal; // EPS solver for the Gauss-Newton primal equation 
 
   // Options for Gauss-Newton solvers
   std::string gn_solver_mode; ///< Gauss-Newton solver mode: "primal" or "dual" or "least-squares"
   std::string gn_leastsquares_solver; ///< Least-squares solver name: "brgn" or "lsqr"
   double gn_leastsquares_damping; ///< Damping parameter λ for Least Squares regularization
+  std::string gn_normaleq_solver; ///< Normal equation solver: "minres", "cg", "gmres", or "proj"
   double gn_normaleq_damping; ///< Damping parameter for Gauss-Newton matrix shift
   int gn_prec_update_interval; ///< Preconditioner update interval (0 = startup only, -1 = adaptive)
   int gn_precond_rank; ///< Rank for low-rank preconditioner
@@ -144,7 +144,6 @@ class OptimProblem {
   Vec brgn_residual; ///< Cached Residual vector for BRGN solver
   Vec y_dual_workspace; ///< Workspace vector for dual solver (tangent space, size dim²-1)
   Vec v_dual_workspace; ///< Workspace vector for intermediate L^T y computation (design space)
-  std::string gn_normaleq_solver; ///< Normal equation solver: "minres", "cg", "gmres", or "proj"
   int gn_dual_ksp_baseline; ///< Baseline KSP iterations right after preconditioner formation (for adaptive update)
   int gn_dual_ksp_excess_accum; ///< Accumulated excess KSP iterations beyond n_0 (for adaptive update)
   Mat gn_dual_lowrank_U; ///< V_r: first r eigenvectors (tangent_dim × rank, dense)
@@ -152,8 +151,7 @@ class OptimProblem {
   Vec gn_dual_lowrank_temp; ///< Workspace for low-rank application (size = rank)
   PetscScalar gn_dual_precond_mu; ///< μ = σ_{r+1} for complement space
 
-
-  // TODO: MOVE THESE TO LOCAL FUNCTION.
+  // TODO: Move these to local functions
   int neigvals; ///< Number of eigenvalues to compute (=N^2-1)
   int ncv; ///< Number of Lanczos vectors to use in EPS solver. HOW TO CHOOSE?? 
 
@@ -218,9 +216,9 @@ class OptimProblem {
    * @brief Override the maximum number of iterations for all Gauss-Newton solvers.
    *
    * This sets the maximum iterations for:
-   * - KSP solver (used in solveGaussNewtonNormalEqKSP)
+   * - KSP solver (used in solveGaussNewtonPrimalKSP)
    * - Least Squares solver (used in solveGaussNewtonLeastSquares)
-   * - EPS eigenvalue solver (used in solveGaussNewtonNormalEqEPS)
+   * - EPS eigenvalue solver (used in solveGaussNewtonPrimalProjected)
    *
    * @param maxiter Maximum number of iterations
    */
@@ -234,13 +232,6 @@ class OptimProblem {
    * @param xinit Design parameter vector to use as evaluation point
    */
   void setGaussNewtonEvalPoint(Vec xinit);
-
-  /**
-   * @brief Get the current maximum number of iterations for Gauss-Newton solvers.
-   *
-   * @return int Current maximum number of iterations (from KSP solver)
-   */
-  int getGaussNewtonMaxiter();
 
   /**
    * @brief Evaluates the objective function F(x).
@@ -387,7 +378,7 @@ class OptimProblem {
    * @param b Right-hand side vector
    * @param Ainv_b Solution vector to store the result
    */
-  void solveGaussNewtonNormalEqKSP(Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b);
+  void solveGaussNewtonPrimalKSP(Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b);
 
   /**
    * @brief Solves the dual Gauss-Newton problem: (L L^T + λI) y = -∇_U J, then v = L^T y
@@ -419,7 +410,7 @@ class OptimProblem {
    * @param b Right-hand side vector
    * @param Ainv_b Solution vector to store the result
    */
-  void solveGaussNewtonNormalEqEPS(Vec xinit, const Vec b, Vec Ainv_b);
+  void solveGaussNewtonPrimalProjected(Vec xinit, const Vec b, Vec Ainv_b);
 
   /**
    * @brief Backtracking Armijo line search along a descent direction, projected onto bound constraints.
@@ -445,7 +436,7 @@ class OptimProblem {
    * @param[out] evecs_out Newly created dense matrix (ndesign x number-of-converged-evals) holding one eigenvector per column
    * @return Eigenvalues of Gauss-Newton matrix
    */
-  std::vector<double> computeGaussNewtonNormalEqEvals(Vec xinit, Mat* evecs_out);
+  std::vector<double> computeGaussNewtonPrimalEvals(Vec xinit, Mat* evecs_out);
 
   /**
    * @brief Runs the optimization solver.

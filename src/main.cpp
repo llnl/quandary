@@ -447,7 +447,7 @@ int main(int argc,char **argv)
     optimctx->getStartingPoint(xinit);
 
     Mat evecs;
-    std::vector<double> evals = optimctx->computeGaussNewtonNormalEqEvals(xinit, &evecs);
+    std::vector<double> evals = optimctx->computeGaussNewtonPrimalEvals(xinit, &evecs);
     // Print the eigenvalues to file:
     snprintf(filename, 254, "%s/eigenvalues.dat", output->output_dir.c_str());
     std::ofstream evalfile(filename);
@@ -530,7 +530,7 @@ int main(int argc,char **argv)
 
     // call the Gauss-Newton solver again to evaluate the residual
     // Save current max iterations, set to 1 for residual check, then restore
-    int saved_maxiter = optimctx->getGaussNewtonMaxiter();
+    int saved_maxiter = config.getGnMaxiter();
     optimctx->setGaussNewtonMaxiter(1); // just for checking the residual
     if (mpirank_world == 0 && !quietmode) printf("\nTesting: call solveGaussNewtonLeastSquares again with converged search direction\n");
     optimctx->solveGaussNewtonLeastSquares(xinit, v_LeastSquares, v_result);
@@ -552,13 +552,13 @@ int main(int argc,char **argv)
     // Solve Gauss-Newton Normal Equation with KSP
     Vec v_KSP;
     VecDuplicate(grad, &v_KSP);
-    if (mpirank_world == 0 && !quietmode) printf("\nCalling solveGaussNewtonNormalEqKSP\n");
-    optimctx->solveGaussNewtonNormalEqKSP(xinit, v_zero, gnrhs, v_KSP);
+    if (mpirank_world == 0 && !quietmode) printf("\nCalling solveGaussNewtonPrimalKSP\n");
+    optimctx->solveGaussNewtonPrimalKSP(xinit, v_zero, gnrhs, v_KSP);
 
     // call the Gauss-Newton solver again to re-evaluate the residual
     optimctx->setGaussNewtonMaxiter(1); // just for checking the residual
-    if (mpirank_world == 0 && !quietmode) printf("\nTesting: call solveGaussNewtonNormalEqKSP again with converged search direction\n");
-    optimctx->solveGaussNewtonNormalEqKSP(xinit, v_KSP, gnrhs, v_result);
+    if (mpirank_world == 0 && !quietmode) printf("\nTesting: call solveGaussNewtonPrimalKSP again with converged search direction\n");
+    optimctx->solveGaussNewtonPrimalKSP(xinit, v_KSP, gnrhs, v_result);
     // check if the solution norm has changed
     VecNorm(v_result, NORM_2, &v_LeastSquares_norm);
     if (mpirank_world == 0 && !quietmode) {
@@ -568,16 +568,16 @@ int main(int argc,char **argv)
     // check if the solution from the least squares routine gives a small residual in KSP and vice versa?
     if (mpirank_world == 0 && !quietmode){
       printf("\n");
-      printf("Testing: call solveGaussNewtonLeastSquares with converged search direction from solveGaussNewtonNormalEqKSP\n");
+      printf("Testing: call solveGaussNewtonLeastSquares with converged search direction from solveGaussNewtonPrimalKSP\n");
     }
     optimctx->solveGaussNewtonLeastSquares(xinit, v_KSP, v_result);
   
     // check if the solution from the least squares routine gives a small residual?
     if (mpirank_world == 0 && !quietmode){
         printf("\n");
-        printf("Testing: call solveGaussNewtonNormalEqKSP with converged search direction from solveGaussNewtonLeastSquares\n");
+        printf("Testing: call solveGaussNewtonPrimalKSP with converged search direction from solveGaussNewtonLeastSquares\n");
     }
-    optimctx->solveGaussNewtonNormalEqKSP(xinit, v_LeastSquares, gnrhs, v_result);
+    optimctx->solveGaussNewtonPrimalKSP(xinit, v_LeastSquares, gnrhs, v_result);
 
     // Evaluate residuals from Least Squares solution
     Vec v_test_1;
@@ -626,7 +626,7 @@ int main(int argc,char **argv)
     if (mpirank_world == 0 && !quietmode) {
       printf("\n=== Testing Gauss-Newton EPS Solver ===\n");
     }
-    optimctx->solveGaussNewtonNormalEqEPS(xinit, gnrhs, v_EPS);
+    optimctx->solveGaussNewtonPrimalProjected(xinit, gnrhs, v_EPS);
 
     // ==== Summary of all methods ====
     if (mpirank_world == 0 && !quietmode) {

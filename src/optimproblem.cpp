@@ -128,229 +128,120 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   VecDuplicate(xinit, &xprev);
   VecZeroEntries(xprev);
 
-  // Include hessian of generalized J_inf wrt U in GaussNewton Approximation (for Jtrace only)
+  /* Initialize the Gauss-Newton solvers */
   includeHessUJ = false;
   if (optim_solver_type == OptimSolverType::GAUSS_NEWTON){
     if (optim_target->getObjectiveType() == ObjectiveType::JTRACE) {
       includeHessUJ = true;
     }
   }
-  includeHessUJ = true;
-  // includeHessUJ = false;
+  VecDuplicate(xinit, &xeval_GN);
+  VecZeroEntries(xeval_GN);
+  VecAssemblyBegin(xeval_GN); VecAssemblyEnd(xeval_GN);
 
-  /* Create MatShell for Gauss-Newton least-squares problem */
+  // Get for the inner Gauss-Newton solvers from config 
+  gn_maxiter = config.getGnMaxiter();
+  gn_rtol = config.getGnRtol();
+  gn_solver_mode = config.getGnSolverMode();
+  gn_normaleq_damping = config.getGnNormaleqDamping();
+  gn_normaleq_solver = config.getGnNormaleqSolver();  
   gn_leastsquares_damping = config.getGnLeastSquaresDamping();
+  gn_leastsquares_solver = config.getGnLeastSquaresSolver();
+  gn_prec_update_interval = config.getGnPrecUpdateInterval();
+  gn_precond_rank = config.getGnPrecondRank();
+
+  // Create MatShell for least-squares problem
   int N = ndesign;
   PetscInt M = mastereq->getDim()*mastereq->getDim() - 1;
-  // enlarge the output space if damping is enabled (only for least-squares mode)
   if (gn_leastsquares_damping > 0.0) {
     M += ndesign;
-    if (mpirank_world == 0 && !quietmode) {
-      printf("Least-squares damping enabled: λ = %e, augmented matrix size = %d × %d\n", gn_leastsquares_damping, (int)M, N);
-    }
   }
   MatCreateShell(PETSC_COMM_SELF, M, N, M, N, this, &GN_LeastSquares_MatShell);
   MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_MULT, (void(*)(void))GN_LeastSquares_MatMult);
   MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_MULT_TRANSPOSE, (void(*)(void))GN_LeastSquares_MatMultTranspose);
-
-  // Create the KSP solver for the Gauss-Newton least-squares problem
-  KSPCreate(PETSC_COMM_SELF, &ksp_gn_leastsquares);
-  KSPSetOperators(ksp_gn_leastsquares, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell);
-  // KSPSetNormType(ksp_gn_leastsquares, KSP_NORM_UNPRECONDITIONED); // Unconditioned ressidual norm
-  KSPSetType(ksp_gn_leastsquares, KSPLSQR);
-  KSPSetTolerances(ksp_gn_leastsquares,config.getGnRtol(),PETSC_DEFAULT,PETSC_DEFAULT,config.getGnMaxiter());
-  // KSPSetComputeSingularValues(ksp_gn_leastsquares, PETSC_TRUE);
-  KSPSetFromOptions(ksp_gn_leastsquares);
-  KSPMonitorCancel(ksp_gn_leastsquares);
-  KSPMonitorSet(ksp_gn_leastsquares, KSPMonitorResidualAndSolution, (void*)this, NULL);
-
-
-  // Initialize Tao BRGN solver for least-squares problem if configured
-  gn_leastsquares_solver = config.getGnLeastSquaresSolver();
-  if (gn_leastsquares_solver == "brgn") {
-    // Create Tao solver on PETSC_COMM_SELF (same as ksp_gn_leastsquares)
-    TaoCreate(PETSC_COMM_SELF, &tao_brgn);
-    TaoSetType(tao_brgn, TAOBRGN);
-
-    // Create storage for RHS vector (used in residual callback)
-    MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &brgn_rhs);
-    VecDuplicate(brgn_rhs, &brgn_residual);
-
-    // Set BRGN convergence tolerances. TODO: THIS NEEDS FIX! BRGN is a newton solver, so it will only need one outer newton step. The inner linear solver is the actual workhorse. Need to pass appropriate tolerances to the subsolver, not the BRGN solver. However, somehow, the below crashes when running on multiple processes. TODO: Check parallel implementation.
-    // Tao tao_sub;
-    // TaoBRGNGetSubsolver(tao_brgn, &tao_sub);
-    // TaoSetTolerances(tao_sub, config.getGnRtol(), PETSC_DEFAULT, PETSC_DEFAULT);
-    // TaoSetMaximumIterations(tao_sub, config.getGnMaxiter());
-    TaoSetTolerances(tao_brgn, config.getGnRtol(), PETSC_DEFAULT, PETSC_DEFAULT);
-    TaoSetMaximumIterations(tao_brgn, config.getGnMaxiter());
-
-    // Set damping parameter for regularization term λ||v||²
-    TaoBRGNSetRegularizerWeight(tao_brgn, gn_leastsquares_damping);
-
-    // Set Residual routine F(v) = Lv - b 
-    TaoSetResidualRoutine(tao_brgn, brgn_residual, TaoBRGN_EvalResidual, (void*)this);
-
-    // Set Jacobian (the matrix L = GN_LeastSquares_MatShell, constant for this problem)
-    TaoSetJacobianResidualRoutine(tao_brgn, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell, TaoBRGN_EvalJacobianResidual, (void*)this);
-
-    // Set monitor function to track progress
-    TaoMonitorSet(tao_brgn, TaoBRGN_Monitor, (void*)this, NULL);
-
-    // Allow command-line overrides
-    TaoSetFromOptions(tao_brgn);
-  } else {
-    tao_brgn = nullptr;
-    brgn_rhs = nullptr;
-    brgn_residual = nullptr;
-  }
-
-
   // Pre-allocate workspace vectors for GN_LeastSquares_MatShell operations
   wsub_workspace = new Vec[ninit_local];
   for (int iinit = 0; iinit < ninit_local; iinit++) {
     VecDuplicate(rho_t0_bar, &wsub_workspace[iinit]);
   }
 
-  /* Create MatShell for Gauss-Newton normal equation A=L^*L */
+  // Create the LSQR and BRGN solvers for least-squares problem
+  KSPCreate(PETSC_COMM_SELF, &ksp_gn_leastsquares);
+  KSPSetOperators(ksp_gn_leastsquares, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell);
+  KSPSetType(ksp_gn_leastsquares, KSPLSQR);
+  KSPSetTolerances(ksp_gn_leastsquares,gn_rtol,PETSC_DEFAULT,PETSC_DEFAULT,gn_maxiter);
+  // KSPSetComputeSingularValues(ksp_gn_leastsquares, PETSC_TRUE);
+  KSPSetFromOptions(ksp_gn_leastsquares);
+  KSPMonitorCancel(ksp_gn_leastsquares);
+  KSPMonitorSet(ksp_gn_leastsquares, KSPMonitorResidualAndSolution, (void*)this, NULL);
+  TaoCreate(PETSC_COMM_SELF, &tao_gn_leastsquares_brgn);
+  TaoSetType(tao_gn_leastsquares_brgn, TAOBRGN);
+  MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &brgn_rhs);
+  VecDuplicate(brgn_rhs, &brgn_residual);
+  // Set BRGN convergence tolerances. TODO: THIS NEEDS FIX! BRGN is a newton solver, so it will only need one outer newton step. The inner linear solver is the actual workhorse. Need to pass appropriate tolerances to the subsolver, not the BRGN solver. However, somehow, the below crashes when running on multiple processes. TODO: Check parallel implementation.
+  // Tao tao_sub;
+  // TaoBRGNGetSubsolver(tao_gn_leastsquares_brgn, &tao_sub);
+  // TaoSetTolerances(tao_sub, config.getGnRtol(), PETSC_DEFAULT, PETSC_DEFAULT);
+  // TaoSetMaximumIterations(tao_sub, config.getGnMaxiter());
+  TaoSetTolerances(tao_gn_leastsquares_brgn, gn_rtol, PETSC_DEFAULT, PETSC_DEFAULT);
+  TaoSetMaximumIterations(tao_gn_leastsquares_brgn, gn_maxiter);
+  TaoBRGNSetRegularizerWeight(tao_gn_leastsquares_brgn, gn_leastsquares_damping);
+  TaoSetResidualRoutine(tao_gn_leastsquares_brgn, brgn_residual, TaoBRGN_EvalResidual, (void*)this);
+  TaoSetJacobianResidualRoutine(tao_gn_leastsquares_brgn, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell, TaoBRGN_EvalJacobianResidual, (void*)this);
+  TaoMonitorSet(tao_gn_leastsquares_brgn, TaoBRGN_Monitor, (void*)this, NULL);
+  TaoSetFromOptions(tao_gn_leastsquares_brgn);
+
+  // Create MatShell for Gauss-Newton primal equation
   MatCreateShell(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign, this, &GN_Primal_MatShell);
   MatShellSetOperation(GN_Primal_MatShell, MATOP_MULT, (void(*) (void)) GN_Primal_MatMult);
-  VecDuplicate(xinit, &xeval_GN);
-  VecZeroEntries(xeval_GN);
-  VecAssemblyBegin(xeval_GN); VecAssemblyEnd(xeval_GN);
-
-  /* Create dense matrix for Gauss-Newton normal equation */
-  MatCreateDense(PETSC_COMM_SELF, ndesign, ndesign, ndesign, ndesign, NULL, &GN_Primal_MatDense);
+  MatCreateDense(PETSC_COMM_SELF, ndesign, ndesign, ndesign, ndesign, NULL, &GN_Primal_MatDense); // only used for debug and output 
   MatZeroEntries(GN_Primal_MatDense);
 
-  gn_normaleq_damping = config.getGnNormaleqDamping();
-  gn_rtol = config.getGnRtol();
-  gn_solver_mode = config.getGnSolverMode();
+  // Create MatShell for dual Gauss-Newton problem
+  PetscInt M_dual = mastereq->getDim() * mastereq->getDim() - 1;
+  MatCreateShell(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, this, &GN_Dual_MatShell);
+  MatShellSetOperation(GN_Dual_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_MatMult);
+  MatCreateDense(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, NULL, &GN_Dual_MatDense); // only debug and output
+  MatZeroEntries(GN_Dual_MatDense);
 
+  // Create MatShell for dual low-rank preconditioned 
+  MatCreateShell(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, this, &GN_Dual_LowRank_MatShell);
+  MatShellSetOperation(GN_Dual_LowRank_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_LowRank_MatMult);
 
-  /* Create GN Normal equation linear solver: L^*Lv=b */
-  KSPCreate(PETSC_COMM_SELF, &ksp_gn_primal);
-  KSPSetOperators(ksp_gn_primal, GN_Primal_MatShell, GN_Primal_MatShell);
-  std::string ksp_normaleq_solver_str = config.getGnNormaleqSolver();
-  std::string ksp_normaleq_solver_lower = ksp_normaleq_solver_str;
-  std::transform(ksp_normaleq_solver_lower.begin(), ksp_normaleq_solver_lower.end(), ksp_normaleq_solver_lower.begin(), ::tolower);
-  gn_normaleq_solver = ksp_normaleq_solver_lower;  
-
-  // Skip KSP configuration for projected solver (only applies to dual mode)
-  if (ksp_normaleq_solver_lower != "proj") {
-    if (ksp_normaleq_solver_lower == "cg") {
-      KSPSetType(ksp_gn_primal, KSPCG);
-    } else if (ksp_normaleq_solver_lower == "minres") {
-      KSPSetType(ksp_gn_primal, KSPMINRES);
-    } else if (ksp_normaleq_solver_lower == "gmres") {
-      KSPSetType(ksp_gn_primal, KSPGMRES);
-    } else {
-      // Default or try to use the string directly for other types
-      if (mpirank_world == 0 && !quietmode) {
-        printf("Warning: Unknown gn_normaleq_solver '%s', using it directly with PETSc\n", ksp_normaleq_solver_str.c_str());
-      }
-      KSPSetType(ksp_gn_primal, ksp_normaleq_solver_str.c_str());
-    }
-    // Allow for non-zero initial guess
-    KSPSetInitialGuessNonzero(ksp_gn_primal, PETSC_TRUE);
-
-    // Enable MINRES-QLP if requested
-    if (ksp_normaleq_solver_lower == "minres" && config.getGnNormaleqMinresQlp()) {
+  // Create Gauss-Newton normal equation linear solver (used for both the primal and the dual equations) 
+  KSPCreate(PETSC_COMM_SELF, &ksp_gn_normaleq);
+  KSPSetInitialGuessNonzero(ksp_gn_normaleq, PETSC_TRUE);
+  if (gn_normaleq_solver == "cg") {
+    KSPSetType(ksp_gn_normaleq, KSPCG);
+  } else if (gn_normaleq_solver == "minres") {
+    KSPSetType(ksp_gn_normaleq, KSPMINRES);
+    // Apply MINRES-QLP if configured
+    if (config.getGnNormaleqMinresQlp()) {
       PetscBool set;
       PetscOptionsHasName(NULL, NULL, "-ksp_minres_qlp", &set);
       if (!set) {
         PetscOptionsSetValue(NULL, "-ksp_minres_qlp", NULL);
       }
     }
+  } else if (gn_normaleq_solver == "gmres") {
+    KSPSetType(ksp_gn_normaleq, KSPGMRES);
   } else {
-    // For projected solver, set a default type (won't be used, but needs to be valid)
-    KSPSetType(ksp_gn_primal, KSPMINRES);
+    KSPSetType(ksp_gn_normaleq, KSPMINRES);
   }
-  KSPSetFromOptions(ksp_gn_primal);
-  PC  pc;
-  KSPGetPC(ksp_gn_primal, &pc);
-  PCSetType(pc, PCNONE); // Disable preconditioner
-  KSPSetNormType(ksp_gn_primal, KSP_NORM_UNPRECONDITIONED); // Unconditioned ressidual norm
-  KSPSetTolerances(ksp_gn_primal,config.getGnRtol(),PETSC_DEFAULT,PETSC_DEFAULT,config.getGnMaxiter());
-  KSPMonitorCancel(ksp_gn_primal);
-  KSPMonitorSet(ksp_gn_primal, KSPMonitorResidualAndSolution, (void*)this, NULL);
+  KSPSetFromOptions(ksp_gn_normaleq);
+  // KSPSetNormType(ksp_gn_normaleq, KSP_NORM_UNPRECONDITIONED); // Uncomment if unpreconditioned norm is desired, but is slower. 
+  KSPSetTolerances(ksp_gn_normaleq, gn_rtol, PETSC_DEFAULT, PETSC_DEFAULT, gn_maxiter);
+  KSPMonitorCancel(ksp_gn_normaleq);
+  KSPMonitorSet(ksp_gn_normaleq, KSPMonitorResidualAndSolution, (void*)this, NULL);
 
-
-  /* Dual mode uses pure tangent space (not augmented) */
-  PetscInt M_dual = mastereq->getDim() * mastereq->getDim() - 1;
-
-  /* Create MatShell for dual Gauss-Newton problem (L L^T + λI) */
-  MatCreateShell(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, this, &GN_Dual_MatShell);
-  MatShellSetOperation(GN_Dual_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_MatMult);
-
-  /* Create dense matrices for dual Gauss-Newton problem */
-  MatCreateDense(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, NULL, &GN_Dual_MatDense);
-  MatZeroEntries(GN_Dual_MatDense);
-
-  /* Create workspace vectors for dual solver */
+  // Pre-allocate workspace for dual solver and reset
   VecCreateSeq(PETSC_COMM_SELF, M_dual, &y_dual_workspace);  // tangent space
   VecDuplicate(xinit, &v_dual_workspace);  // design space
-
-  /* Store preconditioner settings */
-  gn_prec_update_interval = config.getGnPrecUpdateInterval();
-  gn_precond_rank = config.getGnPrecondRank();
-  gn_maxiter = config.getGnMaxiter();
-  gn_dual_ksp_baseline = 0;  // Will be set after first preconditioner formation
-  gn_dual_ksp_excess_accum = 0;  // Accumulated excess KSP iterations
-
-  /* Create low-rank preconditioner data structures */
   MatCreateDense(PETSC_COMM_SELF, M_dual, gn_precond_rank, M_dual, gn_precond_rank, NULL, &gn_dual_lowrank_U);
   VecCreateSeq(PETSC_COMM_SELF, gn_precond_rank, &gn_dual_lowrank_sigma_invsqrt);
   VecCreateSeq(PETSC_COMM_SELF, gn_precond_rank, &gn_dual_lowrank_temp);
 
-  /* Create MatShell for low-rank preconditioned operator M^{-1/2} A M^{-1/2} */
-  MatCreateShell(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, this, &GN_Dual_LowRank_MatShell);
-  MatShellSetOperation(GN_Dual_LowRank_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_LowRank_MatMult);
-
-  /* Create KSP solver for dual Gauss-Newton problem */
-  KSPCreate(PETSC_COMM_SELF, &ksp_gn_dual);
-  // Operators will be set at solve time depending on whether preconditioning is enabled
-  KSPSetOperators(ksp_gn_dual, GN_Dual_MatShell, GN_Dual_MatShell);
-
-  // Use same solver type configuration as normal equation solver (skip if using projected solver)
-  if (ksp_normaleq_solver_lower != "proj") {
-    if (ksp_normaleq_solver_lower == "cg") {
-      KSPSetType(ksp_gn_dual, KSPCG);
-    } else if (ksp_normaleq_solver_lower == "minres") {
-      KSPSetType(ksp_gn_dual, KSPMINRES);
-    } else if (ksp_normaleq_solver_lower == "gmres") {
-      KSPSetType(ksp_gn_dual, KSPGMRES);
-    } else {
-      if (mpirank_world == 0 && !quietmode) {
-        printf("Warning: Unknown gn_normaleq_solver '%s' for dual solver, using it directly with PETSc\n", gn_normaleq_solver.c_str());
-      }
-      KSPSetType(ksp_gn_dual, gn_normaleq_solver.c_str());
-    }
-    KSPSetInitialGuessNonzero(ksp_gn_dual, PETSC_TRUE);
-
-    // Apply MINRES-QLP if configured
-    if (ksp_normaleq_solver_lower == "minres" && config.getGnNormaleqMinresQlp()) {
-      PetscBool set;
-      PetscOptionsHasName(NULL, NULL, "-ksp_minres_qlp", &set);
-      if (!set) {
-        PetscOptionsSetValue(NULL, "-ksp_minres_qlp", NULL);
-      }
-    }
-  } else {
-    // For projected solver, set a default type (won't be used, but needs to be valid)
-    KSPSetType(ksp_gn_dual, KSPMINRES);
-  }
-
-  KSPSetFromOptions(ksp_gn_dual);
-  PC pc_dual;
-  KSPGetPC(ksp_gn_dual, &pc_dual);
-  PCSetType(pc_dual, PCNONE); // Disable preconditioner
-  KSPSetNormType(ksp_gn_dual, KSP_NORM_UNPRECONDITIONED);
-  KSPSetTolerances(ksp_gn_dual, config.getGnRtol(), PETSC_DEFAULT, PETSC_DEFAULT, config.getGnMaxiter());
-  KSPMonitorCancel(ksp_gn_dual);
-  KSPMonitorSet(ksp_gn_dual, KSPMonitorResidualAndSolution, (void*)this, NULL);
-
-
-  /* Create eigenvalues solver for Gauss-Newton normal equation Ax=b */
+  /* Create eigenvalues solver for Gauss-Newton primal equation Ax=b */
   EPSCreate(PETSC_COMM_SELF, &eps_gn_primal);
   EPSSetOperators(eps_gn_primal, GN_Primal_MatShell, NULL);
   EPSSetProblemType(eps_gn_primal, EPS_HEP); // Hermitian
@@ -361,9 +252,8 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   // ncv = neigvals + 2; // Max Krylov dimension. How to set??
   ncv = 2*neigvals ; // Max Krylov dimension. How to set??
   EPSSetDimensions(eps_gn_primal, neigvals, ncv, PETSC_DEFAULT);
-  EPSSetTolerances(eps_gn_primal, eps_tol, config.getGnMaxiter());
+  EPSSetTolerances(eps_gn_primal, eps_tol, gn_maxiter);
   EPSSetFromOptions(eps_gn_primal);
-
 }
 
 
@@ -391,12 +281,11 @@ OptimProblem::~OptimProblem() {
   MatDestroy(&gn_dual_lowrank_U);
   VecDestroy(&gn_dual_lowrank_sigma_invsqrt);
   VecDestroy(&gn_dual_lowrank_temp);
-  KSPDestroy(&ksp_gn_primal);
-  KSPDestroy(&ksp_gn_dual);
+  KSPDestroy(&ksp_gn_normaleq);
   EPSDestroy(&eps_gn_primal);
   KSPDestroy(&ksp_gn_leastsquares);
-  if (tao_brgn) {
-    TaoDestroy(&tao_brgn);
+  if (tao_gn_leastsquares_brgn) {
+    TaoDestroy(&tao_gn_leastsquares_brgn);
     VecDestroy(&brgn_rhs);
     VecDestroy(&brgn_residual);
   }
@@ -420,44 +309,31 @@ void OptimProblem::setGaussNewtonMaxiter(int maxiter) {
     printf("Setting max iterations for all Gauss-Newton solvers to: %d\n", maxiter);
   }
 
-  // 1. Set for for solveGaussNewtonNormalEqKSP KSP solver
+  // 1. Set for for solveGaussNewtonPrimalKSP KSP solver
   PetscReal rtol, abstol, dtol;
   PetscInt current_maxits;
-  KSPGetTolerances(ksp_gn_primal, &rtol, &abstol, &dtol, &current_maxits);
-  KSPSetTolerances(ksp_gn_primal, rtol, abstol, dtol, maxiter);
 
-  // 2. Set for solveGaussNewtonLeastSquares solvers
+  // For solveGaussNewtonLeastSquares solvers
   if (gn_leastsquares_solver == "brgn") {
     // For BRGN, this should apply to the sub-solver, since BRGN does Newton steps (so only one anyways). This crashes though. TODO: Fix. 
     // Tao tao_sub;
-    // TaoBRGNGetSubsolver(tao_brgn, &tao_sub);
+    // TaoBRGNGetSubsolver(tao_gn_leastsquares_brgn, &tao_sub);
     // TaoSetMaximumIterations(tao_sub, maxiter);
-    TaoSetMaximumIterations(tao_brgn, maxiter); // no effect
+    TaoSetMaximumIterations(tao_gn_leastsquares_brgn, maxiter); // no effect
   } else {
     KSPGetTolerances(ksp_gn_leastsquares, &rtol, &abstol, &dtol, &current_maxits);
     KSPSetTolerances(ksp_gn_leastsquares, rtol, abstol, dtol, maxiter);
   }
 
-  // 3. Set for dual Gauss-Newton KSP solver
-  KSPGetTolerances(ksp_gn_dual, &rtol, &abstol, &dtol, &current_maxits);
-  KSPSetTolerances(ksp_gn_dual, rtol, abstol, dtol, maxiter);
+  // For Gauss-Newton normal equation KSP solvers
+  KSPGetTolerances(ksp_gn_normaleq, &rtol, &abstol, &dtol, &current_maxits);
+  KSPSetTolerances(ksp_gn_normaleq, rtol, abstol, dtol, maxiter);
 
-  // 4. Set for EPS eigenvalue solver (used in solveGaussNewtonNormalEqEPS)
+  // For EPS eigenvalue solver (used in solveGaussNewtonPrimalProjected)
   PetscReal eps_tol;
   EPSGetTolerances(eps_gn_primal, &eps_tol, &current_maxits);
   EPSSetTolerances(eps_gn_primal, eps_tol, maxiter);
 }
-
-
-int OptimProblem::getGaussNewtonMaxiter() {
-  // Return the current max iterations from ksp_gn_primal (they should all be the same)
-  PetscReal rtol, abstol, dtol;
-  PetscInt maxits;
-  KSPGetTolerances(ksp_gn_primal, &rtol, &abstol, &dtol, &maxits);
-  return (int)maxits;
-}
-
-
 
 double OptimProblem::evalF(const Vec x, bool writeTrajectoryDataFiles) {
   if (mpirank_world == 0 && !quietmode) printf("EVAL F... \n");
@@ -885,14 +761,11 @@ PetscErrorCode OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
 }
 
 
-void OptimProblem::solveGaussNewtonNormalEqKSP(Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b){
+void OptimProblem::solveGaussNewtonPrimalKSP(Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b){
 
   // Store the point of evaluation for the Gauss-Newton matrix shell A(xinit)
   VecCopy(xinit, xeval_GN);
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
-
-  // Set the matrix again, just in case, for reset.
-  KSPSetOperators(ksp_gn_primal, GN_Primal_MatShell, GN_Primal_MatShell);
 
   // Set initial guess from initial_guess parameter
   VecCopy(initial_guess, Ainv_b);
@@ -901,7 +774,9 @@ void OptimProblem::solveGaussNewtonNormalEqKSP(Vec xinit, const Vec initial_gues
   if (gn_normaleq_damping > 0.0) MatShift(GN_Primal_MatShell, gn_normaleq_damping);
 
   // Solve the linear system L^*L x = b
-  KSPSolve(ksp_gn_primal, b, Ainv_b);
+  KSPReset(ksp_gn_normaleq);
+  KSPSetOperators(ksp_gn_normaleq, GN_Primal_MatShell, GN_Primal_MatShell);
+  KSPSolve(ksp_gn_normaleq, b, Ainv_b);
 
   // Revert the optional scaling
   if (gn_normaleq_damping > 0.0) MatShift(GN_Primal_MatShell, -gn_normaleq_damping);
@@ -910,13 +785,13 @@ void OptimProblem::solveGaussNewtonNormalEqKSP(Vec xinit, const Vec initial_gues
   KSPConvergedReason reason;
   int iters;
   double rnorm;
-  KSPGetConvergedReason(ksp_gn_primal, &reason);
-  KSPGetIterationNumber(ksp_gn_primal, &iters);
-  KSPGetResidualNorm(ksp_gn_primal, &rnorm);
+  KSPGetConvergedReason(ksp_gn_normaleq, &reason);
+  KSPGetIterationNumber(ksp_gn_normaleq, &iters);
+  KSPGetResidualNorm(ksp_gn_normaleq, &rnorm);
   ksp_iters_last = iters;
   if (mpirank_world == 0 && !quietmode) {
     KSPType ksp_type;
-    KSPGetType(ksp_gn_primal, &ksp_type);
+    KSPGetType(ksp_gn_normaleq, &ksp_type);
     printf("Gauss-Newton KSP (%s) stats: iterations = %d, residual norm = %1.14e\n", ksp_type, iters, rnorm);
   }
 }
@@ -1003,6 +878,7 @@ Vec OptimProblem::computeDualInitGuess(Vec b_rhs){
 
 
 bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_guess, const Vec b_rhs, Vec v_out){
+ 
 
   // Returns: true if eigendecomposition appears stale, false otherwise
   // Store the point of evaluation for the Gauss-Newton matrix shell
@@ -1010,12 +886,8 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve (solveODE) within linearizedForwad() for the new xeval_GN
   // TODO: Check if the above is needed! 
 
-  // Set the matrix operators
-  KSPSetOperators(ksp_gn_dual, GN_Dual_MatShell, GN_Dual_MatShell);
-
   // Use provided initial guess 
   VecCopy(initial_guess, y_dual_workspace);
-  KSPSetInitialGuessNonzero(ksp_gn_dual, PETSC_TRUE);
 
   bool use_precond = (gn_prec_update_interval >= -1);
 
@@ -1026,39 +898,34 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
 
   if (!use_precond) {
     // No preconditioning - solve directly
-    KSPSolve(ksp_gn_dual, b_rhs, y_dual_workspace);
+    KSPReset(ksp_gn_normaleq);
+    KSPSetOperators(ksp_gn_normaleq, GN_Dual_MatShell, GN_Dual_MatShell);
+    KSPSolve(ksp_gn_normaleq, b_rhs, y_dual_workspace);
 
   } else { 
-    // Low-rank preconditioning: M^{-1/2} (L L^T + λI) M^{-1/2} z = M^{-1/2} b
-    // where M ≈ U Σ U^T is rank-r approximation
+    // Low-rank preconditioning: M^{-1/2} (L L^T + λI) M^{-1/2} z = M^{-1/2} b  where M ≈ U Σ U^T is rank-r approximation
 
-
-   // Scale RHS: b_scaled = M^{-1/2} * b
+    // Scale RHS: b_scaled = M^{-1/2} * b
     Vec b_scaled;
     VecDuplicate(b_rhs, &b_scaled);
     apply_GN_Dual_LowRank_Precond(b_rhs, b_scaled);
 
     // Transform initial guess from y-space to z-space: z0 = M^{1/2} * y0
-    // Mathematical insight: If y0 ≈ M^{-1} * b, then z0 = M^{1/2} * M^{-1} * b = M^{-1/2} * b
-    // Therefore z0 should be b_scaled (the preconditioned RHS)
+    // Use preconditioned RHS as initial guess in z-space
     Vec z_solution;
     VecDuplicate(y_dual_workspace, &z_solution);
-    VecCopy(b_scaled, z_solution);  // Use preconditioned RHS as initial guess in z-space
-
-    // Use the low-rank preconditioned operator
-    KSPSetOperators(ksp_gn_dual, GN_Dual_LowRank_MatShell, GN_Dual_LowRank_MatShell);
+    VecCopy(b_scaled, z_solution);  
 
     // Solve: M^{-1/2} A M^{-1/2} z = M^{-1/2} b
-    KSPSolve(ksp_gn_dual, b_scaled, z_solution);
+    KSPReset(ksp_gn_normaleq);
+    KSPSetOperators(ksp_gn_normaleq, GN_Dual_LowRank_MatShell, GN_Dual_LowRank_MatShell);
+    KSPSolve(ksp_gn_normaleq, b_scaled, z_solution);
 
     // Recover y = M^{-1/2} * z
     apply_GN_Dual_LowRank_Precond(z_solution, y_dual_workspace);
 
     VecDestroy(&b_scaled);
     VecDestroy(&z_solution);
-
-    // Reset operators to unpreconditioned for next time
-    KSPSetOperators(ksp_gn_dual, GN_Dual_MatShell, GN_Dual_MatShell);
   } 
 
   // Revert the damping
@@ -1073,13 +940,13 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
   KSPConvergedReason reason;
   int iters;
   double rnorm;
-  KSPGetConvergedReason(ksp_gn_dual, &reason);
-  KSPGetIterationNumber(ksp_gn_dual, &iters);
-  KSPGetResidualNorm(ksp_gn_dual, &rnorm);
+  KSPGetConvergedReason(ksp_gn_normaleq, &reason);
+  KSPGetIterationNumber(ksp_gn_normaleq, &iters);
+  KSPGetResidualNorm(ksp_gn_normaleq, &rnorm);
   ksp_iters_last = iters;
   if (mpirank_world == 0 && !quietmode) {
     KSPType ksp_type;
-    KSPGetType(ksp_gn_dual, &ksp_type);
+    KSPGetType(ksp_gn_normaleq, &ksp_type);
     printf("Gauss-Newton Dual KSP (%s) stats: iterations = %d, residual norm = %1.14e\n", ksp_type, iters, rnorm);
 
     // Print convergence reason for debugging
@@ -1089,7 +956,7 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
     // Print tolerances for debugging DTOL issues
     PetscReal rtol, abstol, dtol;
     PetscInt maxits;
-    KSPGetTolerances(ksp_gn_dual, &rtol, &abstol, &dtol, &maxits);
+    KSPGetTolerances(ksp_gn_normaleq, &rtol, &abstol, &dtol, &maxits);
     printf("  KSP Tolerances: rtol=%e, abstol=%e, dtol=%e, maxits=%d\n", rtol, abstol, dtol, (int)maxits);
   }
 
@@ -1295,13 +1162,10 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
       // Scale initial guess
       VecCopy(y_proj, z_solution);
 
-      // Configure KSP for refinement with preconditioned operator
-      KSPSetOperators(ksp_gn_dual, GN_Dual_LowRank_MatShell, GN_Dual_LowRank_MatShell);
-      KSPSetInitialGuessNonzero(ksp_gn_dual, PETSC_TRUE);
-      KSPSetTolerances(ksp_gn_dual, gn_rtol, PETSC_DEFAULT, PETSC_DEFAULT, gn_maxiter);
-
       // Solve preconditioned system: M^{-1/2} A M^{-1/2} z = M^{-1/2} b_normalized
-      KSPSolve(ksp_gn_dual, b_scaled, z_solution);
+      KSPReset(ksp_gn_normaleq);
+      KSPSetOperators(ksp_gn_normaleq, GN_Dual_LowRank_MatShell, GN_Dual_LowRank_MatShell);
+      KSPSolve(ksp_gn_normaleq, b_scaled, z_solution);
 
       // Recover y = M^{-1/2} * z
       apply_GN_Dual_LowRank_Precond(z_solution, y_dual_workspace);
@@ -1310,7 +1174,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
       VecScale(y_dual_workspace, bnorm);
 
       // Get actual number of iterations performed
-      KSPGetIterationNumber(ksp_gn_dual, &refine_iters);
+      KSPGetIterationNumber(ksp_gn_normaleq, &refine_iters);
 
       // Restore preconditioner data structures
       gn_dual_lowrank_U = V_r_saved;
@@ -1325,7 +1189,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
       VecDestroy(&b_normalized);
 
       // Reset KSP operators to unpreconditioned for next time
-      KSPSetOperators(ksp_gn_dual, GN_Dual_MatShell, GN_Dual_MatShell);
+      KSPSetOperators(ksp_gn_normaleq, GN_Dual_MatShell, GN_Dual_MatShell);
     }
   }
 
@@ -1356,11 +1220,11 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
 }
 
 
-void OptimProblem::solveGaussNewtonNormalEqEPS(Vec xinit, const Vec b, Vec Ainv_b){
+void OptimProblem::solveGaussNewtonPrimalProjected(Vec xinit, const Vec b, Vec Ainv_b){
 
   // Get eigenvalues and eigenvectors of the Gauss-Newton matrix
   Mat evecs;
-  std::vector<double> evals = computeGaussNewtonNormalEqEvals(xinit, &evecs);
+  std::vector<double> evals = computeGaussNewtonPrimalEvals(xinit, &evecs);
 
   // Print the eigenvalues
   // for (int i=0; i<evals.size(); i++) {
@@ -1406,7 +1270,7 @@ PetscErrorCode KSPMonitorResidualAndSolution(KSP ksp, PetscInt it, PetscReal rno
   return 0;
 }
 
-std::vector<double> OptimProblem::computeGaussNewtonNormalEqEvals(Vec xinit, Mat* evecs_out){
+std::vector<double> OptimProblem::computeGaussNewtonPrimalEvals(Vec xinit, Mat* evecs_out){
 
   // Store xinit so the MatShell can use it as point of evaluation.
   VecCopy(xinit, xeval_GN);
@@ -1540,6 +1404,12 @@ void OptimProblem::solve(Vec xinit) {
       VecDuplicate(x_GN, &step);
       VecDuplicate(x_GN, &v_zero);
 
+      // Reset KSP counters. TODO: Missing some? 
+      gn_dual_ksp_baseline = 0;  
+      gn_dual_ksp_excess_accum = 0;  
+      ksp_iters_last = 0;
+      nonlinear_forward_valid = false;
+
       // Set the initial iterate for Gauss-Newton optimization
       VecCopy(xinit, x_GN);
 
@@ -1552,17 +1422,17 @@ void OptimProblem::solve(Vec xinit) {
         evalGradF(x_GN, G);
         double f = objective;
 
-        // Update the preconditioner if needed. Currently only available for the dual solve.
+        // Update the preconditioner . Currently only for the dual mode
         bool did_update_PC = updateGaussNewtonDualPreconditioner(iter);
 
-        // Solve for the Gauss-Newton system A(x)*Gprec = -G for the search direction (Gprec). Either "primal", or "dual", or "least_squares" mode.
+        // Solve for the Gauss-Newton system for the search direction (Gprec) 
         if (gn_solver_mode == "primal") {// Primal via normal equations: (L^*L + λI) v = G
 
           VecZeroEntries(v_zero); // Initial guess for primal solver 
           if (gn_normaleq_solver == "proj") {
-            solveGaussNewtonNormalEqEPS(x_GN, G, Gprec);
+            solveGaussNewtonPrimalProjected(x_GN, G, Gprec);
           } else {
-            solveGaussNewtonNormalEqKSP(x_GN, v_zero, G, Gprec);
+            solveGaussNewtonPrimalKSP(x_GN, v_zero, G, Gprec);
           }
         
         } else if (gn_solver_mode == "dual"){  // Dual of normal equation: (L L^* + λI) y = b and v = L^* y
@@ -2352,21 +2222,21 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
 
     // Set initial guess from initial_guess parameter
     VecCopy(initial_guess, v_LeastSquares);
-    TaoSetSolution(tao_brgn, v_LeastSquares);
-    TaoSetUp(tao_brgn);
+    TaoSetSolution(tao_gn_leastsquares_brgn, v_LeastSquares);
+    TaoSetUp(tao_gn_leastsquares_brgn);
     // Forward initial guess to the inner solver  
     Tao tao_sub;
-    TaoBRGNGetSubsolver(tao_brgn, &tao_sub);
+    TaoBRGNGetSubsolver(tao_gn_leastsquares_brgn, &tao_sub);
     TaoSetSolution(tao_sub, v_LeastSquares);
 
     // Solve the regularized least-squares problem: min_v ||L*v - b||² + λ||v||²
-    TaoSolve(tao_brgn);
+    TaoSolve(tao_gn_leastsquares_brgn);
 
     // Report convergence. Tao iterations are outer Newton steps (one suffices for a linear problem), the actual cost is in the inner linear solver iterations.
     TaoConvergedReason reason;
     PetscInt newton_iters, lin_iters;
-    TaoGetConvergedReason(tao_brgn, &reason);
-    TaoGetIterationNumber(tao_brgn, &newton_iters);
+    TaoGetConvergedReason(tao_gn_leastsquares_brgn, &reason);
+    TaoGetIterationNumber(tao_gn_leastsquares_brgn, &newton_iters);
     TaoGetLinearSolveIterations(tao_sub, &lin_iters);
     ksp_iters_last = lin_iters;
 
@@ -2381,14 +2251,14 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
     }
 
   } else if (gn_leastsquares_solver == "lsqr"){
-    // Set the matrix again, just in case, for reset.
-    KSPSetOperators(ksp_gn_leastsquares, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell);
 
     // Set initial guess from initial_guess parameter
     VecCopy(initial_guess, v_LeastSquares);
     KSPSetInitialGuessNonzero(ksp_gn_leastsquares, PETSC_TRUE);
 
     // Solve the Gauss-Newton least-squares problem
+    KSPReset(ksp_gn_leastsquares);
+    KSPSetOperators(ksp_gn_leastsquares, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell);
     KSPSolve(ksp_gn_leastsquares, b, v_LeastSquares);
 
     // Report convergence
