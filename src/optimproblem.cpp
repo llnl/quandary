@@ -154,21 +154,21 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_MULT_TRANSPOSE, (void(*)(void))GN_LeastSquares_MatMultTranspose);
 
   // Create the KSP solver for the Gauss-Newton least-squares problem
-  KSPCreate(PETSC_COMM_SELF, &ksp_LeastSquares);
-  KSPSetOperators(ksp_LeastSquares, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell);
-  // KSPSetNormType(ksp_LeastSquares, KSP_NORM_UNPRECONDITIONED); // Unconditioned ressidual norm
-  KSPSetType(ksp_LeastSquares, KSPLSQR);
-  KSPSetTolerances(ksp_LeastSquares,config.getGnRtol(),PETSC_DEFAULT,PETSC_DEFAULT,config.getGnMaxiter());
-  // KSPSetComputeSingularValues(ksp_LeastSquares, PETSC_TRUE);
-  KSPSetFromOptions(ksp_LeastSquares);
-  KSPMonitorCancel(ksp_LeastSquares);
-  KSPMonitorSet(ksp_LeastSquares, KSPMonitorResidualAndSolution, (void*)this, NULL);
+  KSPCreate(PETSC_COMM_SELF, &ksp_gn_leastsquares);
+  KSPSetOperators(ksp_gn_leastsquares, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell);
+  // KSPSetNormType(ksp_gn_leastsquares, KSP_NORM_UNPRECONDITIONED); // Unconditioned ressidual norm
+  KSPSetType(ksp_gn_leastsquares, KSPLSQR);
+  KSPSetTolerances(ksp_gn_leastsquares,config.getGnRtol(),PETSC_DEFAULT,PETSC_DEFAULT,config.getGnMaxiter());
+  // KSPSetComputeSingularValues(ksp_gn_leastsquares, PETSC_TRUE);
+  KSPSetFromOptions(ksp_gn_leastsquares);
+  KSPMonitorCancel(ksp_gn_leastsquares);
+  KSPMonitorSet(ksp_gn_leastsquares, KSPMonitorResidualAndSolution, (void*)this, NULL);
 
 
   // Initialize Tao BRGN solver for least-squares problem if configured
   gn_leastsquares_solver = config.getGnLeastSquaresSolver();
   if (gn_leastsquares_solver == "brgn") {
-    // Create Tao solver on PETSC_COMM_SELF (same as ksp_LeastSquares)
+    // Create Tao solver on PETSC_COMM_SELF (same as ksp_gn_leastsquares)
     TaoCreate(PETSC_COMM_SELF, &tao_brgn);
     TaoSetType(tao_brgn, TAOBRGN);
 
@@ -228,8 +228,8 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
 
 
   /* Create GN Normal equation linear solver: L^*Lv=b */
-  KSPCreate(PETSC_COMM_SELF, &ksp_GN_NormalEq);
-  KSPSetOperators(ksp_GN_NormalEq, GN_Primal_MatShell, GN_Primal_MatShell);
+  KSPCreate(PETSC_COMM_SELF, &ksp_gn_primal);
+  KSPSetOperators(ksp_gn_primal, GN_Primal_MatShell, GN_Primal_MatShell);
   std::string ksp_normaleq_solver_str = config.getGnNormaleqSolver();
   std::string ksp_normaleq_solver_lower = ksp_normaleq_solver_str;
   std::transform(ksp_normaleq_solver_lower.begin(), ksp_normaleq_solver_lower.end(), ksp_normaleq_solver_lower.begin(), ::tolower);
@@ -238,20 +238,20 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   // Skip KSP configuration for projected solver (only applies to dual mode)
   if (ksp_normaleq_solver_lower != "proj") {
     if (ksp_normaleq_solver_lower == "cg") {
-      KSPSetType(ksp_GN_NormalEq, KSPCG);
+      KSPSetType(ksp_gn_primal, KSPCG);
     } else if (ksp_normaleq_solver_lower == "minres") {
-      KSPSetType(ksp_GN_NormalEq, KSPMINRES);
+      KSPSetType(ksp_gn_primal, KSPMINRES);
     } else if (ksp_normaleq_solver_lower == "gmres") {
-      KSPSetType(ksp_GN_NormalEq, KSPGMRES);
+      KSPSetType(ksp_gn_primal, KSPGMRES);
     } else {
       // Default or try to use the string directly for other types
       if (mpirank_world == 0 && !quietmode) {
         printf("Warning: Unknown gn_normaleq_solver '%s', using it directly with PETSc\n", ksp_normaleq_solver_str.c_str());
       }
-      KSPSetType(ksp_GN_NormalEq, ksp_normaleq_solver_str.c_str());
+      KSPSetType(ksp_gn_primal, ksp_normaleq_solver_str.c_str());
     }
     // Allow for non-zero initial guess
-    KSPSetInitialGuessNonzero(ksp_GN_NormalEq, PETSC_TRUE);
+    KSPSetInitialGuessNonzero(ksp_gn_primal, PETSC_TRUE);
 
     // Enable MINRES-QLP if requested
     if (ksp_normaleq_solver_lower == "minres" && config.getGnNormaleqMinresQlp()) {
@@ -263,16 +263,16 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
     }
   } else {
     // For projected solver, set a default type (won't be used, but needs to be valid)
-    KSPSetType(ksp_GN_NormalEq, KSPMINRES);
+    KSPSetType(ksp_gn_primal, KSPMINRES);
   }
-  KSPSetFromOptions(ksp_GN_NormalEq);
+  KSPSetFromOptions(ksp_gn_primal);
   PC  pc;
-  KSPGetPC(ksp_GN_NormalEq, &pc);
+  KSPGetPC(ksp_gn_primal, &pc);
   PCSetType(pc, PCNONE); // Disable preconditioner
-  KSPSetNormType(ksp_GN_NormalEq, KSP_NORM_UNPRECONDITIONED); // Unconditioned ressidual norm
-  KSPSetTolerances(ksp_GN_NormalEq,config.getGnRtol(),PETSC_DEFAULT,PETSC_DEFAULT,config.getGnMaxiter());
-  KSPMonitorCancel(ksp_GN_NormalEq);
-  KSPMonitorSet(ksp_GN_NormalEq, KSPMonitorResidualAndSolution, (void*)this, NULL);
+  KSPSetNormType(ksp_gn_primal, KSP_NORM_UNPRECONDITIONED); // Unconditioned ressidual norm
+  KSPSetTolerances(ksp_gn_primal,config.getGnRtol(),PETSC_DEFAULT,PETSC_DEFAULT,config.getGnMaxiter());
+  KSPMonitorCancel(ksp_gn_primal);
+  KSPMonitorSet(ksp_gn_primal, KSPMonitorResidualAndSolution, (void*)this, NULL);
 
 
   /* Dual mode uses pure tangent space (not augmented) */
@@ -307,25 +307,25 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   MatShellSetOperation(GN_Dual_LowRank_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_LowRank_MatMult);
 
   /* Create KSP solver for dual Gauss-Newton problem */
-  KSPCreate(PETSC_COMM_SELF, &ksp_GN_Dual);
+  KSPCreate(PETSC_COMM_SELF, &ksp_gn_dual);
   // Operators will be set at solve time depending on whether preconditioning is enabled
-  KSPSetOperators(ksp_GN_Dual, GN_Dual_MatShell, GN_Dual_MatShell);
+  KSPSetOperators(ksp_gn_dual, GN_Dual_MatShell, GN_Dual_MatShell);
 
   // Use same solver type configuration as normal equation solver (skip if using projected solver)
   if (ksp_normaleq_solver_lower != "proj") {
     if (ksp_normaleq_solver_lower == "cg") {
-      KSPSetType(ksp_GN_Dual, KSPCG);
+      KSPSetType(ksp_gn_dual, KSPCG);
     } else if (ksp_normaleq_solver_lower == "minres") {
-      KSPSetType(ksp_GN_Dual, KSPMINRES);
+      KSPSetType(ksp_gn_dual, KSPMINRES);
     } else if (ksp_normaleq_solver_lower == "gmres") {
-      KSPSetType(ksp_GN_Dual, KSPGMRES);
+      KSPSetType(ksp_gn_dual, KSPGMRES);
     } else {
       if (mpirank_world == 0 && !quietmode) {
         printf("Warning: Unknown gn_normaleq_solver '%s' for dual solver, using it directly with PETSc\n", gn_normaleq_solver.c_str());
       }
-      KSPSetType(ksp_GN_Dual, gn_normaleq_solver.c_str());
+      KSPSetType(ksp_gn_dual, gn_normaleq_solver.c_str());
     }
-    KSPSetInitialGuessNonzero(ksp_GN_Dual, PETSC_TRUE);
+    KSPSetInitialGuessNonzero(ksp_gn_dual, PETSC_TRUE);
 
     // Apply MINRES-QLP if configured
     if (ksp_normaleq_solver_lower == "minres" && config.getGnNormaleqMinresQlp()) {
@@ -337,32 +337,32 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
     }
   } else {
     // For projected solver, set a default type (won't be used, but needs to be valid)
-    KSPSetType(ksp_GN_Dual, KSPMINRES);
+    KSPSetType(ksp_gn_dual, KSPMINRES);
   }
 
-  KSPSetFromOptions(ksp_GN_Dual);
+  KSPSetFromOptions(ksp_gn_dual);
   PC pc_dual;
-  KSPGetPC(ksp_GN_Dual, &pc_dual);
+  KSPGetPC(ksp_gn_dual, &pc_dual);
   PCSetType(pc_dual, PCNONE); // Disable preconditioner
-  KSPSetNormType(ksp_GN_Dual, KSP_NORM_UNPRECONDITIONED);
-  KSPSetTolerances(ksp_GN_Dual, config.getGnRtol(), PETSC_DEFAULT, PETSC_DEFAULT, config.getGnMaxiter());
-  KSPMonitorCancel(ksp_GN_Dual);
-  KSPMonitorSet(ksp_GN_Dual, KSPMonitorResidualAndSolution, (void*)this, NULL);
+  KSPSetNormType(ksp_gn_dual, KSP_NORM_UNPRECONDITIONED);
+  KSPSetTolerances(ksp_gn_dual, config.getGnRtol(), PETSC_DEFAULT, PETSC_DEFAULT, config.getGnMaxiter());
+  KSPMonitorCancel(ksp_gn_dual);
+  KSPMonitorSet(ksp_gn_dual, KSPMonitorResidualAndSolution, (void*)this, NULL);
 
 
   /* Create eigenvalues solver for Gauss-Newton normal equation Ax=b */
-  EPSCreate(PETSC_COMM_SELF, &eps_GN_NormalEq);
-  EPSSetOperators(eps_GN_NormalEq, GN_Primal_MatShell, NULL);
-  EPSSetProblemType(eps_GN_NormalEq, EPS_HEP); // Hermitian
-  EPSSetWhichEigenpairs(eps_GN_NormalEq, EPS_LARGEST_REAL); // largest eigenvalues
+  EPSCreate(PETSC_COMM_SELF, &eps_gn_primal);
+  EPSSetOperators(eps_gn_primal, GN_Primal_MatShell, NULL);
+  EPSSetProblemType(eps_gn_primal, EPS_HEP); // Hermitian
+  EPSSetWhichEigenpairs(eps_gn_primal, EPS_LARGEST_REAL); // largest eigenvalues
   double eps_thresh = eps_evals_cutoff;
-  EPSSetThreshold(eps_GN_NormalEq, eps_thresh, PETSC_FALSE);  // absolute threshold
+  EPSSetThreshold(eps_gn_primal, eps_thresh, PETSC_FALSE);  // absolute threshold
   neigvals = mastereq->getDim()*mastereq->getDim() - 1;
   // ncv = neigvals + 2; // Max Krylov dimension. How to set??
   ncv = 2*neigvals ; // Max Krylov dimension. How to set??
-  EPSSetDimensions(eps_GN_NormalEq, neigvals, ncv, PETSC_DEFAULT);
-  EPSSetTolerances(eps_GN_NormalEq, eps_tol, config.getGnMaxiter());
-  EPSSetFromOptions(eps_GN_NormalEq);
+  EPSSetDimensions(eps_gn_primal, neigvals, ncv, PETSC_DEFAULT);
+  EPSSetTolerances(eps_gn_primal, eps_tol, config.getGnMaxiter());
+  EPSSetFromOptions(eps_gn_primal);
 
 }
 
@@ -391,10 +391,10 @@ OptimProblem::~OptimProblem() {
   MatDestroy(&gn_dual_lowrank_U);
   VecDestroy(&gn_dual_lowrank_sigma_invsqrt);
   VecDestroy(&gn_dual_lowrank_temp);
-  KSPDestroy(&ksp_GN_NormalEq);
-  KSPDestroy(&ksp_GN_Dual);
-  EPSDestroy(&eps_GN_NormalEq);
-  KSPDestroy(&ksp_LeastSquares);
+  KSPDestroy(&ksp_gn_primal);
+  KSPDestroy(&ksp_gn_dual);
+  EPSDestroy(&eps_gn_primal);
+  KSPDestroy(&ksp_gn_leastsquares);
   if (tao_brgn) {
     TaoDestroy(&tao_brgn);
     VecDestroy(&brgn_rhs);
@@ -423,8 +423,8 @@ void OptimProblem::setGaussNewtonMaxiter(int maxiter) {
   // 1. Set for for solveGaussNewtonNormalEqKSP KSP solver
   PetscReal rtol, abstol, dtol;
   PetscInt current_maxits;
-  KSPGetTolerances(ksp_GN_NormalEq, &rtol, &abstol, &dtol, &current_maxits);
-  KSPSetTolerances(ksp_GN_NormalEq, rtol, abstol, dtol, maxiter);
+  KSPGetTolerances(ksp_gn_primal, &rtol, &abstol, &dtol, &current_maxits);
+  KSPSetTolerances(ksp_gn_primal, rtol, abstol, dtol, maxiter);
 
   // 2. Set for solveGaussNewtonLeastSquares solvers
   if (gn_leastsquares_solver == "brgn") {
@@ -434,26 +434,26 @@ void OptimProblem::setGaussNewtonMaxiter(int maxiter) {
     // TaoSetMaximumIterations(tao_sub, maxiter);
     TaoSetMaximumIterations(tao_brgn, maxiter); // no effect
   } else {
-    KSPGetTolerances(ksp_LeastSquares, &rtol, &abstol, &dtol, &current_maxits);
-    KSPSetTolerances(ksp_LeastSquares, rtol, abstol, dtol, maxiter);
+    KSPGetTolerances(ksp_gn_leastsquares, &rtol, &abstol, &dtol, &current_maxits);
+    KSPSetTolerances(ksp_gn_leastsquares, rtol, abstol, dtol, maxiter);
   }
 
   // 3. Set for dual Gauss-Newton KSP solver
-  KSPGetTolerances(ksp_GN_Dual, &rtol, &abstol, &dtol, &current_maxits);
-  KSPSetTolerances(ksp_GN_Dual, rtol, abstol, dtol, maxiter);
+  KSPGetTolerances(ksp_gn_dual, &rtol, &abstol, &dtol, &current_maxits);
+  KSPSetTolerances(ksp_gn_dual, rtol, abstol, dtol, maxiter);
 
   // 4. Set for EPS eigenvalue solver (used in solveGaussNewtonNormalEqEPS)
   PetscReal eps_tol;
-  EPSGetTolerances(eps_GN_NormalEq, &eps_tol, &current_maxits);
-  EPSSetTolerances(eps_GN_NormalEq, eps_tol, maxiter);
+  EPSGetTolerances(eps_gn_primal, &eps_tol, &current_maxits);
+  EPSSetTolerances(eps_gn_primal, eps_tol, maxiter);
 }
 
 
 int OptimProblem::getGaussNewtonMaxiter() {
-  // Return the current max iterations from ksp_GN_NormalEq (they should all be the same)
+  // Return the current max iterations from ksp_gn_primal (they should all be the same)
   PetscReal rtol, abstol, dtol;
   PetscInt maxits;
-  KSPGetTolerances(ksp_GN_NormalEq, &rtol, &abstol, &dtol, &maxits);
+  KSPGetTolerances(ksp_gn_primal, &rtol, &abstol, &dtol, &maxits);
   return (int)maxits;
 }
 
@@ -892,7 +892,7 @@ void OptimProblem::solveGaussNewtonNormalEqKSP(Vec xinit, const Vec initial_gues
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
 
   // Set the matrix again, just in case, for reset.
-  KSPSetOperators(ksp_GN_NormalEq, GN_Primal_MatShell, GN_Primal_MatShell);
+  KSPSetOperators(ksp_gn_primal, GN_Primal_MatShell, GN_Primal_MatShell);
 
   // Set initial guess from initial_guess parameter
   VecCopy(initial_guess, Ainv_b);
@@ -901,7 +901,7 @@ void OptimProblem::solveGaussNewtonNormalEqKSP(Vec xinit, const Vec initial_gues
   if (gn_normaleq_damping > 0.0) MatShift(GN_Primal_MatShell, gn_normaleq_damping);
 
   // Solve the linear system L^*L x = b
-  KSPSolve(ksp_GN_NormalEq, b, Ainv_b);
+  KSPSolve(ksp_gn_primal, b, Ainv_b);
 
   // Revert the optional scaling
   if (gn_normaleq_damping > 0.0) MatShift(GN_Primal_MatShell, -gn_normaleq_damping);
@@ -910,13 +910,13 @@ void OptimProblem::solveGaussNewtonNormalEqKSP(Vec xinit, const Vec initial_gues
   KSPConvergedReason reason;
   int iters;
   double rnorm;
-  KSPGetConvergedReason(ksp_GN_NormalEq, &reason);
-  KSPGetIterationNumber(ksp_GN_NormalEq, &iters);
-  KSPGetResidualNorm(ksp_GN_NormalEq, &rnorm);
+  KSPGetConvergedReason(ksp_gn_primal, &reason);
+  KSPGetIterationNumber(ksp_gn_primal, &iters);
+  KSPGetResidualNorm(ksp_gn_primal, &rnorm);
   ksp_iters_last = iters;
   if (mpirank_world == 0 && !quietmode) {
     KSPType ksp_type;
-    KSPGetType(ksp_GN_NormalEq, &ksp_type);
+    KSPGetType(ksp_gn_primal, &ksp_type);
     printf("Gauss-Newton KSP (%s) stats: iterations = %d, residual norm = %1.14e\n", ksp_type, iters, rnorm);
   }
 }
@@ -1011,11 +1011,11 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
   // TODO: Check if the above is needed! 
 
   // Set the matrix operators
-  KSPSetOperators(ksp_GN_Dual, GN_Dual_MatShell, GN_Dual_MatShell);
+  KSPSetOperators(ksp_gn_dual, GN_Dual_MatShell, GN_Dual_MatShell);
 
   // Use provided initial guess 
   VecCopy(initial_guess, y_dual_workspace);
-  KSPSetInitialGuessNonzero(ksp_GN_Dual, PETSC_TRUE);
+  KSPSetInitialGuessNonzero(ksp_gn_dual, PETSC_TRUE);
 
   bool use_precond = (gn_prec_update_interval >= -1);
 
@@ -1026,7 +1026,7 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
 
   if (!use_precond) {
     // No preconditioning - solve directly
-    KSPSolve(ksp_GN_Dual, b_rhs, y_dual_workspace);
+    KSPSolve(ksp_gn_dual, b_rhs, y_dual_workspace);
 
   } else { 
     // Low-rank preconditioning: M^{-1/2} (L L^T + λI) M^{-1/2} z = M^{-1/2} b
@@ -1046,10 +1046,10 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
     VecCopy(b_scaled, z_solution);  // Use preconditioned RHS as initial guess in z-space
 
     // Use the low-rank preconditioned operator
-    KSPSetOperators(ksp_GN_Dual, GN_Dual_LowRank_MatShell, GN_Dual_LowRank_MatShell);
+    KSPSetOperators(ksp_gn_dual, GN_Dual_LowRank_MatShell, GN_Dual_LowRank_MatShell);
 
     // Solve: M^{-1/2} A M^{-1/2} z = M^{-1/2} b
-    KSPSolve(ksp_GN_Dual, b_scaled, z_solution);
+    KSPSolve(ksp_gn_dual, b_scaled, z_solution);
 
     // Recover y = M^{-1/2} * z
     apply_GN_Dual_LowRank_Precond(z_solution, y_dual_workspace);
@@ -1058,7 +1058,7 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
     VecDestroy(&z_solution);
 
     // Reset operators to unpreconditioned for next time
-    KSPSetOperators(ksp_GN_Dual, GN_Dual_MatShell, GN_Dual_MatShell);
+    KSPSetOperators(ksp_gn_dual, GN_Dual_MatShell, GN_Dual_MatShell);
   } 
 
   // Revert the damping
@@ -1073,13 +1073,13 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
   KSPConvergedReason reason;
   int iters;
   double rnorm;
-  KSPGetConvergedReason(ksp_GN_Dual, &reason);
-  KSPGetIterationNumber(ksp_GN_Dual, &iters);
-  KSPGetResidualNorm(ksp_GN_Dual, &rnorm);
+  KSPGetConvergedReason(ksp_gn_dual, &reason);
+  KSPGetIterationNumber(ksp_gn_dual, &iters);
+  KSPGetResidualNorm(ksp_gn_dual, &rnorm);
   ksp_iters_last = iters;
   if (mpirank_world == 0 && !quietmode) {
     KSPType ksp_type;
-    KSPGetType(ksp_GN_Dual, &ksp_type);
+    KSPGetType(ksp_gn_dual, &ksp_type);
     printf("Gauss-Newton Dual KSP (%s) stats: iterations = %d, residual norm = %1.14e\n", ksp_type, iters, rnorm);
 
     // Print convergence reason for debugging
@@ -1089,7 +1089,7 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
     // Print tolerances for debugging DTOL issues
     PetscReal rtol, abstol, dtol;
     PetscInt maxits;
-    KSPGetTolerances(ksp_GN_Dual, &rtol, &abstol, &dtol, &maxits);
+    KSPGetTolerances(ksp_gn_dual, &rtol, &abstol, &dtol, &maxits);
     printf("  KSP Tolerances: rtol=%e, abstol=%e, dtol=%e, maxits=%d\n", rtol, abstol, dtol, (int)maxits);
   }
 
@@ -1296,12 +1296,12 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
       VecCopy(y_proj, z_solution);
 
       // Configure KSP for refinement with preconditioned operator
-      KSPSetOperators(ksp_GN_Dual, GN_Dual_LowRank_MatShell, GN_Dual_LowRank_MatShell);
-      KSPSetInitialGuessNonzero(ksp_GN_Dual, PETSC_TRUE);
-      KSPSetTolerances(ksp_GN_Dual, gn_rtol, PETSC_DEFAULT, PETSC_DEFAULT, gn_maxiter);
+      KSPSetOperators(ksp_gn_dual, GN_Dual_LowRank_MatShell, GN_Dual_LowRank_MatShell);
+      KSPSetInitialGuessNonzero(ksp_gn_dual, PETSC_TRUE);
+      KSPSetTolerances(ksp_gn_dual, gn_rtol, PETSC_DEFAULT, PETSC_DEFAULT, gn_maxiter);
 
       // Solve preconditioned system: M^{-1/2} A M^{-1/2} z = M^{-1/2} b_normalized
-      KSPSolve(ksp_GN_Dual, b_scaled, z_solution);
+      KSPSolve(ksp_gn_dual, b_scaled, z_solution);
 
       // Recover y = M^{-1/2} * z
       apply_GN_Dual_LowRank_Precond(z_solution, y_dual_workspace);
@@ -1310,7 +1310,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
       VecScale(y_dual_workspace, bnorm);
 
       // Get actual number of iterations performed
-      KSPGetIterationNumber(ksp_GN_Dual, &refine_iters);
+      KSPGetIterationNumber(ksp_gn_dual, &refine_iters);
 
       // Restore preconditioner data structures
       gn_dual_lowrank_U = V_r_saved;
@@ -1325,7 +1325,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
       VecDestroy(&b_normalized);
 
       // Reset KSP operators to unpreconditioned for next time
-      KSPSetOperators(ksp_GN_Dual, GN_Dual_MatShell, GN_Dual_MatShell);
+      KSPSetOperators(ksp_gn_dual, GN_Dual_MatShell, GN_Dual_MatShell);
     }
   }
 
@@ -1377,7 +1377,7 @@ void OptimProblem::solveGaussNewtonNormalEqEPS(Vec xinit, const Vec b, Vec Ainv_
   VecGetArray(tmp, &tmp_data);
   for (int i=0; i<evals.size(); i++) {
     if (evals[i] > eps_evals_cutoff) {
-      tmp_data[i] /= (evals[i] + eps_normaleq_damping);
+      tmp_data[i] /= (evals[i] + eps_primal_damping);
     } else {
       tmp_data[i] = 0.0;
     }
@@ -1415,19 +1415,19 @@ std::vector<double> OptimProblem::computeGaussNewtonNormalEqEvals(Vec xinit, Mat
   // Update EPS for a fresh solve on the new xeval_GN. 
   if (!gn_primal_usedensemat) { 
     // use MatShell 
-    EPSSetOperators(eps_GN_NormalEq, GN_Primal_MatShell, NULL);
+    EPSSetOperators(eps_gn_primal, GN_Primal_MatShell, NULL);
   } else {
     // use dense Matrix representation of the Gauss-Newton matrix
     updateGaussNewtonMatDense(); // does N2-1 applications of the MatShell
-    EPSSetOperators(eps_GN_NormalEq, GN_Primal_MatDense, NULL);
+    EPSSetOperators(eps_gn_primal, GN_Primal_MatDense, NULL);
   }
 
   // Solve the eigenvalue problem for the Gauss-Newton matrix
-  EPSSolve(eps_GN_NormalEq);
+  EPSSolve(eps_gn_primal);
   PetscInt numConv;
   PetscInt iters_taken;
-  EPSGetConverged(eps_GN_NormalEq, &numConv);
-  EPSGetIterationNumber(eps_GN_NormalEq,&iters_taken);
+  EPSGetConverged(eps_gn_primal, &numConv);
+  EPSGetIterationNumber(eps_gn_primal,&iters_taken);
   if (mpirank_world == 0 && !quietmode) printf("Gauss-Newton EPS converged %d eigenvalues in %d iterations.\n", numConv, iters_taken);
   if (numConv < neigvals) {
       if (mpirank_world==0 && !quietmode) printf("WARNING: Only %d eigenvalues out of %d eigenvalues converged.\n", numConv, neigvals);
@@ -1444,11 +1444,11 @@ std::vector<double> OptimProblem::computeGaussNewtonNormalEqEvals(Vec xinit, Mat
   for (PetscInt i = 0; i < numConv && i < neigvals; i++) {
 
     // Retrieve the eigenvalue (is real) and eigenvector
-    EPSGetEigenpair(eps_GN_NormalEq, i, &evals_re[i], NULL, evec_re[i], NULL);
+    EPSGetEigenpair(eps_gn_primal, i, &evals_re[i], NULL, evec_re[i], NULL);
 
     // Estimate the errror (needs one more application of A)
     double error = 0.0;
-    EPSComputeError(eps_GN_NormalEq,i,EPS_ERROR_RELATIVE,&error);
+    EPSComputeError(eps_gn_primal,i,EPS_ERROR_RELATIVE,&error);
     if (error > eps_tol) {
       if (mpirank_world==0) printf("ERROR: Relative error of eigenpair %d is large (error=%1.4e)\n", i, error);
     }
@@ -2382,22 +2382,22 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
 
   } else if (gn_leastsquares_solver == "lsqr"){
     // Set the matrix again, just in case, for reset.
-    KSPSetOperators(ksp_LeastSquares, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell);
+    KSPSetOperators(ksp_gn_leastsquares, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell);
 
     // Set initial guess from initial_guess parameter
     VecCopy(initial_guess, v_LeastSquares);
-    KSPSetInitialGuessNonzero(ksp_LeastSquares, PETSC_TRUE);
+    KSPSetInitialGuessNonzero(ksp_gn_leastsquares, PETSC_TRUE);
 
     // Solve the Gauss-Newton least-squares problem
-    KSPSolve(ksp_LeastSquares, b, v_LeastSquares);
+    KSPSolve(ksp_gn_leastsquares, b, v_LeastSquares);
 
     // Report convergence
     KSPConvergedReason reason;
     int iters;
     double rnorm;
-    KSPGetConvergedReason(ksp_LeastSquares, &reason);
-    KSPGetIterationNumber(ksp_LeastSquares, &iters);
-    KSPGetResidualNorm(ksp_LeastSquares, &rnorm);
+    KSPGetConvergedReason(ksp_gn_leastsquares, &reason);
+    KSPGetIterationNumber(ksp_gn_leastsquares, &iters);
+    KSPGetResidualNorm(ksp_gn_leastsquares, &rnorm);
     ksp_iters_last = iters;
     if (mpirank_world == 0 && !quietmode) {
       printf("Gauss-Newton Least-Squares stats: iterations = %d, residual norm = %1.14e\n", iters, rnorm);

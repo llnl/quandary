@@ -117,43 +117,43 @@ class OptimProblem {
   Mat GN_Dual_LowRank_MatShell; ///< Applies low-rank preconditioned dual: M^{-1/2} (L L^T + λI) M^{-1/2}
 
   // Solvers for the inner Gauss-Newton equations
-  KSP ksp_LeastSquares;
-  KSP ksp_GN_NormalEq;  ///< Linear solver for Gauss-Newton Normal Equation solver
-
+  KSP ksp_gn_leastsquares; ///< Linear solver for Gauss-Newton least-squares problem
+  KSP ksp_gn_primal;  ///< Linear solver for Gauss-Newton Normal Equation solver
+  KSP ksp_gn_dual;  ///< Linear solver for dual Gauss-Newton system
   Tao tao_brgn;        ///< Tao BRGN solver (alternative to KSPLSQR)
-  int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton normal or least squares solvers 
-  Vec *wsub_workspace; ///< Pre-allocated workspace to compute -\nabla_U J
-  Vec brgn_rhs;        ///< Cached RHS vector for BRGN residual evaluation
-  Vec brgn_residual;   ///< Cached Residual vector for BRGN solver
-  double gn_leastsquares_damping; ///< Damping parameter λ for Least Squares regularization
+  EPS eps_gn_primal; // EPS solver for the Gauss-Newton Normal Equation matrix
+
+  // Options for Gauss-Newton solvers
+  std::string gn_solver_mode; ///< Gauss-Newton solver mode: "primal" or "dual" or "least-squares"
   std::string gn_leastsquares_solver; ///< Least-squares solver name: "brgn" or "lsqr"
-
-  // KSP linear solver
+  double gn_leastsquares_damping; ///< Damping parameter λ for Least Squares regularization
   double gn_normaleq_damping; ///< Damping parameter for Gauss-Newton matrix shift
-
-  // Dual Gauss-Newton solver
-  KSP ksp_GN_Dual;  ///< Linear solver for dual Gauss-Newton system
-  Vec y_dual_workspace; ///< Workspace vector for dual solver (tangent space, size dim²-1)
-  Vec v_dual_workspace; ///< Workspace vector for intermediate L^T y computation (design space)
-  std::string gn_solver_mode; ///< Gauss-Newton solver mode: "primal" or "dual"
-  std::string gn_normaleq_solver; ///< Normal equation solver: "minres", "cg", "gmres", or "proj"
   int gn_prec_update_interval; ///< Preconditioner update interval (0 = startup only, -1 = adaptive)
   int gn_precond_rank; ///< Rank for low-rank preconditioner
-  int gn_dual_ksp_baseline; ///< Baseline KSP iterations right after preconditioner formation (for adaptive update)
-  int gn_dual_ksp_excess_accum; ///< Accumulated excess KSP iterations beyond n_0 (for adaptive update)
   int gn_maxiter; ///< Maximum iterations for Gauss-Newton KSP solver
   double gn_rtol; ///< Relative tolerance for Gauss-Newton KSP solver
+  PetscReal eps_tol = 1e-4; ///< Tolerance for EPS eigenvalue solver in primal mode
+  double eps_evals_cutoff = 1e-5; ///< Cutoff for eigenvalues of the Gauss-Newton matrix in primal mode
+  double eps_primal_damping = 1e-3; ///< Damping for eigenvalues of the Gauss-Newton matrix
 
-  // Low-rank preconditioner data: M = V_r Σ_r V_r^T + μ(I - V_r V_r^T)
+  // Workspace for Gauss-Newton solvers
+  // int tangent_dim; ///< Dimension of the tangent space (dim²-1)
+  int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton normal or least squares solvers 
+  Vec *wsub_workspace; ///< Pre-allocated workspace to compute -\nabla_U J
+  Vec brgn_rhs; ///< Cached RHS vector for BRGN residual evaluation
+  Vec brgn_residual; ///< Cached Residual vector for BRGN solver
+  Vec y_dual_workspace; ///< Workspace vector for dual solver (tangent space, size dim²-1)
+  Vec v_dual_workspace; ///< Workspace vector for intermediate L^T y computation (design space)
+  std::string gn_normaleq_solver; ///< Normal equation solver: "minres", "cg", "gmres", or "proj"
+  int gn_dual_ksp_baseline; ///< Baseline KSP iterations right after preconditioner formation (for adaptive update)
+  int gn_dual_ksp_excess_accum; ///< Accumulated excess KSP iterations beyond n_0 (for adaptive update)
   Mat gn_dual_lowrank_U; ///< V_r: first r eigenvectors (tangent_dim × rank, dense)
   Vec gn_dual_lowrank_sigma_invsqrt; ///< Σ_r^{-1/2} (rank eigenvalues^{-1/2})
   Vec gn_dual_lowrank_temp; ///< Workspace for low-rank application (size = rank)
   PetscScalar gn_dual_precond_mu; ///< μ = σ_{r+1} for complement space
 
-  EPS eps_GN_NormalEq; // EPS solver for the Gauss-Newton Normal Equation matrix
-  PetscReal eps_tol = 1e-4; ///< Tolerance for EPS eigenvalue solver
-  double eps_evals_cutoff = 1e-5; ///< Cutoff for eigenvalues of the Gauss-Newton matrix
-  double eps_normaleq_damping = 1e-3; ///< Damping for eigenvalues of the Gauss-Newton matrix
+
+  // TODO: MOVE THESE TO LOCAL FUNCTION.
   int neigvals; ///< Number of eigenvalues to compute (=N^2-1)
   int ncv; ///< Number of Lanczos vectors to use in EPS solver. HOW TO CHOOSE?? 
 
