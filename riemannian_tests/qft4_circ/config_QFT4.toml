@@ -63,8 +63,7 @@ gn_solver_mode = "dual"
 
 # experimental preconditioner (dual mode only)
 gn_prec_update_interval = -1
-gn_dual_precond_type="low_rank"
-gn_dual_precond_rank = 100
+gn_precond_rank = 100
 
 # Those apply to solving the normal equation
 # minres-qlp

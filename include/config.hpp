@@ -115,8 +115,7 @@ class Config {
   bool gn_normaleq_minres_qlp; ///< Use MINRES-QLP variant (more robust than standard MINRES)
   std::string gn_solver_mode; ///< Gauss-Newton solver mode: "primal" or "dual"
   int gn_prec_update_interval; ///< Preconditioner update interval (0 = only at startup, n>0 = every n iterations)
-  std::string gn_dual_precond_type; ///< Dual preconditioner type: "symmetric", "left", or "low_rank"
-  int gn_dual_precond_rank; ///< Rank for low-rank preconditioner (only used if gn_dual_precond_type="low_rank")
+  int gn_precond_rank; ///< Rank for low-rank preconditioner 
 
   // Output and runtypes
   std::string output_directory; ///< Directory for output files
@@ -200,8 +199,7 @@ class Config {
   bool getGnNormaleqMinresQlp() const { return gn_normaleq_minres_qlp; }
   const std::string& getGnSolverMode() const { return gn_solver_mode; }
   int getGnPrecUpdateInterval() const { return gn_prec_update_interval; }
-  const std::string& getGnDualPrecondType() const { return gn_dual_precond_type; }
-  int getGnDualPrecondRank() const { return gn_dual_precond_rank; }
+  int getGnPrecondRank() const { return gn_precond_rank; }
   double getGnRtol() const { return gn_rtol; }
   int getGnMaxiter() const { return gn_maxiter; }
 

@@ -52,8 +52,7 @@ gn_solver_mode = "primal"
 
 # experimental preconditioner (dual mode only)
 gn_prec_update_interval = -1
-gn_dual_precond_type="low_rank"
-gn_dual_precond_rank = 20
+gn_precond_rank = 20
 
 # Those apply to solving the normal equation
 # gn_normaleq_damping = 1e-5

@@ -91,13 +91,13 @@ class OptimProblem {
   double* mygrad; ///< Auxiliary gradient storage
   Vec xtmp; ///< Temporary vector storage
   int output_optimization_stride; ///< Write output files every N optimization iterations
-  Vec x_GN; ///< Current iterate for GN optimization. Holds solution after finished. 
 
   TimeStepper* timestepper; ///< Pointer to time-stepping scheme
   Output* output; ///< Pointer to output handler
   MasterEq* mastereq; ///< Pointer to master equation solver
 
   /* Storage for Gauss-Newton optimization solvers */
+  Vec x_GN; ///< Current iterate for Gauss-Newton optimization. Holds solution after finished. 
   Vec xeval_GN; ///< Point of evaluation for Gauss-Newton (evaluate L(x) at this x) 
   bool nonlinear_forward_valid; ///< True once the nonlinear forward solveODE has been done and stored for the current xeval_GN, reset whenever xeval_GN changes!
   bool includeHessUJ; ///< Flag to include Hessian of J(U) in the Gauss-Newton approximation 
@@ -113,39 +113,32 @@ class OptimProblem {
   bool gn_primal_usedensemat = false; ///< Always false.
   Mat GN_LeastSquares_MatShell; ///< Applies P_gL and, if damped, augments with lambda I. Misses W^1/2 at this point. TODO: Should probably be calling GN_Jacobian_Tangentspace plus augmentation. 
   Mat GN_Dual_MatShell; ///< Applies P_G W^1/2 L L^* W^1/2 P_G
-  Mat GN_Dual_MatDense; ///< Dense P_G Q^1/2 L L^* W^1/2 P_G
-  Mat GN_Dual_Precond_MatShell; ///< MatShell for symmetrically preconditioned dual: D^{-1/2} (L L^T + λI) D^{-1/2}
-  Mat GN_Dual_Precond_MatDense; ///< Dense matrix representation of D^{-1/2} (L L^T) D^{-1/2}
-  Mat GN_Dual_LowRank_MatShell; ///< MatShell for low-rank preconditioned dual: M^{-1/2} (L L^T + λI) M^{-1/2}
+  Mat GN_Dual_MatDense; ///< Dense P_G W^1/2 L L^* W^1/2 P_G
+  Mat GN_Dual_LowRank_MatShell; ///< Applies low-rank preconditioned dual: M^{-1/2} (L L^T + λI) M^{-1/2}
 
-  int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton normal or least squares solvers 
-
+  // Solvers for the inner Gauss-Newton equations
   KSP ksp_LeastSquares;
-  Vec *wsub_workspace; ///< Pre-allocated workspace vectors for MatMultTranspose (size: ninit_local)
+  KSP ksp_GN_NormalEq;  ///< Linear solver for Gauss-Newton Normal Equation solver
 
-  // Tao BRGN solver for least-squares problem
   Tao tao_brgn;        ///< Tao BRGN solver (alternative to KSPLSQR)
+  int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton normal or least squares solvers 
+  Vec *wsub_workspace; ///< Pre-allocated workspace to compute -\nabla_U J
   Vec brgn_rhs;        ///< Cached RHS vector for BRGN residual evaluation
   Vec brgn_residual;   ///< Cached Residual vector for BRGN solver
-
   double gn_leastsquares_damping; ///< Damping parameter λ for Least Squares regularization
   std::string gn_leastsquares_solver; ///< Least-squares solver name: "brgn" or "lsqr"
 
   // KSP linear solver
-  KSP ksp_GN_NormalEq;  ///< Linear solver for Gauss-Newton Normal Equation solver
   double gn_normaleq_damping; ///< Damping parameter for Gauss-Newton matrix shift
 
   // Dual Gauss-Newton solver
   KSP ksp_GN_Dual;  ///< Linear solver for dual Gauss-Newton system
   Vec y_dual_workspace; ///< Workspace vector for dual solver (tangent space, size dim²-1)
   Vec v_dual_workspace; ///< Workspace vector for intermediate L^T y computation (design space)
-  Vec gn_dual_precond_diag; ///< D^{-1/2} where D = diag(L L^T + λI) for symmetric preconditioning
-  Vec gn_dual_temp; ///< Temporary vector for symmetric preconditioning operations
   std::string gn_solver_mode; ///< Gauss-Newton solver mode: "primal" or "dual"
   std::string gn_normaleq_solver; ///< Normal equation solver: "minres", "cg", "gmres", or "proj"
   int gn_prec_update_interval; ///< Preconditioner update interval (0 = startup only, -1 = adaptive)
-  std::string gn_dual_precond_type; ///< Dual preconditioner type: "symmetric", "left", or "low_rank"
-  int gn_dual_precond_rank; ///< Rank for low-rank preconditioner
+  int gn_precond_rank; ///< Rank for low-rank preconditioner
   int gn_dual_ksp_baseline; ///< Baseline KSP iterations right after preconditioner formation (for adaptive update)
   int gn_dual_ksp_excess_accum; ///< Accumulated excess KSP iterations beyond n_0 (for adaptive update)
   int gn_maxiter; ///< Maximum iterations for Gauss-Newton KSP solver
@@ -206,13 +199,11 @@ class OptimProblem {
   Mat getGN_Primal_MatShell() { return GN_Primal_MatShell; };
   Mat getGN_Primal_MatDense() { return GN_Primal_MatDense; };
   Mat getGN_Dual_MatShell() { return GN_Dual_MatShell; };
-  Mat getGN_Dual_Precond_MatShell() { return GN_Dual_Precond_MatShell; };
   Mat getGN_Dual_LowRank_MatShell() { return GN_Dual_LowRank_MatShell; };
   Mat getGN_Dual_LowRank_U() { return gn_dual_lowrank_U; };
   Vec getGN_Dual_LowRank_Sigma_InvSqrt() { return gn_dual_lowrank_sigma_invsqrt; };
   PetscScalar getGN_Dual_Precond_Mu() { return gn_dual_precond_mu; };
   Mat getGN_Dual_MatDense() { return GN_Dual_MatDense; };
-  Mat getGN_Dual_Precond_MatDense() { return GN_Dual_Precond_MatDense; };
   Mat getGNLeastSquaresShell() { return GN_LeastSquares_MatShell; };
   Mat getGN_LeastSquares_MatShell() { return GN_LeastSquares_MatShell; };
   bool getQuietmode() { return quietmode; };
@@ -324,15 +315,11 @@ class OptimProblem {
    * @brief MatMult GN_Dual_MatShell: Applies P_G W^1/2 L L^* W^1/2 P_G 
    */
   static PetscErrorCode GN_Dual_MatMult(Mat A, const Vec y, Vec Ay);
-  static PetscErrorCode GN_Dual_GetDiagonal(Mat A, Vec diag);
 
   /**
    * @brief MatMult for GN_Dual_LowRank_MatShell: Applies M^{-1/2} A M^{-1/2} z where A=GN_dual_MatShell = P_G W^1/2 L L^* W^1/2 P_G 
    */
   static PetscErrorCode GN_Dual_LowRank_MatMult(Mat A, const Vec z, Vec output);
-
-  // MatShell Operations for GN_Dual_Precond_Matshell (symmetrically preconditioned dual Gauss-Newton)
-  static PetscErrorCode GN_Dual_Precond_MatMult(Mat A, const Vec z, Vec output);
 
 
   /**
@@ -367,17 +354,9 @@ class OptimProblem {
   void updateGaussNewtonDualMatDense();
 
   /**
-   * @brief Updates the dual Gauss-Newton preconditioner (calls either diagonal or low-rank preconditioner update function)
+   * @brief Updates the dual Gauss-Newton low-rank preconditioner 
    */
   bool updateGaussNewtonDualPreconditioner(int iter);
-
-  /**
-   * @brief Extracts diagonal of (L L^T + λI) for dual Gauss-Newton preconditioner
-   *
-   * Computes diagonal entries by applying GN_Dual_MatShell to unit vectors.
-   * Stores result in gn_dual_precond_diag and updates the KSP preconditioner.
-   */
-  void updateGaussNewtonDualPreconditionerDiagonal();
 
   /**
    * @brief Constructs rank-r low-rank approximation M ≈ U Σ U^T for dual Gauss-Newton preconditioner
@@ -399,18 +378,6 @@ class OptimProblem {
    * @param[out] y Output vector after applying M^{-1/2} (tangent space)
    */
   void apply_GN_Dual_LowRank_Precond(const Vec x, Vec y);
-
-
-  /**
-   * @brief Assembles the dense symmetrically preconditioned dual Gauss-Newton matrix
-   *
-   * Computes D^{-1/2} (L L^T + λI) D^{-1/2} in dense format.
-   * Requires updateGaussNewtonDualPreconditionerDiagonal() to be called first.
-   * Dimensions: (dim²-1) × (dim²-1) where dim is the Hilbert space dimension.
-   *
-   * @note This operation can be expensive as it involves (dim²-1) applications of the preconditioned MatShell.
-   */
-  void updateGaussNewtonDualPrecondMatDense();
 
   /**
    * @brief Solves the Gauss-Newton normal equation L^* L(x) v = b for v using CG iterations

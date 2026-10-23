@@ -281,36 +281,26 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   /* Create MatShell for dual Gauss-Newton problem (L L^T + λI) */
   MatCreateShell(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, this, &GN_Dual_MatShell);
   MatShellSetOperation(GN_Dual_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_MatMult);
-  MatShellSetOperation(GN_Dual_MatShell, MATOP_GET_DIAGONAL, (void(*)(void))GN_Dual_GetDiagonal);
 
   /* Create dense matrices for dual Gauss-Newton problem */
   MatCreateDense(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, NULL, &GN_Dual_MatDense);
   MatZeroEntries(GN_Dual_MatDense);
-  MatCreateDense(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, NULL, &GN_Dual_Precond_MatDense);
-  MatZeroEntries(GN_Dual_Precond_MatDense);
 
   /* Create workspace vectors for dual solver */
   VecCreateSeq(PETSC_COMM_SELF, M_dual, &y_dual_workspace);  // tangent space
   VecDuplicate(xinit, &v_dual_workspace);  // design space
-  VecCreateSeq(PETSC_COMM_SELF, M_dual, &gn_dual_precond_diag);  // D^{-1/2} for symmetric preconditioning
-  VecCreateSeq(PETSC_COMM_SELF, M_dual, &gn_dual_temp);  // temp vector for preconditioning ops
-
-  /* Create MatShell for symmetrically preconditioned operator D^{-1/2} A D^{-1/2} */
-  MatCreateShell(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, this, &GN_Dual_Precond_MatShell);
-  MatShellSetOperation(GN_Dual_Precond_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_Precond_MatMult);
 
   /* Store preconditioner settings */
   gn_prec_update_interval = config.getGnPrecUpdateInterval();
-  gn_dual_precond_type = config.getGnDualPrecondType();
-  gn_dual_precond_rank = config.getGnDualPrecondRank();
+  gn_precond_rank = config.getGnPrecondRank();
   gn_maxiter = config.getGnMaxiter();
   gn_dual_ksp_baseline = 0;  // Will be set after first preconditioner formation
   gn_dual_ksp_excess_accum = 0;  // Accumulated excess KSP iterations
 
   /* Create low-rank preconditioner data structures */
-  MatCreateDense(PETSC_COMM_SELF, M_dual, gn_dual_precond_rank, M_dual, gn_dual_precond_rank, NULL, &gn_dual_lowrank_U);
-  VecCreateSeq(PETSC_COMM_SELF, gn_dual_precond_rank, &gn_dual_lowrank_sigma_invsqrt);
-  VecCreateSeq(PETSC_COMM_SELF, gn_dual_precond_rank, &gn_dual_lowrank_temp);
+  MatCreateDense(PETSC_COMM_SELF, M_dual, gn_precond_rank, M_dual, gn_precond_rank, NULL, &gn_dual_lowrank_U);
+  VecCreateSeq(PETSC_COMM_SELF, gn_precond_rank, &gn_dual_lowrank_sigma_invsqrt);
+  VecCreateSeq(PETSC_COMM_SELF, gn_precond_rank, &gn_dual_lowrank_temp);
 
   /* Create MatShell for low-rank preconditioned operator M^{-1/2} A M^{-1/2} */
   MatCreateShell(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, this, &GN_Dual_LowRank_MatShell);
@@ -393,15 +383,11 @@ OptimProblem::~OptimProblem() {
   MatDestroy(&GN_Primal_MatDense);
   MatDestroy(&GN_LeastSquares_MatShell);
   MatDestroy(&GN_Dual_MatShell);
-  MatDestroy(&GN_Dual_Precond_MatShell);
   MatDestroy(&GN_Dual_LowRank_MatShell);
   MatDestroy(&GN_Dual_MatDense);
-  MatDestroy(&GN_Dual_Precond_MatDense);
   VecDestroy(&xeval_GN);
   VecDestroy(&y_dual_workspace);
   VecDestroy(&v_dual_workspace);
-  VecDestroy(&gn_dual_precond_diag);
-  VecDestroy(&gn_dual_temp);
   MatDestroy(&gn_dual_lowrank_U);
   VecDestroy(&gn_dual_lowrank_sigma_invsqrt);
   VecDestroy(&gn_dual_lowrank_temp);
@@ -898,28 +884,6 @@ PetscErrorCode OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
   return 0;
 }
 
-PetscErrorCode OptimProblem::GN_Dual_GetDiagonal(Mat A, Vec diag){
-  OptimProblem *self;
-  MatShellGetContext(A, (void**)&self);
-
-  // Return the stored diagonal from gn_dual_precond_diag
-  VecCopy(self->gn_dual_precond_diag, diag);
-
-  return 0;
-}
-
-PetscErrorCode OptimProblem::GN_Dual_Precond_MatMult(Mat A, const Vec z, Vec output){
-  OptimProblem *self;
-  MatShellGetContext(A, (void**)&self);
-
-  // Apply D^{-1/2} A D^{-1/2} z
-  VecPointwiseMult(self->gn_dual_temp, self->gn_dual_precond_diag, z); // temp = precond_diag[i]*z[i]
-  MatMult(self->GN_Dual_MatShell, self->gn_dual_temp, output); 
-  VecPointwiseMult(output, self->gn_dual_precond_diag, output); 
-
-  return 0;
-}
-
 
 void OptimProblem::solveGaussNewtonNormalEqKSP(Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b){
 
@@ -1026,7 +990,7 @@ Vec OptimProblem::computeDualInitGuess(Vec b_rhs){
 
   // If using low-rank preconditioner, compute initial guess from stored eigenspace. Otherwise, use zero initial guess. 
   Vec y_initial;
-  if ((gn_prec_update_interval >= -1) && (gn_dual_precond_type == "low_rank")) {
+  if (gn_prec_update_interval >= -1) {
     y_initial = computeEigenspaceInitialGuessFromStored(b_rhs);
   } else {
     VecDuplicate(b_rhs, &y_initial);
@@ -1046,9 +1010,6 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve (solveODE) within linearizedForwad() for the new xeval_GN
   // TODO: Check if the above is needed! 
 
-  // Use passed RHS (computed by caller)
-  const Vec b = b_rhs;
-
   // Set the matrix operators
   KSPSetOperators(ksp_GN_Dual, GN_Dual_MatShell, GN_Dual_MatShell);
 
@@ -1056,34 +1017,31 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
   VecCopy(initial_guess, y_dual_workspace);
   KSPSetInitialGuessNonzero(ksp_GN_Dual, PETSC_TRUE);
 
+  bool use_precond = (gn_prec_update_interval >= -1);
+
   // Optional Levenberg-Marquardt damping: (L L^T + λI)
   if (gn_normaleq_damping > 0.0) {
     MatShift(GN_Dual_MatShell, gn_normaleq_damping);
-    // Also shift the preconditioned operator
-    if (gn_prec_update_interval >= -1) {
-      MatShift(GN_Dual_Precond_MatShell, gn_normaleq_damping);
-    }
   }
 
-  // Apply preconditioning if enabled (interval >= 0 or adaptive mode = -1)
-  Vec b_scaled, z_solution;
-  bool use_precond = (gn_prec_update_interval >= -1);
-  bool use_symmetric_precond = use_precond && (gn_dual_precond_type == "symmetric");
-  bool use_left_precond = use_precond && (gn_dual_precond_type == "left");
-  bool use_lowrank_precond = use_precond && (gn_dual_precond_type == "low_rank");
+  if (!use_precond) {
+    // No preconditioning - solve directly
+    KSPSolve(ksp_GN_Dual, b_rhs, y_dual_workspace);
 
-  // TODO: Go through the below if-statements and remove any duplicated code! Move the if-else blocks closer together so it is more clear what is different amongst the three if branches. 
-  if (use_lowrank_precond) {
+  } else { 
     // Low-rank preconditioning: M^{-1/2} (L L^T + λI) M^{-1/2} z = M^{-1/2} b
     // where M ≈ U Σ U^T is rank-r approximation
 
-    // Scale RHS: b_scaled = M^{-1/2} * b
-    VecDuplicate(b, &b_scaled);
-    apply_GN_Dual_LowRank_Precond(b, b_scaled);
+
+   // Scale RHS: b_scaled = M^{-1/2} * b
+    Vec b_scaled;
+    VecDuplicate(b_rhs, &b_scaled);
+    apply_GN_Dual_LowRank_Precond(b_rhs, b_scaled);
 
     // Transform initial guess from y-space to z-space: z0 = M^{1/2} * y0
     // Mathematical insight: If y0 ≈ M^{-1} * b, then z0 = M^{1/2} * M^{-1} * b = M^{-1/2} * b
     // Therefore z0 should be b_scaled (the preconditioned RHS)
+    Vec z_solution;
     VecDuplicate(y_dual_workspace, &z_solution);
     VecCopy(b_scaled, z_solution);  // Use preconditioned RHS as initial guess in z-space
 
@@ -1101,65 +1059,14 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
 
     // Reset operators to unpreconditioned for next time
     KSPSetOperators(ksp_GN_Dual, GN_Dual_MatShell, GN_Dual_MatShell);
-  } else if (use_symmetric_precond) {
-    // Symmetric preconditioning: D^{-1/2} (L L^T + λI) D^{-1/2} z = D^{-1/2} b
-    // where D = diag(L L^T + λI), and we stored D^{-1/2} in gn_dual_precond_diag
-
-    // Scale RHS: b_scaled = D^{-1/2} * b
-    VecDuplicate(b, &b_scaled);
-    VecPointwiseMult(b_scaled, gn_dual_precond_diag, b);
-
-    // Scale initial guess: z0 = D^{1/2} * y0 = y0 / D^{-1/2}
-    VecDuplicate(y_dual_workspace, &z_solution);
-    VecPointwiseDivide(z_solution, y_dual_workspace, gn_dual_precond_diag);
-
-    // Use the preconditioned operator
-    KSPSetOperators(ksp_GN_Dual, GN_Dual_Precond_MatShell, GN_Dual_Precond_MatShell);
-
-    // Solve: D^{-1/2} A D^{-1/2} z = D^{-1/2} b
-    KSPSolve(ksp_GN_Dual, b_scaled, z_solution);
-
-    // Recover y = D^{-1/2} * z
-    VecPointwiseMult(y_dual_workspace, gn_dual_precond_diag, z_solution);
-
-    VecDestroy(&b_scaled);
-    VecDestroy(&z_solution);
-
-    // Reset operators to unpreconditioned for next time
-    KSPSetOperators(ksp_GN_Dual, GN_Dual_MatShell, GN_Dual_MatShell);
-  } else if (use_left_precond) {
-    // Left preconditioning: D^{-1} (L L^T + λI) y = D^{-1} b
-    // where D = diag(L L^T + λI), and we stored D^{-1} in gn_dual_precond_diag
-
-    // Scale RHS: b_scaled = D^{-1} * b
-    VecDuplicate(b, &b_scaled);
-    VecPointwiseMult(b_scaled, gn_dual_precond_diag, b);
-
-    // Use the preconditioned operator (applies D^{-1} on left)
-    KSPSetOperators(ksp_GN_Dual, GN_Dual_Precond_MatShell, GN_Dual_Precond_MatShell);
-
-    // Solve: D^{-1} A y = D^{-1} b
-    KSPSolve(ksp_GN_Dual, b_scaled, y_dual_workspace);
-
-    VecDestroy(&b_scaled);
-
-    // Reset operators to unpreconditioned for next time
-    KSPSetOperators(ksp_GN_Dual, GN_Dual_MatShell, GN_Dual_MatShell);
-  } else {
-    // No preconditioning - solve directly
-    KSPSolve(ksp_GN_Dual, b, y_dual_workspace);
-  }
+  } 
 
   // Revert the damping
   if (gn_normaleq_damping > 0.0) {
     MatShift(GN_Dual_MatShell, -gn_normaleq_damping);
-    if (gn_prec_update_interval >= -1) {
-      MatShift(GN_Dual_Precond_MatShell, -gn_normaleq_damping);
-    }
   }
 
-  // Recover primal solution: v = L^T y (use pure Jacobian transpose for dual mode)
-  // Note: b is not destroyed here since it's passed as a parameter
+  // Recover primal solution: v = L^* y 
   apply_GN_Jacobian_Tangentspace_Adjoint(y_dual_workspace, v_out);
 
   // Report convergence
@@ -1197,7 +1104,7 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
   }
 
   // Check 2: Large initial residual (only if we used low-rank preconditioner)
-  if (!eigendecomp_is_stale && use_lowrank_precond) {
+  if (!eigendecomp_is_stale && use_precond) {
     // Check if initial guess led to huge residual
     // For well-conditioned eigenspace approximation, initial residual should be moderate
     // If r_0 is very large compared to ||b||, eigendecomposition is likely stale
@@ -1226,6 +1133,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   //   6. Recover primal: v = L^T y
 
   // TODO: Understand this function and how it interacts with the low-rank preconditioner and the Gauss-Newton dual system.
+  // TODO: Remove the KSP iterations. Make this a full-rank rank solver in the projected subspace.
 
   // // Store the point of evaluation. This should have been done already! 
   VecCopy(xinit, xeval_GN);
@@ -1244,7 +1152,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
 
   // Compute eigendecomposition: (L L^T + λI) V_{r+1} = Σ_{r+1} V_{r+1}
   // We compute r+1 eigenvalues to get μ = λ_{r+1} for the complement space
-  int rank = gn_dual_precond_rank;
+  int rank = gn_precond_rank;
   int num_eigs = (rank < tangent_dim) ? rank + 1 : rank;  // Compute r+1 unless at full rank
 
   if (mpirank_world == 0 && !quietmode) {
@@ -1376,7 +1284,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
       gn_dual_lowrank_sigma_invsqrt = sigma_invsqrt_temp;
       gn_dual_precond_mu = have_complement ? mu : eigenvalues[rank-1];  // Use μ if available
 
-      // Apply symmetric low-rank preconditioning: M^{-1/2} A M^{-1/2} z = M^{-1/2} b_normalized
+      // Apply low-rank preconditioning: M^{-1/2} A M^{-1/2} z = M^{-1/2} b_normalized
       Vec b_scaled, z_solution;
       VecDuplicate(b_normalized, &b_scaled);
       VecDuplicate(y_proj, &z_solution);
@@ -1670,7 +1578,7 @@ void OptimProblem::solve(Vec xinit) {
             VecDestroy(&y_initial);
 
             // If low-rank eigendecomposition is stale, force immediate recomputation and retry
-            if (precond_is_stale && gn_dual_precond_type == "low_rank") { // TODO: WHy is "low_rank" needed here? 
+            if (precond_is_stale) {  
               if (mpirank_world == 0 && !quietmode) {
                 printf("  Recomputing low-rank eigendecomposition at current point and forcing new solve...\n");
               }
@@ -1971,55 +1879,6 @@ void OptimProblem::updateGaussNewtonDualMatDense(){
 }
 
 
-void OptimProblem::updateGaussNewtonDualPrecondMatDense(){
-  MatZeroEntries(GN_Dual_Precond_MatDense);
-
-  // Get tangent space dimension (dim²-1)
-  PetscInt tangent_dim;
-  MatGetSize(GN_Dual_Precond_MatShell, &tangent_dim, NULL);
-
-  Vec e;
-  VecCreateSeq(PETSC_COMM_SELF, tangent_dim, &e);
-  Vec Ay;
-  VecDuplicate(e, &Ay);
-
-  // Parallelize over comm_optim threads
-  int ncols_per_rank = tangent_dim / mpisize_optim;
-  int ncols_local = ncols_per_rank;
-  if (mpirank_optim == mpisize_optim - 1) {
-    ncols_local = tangent_dim - mpirank_optim * ncols_per_rank;
-  }
-
-  // Iterate over local columns: apply preconditioned MatShell to each unit vector
-  for (int ix_local = 0; ix_local < ncols_local; ++ix_local) {
-    int ix = ix_local + mpirank_optim * ncols_per_rank;
-
-    VecSet(e, 0.0);
-    VecSetValue(e, ix, 1.0, INSERT_VALUES);
-    VecAssemblyBegin(e);
-    VecAssemblyEnd(e);
-    MatMult(GN_Dual_Precond_MatShell, e, Ay);
-    for (int jy = 0; jy < tangent_dim; ++jy) {
-      PetscScalar val;
-      VecGetValues(Ay, 1, &jy, &val);
-      MatSetValue(GN_Dual_Precond_MatDense, jy, ix, val, INSERT_VALUES);
-    }
-  }
-  VecDestroy(&e);
-  VecDestroy(&Ay);
-
-  MatAssemblyBegin(GN_Dual_Precond_MatDense, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(GN_Dual_Precond_MatDense, MAT_FINAL_ASSEMBLY);
-
-  // Allreduce to combine contributions from all MPI ranks
-  PetscScalar *precond_data;
-  MatDenseGetArray(GN_Dual_Precond_MatDense, &precond_data);
-  int precond_size = tangent_dim * tangent_dim;
-  MPI_Allreduce(MPI_IN_PLACE, precond_data, precond_size, MPIU_SCALAR, MPI_SUM, comm_optim);
-  MatDenseRestoreArray(GN_Dual_Precond_MatDense, &precond_data);
-
-}
-
 bool OptimProblem::updateGaussNewtonDualPreconditioner(int iter){
 
   if (gn_solver_mode != "dual") {
@@ -2030,12 +1889,7 @@ bool OptimProblem::updateGaussNewtonDualPreconditioner(int iter){
   if (iter == 0){
     bool enable_precond = (gn_prec_update_interval >= -1) && (gn_normaleq_solver != "proj");
     if (enable_precond) {
-
-      if (gn_dual_precond_type == "low_rank") {
-        updateGaussNewtonDualPreconditionerLowRank(gn_dual_precond_rank);
-      } else {
-        updateGaussNewtonDualPreconditionerDiagonal();
-      }
+      updateGaussNewtonDualPreconditionerLowRank(gn_precond_rank);
     }
     return enable_precond;
   }
@@ -2056,25 +1910,21 @@ bool OptimProblem::updateGaussNewtonDualPreconditioner(int iter){
       if (excess > 0) {
         gn_dual_ksp_excess_accum += excess;
         if (mpirank_world == 0 && !quietmode) {
-          printf("Iteration %d: KSP excess = %d (accumulated = %d, threshold = %d)\n", iter, excess, gn_dual_ksp_excess_accum, gn_dual_precond_rank);
+          printf("Iteration %d: KSP excess = %d (accumulated = %d, threshold = %d)\n", iter, excess, gn_dual_ksp_excess_accum, gn_precond_rank);
         }
       }
 
       // Update when accumulated excess exceeds r
-      if (gn_dual_ksp_excess_accum >= gn_dual_precond_rank) {
+      if (gn_dual_ksp_excess_accum >= gn_precond_rank) {
         should_update = true;
         if (mpirank_world == 0 && !quietmode) {
-          printf("Iteration %d: Updating preconditioner (accumulated excess %d >= r = %d)\n", iter, gn_dual_ksp_excess_accum, gn_dual_precond_rank);
+          printf("Iteration %d: Updating preconditioner (accumulated excess %d >= r = %d)\n", iter, gn_dual_ksp_excess_accum, gn_precond_rank);
         }
       }
     }
 
     if (should_update) {
-      if (gn_dual_precond_type == "low_rank") {
-        updateGaussNewtonDualPreconditionerLowRank(gn_dual_precond_rank);
-      } else {
-        updateGaussNewtonDualPreconditionerDiagonal();
-      }
+      updateGaussNewtonDualPreconditionerLowRank(gn_precond_rank);
       // Reset accumulator after update
       if (gn_prec_update_interval == -1) {
         gn_dual_ksp_excess_accum = 0;
@@ -2084,79 +1934,6 @@ bool OptimProblem::updateGaussNewtonDualPreconditioner(int iter){
     return should_update;
   }
   return false; // default No update 
-}
-
-void OptimProblem::updateGaussNewtonDualPreconditionerDiagonal(){
-  // Extract diagonal of (L L^T + λI) by applying MatShell to unit vectors
-
-  // Get tangent space dimension (dim²-1)
-  PetscInt tangent_dim;
-  VecGetSize(gn_dual_precond_diag, &tangent_dim);
-
-  Vec e;
-  VecCreateSeq(PETSC_COMM_SELF, tangent_dim, &e);
-  Vec Ay;
-  VecDuplicate(e, &Ay);
-
-  // Parallelize over comm_optim threads (though for diagonal we only need diagonal entries)
-  int ncols_per_rank = tangent_dim / mpisize_optim;
-  int ncols_local = ncols_per_rank;
-  if (mpirank_optim == mpisize_optim - 1) {
-    ncols_local = tangent_dim - mpirank_optim * ncols_per_rank;
-  }
-
-  // Extract diagonal: d_ii = (GN_Dual_MatShell * e_i)_i
-  PetscScalar *diag_data;
-  VecGetArray(gn_dual_precond_diag, &diag_data);
-
-  for (int ix_local = 0; ix_local < ncols_local; ++ix_local) {
-    int ix = ix_local + mpirank_optim * ncols_per_rank;
-
-    // Create unit vector e_i
-    VecSet(e, 0.0);
-    VecSetValue(e, ix, 1.0, INSERT_VALUES);
-    VecAssemblyBegin(e);
-    VecAssemblyEnd(e);
-
-    // Apply (L L^T + λI) to e_i
-    MatMult(GN_Dual_MatShell, e, Ay);
-
-    // Extract diagonal entry
-    PetscScalar val;
-    VecGetValues(Ay, 1, &ix, &val);
-    diag_data[ix] = val;
-  }
-
-  // Allreduce BEFORE restoring the array (while we still have the pointer)
-  MPI_Allreduce(MPI_IN_PLACE, diag_data, tangent_dim, MPIU_SCALAR, MPI_SUM, comm_optim);
-
-  // Compute preconditioner: D^{-1/2} (symmetric) or D^{-1} (left)
-  bool use_symmetric = (gn_dual_precond_type == "symmetric");
-
-  for (PetscInt i = 0; i < tangent_dim; i++) {
-    if (PetscAbsScalar(diag_data[i]) > 1e-14) {
-      if (use_symmetric) {
-        diag_data[i] = 1.0 / PetscSqrtScalar(diag_data[i]);  // D^{-1/2}
-      } else {
-        diag_data[i] = 1.0 / diag_data[i];  // D^{-1}
-      }
-    } else {
-      diag_data[i] = 1.0;  // Avoid division by zero
-    }
-  }
-
-  VecRestoreArray(gn_dual_precond_diag, &diag_data);
-
-  VecDestroy(&e);
-  VecDestroy(&Ay);
-
-  if (mpirank_world == 0 && !quietmode) {
-    if (use_symmetric) {
-      printf("Updated dual Gauss-Newton symmetric diagonal preconditioner (D^{-1/2})\n");
-    } else {
-      printf("Updated dual Gauss-Newton left diagonal preconditioner (D^{-1})\n");
-    }
-  }
 }
 
 
@@ -2386,7 +2163,7 @@ Vec OptimProblem::computeEigenspaceInitialGuessFromStored(const Vec b_rhs){
   // Requires: gn_dual_lowrank_U, gn_dual_lowrank_sigma_invsqrt, gn_dual_precond_mu
   // to be already computed by updateGaussNewtonDualPreconditionerLowRank()
 
-  int rank = gn_dual_precond_rank;
+  int rank = gn_precond_rank;
 
   // Convert stored Σ_r^{-1/2} to Σ_r for eigenspace approximation
   PetscScalar *eigenvalues = new PetscScalar[rank];

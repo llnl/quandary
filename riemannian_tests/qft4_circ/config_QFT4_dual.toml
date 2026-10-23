@@ -66,8 +66,7 @@ gn_maxiter = 300
 gn_rtol = 1e-5
 
 # Low-rank preconditioner
-gn_dual_precond_type="low_rank"
-gn_dual_precond_rank = 150
+gn_precond_rank = 150
 gn_prec_update_interval = -1
 
 [output]

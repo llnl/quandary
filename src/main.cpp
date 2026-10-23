@@ -297,157 +297,124 @@ int main(int argc,char **argv)
 
       // Optionally save preconditioned matrix if preconditioner is enabled
       // (interval >= 0 for fixed/startup, or -1 for adaptive mode)
-      if (config.getGnPrecUpdateInterval() >= 0 || config.getGnPrecUpdateInterval() == -1) {
-        std::string precond_type = config.getGnDualPrecondType();
-        bool is_symmetric = (precond_type == "symmetric");
-        bool is_low_rank = (precond_type == "low_rank");
+      // if (config.getGnPrecUpdateInterval() >= 0 || config.getGnPrecUpdateInterval() == -1) {
+      //   if (mpirank_world == 0 && !quietmode) {
+      //     printf("\nAssembling low-rank preconditioned dual matrix with rank=%d...\n", config.getGnDualPrecondRank());
+      //   }
 
-        if (mpirank_world == 0 && !quietmode) {
-          if (is_low_rank) {
-            printf("\nAssembling low-rank preconditioned dual matrix (M^{-1/2} (L L^T + λI) M^{-1/2}) with rank=%d...\n",
-                   config.getGnDualPrecondRank());
-          } else if (is_symmetric) {
-            printf("\nAssembling symmetrically preconditioned dual matrix (D^{-1/2} (L L^T + λI) D^{-1/2})...\n");
-          } else {
-            printf("\nAssembling left preconditioned dual matrix (D^{-1} (L L^T + λI))...\n");
-          }
-        }
+      //   // Damping was already applied above, and also needs to be applied to precond shell
+      //   if (damping > 0.0) {
+      //     Mat GN_Dual_MatShell = optimctx->getGN_Dual_MatShell();
+      //     Mat GN_Dual_LowRank_MatShell = optimctx->getGN_Dual_LowRank_MatShell();
+      //     MatShift(GN_Dual_MatShell, damping);  // Need to shift base matrix for low-rank
+      //     MatShift(GN_Dual_LowRank_MatShell, damping);
+      //   }
 
-        // Damping was already applied above, and also needs to be applied to precond shell
-        if (damping > 0.0) {
-          if (is_low_rank) {
-            Mat GN_Dual_MatShell = optimctx->getGN_Dual_MatShell();
-            Mat GN_Dual_LowRank_MatShell = optimctx->getGN_Dual_LowRank_MatShell();
-            MatShift(GN_Dual_MatShell, damping);  // Need to shift base matrix for low-rank
-            MatShift(GN_Dual_LowRank_MatShell, damping);
-          } else {
-            Mat GN_Dual_Precond_MatShell = optimctx->getGN_Dual_Precond_MatShell();
-            MatShift(GN_Dual_Precond_MatShell, damping);
-          }
-        }
+      //   // Update preconditioner
+      //   optimctx->updateGaussNewtonDualPreconditionerLowRank(config.getGnDualPrecondRank());
 
-        // Update preconditioner
-        if (is_low_rank) {
-          optimctx->updateGaussNewtonDualPreconditionerLowRank(config.getGnDualPrecondRank());
-        } else {
-          optimctx->updateGaussNewtonDualPreconditionerDiagonal();
-        }
+      //   // Assemble the preconditioned dense matrix
+      //   Mat mat_dual_precond = optimctx->getGN_Dual_Precond_MatDense();
+      //   MatZeroEntries(mat_dual_precond);
 
-        // Assemble the preconditioned dense matrix
-        Mat mat_dual_precond = optimctx->getGN_Dual_Precond_MatDense();
-        MatZeroEntries(mat_dual_precond);
+      //   // For low-rank: Compute M^{-1/2} A M^{-1/2} directly using dense matrices
+      //   // M^{-1/2} = V_r Σ_r^{-1/2} V_r^T + μ^{-1/2}(I - V_r V_r^T)
 
-        if (is_low_rank) {
-          // For low-rank: Compute M^{-1/2} A M^{-1/2} directly using dense matrices
-          // M^{-1/2} = V_r Σ_r^{-1/2} V_r^T + μ^{-1/2}(I - V_r V_r^T)
+      //   PetscInt tangent_dim;
+      //   MatGetSize(mat_dual, &tangent_dim, NULL);
+      //   int rank = config.getGnDualPrecondRank();
 
-          PetscInt tangent_dim;
-          MatGetSize(mat_dual, &tangent_dim, NULL);
-          int rank = config.getGnDualPrecondRank();
+      //   // Get low-rank preconditioner data
+      //   Mat V_r = optimctx->getGN_Dual_LowRank_U();
+      //   Vec sigma_invsqrt = optimctx->getGN_Dual_LowRank_Sigma_InvSqrt();
+      //   PetscScalar mu = optimctx->getGN_Dual_Precond_Mu();
+      //   PetscScalar mu_invsqrt = 1.0 / PetscSqrtScalar(mu);
 
-          // Get low-rank preconditioner data
-          Mat V_r = optimctx->getGN_Dual_LowRank_U();
-          Vec sigma_invsqrt = optimctx->getGN_Dual_LowRank_Sigma_InvSqrt();
-          PetscScalar mu = optimctx->getGN_Dual_Precond_Mu();
-          PetscScalar mu_invsqrt = 1.0 / PetscSqrtScalar(mu);
+      //   if (mpirank_world == 0 && !quietmode) {
+      //     printf("  Forming M^{-1/2} as dense matrix (n=%d, r=%d, μ^{-1/2}=%e)...\n",
+      //            (int)tangent_dim, rank, mu_invsqrt);
+      //   }
 
-          if (mpirank_world == 0 && !quietmode) {
-            printf("  Forming M^{-1/2} as dense matrix (n=%d, r=%d, μ^{-1/2}=%e)...\n",
-                   (int)tangent_dim, rank, mu_invsqrt);
-          }
+      //   // Form M^{-1/2} as a dense matrix
+      //   // M^{-1/2} = V_r Σ_r^{-1/2} V_r^T + μ^{-1/2}(I - V_r V_r^T)
+      //   Mat M_invsqrt;
+      //   MatCreateSeqDense(PETSC_COMM_SELF, tangent_dim, tangent_dim, NULL, &M_invsqrt);
 
-          // Form M^{-1/2} as a dense matrix
-          // M^{-1/2} = V_r Σ_r^{-1/2} V_r^T + μ^{-1/2}(I - V_r V_r^T)
-          Mat M_invsqrt;
-          MatCreateSeqDense(PETSC_COMM_SELF, tangent_dim, tangent_dim, NULL, &M_invsqrt);
+      //   // Get direct access to dense matrix storage
+      //   PetscScalar *M_data;
+      //   MatDenseGetArray(M_invsqrt, &M_data);
 
-          // Get direct access to dense matrix storage
-          PetscScalar *M_data;
-          MatDenseGetArray(M_invsqrt, &M_data);
+      //   // Get V_r and sigma data
+      //   PetscScalar *Vr_data;
+      //   MatDenseGetArray(V_r, &Vr_data);
 
-          // Get V_r and sigma data
-          PetscScalar *Vr_data;
-          MatDenseGetArray(V_r, &Vr_data);
+      //   PetscScalar *sigma_data;
+      //   VecGetArray(sigma_invsqrt, &sigma_data);
 
-          PetscScalar *sigma_data;
-          VecGetArray(sigma_invsqrt, &sigma_data);
+      //   // Build M^{-1/2} directly
+      //   // M_data is column-major: M_data[i + j*tangent_dim] = M(i,j)
+      //   for (int i = 0; i < tangent_dim; i++) {
+      //     for (int j = 0; j < tangent_dim; j++) {
+      //       PetscScalar val = 0.0;
 
-          // Build M^{-1/2} directly
-          // M_data is column-major: M_data[i + j*tangent_dim] = M(i,j)
-          for (int i = 0; i < tangent_dim; i++) {
-            for (int j = 0; j < tangent_dim; j++) {
-              PetscScalar val = 0.0;
+      //       // Add V_r Σ_r^{-1/2} V_r^T contribution
+      //       for (int k = 0; k < rank; k++) {
+      //         // V_r is column-major: Vr_data[i + k*tangent_dim] = V_r(i,k)
+      //         val += Vr_data[i + k * tangent_dim] * sigma_data[k] * Vr_data[j + k * tangent_dim];
+      //       }
 
-              // Add V_r Σ_r^{-1/2} V_r^T contribution
-              for (int k = 0; k < rank; k++) {
-                // V_r is column-major: Vr_data[i + k*tangent_dim] = V_r(i,k)
-                val += Vr_data[i + k * tangent_dim] * sigma_data[k] * Vr_data[j + k * tangent_dim];
-              }
+      //       // Add μ^{-1/2}(I - V_r V_r^T) contribution
+      //       PetscScalar vv_sum = 0.0;
+      //       for (int k = 0; k < rank; k++) {
+      //         vv_sum += Vr_data[i + k * tangent_dim] * Vr_data[j + k * tangent_dim];
+      //       }
+      //       val += mu_invsqrt * ((i == j ? 1.0 : 0.0) - vv_sum);
 
-              // Add μ^{-1/2}(I - V_r V_r^T) contribution
-              PetscScalar vv_sum = 0.0;
-              for (int k = 0; k < rank; k++) {
-                vv_sum += Vr_data[i + k * tangent_dim] * Vr_data[j + k * tangent_dim];
-              }
-              val += mu_invsqrt * ((i == j ? 1.0 : 0.0) - vv_sum);
+      //       M_data[i + j * tangent_dim] = val;
+      //     }
+      //   }
 
-              M_data[i + j * tangent_dim] = val;
-            }
-          }
+      //   MatDenseRestoreArray(M_invsqrt, &M_data);
+      //   MatDenseRestoreArray(V_r, &Vr_data);
+      //   VecRestoreArray(sigma_invsqrt, &sigma_data);
 
-          MatDenseRestoreArray(M_invsqrt, &M_data);
-          MatDenseRestoreArray(V_r, &Vr_data);
-          VecRestoreArray(sigma_invsqrt, &sigma_data);
+      //   MatAssemblyBegin(M_invsqrt, MAT_FINAL_ASSEMBLY);
+      //   MatAssemblyEnd(M_invsqrt, MAT_FINAL_ASSEMBLY);
 
-          MatAssemblyBegin(M_invsqrt, MAT_FINAL_ASSEMBLY);
-          MatAssemblyEnd(M_invsqrt, MAT_FINAL_ASSEMBLY);
+      //   if (mpirank_world == 0 && !quietmode) {
+      //     printf("  Computing M^{-1/2} A M^{-1/2}...\n");
+      //   }
 
-          if (mpirank_world == 0 && !quietmode) {
-            printf("  Computing M^{-1/2} A M^{-1/2}...\n");
-          }
+      //   // Compute preconditioned matrix: M^{-1/2} A M^{-1/2}
+      //   // First: temp = A M^{-1/2}
+      //   Mat temp;
+      //   MatMatMult(mat_dual, M_invsqrt, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &temp);
 
-          // Compute preconditioned matrix: M^{-1/2} A M^{-1/2}
-          // First: temp = A M^{-1/2}
-          Mat temp;
-          MatMatMult(mat_dual, M_invsqrt, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &temp);
+      //   // Second: mat_dual_precond = M^{-1/2} temp = M^{-1/2} A M^{-1/2}
+      //   MatMatMult(M_invsqrt, temp, MAT_REUSE_MATRIX, PETSC_DEFAULT, &mat_dual_precond);
 
-          // Second: mat_dual_precond = M^{-1/2} temp = M^{-1/2} A M^{-1/2}
-          MatMatMult(M_invsqrt, temp, MAT_REUSE_MATRIX, PETSC_DEFAULT, &mat_dual_precond);
+      //   MatDestroy(&temp);
+      //   MatDestroy(&M_invsqrt);
 
-          MatDestroy(&temp);
-          MatDestroy(&M_invsqrt);
-        } else {
-          optimctx->updateGaussNewtonDualPrecondMatDense();
-        }
+      //   // Only rank 0 writes to file
+      //   if (mpirank_world == 0) {
+      //     snprintf(filename, 254, "%s/GN_dual_matrix_preconditioned.dat", output->output_dir.c_str());
+      //     PetscViewer viewer;
+      //     PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
+      //     PetscViewerBinarySetSkipInfo(viewer, PETSC_TRUE);  // Suppress .info file
+      //     MatView(mat_dual_precond, viewer);
+      //     PetscViewerDestroy(&viewer);
 
-        // Only rank 0 writes to file
-        if (mpirank_world == 0) {
-          snprintf(filename, 254, "%s/GN_dual_matrix_preconditioned.dat", output->output_dir.c_str());
-          PetscViewer viewer;
-          PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
-          PetscViewerBinarySetSkipInfo(viewer, PETSC_TRUE);  // Suppress .info file
-          MatView(mat_dual_precond, viewer);
-          PetscViewerDestroy(&viewer);
-
-          if (!quietmode) {
-            PetscInt dim;
-            MatGetSize(mat_dual_precond, &dim, NULL);
-            if (is_low_rank) {
-              printf("Preconditioned dual matrix (M^{-1/2} (L L^T + λI) M^{-1/2}, rank=%d) saved to: %s\n",
-                     config.getGnDualPrecondRank(), filename);
-            } else if (is_symmetric) {
-              printf("Preconditioned dual matrix (D^{-1/2} (L L^T + λI) D^{-1/2}) saved to: %s\n", filename);
-            } else {
-              printf("Preconditioned dual matrix (D^{-1} (L L^T + λI)) saved to: %s\n", filename);
-            }
-            printf("Matrix dimensions: %d x %d (tangent space)\n", dim, dim);
-            printf("Preconditioner type: %s\n", precond_type.c_str());
-            if (damping > 0.0) {
-              printf("Damping parameter λ = %1.6e included in preconditioner\n", damping);
-            }
-          }
-        }
-      }
+      //     if (!quietmode) {
+      //       PetscInt dim;
+      //       MatGetSize(mat_dual_precond, &dim, NULL);
+      //       printf("Preconditioned dual matrix (M^{-1/2} (L L^T + λI) M^{-1/2}, rank=%d) saved to: %s\n",
+      //                config.getGnDualPrecondRank(), filename);
+      //       printf("Matrix dimensions: %d x %d (tangent space)\n", dim, dim);
+      //       printf("Damping parameter λ = %1.6e\n", damping);
+      //     }
+      //   }
+      // }
 
       // Note: No need to revert damping - we're in matrix_save mode and the program exits after this
     } else {

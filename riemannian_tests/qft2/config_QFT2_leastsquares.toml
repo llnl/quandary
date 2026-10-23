@@ -61,8 +61,7 @@ gn_leastsquares_damping = 1e-5
 
 # Preconditioner options
 gn_prec_update_interval = -1
-gn_dual_precond_type="low_rank"
-gn_dual_precond_rank = 10
+gn_precond_rank = 10
 
 
 [output]

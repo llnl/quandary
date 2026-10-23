@@ -319,10 +319,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     std::string gn_solver_mode_lower = toLower(gn_solver_mode);
     gn_solver_mode = gn_solver_mode_lower;
     gn_prec_update_interval = validators::field<int>(optimization_table, "gn_prec_update_interval").greaterThanEqual(-1).valueOr(ConfigDefaults::GN_PREC_UPDATE_INTERVAL);
-    gn_dual_precond_type = validators::field<std::string>(optimization_table, "gn_dual_precond_type").valueOr(ConfigDefaults::GN_DUAL_PRECOND_TYPE);
-    std::string gn_dual_precond_type_lower = toLower(gn_dual_precond_type);
-    gn_dual_precond_type = gn_dual_precond_type_lower;
-    gn_dual_precond_rank = validators::field<int>(optimization_table, "gn_dual_precond_rank").greaterThan(0).valueOr(ConfigDefaults::GN_DUAL_PRECOND_RANK);
+    gn_precond_rank = validators::field<int>(optimization_table, "gn_precond_rank").greaterThan(0).valueOr(ConfigDefaults::GN_PRECOND_RANK);
 
     // Parse output options from [output] table
     output_directory = output_table["directory"].value_or(ConfigDefaults::OUTPUT_DIRECTORY);
@@ -710,12 +707,7 @@ void Config::printConfig(std::stringstream& log) const {
     log << "gn_normaleq_minres_qlp = " << (gn_normaleq_minres_qlp ? "true" : "false") << "\n";
     log << "gn_solver_mode = \"" << gn_solver_mode << "\"\n";
     log << "gn_prec_update_interval = " << gn_prec_update_interval << "\n";
-    if (gn_solver_mode == "dual" && gn_prec_update_interval >= 0) {
-      log << "gn_dual_precond_type = \"" << gn_dual_precond_type << "\"\n";
-      if (gn_dual_precond_type == "low_rank") {
-        log << "gn_dual_precond_rank = " << gn_dual_precond_rank << "\n";
-      }
-    }
+    log << "gn_precond_rank = " << gn_precond_rank << "\n";
     log << "gn_leastsquares_solver = \"" << gn_leastsquares_solver << "\"\n";
     log << "gn_leastsquares_damping = " << gn_leastsquares_damping << "\n";
   }
