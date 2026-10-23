@@ -258,7 +258,7 @@ int main(int argc,char **argv)
     if (mode == "dual") {
       // Save dual matrix L L^T + λI (tangent space dimension: dim²-1)
       // Apply damping before assembling
-      double damping = config.getOptimTikhonovCoeff();
+      double damping = config.getGnNormaleqDamping();
       if (damping > 0.0) {
         Mat GN_Dual_MatShell = optimctx->getGN_Dual_MatShell();
         MatShift(GN_Dual_MatShell, damping);
@@ -630,7 +630,6 @@ int main(int argc,char **argv)
       printf("\n=== Testing Dual Gauss-Newton Solver ===\n");
       printf("RHS computed internally: b = -∇_U J projected to tangent space (Riemannian gradient)\n");
     }
-  
 
     // Create zero initial guess in tangent space
     Mat GNLeastSquaresShell = optimctx->getGNLeastSquaresShell();
@@ -671,6 +670,8 @@ int main(int argc,char **argv)
       if (config.getGnNormaleqSolver() == "minres" && config.getGnNormaleqMinresQlp()) {
         printf(" (QLP variant)");
       }
+      printf("\n");
+      printf("GN NormalEq damping: %1.4e\n", config.getGnNormaleqDamping());
       printf("\n");
 
       // Compute all pairwise differences

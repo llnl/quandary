@@ -67,6 +67,7 @@ gn_dual_precond_rank = 100
 
 # Those apply to solving the normal equation
 # minres-qlp
+gn_normaleq_damping = 1e-3
 gn_rtol = 1e-5
 gn_normaleq_solver = "minres"
 gn_normaleq_minres_qlp = true  

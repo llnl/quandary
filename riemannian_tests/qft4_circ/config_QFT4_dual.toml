@@ -57,6 +57,7 @@ penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedco
 solver_type = "gauss_newton"
 
 # Those apply to solving the normal equation
+gn_normaleq_damping = 1e-3
 gn_solver_mode = "dual"
 
 # Those apply to all gn solvers (normal eq and least squares)

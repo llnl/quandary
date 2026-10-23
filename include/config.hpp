@@ -110,6 +110,7 @@ class Config {
   int gn_maxiter; ///< Maximum iterations for inner Gauss-Newton iterations (Normal or Least Squares)
   std::string leastsquares_solver; ///< Least-squares solver: "brgn" or "lsqr"
   double leastsquares_damping; ///< Damping parameter for Least Squares regularization
+  double gn_normaleq_damping; ///< Damping parameter for Gauss-Newton Normal Equation solves (Levenberg-Marquardt)
   std::string gn_normaleq_solver; ///< KSP solver type for Gauss-Newton Normal equation: "CG", "MINRES", "GMRES", etc.
   bool gn_normaleq_minres_qlp; ///< Use MINRES-QLP variant (more robust than standard MINRES)
   std::string gn_solver_mode; ///< Gauss-Newton solver mode: "primal" or "dual"
@@ -194,6 +195,7 @@ class Config {
   OptimSolverType getOptimSolverType() const { return optim_solver_type; }
   const std::string& getLeastSquaresSolver() const { return leastsquares_solver; }
   double getLeastSquaresDamping() const { return leastsquares_damping; }
+  double getGnNormaleqDamping() const { return gn_normaleq_damping; }
   const std::string& getGnNormaleqSolver() const { return gn_normaleq_solver; }
   bool getGnNormaleqMinresQlp() const { return gn_normaleq_minres_qlp; }
   const std::string& getGnSolverMode() const { return gn_solver_mode; }
