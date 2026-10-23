@@ -82,7 +82,7 @@ def read_infidelity(seed_dir):
         print(f"Warning: Error reading {history_file}: {e}")
         return None
 
-def plot_seeds_infidelity(parent_dir='.', basenames=None, title_suffix='', show_individual=True, show_statistics=True):
+def plot_seeds_infidelity(parent_dir='.', basenames=None, title_suffix='', show_individual=True, show_statistics=True, infidelity_threshold=1.2e-6):
     """
     Plot infidelity convergence from all seed directories.
 
@@ -102,6 +102,8 @@ def plot_seeds_infidelity(parent_dir='.', basenames=None, title_suffix='', show_
         If True, plot individual seed traces (default: True)
     show_statistics : bool
         If True, plot mean and std bands (default: True)
+    infidelity_threshold : float
+        Threshold for final infidelity to consider converged (default: 1.2e-6)
     """
     if basenames is None:
         basenames = ['seed']
@@ -142,9 +144,9 @@ def plot_seeds_infidelity(parent_dir='.', basenames=None, title_suffix='', show_
 
         print(f"Successfully read data from {len(all_data)} seeds for '{basename}'")
 
-        # Filter out traces that stop at infidelity > 1.2e-6
+        # Filter out traces that stop at infidelity > threshold
         filtered_data = []
-        threshold = 1.2e-6
+        threshold = infidelity_threshold
         for iteration, infidelity, seed_num, x0_norm in all_data:
             final_infidelity = infidelity[-1]
             if final_infidelity <= threshold:
@@ -320,7 +322,7 @@ def plot_seeds_infidelity(parent_dir='.', basenames=None, title_suffix='', show_
     print("\nDisplaying plot... Close the window to exit.")
     plt.show(block=True)
 
-def plot_convergence_vs_initial_norm(parent_dir='.', basenames=None, title_suffix=''):
+def plot_convergence_vs_initial_norm(parent_dir='.', basenames=None, title_suffix='', infidelity_threshold=1.2e-6):
     """
     Create scatter plot of iterations to convergence vs initial control vector norm.
 
@@ -332,6 +334,8 @@ def plot_convergence_vs_initial_norm(parent_dir='.', basenames=None, title_suffi
         List of basename patterns for seed directories (default: ['seed'])
     title_suffix : str
         Optional suffix to add to title and filename (default: '')
+    infidelity_threshold : float
+        Threshold for final infidelity to consider converged (default: 1.2e-6)
     """
     if basenames is None:
         basenames = ['seed']
@@ -372,8 +376,8 @@ def plot_convergence_vs_initial_norm(parent_dir='.', basenames=None, title_suffi
 
         print(f"Successfully read data from {len(all_data)} seeds for '{basename}'")
 
-        # Filter out traces that stop at infidelity > 1.2e-6 and extract convergence data
-        threshold = 1.2e-6
+        # Filter out traces that stop at infidelity > threshold and extract convergence data
+        threshold = infidelity_threshold
         x0_norms = []
         xf_norms = []
         iters_to_converge = []
@@ -533,6 +537,13 @@ Output:
         help='Hide statistics (only show individual traces)'
     )
 
+    parser.add_argument(
+        '--threshold',
+        type=float,
+        default=1.2e-6,
+        help='Infidelity threshold for convergence (default: 1.2e-6)'
+    )
+
     args = parser.parse_args()
 
     # Check if parent directory exists
@@ -546,12 +557,14 @@ Output:
         args.basename,
         args.suffix,
         show_individual=not args.no_individual,
-        show_statistics=not args.no_statistics
+        show_statistics=not args.no_statistics,
+        infidelity_threshold=args.threshold
     )
 
     # Plot convergence vs initial norm scatter plot
     plot_convergence_vs_initial_norm(
         args.directory,
         args.basename,
-        args.suffix
+        args.suffix,
+        infidelity_threshold=args.threshold
     )
