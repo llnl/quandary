@@ -43,23 +43,33 @@ tikhonov = { coeff = 1e-05, use_x0 = false }
 penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0 }
 
 # Switch between lbfgs and gauss_newton optimization
+#solver_type = "lbfgs"
 solver_type = "gauss_newton"
 
-# Those apply to all gn solvers (normal eq and least squares)
-# gn_normaleq_damping = 1e-3
-gn_normaleq_damping = 1e-5
+# Switch GaussNewton mode: "primal", or "dual", or "least_squares"
+#gn_solver_mode = "primal"
 gn_solver_mode = "dual"
+#gn_solver_mode = "least_squares"
 
 # options are "minres", "cg", "gmres", or "proj"
 gn_normaleq_solver = "minres"
+#gn_normaleq_solver = "proj"
 gn_normaleq_minres_qlp = true 
+gn_normaleq_damping = 1e-5
+
+# Stopping criteria for inner GN solvers
 gn_maxiter = 100 
 gn_rtol = 1e-5
 
-# Low-rank preconditioner
+# Preconditioner
 gn_dual_precond_type="low_rank"
 gn_dual_precond_rank = 30
 gn_prec_update_interval = -1
+
+# Inner solver for least squares
+gn_leastsquares_solver = "lsqr"
+# gn_leastsquares_solver = "brgn"
+gn_leastsquares_damping = 1e-5
 
 # preconditioner update interval (dual mode only)
 # keyword gn_prec_update_interval:
@@ -69,7 +79,7 @@ gn_prec_update_interval = -1
 # every n iteration: n
 
 [output]
-directory = "./"
+directory = "./dual_test"
 # observables = ["population", "expectedEnergy", "fullstate"]
 timestep_stride = 1
 optimization_stride = 1

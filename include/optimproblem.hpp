@@ -122,8 +122,8 @@ class OptimProblem {
   Tao tao_brgn;        ///< Tao BRGN solver (alternative to KSPLSQR)
   Vec brgn_rhs;        ///< Cached RHS vector for BRGN residual evaluation
   Vec brgn_residual;   ///< Cached Residual vector for BRGN solver
-  double leastsquares_damping; ///< Damping parameter λ for Least Squares regularization
-  std::string leastsquares_solver; ///< Least-squares solver name: "brgn" or "lsqr"
+  double gn_leastsquares_damping; ///< Damping parameter λ for Least Squares regularization
+  std::string gn_leastsquares_solver; ///< Least-squares solver name: "brgn" or "lsqr"
 
   // KSP linear solver
   KSP ksp_GN_NormalEq;  ///< Linear solver for Gauss-Newton Normal Equation solver
@@ -379,19 +379,28 @@ class OptimProblem {
   void updateGaussNewtonDualMatDense();
 
   /**
+   * @brief Updates the dual Gauss-Newton preconditioner
+   *
+   * Chooses either diagonal or low-rank updates based on the current configuration.
+   */
+  bool updateGaussNewtonDualPreconditioner(int iter);
+
+  /**
    * @brief Extracts diagonal of (L L^T + λI) for dual Gauss-Newton preconditioner
    *
    * Computes diagonal entries by applying GN_Dual_MatShell to unit vectors.
    * Stores result in gn_dual_precond_diag and updates the KSP preconditioner.
    */
-  void updateGaussNewtonDualPreconditioner();
+  void updateGaussNewtonDualPreconditionerDiagonal();
 
   /**
    * @brief Constructs rank-r low-rank approximation M ≈ U Σ U^T for dual Gauss-Newton preconditioner
    *
-   * Uses randomized sampling: generates r random vectors, applies GN_Dual_MatShell,
-   * orthogonalizes to form U, and computes Σ = U^T A U.
-   * Stores U and Σ^{-1/2} for symmetric preconditioning.
+  // Construct full-rank preconditioner M = V_r Σ_r V_r^T + μ(I - V_r V_r^T)
+  // Algorithm:
+  //   1. Use EPS to compute r+1 largest eigenvalues/eigenvectors of A
+  //   2. Store V_r (first r eigenvectors), Σ_r (first r eigenvalues), μ = σ_{r+1}
+  //   3. Apply M^{-1/2} = V_r Σ_r^{-1/2} V_r^T + μ^{-1/2}(I - V_r V_r^T)
    *
    * @param rank Number of basis vectors to use (r)
    */
@@ -424,7 +433,7 @@ class OptimProblem {
    * @brief Assembles the dense symmetrically preconditioned dual Gauss-Newton matrix
    *
    * Computes D^{-1/2} (L L^T + λI) D^{-1/2} in dense format.
-   * Requires updateGaussNewtonDualPreconditioner() to be called first.
+   * Requires updateGaussNewtonDualPreconditionerDiagonal() to be called first.
    * Dimensions: (dim²-1) × (dim²-1) where dim is the Hilbert space dimension.
    *
    * @note This operation can be expensive as it involves (dim²-1) applications of the preconditioned MatShell.
@@ -455,12 +464,14 @@ class OptimProblem {
    * @param v_out Solution vector (in design space, size ndesign)
    */
   Vec computeDualRHS();
+  Vec computeDualInitGuess(Vec b_rhs);
   void computeEigenspaceApproximation(const Vec b, const Mat V_r,
       const PetscScalar* eigenvalues, int rank, bool have_complement,
       PetscScalar mu, Vec y_approx);
   Vec computeEigenspaceInitialGuessFromStored(const Vec b_rhs);
-  bool solveGaussNewtonDual(Vec xinit, const Vec initial_guess, const Vec b_rhs, Vec v_out);
+  bool solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_guess, const Vec b_rhs, Vec v_out);
   void solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec v_out);
+  void solveGaussNewtonDual(Vec xinit, const Vec b_rhs, Vec v_out);
 
   /**
    * @brief Solves the Gauss-Newton normal equation L^* L(x) v = b via eigenvalue decomposition

@@ -56,11 +56,10 @@ penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedco
 # Switch between lbfgs and gauss_newton optimization
 solver_type = "gauss_newton"
 
-# Those apply to solving the normal equation
 gn_normaleq_damping = 1e-3
 gn_solver_mode = "dual"
+#gn_solver_mode = "least_squares"
 
-# Those apply to all gn solvers (normal eq and least squares)
 gn_normaleq_solver = "minres"
 gn_normaleq_minres_qlp = true 
 gn_maxiter = 300 

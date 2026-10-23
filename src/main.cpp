@@ -330,7 +330,7 @@ int main(int argc,char **argv)
         if (is_low_rank) {
           optimctx->updateGaussNewtonDualPreconditionerLowRank(config.getGnDualPrecondRank());
         } else {
-          optimctx->updateGaussNewtonDualPreconditioner();
+          optimctx->updateGaussNewtonDualPreconditionerDiagonal();
         }
 
         // Assemble the preconditioned dense matrix
@@ -647,7 +647,7 @@ int main(int argc,char **argv)
     Vec b_rhs = optimctx->computeDualRHS();
 
     // Solve with zero initial guess (ignore staleness flag in matrix_save mode)
-    (void) optimctx->solveGaussNewtonDual(xinit, y_zero_dual, b_rhs, v_Dual);
+    (void) optimctx->solveGaussNewtonDualPrecondKSP(xinit, y_zero_dual, b_rhs, v_Dual);
 
     VecDestroy(&b_rhs);
     VecDestroy(&y_zero_dual);
@@ -665,7 +665,7 @@ int main(int argc,char **argv)
     if (mpirank_world == 0 && !quietmode) {
       printf("\n");
       printf("=== Summary: Comparison of All Gauss-Newton Solvers ===\n");
-      printf("Least-squares solver type: %s\n", config.getLeastSquaresSolver().c_str());
+      printf("Least-squares solver type: %s\n", config.getGnLeastSquaresSolver().c_str());
       printf("GN NormalEq solver type: %s", config.getGnNormaleqSolver().c_str());
       if (config.getGnNormaleqSolver() == "minres" && config.getGnNormaleqMinresQlp()) {
         printf(" (QLP variant)");

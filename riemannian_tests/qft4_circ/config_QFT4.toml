@@ -59,6 +59,7 @@ solver_type = "gauss_newton"
 gn_maxiter = 300
 # gn_solver_mode = "primal"
 gn_solver_mode = "dual"
+#gn_solver_mode = "least_squares"
 
 # experimental preconditioner (dual mode only)
 gn_prec_update_interval = -1

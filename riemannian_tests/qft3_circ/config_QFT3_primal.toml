@@ -45,10 +45,10 @@ penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedco
 # Switch between lbfgs and gauss_newton optimization
 solver_type = "gauss_newton"
 
-# Those apply to all gn solvers (normal eq and least squares)
 gn_maxiter = 100
 gn_solver_mode = "primal"
 # gn_solver_mode = "dual"
+# gn_solver_mode = "least_squares"
 
 # experimental preconditioner (dual mode only)
 gn_prec_update_interval = -1
@@ -60,12 +60,11 @@ gn_dual_precond_rank = 20
 gn_rtol = 1e-5
 gn_normaleq_damping = 1e-3
 gn_normaleq_solver = "minres"
-# minres-qlp
 gn_normaleq_minres_qlp = true  
 
 # Those apply to solving the Least Squares problem
-# gn_leastsquares_solver = "BRGN"
-# gn_leastsquares_solver = "LSQR"
+# gn_leastsquares_solver = "brgn"
+# gn_leastsquares_solver = "lsqr"
 # gn_leastsquares_damping = 1e-3
 
 [output]

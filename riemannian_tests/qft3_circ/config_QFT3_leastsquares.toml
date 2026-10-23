@@ -43,21 +43,19 @@ tikhonov = { coeff = 1e-05, use_x0 = false }
 penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0 }
 
 # Switch between lbfgs and gauss_newton optimization
-solver_type = "least_squares"
+solver_type = "gauss_newton"
 
-# Those apply to all gn solvers (normal eq and least squares)
 gn_maxiter = 100
 gn_rtol = 1e-1
+gn_solver_mode = "least_squares"
 
-# only applies to the gauss-newton solvers
-# gn_solver_mode = primal
 # gn_normaleq_solver = "minres"
 # gn_normaleq_damping = 1e-3
 
 # Those apply to solving the Least Squares problem
 # leastsquares_solver = "brgn"
-leastsquares_solver = "lsqr"
-leastsquares_damping = 1.0
+gn_leastsquares_solver = "lsqr"
+gn_leastsquares_damping = 1.0
 
 [output]
 directory = "./"
