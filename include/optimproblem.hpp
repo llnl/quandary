@@ -91,37 +91,43 @@ class OptimProblem {
   double* mygrad; ///< Auxiliary gradient storage
   Vec xtmp; ///< Temporary vector storage
   int output_optimization_stride; ///< Write output files every N optimization iterations
+  Vec x_GN; ///< Current iterate for GN optimization. Holds solution after finished. 
 
   TimeStepper* timestepper; ///< Pointer to time-stepping scheme
   Output* output; ///< Pointer to output handler
   MasterEq* mastereq; ///< Pointer to master equation solver
 
-  Mat GN_NormalEq_MatShell; ///< MatShell for applying Gauss-Newton normal equations matrix A(x)=L(x)^* L(x) to a vector v 
-  Mat GN_NormalEq_MatDense; ///< Dense matrix representation of the Gauss-Newton normal equation matrix
-  bool GN_NormalEq_usedensemat = false; ///< Flag indicating if the dense matrix representation of the Gauss-Newton normal equation matrix is used. Always false.
-
+  /* Storage for Gauss-Newton optimization solvers */
   Vec xeval_GN; ///< Point of evaluation for Gauss-Newton (evaluate L(x) at this x) 
-
-  Vec x_GN; ///< Current iterate for GN optimization. Holds solution after finished. 
-  int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton normal or least squares solvers 
-  bool nonlinear_forward_valid; ///< True once the nonlinear forward has been solved and stored for the current xeval_GN, reset whenever xeval_GN changes
-  bool includeHessUJ; ///< Flag to include Hessian of J(U) in the terminal adjoint condition
+  bool nonlinear_forward_valid; ///< True once the nonlinear forward solveODE has been done and stored for the current xeval_GN, reset whenever xeval_GN changes!
+  bool includeHessUJ; ///< Flag to include Hessian of J(U) in the Gauss-Newton approximation 
 
   // Options for the Armijo line search 
   const double c1 = 1e-4;    //< Sufficient decrease parameter
   const double rho_backtrack = 0.5;   ///< Backtracking factor
   const int max_ls_iter = 20; ///< Maximum number of backtracking steps
 
-  // Gauss-Newton least squares solver
-  Mat GN_LeastSquares_MatShell; ///< MatShell for the Gauss-Newton least-squares problem
+  // All matshells/densemats for Gauss-Newton solvers
+  Mat GN_Primal_MatShell; ///< Applies L^*WL  
+  Mat GN_Primal_MatDense; ///< Dense L^*WL (debug only)
+  bool gn_primal_usedensemat = false; ///< Always false.
+  Mat GN_LeastSquares_MatShell; ///< Applies P_gL and, if damped, augments with lambda I. Misses W^1/2 at this point. TODO: Should probably be calling GN_Jacobian_Tangentspace plus augmentation. 
+  Mat GN_Dual_MatShell; ///< Applies P_G W^1/2 L L^* W^1/2 P_G
+  Mat GN_Dual_MatDense; ///< Dense P_G Q^1/2 L L^* W^1/2 P_G
+  Mat GN_Dual_Precond_MatShell; ///< MatShell for symmetrically preconditioned dual: D^{-1/2} (L L^T + λI) D^{-1/2}
+  Mat GN_Dual_Precond_MatDense; ///< Dense matrix representation of D^{-1/2} (L L^T) D^{-1/2}
+  Mat GN_Dual_LowRank_MatShell; ///< MatShell for low-rank preconditioned dual: M^{-1/2} (L L^T + λI) M^{-1/2}
+
+  int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton normal or least squares solvers 
+
   KSP ksp_LeastSquares;
   Vec *wsub_workspace; ///< Pre-allocated workspace vectors for MatMultTranspose (size: ninit_local)
-  PetscInt state_dim_cached; ///< Cached state dimension for efficiency
 
   // Tao BRGN solver for least-squares problem
   Tao tao_brgn;        ///< Tao BRGN solver (alternative to KSPLSQR)
   Vec brgn_rhs;        ///< Cached RHS vector for BRGN residual evaluation
   Vec brgn_residual;   ///< Cached Residual vector for BRGN solver
+
   double gn_leastsquares_damping; ///< Damping parameter λ for Least Squares regularization
   std::string gn_leastsquares_solver; ///< Least-squares solver name: "brgn" or "lsqr"
 
@@ -130,11 +136,6 @@ class OptimProblem {
   double gn_normaleq_damping; ///< Damping parameter for Gauss-Newton matrix shift
 
   // Dual Gauss-Newton solver
-  Mat GN_Dual_MatShell; ///< MatShell for the dual Gauss-Newton problem (L L^T + λI)
-  Mat GN_Dual_Precond_MatShell; ///< MatShell for symmetrically preconditioned dual: D^{-1/2} (L L^T + λI) D^{-1/2}
-  Mat GN_Dual_LowRank_MatShell; ///< MatShell for low-rank preconditioned dual: M^{-1/2} (L L^T + λI) M^{-1/2}
-  Mat GN_Dual_MatDense; ///< Dense matrix representation of L L^T
-  Mat GN_Dual_Precond_MatDense; ///< Dense matrix representation of D^{-1/2} (L L^T) D^{-1/2}
   KSP ksp_GN_Dual;  ///< Linear solver for dual Gauss-Newton system
   Vec y_dual_workspace; ///< Workspace vector for dual solver (tangent space, size dim²-1)
   Vec v_dual_workspace; ///< Workspace vector for intermediate L^T y computation (design space)
@@ -202,8 +203,8 @@ class OptimProblem {
   int getMPIsize_world() { return mpisize_world;};
   int getMaxIter()     { return maxiter; };
   OptimTarget* getOptimTarget() { return optim_target; };
-  Mat getGN_NormalEq_MatShell() { return GN_NormalEq_MatShell; };
-  Mat getGN_NormalEq_MatDense() { return GN_NormalEq_MatDense; };
+  Mat getGN_Primal_MatShell() { return GN_Primal_MatShell; };
+  Mat getGN_Primal_MatDense() { return GN_Primal_MatDense; };
   Mat getGN_Dual_MatShell() { return GN_Dual_MatShell; };
   Mat getGN_Dual_Precond_MatShell() { return GN_Dual_Precond_MatShell; };
   Mat getGN_Dual_LowRank_MatShell() { return GN_Dual_LowRank_MatShell; };
@@ -308,59 +309,47 @@ class OptimProblem {
    */
   static PetscErrorCode TaoBRGN_Monitor(Tao tao, void *ctx);
 
-  // For the Gauss-Newton least-squares MatShell operations
-  static PetscErrorCode GN_LeastSquares_MatMult(Mat A, Vec v, Vec y); // Apply y = W^1/2Lv
-  static PetscErrorCode GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec vout); // Apply vout = L* W^1/2 w
-  static PetscErrorCode GN_LeastSquares_MatCreateVecs(Mat A, Vec *right, Vec *left);
-
-  // For the dual Gauss-Newton MatShell operations
-  static PetscErrorCode GN_Dual_MatCreateVecs(Mat A, Vec *right, Vec *left);
-  static void GN_Jacobian_MatMult(Mat A, Vec v, Vec y); // Pure Jacobian L*v (no augmentation)
-  static void GN_Jacobian_MatMultTranspose(Mat A, Vec w, Vec vout); // Pure Jacobian L^T*w (no augmentation)
-
   /**
-   * @brief MatMult operation for MatShell Gauss-Newton Normal Equation L^*Lv: Linearized forward + adjoint operator.
-   *
-   * The point of evaluation xeval_GN must be set correctly in the OptimProblem before calling this.
-   *
-   * @param[in] v Direction vector
-   * @param[out] Av Resulting vector after applying the linearized forward and adjoint operators
+   * @brief MatMult for GN_Primal_MatShell: Applies L^*WL
    */
-  static PetscErrorCode GN_NormalEq_MatMult(Mat A, const Vec v, Vec Av);
+  static PetscErrorCode GN_Primal_MatMult(Mat A, const Vec v, Vec Av);
 
   /**
-   * @brief MatMult operation for MatShell dual Gauss-Newton problem (L L^T + λI) y
-   *
-   * Computes y_out = L L^T y_in by calling GN_LeastSquares_MatMultTranspose followed by GN_LeastSquares_MatMult.
-   * Damping is handled separately via MatShift on the shell.
-   *
-   * @param[in] A MatShell containing OptimProblem context
-   * @param[in] y Input vector (tangent space, size dim²-1)
-   * @param[out] Ay Output vector after applying L L^T (tangent space, size dim²-1)
+   * @brief MatMult for GN_LeastSquares_MatShell: Applies P_G L, and, if damped, augments with lambda_I 
+   */
+  static PetscErrorCode GN_LeastSquares_MatMult(Mat A, Vec v, Vec y); 
+  static PetscErrorCode GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec vout); 
+
+  /**
+   * @brief MatMult GN_Dual_MatShell: Applies P_G W^1/2 L L^* W^1/2 P_G 
    */
   static PetscErrorCode GN_Dual_MatMult(Mat A, const Vec y, Vec Ay);
-
-  /**
-   * @brief GetDiagonal operation for MatShell dual Gauss-Newton problem
-   *
-   * Returns the precomputed diagonal of (L L^T + λI) for use by preconditioners.
-   *
-   * @param[in] A MatShell containing OptimProblem context
-   * @param[out] diag Diagonal vector (tangent space, size dim²-1)
-   */
   static PetscErrorCode GN_Dual_GetDiagonal(Mat A, Vec diag);
 
   /**
-   * @brief MatMult operation for symmetrically preconditioned dual Gauss-Newton: D^{-1/2} (L L^T + λI) D^{-1/2}
-   *
-   * Applies the symmetrically preconditioned operator where D = diag(L L^T + λI).
-   * The action is: D^{-1/2} * A * (D^{-1/2} * z)
-   *
-   * @param[in] A MatShell containing OptimProblem context
-   * @param[in] z Input vector (tangent space, size dim²-1)
-   * @param[out] output Output vector after applying D^{-1/2} A D^{-1/2} (tangent space)
+   * @brief MatMult for GN_Dual_LowRank_MatShell: Applies M^{-1/2} A M^{-1/2} z where A=GN_dual_MatShell = P_G W^1/2 L L^* W^1/2 P_G 
    */
+  static PetscErrorCode GN_Dual_LowRank_MatMult(Mat A, const Vec z, Vec output);
+
+  // MatShell Operations for GN_Dual_Precond_Matshell (symmetrically preconditioned dual Gauss-Newton)
   static PetscErrorCode GN_Dual_Precond_MatMult(Mat A, const Vec z, Vec output);
+
+
+  /**
+   * @brief Applies the Gauss-Newton Jacobian projected onto the tangent space: Y = P_G W^1/2 Lv
+   * @note: Requires xeval_GN to be set before calling. Performs a nonlinear solveODE at xeval_GN if !nonlinear_forward_valid, so to store U(t;xeval_GN) for all t. 
+   * @param v Input vector in the design space
+   * @param y Output vector in the tangent space
+   */
+  void apply_GN_Jacobian_Tangentspace(Vec v, Vec y); 
+
+  /**
+   * @brief Applies the adjoint of the Gauss-Newton Jacobian projected onto the tangent space: vout = (P_G W^1/2 L)^T w
+   * @note: Requires that U(t; xeval_GN) is valid (i.e., a nonlinear forward solveODE has been performed at xeval_GN)
+   * @param w Input vector in the tangent space
+   * @param vout Output vector in the design space
+   */
+  void apply_GN_Jacobian_Tangentspace_Adjoint(Vec w, Vec vout); 
 
   /**
    * @brief Updates the dense full  Gauss-Newton matrix based on the current point of evaluation xeval_GN by calling GN_NormalEqShell_MatMult on each unit vectoor.
@@ -372,16 +361,13 @@ class OptimProblem {
    * @brief Assembles the dense dual Gauss-Newton matrix L L^T in GN_Dual_MatDense
    *
    * Uses matrix-vector products with GN_Dual_MatShell to build the dense representation.
-   * Dimensions: (dim²-1) × (dim²-1) where dim is the Hilbert space dimension.
    *
    * @note This operation can be expensive as it involves (dim²-1) applications of the dual MatShell.
    */
   void updateGaussNewtonDualMatDense();
 
   /**
-   * @brief Updates the dual Gauss-Newton preconditioner
-   *
-   * Chooses either diagonal or low-rank updates based on the current configuration.
+   * @brief Updates the dual Gauss-Newton preconditioner (calls either diagonal or low-rank preconditioner update function)
    */
   bool updateGaussNewtonDualPreconditioner(int iter);
 
@@ -407,27 +393,13 @@ class OptimProblem {
   void updateGaussNewtonDualPreconditionerLowRank(int rank);
 
   /**
-   * @brief MatMult operation for low-rank preconditioned dual Gauss-Newton: M^{-1/2} (L L^T + λI) M^{-1/2}
+   * @brief Applies the low-rank dual Gauss-Newton preconditioner: y = M^{-1/2} x, where M ≈ U Σ U^T is the precomputed low-rank approximation.
    *
-   * Applies M^{-1/2} where M ≈ U Σ U^T is the low-rank approximation.
-   * The action is: M^{-1/2} * x = U * (Σ^{-1/2} .* (U^T * x))
-   *
-   * @param[in] A MatShell containing OptimProblem context
    * @param[in] x Input vector (tangent space, size dim²-1)
    * @param[out] y Output vector after applying M^{-1/2} (tangent space)
    */
-  static void GN_Dual_LowRank_ApplyPrecond(Mat A, const Vec x, Vec y);
+  void apply_GN_Dual_LowRank_Precond(const Vec x, Vec y);
 
-  /**
-   * @brief MatMult for low-rank preconditioned system: M^{-1/2} A M^{-1/2} z
-   *
-   * Combines GN_Dual_MatShell with low-rank preconditioning on both sides.
-   *
-   * @param[in] A MatShell containing OptimProblem context
-   * @param[in] z Input vector (preconditioned space)
-   * @param[out] output Output vector (preconditioned space)
-   */
-  static PetscErrorCode GN_Dual_LowRank_MatMult(Mat A, const Vec z, Vec output);
 
   /**
    * @brief Assembles the dense symmetrically preconditioned dual Gauss-Newton matrix

@@ -152,7 +152,6 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   MatCreateShell(PETSC_COMM_SELF, M, N, M, N, this, &GN_LeastSquares_MatShell);
   MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_MULT, (void(*)(void))GN_LeastSquares_MatMult);
   MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_MULT_TRANSPOSE, (void(*)(void))GN_LeastSquares_MatMultTranspose);
-  MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_CREATE_VECS,     (void(*)(void))GN_LeastSquares_MatCreateVecs);
 
   // Create the KSP solver for the Gauss-Newton least-squares problem
   KSPCreate(PETSC_COMM_SELF, &ksp_LeastSquares);
@@ -174,7 +173,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
     TaoSetType(tao_brgn, TAOBRGN);
 
     // Create storage for RHS vector (used in residual callback)
-    GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &brgn_rhs);
+    MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &brgn_rhs);
     VecDuplicate(brgn_rhs, &brgn_residual);
 
     // Set BRGN convergence tolerances. TODO: THIS NEEDS FIX! BRGN is a newton solver, so it will only need one outer newton step. The inner linear solver is the actual workhorse. Need to pass appropriate tolerances to the subsolver, not the BRGN solver. However, somehow, the below crashes when running on multiple processes. TODO: Check parallel implementation.
@@ -205,8 +204,6 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
     brgn_residual = nullptr;
   }
 
-  // Cache state dimension for efficiency
-  VecGetSize(rho_t0_bar, &state_dim_cached);
 
   // Pre-allocate workspace vectors for GN_LeastSquares_MatShell operations
   wsub_workspace = new Vec[ninit_local];
@@ -215,15 +212,15 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   }
 
   /* Create MatShell for Gauss-Newton normal equation A=L^*L */
-  MatCreateShell(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign, this, &GN_NormalEq_MatShell);
-  MatShellSetOperation(GN_NormalEq_MatShell, MATOP_MULT, (void(*) (void)) GN_NormalEq_MatMult);
+  MatCreateShell(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign, this, &GN_Primal_MatShell);
+  MatShellSetOperation(GN_Primal_MatShell, MATOP_MULT, (void(*) (void)) GN_Primal_MatMult);
   VecDuplicate(xinit, &xeval_GN);
   VecZeroEntries(xeval_GN);
   VecAssemblyBegin(xeval_GN); VecAssemblyEnd(xeval_GN);
 
   /* Create dense matrix for Gauss-Newton normal equation */
-  MatCreateDense(PETSC_COMM_SELF, ndesign, ndesign, ndesign, ndesign, NULL, &GN_NormalEq_MatDense);
-  MatZeroEntries(GN_NormalEq_MatDense);
+  MatCreateDense(PETSC_COMM_SELF, ndesign, ndesign, ndesign, ndesign, NULL, &GN_Primal_MatDense);
+  MatZeroEntries(GN_Primal_MatDense);
 
   gn_normaleq_damping = config.getGnNormaleqDamping();
   gn_rtol = config.getGnRtol();
@@ -232,7 +229,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
 
   /* Create GN Normal equation linear solver: L^*Lv=b */
   KSPCreate(PETSC_COMM_SELF, &ksp_GN_NormalEq);
-  KSPSetOperators(ksp_GN_NormalEq, GN_NormalEq_MatShell, GN_NormalEq_MatShell);
+  KSPSetOperators(ksp_GN_NormalEq, GN_Primal_MatShell, GN_Primal_MatShell);
   std::string ksp_normaleq_solver_str = config.getGnNormaleqSolver();
   std::string ksp_normaleq_solver_lower = ksp_normaleq_solver_str;
   std::transform(ksp_normaleq_solver_lower.begin(), ksp_normaleq_solver_lower.end(), ksp_normaleq_solver_lower.begin(), ::tolower);
@@ -285,7 +282,6 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   MatCreateShell(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, this, &GN_Dual_MatShell);
   MatShellSetOperation(GN_Dual_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_MatMult);
   MatShellSetOperation(GN_Dual_MatShell, MATOP_GET_DIAGONAL, (void(*)(void))GN_Dual_GetDiagonal);
-  MatShellSetOperation(GN_Dual_MatShell, MATOP_CREATE_VECS, (void(*)(void))GN_Dual_MatCreateVecs);
 
   /* Create dense matrices for dual Gauss-Newton problem */
   MatCreateDense(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, NULL, &GN_Dual_MatDense);
@@ -366,7 +362,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
 
   /* Create eigenvalues solver for Gauss-Newton normal equation Ax=b */
   EPSCreate(PETSC_COMM_SELF, &eps_GN_NormalEq);
-  EPSSetOperators(eps_GN_NormalEq, GN_NormalEq_MatShell, NULL);
+  EPSSetOperators(eps_GN_NormalEq, GN_Primal_MatShell, NULL);
   EPSSetProblemType(eps_GN_NormalEq, EPS_HEP); // Hermitian
   EPSSetWhichEigenpairs(eps_GN_NormalEq, EPS_LARGEST_REAL); // largest eigenvalues
   double eps_thresh = eps_evals_cutoff;
@@ -392,9 +388,9 @@ OptimProblem::~OptimProblem() {
   VecDestroy(&x_GN);
   VecDestroy(&xprev);
 
-  MatDestroy(&GN_NormalEq_MatDense);
-  MatDestroy(&GN_NormalEq_MatShell);
-  MatDestroy(&GN_NormalEq_MatDense);
+  MatDestroy(&GN_Primal_MatDense);
+  MatDestroy(&GN_Primal_MatShell);
+  MatDestroy(&GN_Primal_MatDense);
   MatDestroy(&GN_LeastSquares_MatShell);
   MatDestroy(&GN_Dual_MatShell);
   MatDestroy(&GN_Dual_Precond_MatShell);
@@ -817,7 +813,7 @@ void OptimProblem::evalLinearizedForward(const Vec x, const Vec v){
   nonlinear_forward_valid = true;
 }
 
-PetscErrorCode OptimProblem::GN_NormalEq_MatMult(Mat A, const Vec v, Vec Av){
+PetscErrorCode OptimProblem::GN_Primal_MatMult(Mat A, const Vec v, Vec Av){
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
   // if (self->mpirank_world == 0) printf("APPLYING GAUSS-NEWTON...\n");
@@ -894,15 +890,10 @@ PetscErrorCode OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
   // Reset output
   VecZeroEntries(Ay);
 
-  // Compute Ay = L L^T y (using pure Jacobian operations for dual mode)
-  // Note: We need to pass a matrix for context, but the functions use VecGetSize to get dimensions
-  // Step 1: Compute v_temp = L^T y (tangent space → design space)
-  GN_Jacobian_MatMultTranspose(A, y, self->v_dual_workspace);
-
-  // Step 2: Compute Ay = L v_temp (design space → tangent space)
-  GN_Jacobian_MatMult(A, self->v_dual_workspace, Ay);
-
-  // Note: Damping (λI) is applied separately via MatShift on the shell
+  // v_temp = L^T W^1/2 P_G y (tangent space -> design space)
+  self->apply_GN_Jacobian_Tangentspace_Adjoint(y, self->v_dual_workspace);
+  // Ay = P_G W^1/2 L v_temp (design space -> tangent space)
+  self->apply_GN_Jacobian_Tangentspace(self->v_dual_workspace, Ay);
 
   return 0;
 }
@@ -922,7 +913,7 @@ PetscErrorCode OptimProblem::GN_Dual_Precond_MatMult(Mat A, const Vec z, Vec out
   MatShellGetContext(A, (void**)&self);
 
   // Apply D^{-1/2} A D^{-1/2} z
-  VecPointwiseMult(self->gn_dual_temp, self->gn_dual_precond_diag, z);
+  VecPointwiseMult(self->gn_dual_temp, self->gn_dual_precond_diag, z); // temp = precond_diag[i]*z[i]
   MatMult(self->GN_Dual_MatShell, self->gn_dual_temp, output); 
   VecPointwiseMult(output, self->gn_dual_precond_diag, output); 
 
@@ -937,19 +928,19 @@ void OptimProblem::solveGaussNewtonNormalEqKSP(Vec xinit, const Vec initial_gues
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
 
   // Set the matrix again, just in case, for reset.
-  KSPSetOperators(ksp_GN_NormalEq, GN_NormalEq_MatShell, GN_NormalEq_MatShell);
+  KSPSetOperators(ksp_GN_NormalEq, GN_Primal_MatShell, GN_Primal_MatShell);
 
   // Set initial guess from initial_guess parameter
   VecCopy(initial_guess, Ainv_b);
 
   // Optional Levenberg-Marquardt damping: A += mu I
-  if (gn_normaleq_damping > 0.0) MatShift(GN_NormalEq_MatShell, gn_normaleq_damping);
+  if (gn_normaleq_damping > 0.0) MatShift(GN_Primal_MatShell, gn_normaleq_damping);
 
   // Solve the linear system L^*L x = b
   KSPSolve(ksp_GN_NormalEq, b, Ainv_b);
 
   // Revert the optional scaling
-  if (gn_normaleq_damping > 0.0) MatShift(GN_NormalEq_MatShell, -gn_normaleq_damping);
+  if (gn_normaleq_damping > 0.0) MatShift(GN_Primal_MatShell, -gn_normaleq_damping);
 
   // Report convergence
   KSPConvergedReason reason;
@@ -970,7 +961,7 @@ Vec OptimProblem::computeDualRHS(){
   // This assumes evalGradF() has already been called, so final states are available
 
   Vec b;
-  GN_Dual_MatCreateVecs(GN_Dual_MatShell, nullptr, &b);
+  MatCreateVecs(GN_Dual_MatShell, nullptr, &b);
 
   PetscInt tangent_dim;
   VecGetSize(b, &tangent_dim);
@@ -1088,7 +1079,7 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
 
     // Scale RHS: b_scaled = M^{-1/2} * b
     VecDuplicate(b, &b_scaled);
-    GN_Dual_LowRank_ApplyPrecond(GN_Dual_LowRank_MatShell, b, b_scaled);
+    apply_GN_Dual_LowRank_Precond(b, b_scaled);
 
     // Transform initial guess from y-space to z-space: z0 = M^{1/2} * y0
     // Mathematical insight: If y0 ≈ M^{-1} * b, then z0 = M^{1/2} * M^{-1} * b = M^{-1/2} * b
@@ -1103,7 +1094,7 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
     KSPSolve(ksp_GN_Dual, b_scaled, z_solution);
 
     // Recover y = M^{-1/2} * z
-    GN_Dual_LowRank_ApplyPrecond(GN_Dual_LowRank_MatShell, z_solution, y_dual_workspace);
+    apply_GN_Dual_LowRank_Precond(z_solution, y_dual_workspace);
 
     VecDestroy(&b_scaled);
     VecDestroy(&z_solution);
@@ -1169,7 +1160,7 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
 
   // Recover primal solution: v = L^T y (use pure Jacobian transpose for dual mode)
   // Note: b is not destroyed here since it's passed as a parameter
-  GN_Jacobian_MatMultTranspose(GN_Dual_MatShell, y_dual_workspace, v_out);
+  apply_GN_Jacobian_Tangentspace_Adjoint(y_dual_workspace, v_out);
 
   // Report convergence
   KSPConvergedReason reason;
@@ -1391,7 +1382,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
       VecDuplicate(y_proj, &z_solution);
 
       // Scale normalized RHS: b_scaled = M^{-1/2} * b_normalized
-      GN_Dual_LowRank_ApplyPrecond(GN_Dual_LowRank_MatShell, b_normalized, b_scaled);
+      apply_GN_Dual_LowRank_Precond(b_normalized, b_scaled);
 
       // Scale initial guess
       VecCopy(y_proj, z_solution);
@@ -1405,7 +1396,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
       KSPSolve(ksp_GN_Dual, b_scaled, z_solution);
 
       // Recover y = M^{-1/2} * z
-      GN_Dual_LowRank_ApplyPrecond(GN_Dual_LowRank_MatShell, z_solution, y_dual_workspace);
+      apply_GN_Dual_LowRank_Precond(z_solution, y_dual_workspace);
 
       // Scale back by ||b|| to get the actual solution
       VecScale(y_dual_workspace, bnorm);
@@ -1440,7 +1431,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   delete[] eigenvalues;
 
   // Recover primal solution: v = L^T y (use pure Jacobian transpose for dual mode)
-  GN_Jacobian_MatMultTranspose(GN_Dual_MatShell, y_dual_workspace, v_out);
+  apply_GN_Jacobian_Tangentspace_Adjoint(y_dual_workspace, v_out);
 
   // Store KSP iterations for reporting in optimization history
   ksp_iters_last = refine_iters;
@@ -1514,13 +1505,13 @@ std::vector<double> OptimProblem::computeGaussNewtonNormalEqEvals(Vec xinit, Mat
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
 
   // Update EPS for a fresh solve on the new xeval_GN. 
-  if (!GN_NormalEq_usedensemat) { 
+  if (!gn_primal_usedensemat) { 
     // use MatShell 
-    EPSSetOperators(eps_GN_NormalEq, GN_NormalEq_MatShell, NULL);
+    EPSSetOperators(eps_GN_NormalEq, GN_Primal_MatShell, NULL);
   } else {
     // use dense Matrix representation of the Gauss-Newton matrix
     updateGaussNewtonMatDense(); // does N2-1 applications of the MatShell
-    EPSSetOperators(eps_GN_NormalEq, GN_NormalEq_MatDense, NULL);
+    EPSSetOperators(eps_GN_NormalEq, GN_Primal_MatDense, NULL);
   }
 
   // Solve the eigenvalue problem for the Gauss-Newton matrix
@@ -1538,7 +1529,7 @@ std::vector<double> OptimProblem::computeGaussNewtonNormalEqEvals(Vec xinit, Mat
   std::vector<double> evals_re(neigvals);
   std::vector<Vec> evec_re(neigvals);
   for (int ix = 0; ix < neigvals; ix++) {
-    MatCreateVecs(GN_NormalEq_MatShell, &evec_re[ix], NULL);
+    MatCreateVecs(GN_Primal_MatShell, &evec_re[ix], NULL);
   }
 
   // Retrieve eigenpairs of M and compute error. 
@@ -1887,7 +1878,7 @@ PetscErrorCode TaoEvalObjectiveAndGradient(Tao tao, Vec x, PetscReal *f, Vec G, 
 }
 
 void OptimProblem::updateGaussNewtonMatDense(){
-  MatZeroEntries(GN_NormalEq_MatDense);
+  MatZeroEntries(GN_Primal_MatDense);
 
   Vec e;
   VecDuplicate(xeval_GN, &e);
@@ -1911,25 +1902,25 @@ void OptimProblem::updateGaussNewtonMatDense(){
     VecSetValue(e, ix, 1.0, INSERT_VALUES);
     VecAssemblyBegin(e);
     VecAssemblyEnd(e);
-    MatMult(this->getGN_NormalEq_MatShell(), e, Av);
+    MatMult(this->getGN_Primal_MatShell(), e, Av);
     for (int jx = 0; jx < ndesign; ++jx) {
       PetscScalar val;
       VecGetValues(Av, 1, &jx, &val);
-      MatSetValue(GN_NormalEq_MatDense, jx, ix, val, INSERT_VALUES);
+      MatSetValue(GN_Primal_MatDense, jx, ix, val, INSERT_VALUES);
     }
   }
   VecDestroy(&e);
   VecDestroy(&Av);
 
-  MatAssemblyBegin(GN_NormalEq_MatDense, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(GN_NormalEq_MatDense, MAT_FINAL_ASSEMBLY);
+  MatAssemblyBegin(GN_Primal_MatDense, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(GN_Primal_MatDense, MAT_FINAL_ASSEMBLY);
 
   // Allreduce to combine contributions from all MPI ranks
   PetscScalar *data;
-  MatDenseGetArray(GN_NormalEq_MatDense, &data);
+  MatDenseGetArray(GN_Primal_MatDense, &data);
   int size = ndesign * ndesign;
   MPI_Allreduce(MPI_IN_PLACE, data, size, MPIU_SCALAR, MPI_SUM, comm_optim);
-  MatDenseRestoreArray(GN_NormalEq_MatDense, &data);
+  MatDenseRestoreArray(GN_Primal_MatDense, &data);
 
 }
 
@@ -2291,12 +2282,11 @@ void OptimProblem::updateGaussNewtonDualPreconditionerLowRank(int rank){
 
 // Apply M^{-1/2} where M ≈ U Σ U^T
 // M^{-1/2} x = U * (Σ^{-1/2} .* (U^T * x))
-void OptimProblem::GN_Dual_LowRank_ApplyPrecond(Mat A, const Vec x, Vec y){
+void OptimProblem::apply_GN_Dual_LowRank_Precond(const Vec x, Vec y){
   // Apply M^{-1/2} = V_r Σ_r^{-1/2} V_r^T + μ^{-1/2}(I - V_r V_r^T)
   // y = V_r (Σ_r^{-1/2} .* (V_r^T x)) + μ^{-1/2} (x - V_r (V_r^T x))
 
-  OptimProblem *self;
-  MatShellGetContext(A, (void**)&self);
+  OptimProblem *self = this;
 
   // Step 1: temp = V_r^T * x (project onto top-r subspace)
   MatMultTranspose(self->gn_dual_lowrank_U, x, self->gn_dual_lowrank_temp);
@@ -2423,28 +2413,24 @@ Vec OptimProblem::computeEigenspaceInitialGuessFromStored(const Vec b_rhs){
 }
 
 
-// Apply M^{-1/2} A M^{-1/2} z
+
 PetscErrorCode OptimProblem::GN_Dual_LowRank_MatMult(Mat A, const Vec z, Vec output){
+  // Applies M^{-1/2} A M^{-1/2} z where A=GN_dual_MatShell = P_G W^1/2 L L^* W^1/2 P_G 
+
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
 
   Vec temp;
-  VecDuplicate(z, &temp);
+  VecDuplicate(z, &temp); // TODO: Should probably reuse a preallocated workspace!
 
-  // Step 1: temp = M^{-1/2} * z
-  GN_Dual_LowRank_ApplyPrecond(A, z, temp);
-
-  // Step 2: temp = A * temp
+  self->apply_GN_Dual_LowRank_Precond(z, temp);
   MatMult(self->GN_Dual_MatShell, temp, output);
-
-  // Step 3: output = M^{-1/2} * output
-  VecCopy(output, temp);  // Save intermediate result
-  GN_Dual_LowRank_ApplyPrecond(A, temp, output);
+  VecCopy(output, temp);  // Save intermediate result. TODO: Probably not needed. Check.
+  self->apply_GN_Dual_LowRank_Precond(temp, output);
 
   VecDestroy(&temp);
   return 0;
 }
-
 
 
 void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initial_guess, Vec v_LeastSquares){
@@ -2457,7 +2443,7 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
   // \nabla_J = -2/n U - 2/n^2Tr(V^dU)V = 2/n(I-P)U
 
   Vec b; // RHS
-  GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &b);
+  MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &b);
   VecZeroEntries(b);  // Ensure bottom part (for damping rows) is initialized to zero
 
   // Get U(T) from optim_target
@@ -2566,13 +2552,13 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
   // // Adjoint test: <w, A v> should equal <A^T w, v>  (all real)
   // printf("GN Least-Squares: Adjoint test\n");
   // Vec v_test, w_test, Av, ATw;
-  // GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, &v_test, nullptr);
-  // GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &w_test);
+  // MatCreateVecs(GN_LeastSquares_MatShell, &v_test, nullptr);
+  // MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &w_test);
   // VecSetRandom(v_test, nullptr);
   // VecSetRandom(w_test, nullptr);
-  // GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &Av);
+  // MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &Av);
   // GN_LeastSquares_MatMult(GN_LeastSquares_MatShell, v_test, Av);
-  // GN_LeastSquares_MatCreateVecs(GN_LeastSquares_MatShell, &ATw, nullptr);
+  // MatCreateVecs(GN_LeastSquares_MatShell, &ATw, nullptr);
   // GN_LeastSquares_MatMultTranspose(GN_LeastSquares_MatShell, w_test, ATw);
 
   // PetscScalar lhs, rhs;
@@ -2878,51 +2864,12 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w_long,
   return 0;
 }
 
-PetscErrorCode OptimProblem::GN_LeastSquares_MatCreateVecs(Mat A, Vec *right, Vec *left)
-{
-  OptimProblem *self;
-  MatShellGetContext(A, (void**)&self);
 
-  PetscInt M,N;
-  MatGetSize(A, &M, &N);
-
-  if (right) {
-    // Create a control pulse vector
-    VecCreateSeq(PETSC_COMM_SELF, N, right);
-  }
-  if (left) {
-    // Create a reduced tangent space (augmented with ndesign rows for least-squares damping)
-    VecCreateSeq(PETSC_COMM_SELF, M, left);
-  }
-  return 0;
-}
-
-PetscErrorCode OptimProblem::GN_Dual_MatCreateVecs(Mat A, Vec *right, Vec *left)
-{
-  OptimProblem *self;
-  MatShellGetContext(A, (void**)&self);
-
-  // Always use pure tangent space dimension (never augmented)
-  PetscInt tangent_dim = self->mastereq->getDim() * self->mastereq->getDim() - 1;
-  PetscInt N = self->ndesign;
-
-  if (right) {
-    // Create a control pulse vector
-    VecCreateSeq(PETSC_COMM_SELF, N, right);
-  }
-  if (left) {
-    // Create a pure tangent space vector (not augmented)
-    VecCreateSeq(PETSC_COMM_SELF, tangent_dim, left);
-  }
-  return 0;
-}
-
-void OptimProblem::GN_Jacobian_MatMult(Mat A, Vec v, Vec y)
+void OptimProblem::apply_GN_Jacobian_Tangentspace(Vec v, Vec y)
 {
   // Jacobian forward: y = P_G W^1/2 Lv 
 
-  OptimProblem *self;
-  MatShellGetContext(A, (void**)&self);
+  OptimProblem *self = this;
 
   // Reset output
   VecZeroEntries(y);
@@ -2988,12 +2935,11 @@ void OptimProblem::GN_Jacobian_MatMult(Mat A, Vec v, Vec y)
   // No damping rows - pure Jacobian only
 }
 
-void OptimProblem::GN_Jacobian_MatMultTranspose(Mat A, Vec w, Vec vout)
+void OptimProblem::apply_GN_Jacobian_Tangentspace_Adjoint(Vec w, Vec vout)
 {
   // Jacobian transpose: vout = L^T W^1/2 P_G^{-1} w 
 
-  OptimProblem *self;
-  MatShellGetContext(A, (void**)&self);
+  OptimProblem *self = this;
 
   // Reset output
   VecZeroEntries(vout);

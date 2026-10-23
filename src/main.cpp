@@ -454,7 +454,7 @@ int main(int argc,char **argv)
       // Save primal matrix L^T L (design space dimension: ndesign)
       if (mpirank_world == 0 && !quietmode) printf("\nAssembling primal Gauss-Newton matrix (L^T L)...\n");
       optimctx->updateGaussNewtonMatDense();
-      Mat mat_primal = optimctx->getGN_NormalEq_MatDense();
+      Mat mat_primal = optimctx->getGN_Primal_MatDense();
 
       // Only rank 0 writes to file (matrix is replicated on all ranks after MPI_Allreduce)
       if (mpirank_world == 0) {
@@ -615,7 +615,7 @@ int main(int argc,char **argv)
     // Evaluate residuals from Least Squares solution
     Vec v_test_1;
     VecDuplicate(grad, &v_test_1);
-    MatMult(optimctx->getGN_NormalEq_MatShell(), v_LeastSquares, v_test_1);
+    MatMult(optimctx->getGN_Primal_MatShell(), v_LeastSquares, v_test_1);
     VecAXPY(v_test_1, -1.0, gnrhs);
     VecNorm(v_test_1, NORM_2, &v_LeastSquares_norm);
     if (mpirank_world == 0 && !quietmode) {
@@ -1145,7 +1145,7 @@ int main(int argc,char **argv)
     VecAssemblyBegin(v_GN); VecAssemblyEnd(v_GN);
 
     // Evaluate Av_GN = A * e_ix
-    MatMult(optimctx->getGN_NormalEq_MatShell(), v_GN, Av_GN);
+    MatMult(optimctx->getGN_Primal_MatShell(), v_GN, Av_GN);
 
     // Store Av_GN in ix-th column of A_GaussNewton
     const PetscScalar *Av_ptr;
