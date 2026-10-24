@@ -225,9 +225,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
     }
   } else if (gn_normaleq_solver == "gmres") {
     KSPSetType(ksp_gn_normaleq, KSPGMRES);
-  } else {
-    KSPSetType(ksp_gn_normaleq, KSPMINRES);
-  }
+  } 
   KSPSetFromOptions(ksp_gn_normaleq);
   // KSPSetNormType(ksp_gn_normaleq, KSP_NORM_UNPRECONDITIONED); // Uncomment if unpreconditioned norm is desired, but is slower. 
   KSPSetTolerances(ksp_gn_normaleq, gn_rtol, PETSC_DEFAULT, PETSC_DEFAULT, gn_maxiter);

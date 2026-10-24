@@ -309,24 +309,13 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     gn_rtol = validators::field<double>(optimization_table, "gn_rtol").greaterThan(0.0).valueOr(ConfigDefaults::GN_RTOL);
     gn_maxiter = validators::field<int>(optimization_table, "gn_maxiter").greaterThan(0).valueOr(ConfigDefaults::GN_MAXITER);
 
-    // TODO: Validate against allowed values 
-    gn_leastsquares_solver = validators::field<std::string>(optimization_table, "gn_leastsquares_solver").valueOr(ConfigDefaults::GN_LEASTSQUARES_SOLVER);
-    std::string gn_leastsquares_solver_lower = toLower(gn_leastsquares_solver);
-    gn_leastsquares_solver = gn_leastsquares_solver_lower;
 
-    // TODO: Validate against allowed values
-    gn_normaleq_solver = validators::field<std::string>(optimization_table, "gn_normaleq_solver").valueOr(ConfigDefaults::GN_NORMALEQ_SOLVER);
-    std::string gn_normaleq_solver_lower = toLower(gn_normaleq_solver);
-    gn_normaleq_solver = gn_normaleq_solver_lower;
-
+    gn_normaleq_solver = validators::field<std::string>(optimization_table, "gn_normaleq_solver").oneOf({"cg", "minres", "gmres"}).valueOr(ConfigDefaults::GN_NORMALEQ_SOLVER);
+    gn_solver_mode = validators::field<std::string>(optimization_table, "gn_solver_mode").oneOf({"primal", "dual", "least_squares"}).valueOr(ConfigDefaults::GN_SOLVER_MODE);
+    gn_leastsquares_solver = validators::field<std::string>(optimization_table, "gn_leastsquares_solver").oneOf({"brgn", "lsqr"}).valueOr(ConfigDefaults::GN_LEASTSQUARES_SOLVER);
     gn_leastsquares_damping = validators::field<double>(optimization_table, "gn_leastsquares_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::GN_LEASTSQUARES_DAMPING);
     gn_normaleq_damping = validators::field<double>(optimization_table, "gn_normaleq_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::GN_NORMALEQ_DAMPING);
-
-
     gn_normaleq_minres_qlp = validators::field<bool>(optimization_table, "gn_normaleq_minres_qlp").valueOr(ConfigDefaults::GN_MINRES_QLP);
-    gn_solver_mode = validators::field<std::string>(optimization_table, "gn_solver_mode").valueOr(ConfigDefaults::GN_SOLVER_MODE);
-    std::string gn_solver_mode_lower = toLower(gn_solver_mode);
-    gn_solver_mode = gn_solver_mode_lower;
     gn_prec_update_interval = validators::field<int>(optimization_table, "gn_prec_update_interval").greaterThanEqual(-1).valueOr(ConfigDefaults::GN_PREC_UPDATE_INTERVAL);
     gn_precond_rank = validators::field<int>(optimization_table, "gn_precond_rank").greaterThan(0).valueOr(ConfigDefaults::GN_PRECOND_RANK);
 
