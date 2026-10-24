@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <cctype>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -23,6 +25,7 @@
  *      - `greaterThanEqual(value)`: Field must be >= value
  *      - `lessThan(value)`: Field must be < value
  *      - `positive()`: Field must be > 0 (shorthand for greaterThan(0))
+ *      - `oneOf(options)`: Field must be one of the values in options
  *    For vector fields:
  *      - `minLength(size)`: Vector must have at least size elements
  *      - `hasLength(size)`: Vector must have exactly size elements
@@ -42,14 +45,33 @@
  * // Parse a required vector of positive doubles with key "frequencies", defaulting to {1.0, 2.0}
  * std::vector<double> frequencies = validators::vectorField<double>(toml, "frequencies").minLength(1).positive().valueOr(std::vector<double>{1.0, 2.0});
  *
+ * // Parse an optional string that must be one of specific values with key "solver_type", defaulting to "default"
+ * std::string solver_type = validators::field<std::string>(toml, "solver_type").oneOf({"CG", "GMRES", "BiCGSTAB"}).valueOr("default");
+ *
  * @endcode
  *
  * ## Supported Types
  *
  * Scalar fields: int, size_t, double, std::string, bool, etc.
  * Vector fields: std::vector<T> where T is any supported scalar type
+ *
+ * ## String Handling
+ *
+ * All string values are automatically converted to lowercase for case-insensitive comparison.
+ * This means "CG", "cg", and "Cg" are all treated as equivalent. The returned string value
+ * will be in lowercase.
  */
 namespace validators {
+
+/**
+ * @brief Helper to convert a string to lowercase.
+ */
+inline std::string toLower(const std::string& str) {
+  std::string result = str;
+  std::transform(result.begin(), result.end(), result.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+  return result;
+}
 
 /**
  * @brief Helper to get readable type names for error messages
@@ -95,6 +117,7 @@ class ValidationError : public std::runtime_error {
  * - `greaterThanEqual(value)`: Field must be >= value
  * - `lessThan(value)`: Field must be < value
  * - `positive()`: Field must be > 0 (shorthand for greaterThan(0))
+ * - `oneOf(options)`: Field must be one of the values in options
  *
  *  ## Extraction Methods
  *
@@ -111,6 +134,7 @@ class Validator {
   std::optional<T> greater_than;
   std::optional<T> greater_than_equal;
   std::optional<T> less_than;
+  std::optional<std::vector<T>> valid_options;
 
  public:
   Validator(const toml::table& config_, const std::string& key_) : config(config_), key(key_) {}
@@ -158,6 +182,39 @@ class Validator {
     return *this;
   }
 
+  /**
+   * @brief Requires value to be one of the specified valid options.
+   *
+   * @param options Vector of valid values
+   * @return Reference to this validator for chaining
+   */
+  Validator& oneOf(const std::vector<T>& options) {
+    // Convert string options to lowercase for case-insensitive comparison
+    if constexpr (std::is_same_v<T, std::string>) {
+      std::vector<T> lowercase_options;
+      lowercase_options.reserve(options.size());
+      for (const auto& opt : options) {
+        lowercase_options.push_back(toLower(opt));
+      }
+      valid_options = lowercase_options;
+    } else {
+      valid_options = options;
+    }
+    return *this;
+  }
+
+  /**
+   * @brief Requires value to be one of the specified valid options.
+   *
+   * Convenience overload accepting an initializer list.
+   *
+   * @param options Initializer list of valid values
+   * @return Reference to this validator for chaining
+   */
+  Validator& oneOf(std::initializer_list<T> options) {
+    return oneOf(std::vector<T>(options));
+  }
+
  private:
   std::optional<T> extractValue() {
     // If key doesn't exist, return nullopt
@@ -172,7 +229,12 @@ class Validator {
       throw ValidationError(key, "wrong type (expected " + getTypeName<T>() + ")");
     }
 
-    return val;
+    // Convert strings to lowercase for case-insensitive comparison
+    if constexpr (std::is_same_v<T, std::string>) {
+      return toLower(*val);
+    } else {
+      return val;
+    }
   }
 
   T validateValue(T result) {
@@ -192,6 +254,26 @@ class Validator {
       std::ostringstream oss;
       oss << "must be < " << *less_than << ", got " << result;
       throw ValidationError(key, oss.str());
+    }
+
+    if (valid_options) {
+      bool found = false;
+      for (const auto& option : *valid_options) {
+        if (result == option) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        std::ostringstream oss;
+        oss << "must be one of [";
+        for (size_t i = 0; i < valid_options->size(); ++i) {
+          if (i > 0) oss << ", ";
+          oss << (*valid_options)[i];
+        }
+        oss << "], got " << result;
+        throw ValidationError(key, oss.str());
+      }
     }
 
     return result;

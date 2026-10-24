@@ -108,14 +108,14 @@ class Config {
   OptimSolverType optim_solver_type; ///< Type of optimization solver to use
   double gn_rtol; ///< Relative tolerance for inner Gauss-Newton iterations (Normal or Least Squares)
   int gn_maxiter; ///< Maximum iterations for inner Gauss-Newton iterations (Normal or Least Squares)
-  std::string leastsquares_solver; ///< Least-squares solver: "brgn" or "lsqr"
-  double leastsquares_damping; ///< Damping parameter for Least Squares regularization
+  std::string gn_leastsquares_solver; ///< Least-squares solver: "brgn" or "lsqr"
+  double gn_leastsquares_damping; ///< Damping parameter for Least Squares regularization
+  double gn_normaleq_damping; ///< Damping parameter for Gauss-Newton Normal Equation solves (Levenberg-Marquardt)
   std::string gn_normaleq_solver; ///< KSP solver type for Gauss-Newton Normal equation: "CG", "MINRES", "GMRES", etc.
   bool gn_normaleq_minres_qlp; ///< Use MINRES-QLP variant (more robust than standard MINRES)
   std::string gn_solver_mode; ///< Gauss-Newton solver mode: "primal" or "dual"
   int gn_prec_update_interval; ///< Preconditioner update interval (0 = only at startup, n>0 = every n iterations)
-  std::string gn_dual_precond_type; ///< Dual preconditioner type: "symmetric", "left", or "low_rank"
-  int gn_dual_precond_rank; ///< Rank for low-rank preconditioner (only used if gn_dual_precond_type="low_rank")
+  int gn_precond_rank; ///< Rank for low-rank preconditioner 
 
   // Output and runtypes
   std::string output_directory; ///< Directory for output files
@@ -192,14 +192,14 @@ class Config {
   double getOptimPenaltyEnergy() const { return optim_penalty_energy; }
   double getOptimPenaltyVariation() const { return optim_penalty_variation; }
   OptimSolverType getOptimSolverType() const { return optim_solver_type; }
-  const std::string& getLeastSquaresSolver() const { return leastsquares_solver; }
-  double getLeastSquaresDamping() const { return leastsquares_damping; }
+  const std::string& getGnLeastSquaresSolver() const { return gn_leastsquares_solver; }
+  double getGnLeastSquaresDamping() const { return gn_leastsquares_damping; }
+  double getGnNormaleqDamping() const { return gn_normaleq_damping; }
   const std::string& getGnNormaleqSolver() const { return gn_normaleq_solver; }
   bool getGnNormaleqMinresQlp() const { return gn_normaleq_minres_qlp; }
   const std::string& getGnSolverMode() const { return gn_solver_mode; }
   int getGnPrecUpdateInterval() const { return gn_prec_update_interval; }
-  const std::string& getGnDualPrecondType() const { return gn_dual_precond_type; }
-  int getGnDualPrecondRank() const { return gn_dual_precond_rank; }
+  int getGnPrecondRank() const { return gn_precond_rank; }
   double getGnRtol() const { return gn_rtol; }
   int getGnMaxiter() const { return gn_maxiter; }
 
