@@ -794,8 +794,6 @@ void OptimProblem::solveGaussNewtonPrimalKSP(Vec xinit, const Vec initial_guess,
   }
 }
 Vec OptimProblem::computeDualRHS(){
-  // Compute RHS: b = -∇_U J projected to tangent space
-  // This assumes evalGradF() has already been called, so final states are available
 
   Vec b;
   MatCreateVecs(GN_Dual_MatShell, nullptr, &b);
@@ -861,7 +859,6 @@ Vec OptimProblem::computeDualRHS(){
 
 Vec OptimProblem::computeDualInitGuess(Vec b_rhs){
 
-  // If using low-rank preconditioner, compute initial guess from stored eigenspace. Otherwise, use zero initial guess. 
   Vec y_initial;
   if (gn_prec_update_interval >= -1) {
     y_initial = computeEigenspaceInitialGuessFromStored(b_rhs);
@@ -873,16 +870,11 @@ Vec OptimProblem::computeDualInitGuess(Vec b_rhs){
   return y_initial;
 }
 
-
-
 bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_guess, const Vec b_rhs, Vec v_out){
- 
 
-  // Returns: true if eigendecomposition appears stale, false otherwise
   // Store the point of evaluation for the Gauss-Newton matrix shell
   VecCopy(xinit, xeval_GN);
   nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve (solveODE) within linearizedForwad() for the new xeval_GN
-  // TODO: Check if the above is needed! 
 
   // Use provided initial guess 
   VecCopy(initial_guess, y_dual_workspace);
@@ -987,16 +979,6 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
 
 
 void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec v_out){
-  // Projected subspace solver for dual Gauss-Newton system
-  // NOTE: Re-computes the eigendecomposition at every call
-  // Algorithm:
-  //   1. Compute eigendecomposition: (L L^T + λI) V_r = Σ_r V_r (r largest eigenvalues)
-  //   2. Use passed RHS: b = -∇_U J in tangent space
-  //   3. Project: b̃ = V_r^T b
-  //   4. Solve in subspace: ỹ = Σ_r^{-1} b̃ (direct diagonal solve)
-  //   5. Lift to full space: y = V_r ỹ
-  //   6. Recover primal: v = L^T y
-
   // TODO: Understand this function and how it interacts with the low-rank preconditioner and the Gauss-Newton dual system.
   // TODO: Remove the KSP iterations. Make this a full-rank rank solver in the projected subspace.
 
@@ -1099,7 +1081,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   }
 
   // Compute eigenspace approximation: y = M^{-1} * b
-  computeEigenspaceApproximation(b, V_r, eigenvalues, rank, have_complement, mu, y_dual_workspace);
+  applyEigenspaceApproximation(b, V_r, eigenvalues, rank, have_complement, mu, y_dual_workspace);
 
   // Optional iterative refinement: refine the projected solution with KSP iterations
   // Refinement is enabled when gn_maxiter > 0
@@ -1280,7 +1262,7 @@ std::vector<double> OptimProblem::computeGaussNewtonPrimalEvals(Vec xinit, Mat* 
     EPSSetOperators(eps_gn_primal, GN_Primal_MatShell, NULL);
   } else {
     // use dense Matrix representation of the Gauss-Newton matrix
-    updateGaussNewtonMatDense(); // does N2-1 applications of the MatShell
+    updateGaussNewtonPrimalMatDense(); // does N2-1 applications of the MatShell
     EPSSetOperators(eps_gn_primal, GN_Primal_MatDense, NULL);
   }
 
@@ -1649,7 +1631,7 @@ PetscErrorCode TaoEvalObjectiveAndGradient(Tao tao, Vec x, PetscReal *f, Vec G, 
   return 0;
 }
 
-void OptimProblem::updateGaussNewtonMatDense(){
+void OptimProblem::updateGaussNewtonPrimalMatDense(){
   MatZeroEntries(GN_Primal_MatDense);
 
   Vec e;
@@ -1920,25 +1902,19 @@ void OptimProblem::updateGaussNewtonDualPreconditionerLowRank(int rank){
   delete[] eigenvalues;
 }
 
-
-// Apply M^{-1/2} where M ≈ U Σ U^T
-// M^{-1/2} x = U * (Σ^{-1/2} .* (U^T * x))
 void OptimProblem::apply_GN_Dual_LowRank_Precond(const Vec x, Vec y){
-  // Apply M^{-1/2} = V_r Σ_r^{-1/2} V_r^T + μ^{-1/2}(I - V_r V_r^T)
-  // y = V_r (Σ_r^{-1/2} .* (V_r^T x)) + μ^{-1/2} (x - V_r (V_r^T x))
-
   OptimProblem *self = this;
 
-  // Step 1: temp = V_r^T * x (project onto top-r subspace)
+  // temp = V_r^T * x (project onto top-r subspace)
   MatMultTranspose(self->gn_dual_lowrank_U, x, self->gn_dual_lowrank_temp);
 
-  // Step 2: temp = Σ_r^{-1/2} .* temp (scale by inverse sqrt eigenvalues)
+  // temp = Σ_r^{-1/2} .* temp (scale by inverse sqrt eigenvalues)
   VecPointwiseMult(self->gn_dual_lowrank_temp, self->gn_dual_lowrank_sigma_invsqrt, self->gn_dual_lowrank_temp);
 
-  // Step 3: y = V_r * temp (part 1: V_r Σ_r^{-1/2} V_r^T x)
+  // y = V_r * temp (part 1: V_r Σ_r^{-1/2} V_r^T x)
   MatMult(self->gn_dual_lowrank_U, self->gn_dual_lowrank_temp, y);
 
-  // Step 4: Compute complement part: μ^{-1/2} (x - V_r V_r^T x)
+  // Compute complement part: μ^{-1/2} (x - V_r V_r^T x)
   // First compute V_r^T x again (already in lowrank_temp before scaling)
   Vec vr_proj;
   VecDuplicate(x, &vr_proj);
@@ -1958,78 +1934,57 @@ void OptimProblem::apply_GN_Dual_LowRank_Precond(const Vec x, Vec y){
   VecDestroy(&complement);
 }
 
+void OptimProblem::applyEigenspaceApproximation(const Vec b, const Mat V_r, const PetscScalar* eigenvalues, int rank, bool have_complement, PetscScalar mu, Vec y_approx) {
 
-// Compute eigenspace approximation: y_approx = M^{-1} * b
-// where M = V_r Σ_r V_r^T + μ(I - V_r V_r^T)
-void OptimProblem::computeEigenspaceApproximation(
-    const Vec b,                      // RHS vector (tangent space)
-    const Mat V_r,                    // Eigenvectors (tangent_dim × rank)
-    const PetscScalar* eigenvalues,   // Eigenvalues Σ_r (rank), NOT inverse
-    int rank,                         // Number of eigenpairs
-    bool have_complement,             // Whether we have μ = λ_{r+1}
-    PetscScalar mu,                   // Complement eigenvalue
-    Vec y_approx)                     // Output: eigenspace approximation
-{
-    // Step 1: Project RHS: b̃ = V_r^T b
-    Vec b_tilde;
-    VecCreateSeq(PETSC_COMM_SELF, rank, &b_tilde);
-    MatMultTranspose(V_r, b, b_tilde);
+  // Project RHS: b̃ = V_r^T b
+  Vec b_tilde;
+  VecCreateSeq(PETSC_COMM_SELF, rank, &b_tilde);
+  MatMultTranspose(V_r, b, b_tilde);
 
-    // Step 2: Solve in subspace: ỹ = Σ_r^{-1} b̃ (direct diagonal solve)
-    Vec y_tilde;
-    VecDuplicate(b_tilde, &y_tilde);
-
-    PetscScalar *b_tilde_data, *y_tilde_data;
-    VecGetArray(b_tilde, &b_tilde_data);
-    VecGetArray(y_tilde, &y_tilde_data);
-
-    for (int i = 0; i < rank; i++) {
-        if (eigenvalues[i] > 1e-14) {
-            y_tilde_data[i] = b_tilde_data[i] / eigenvalues[i];
-        } else {
-            y_tilde_data[i] = 0.0;
-            if (mpirank_world == 0 && !quietmode) {
-                printf("Warning: Eigenvalue %d = %e is too small, setting component to zero\n",
-                       i, eigenvalues[i]);
-            }
-        }
+  // Solve in subspace: ỹ = Σ_r^{-1} b̃ (direct diagonal solve)
+  Vec y_tilde;
+  VecDuplicate(b_tilde, &y_tilde);
+  PetscScalar *b_tilde_data, *y_tilde_data;
+  VecGetArray(b_tilde, &b_tilde_data);
+  VecGetArray(y_tilde, &y_tilde_data);
+  for (int i = 0; i < rank; i++) {
+    if (eigenvalues[i] > 1e-14) {
+      y_tilde_data[i] = b_tilde_data[i] / eigenvalues[i];
+    } else {
+      y_tilde_data[i] = 0.0;
+      if (mpirank_world == 0 && !quietmode) {
+          printf("Warning: Eigenvalue %d = %e is too small, setting component to zero\n", i, eigenvalues[i]);
+      }
     }
+  }
+  VecRestoreArray(b_tilde, &b_tilde_data);
+  VecRestoreArray(y_tilde, &y_tilde_data);
 
-    VecRestoreArray(b_tilde, &b_tilde_data);
-    VecRestoreArray(y_tilde, &y_tilde_data);
+  // Lift to full space: y = V_r ỹ (top-r subspace part)
+  MatMult(V_r, y_tilde, y_approx);
 
-    // Step 3: Lift to full space: y = V_r ỹ (top-r subspace part)
-    MatMult(V_r, y_tilde, y_approx);
+  // Add complement space contribution: y += μ^{-1} (I - V_r V_r^T) b
+  if (have_complement && mu > 1e-14) {
+    Vec temp;
+    VecDuplicate(b, &temp);
+    // Compute V_r (V_r^T b) to get projection onto top-r subspace
+    Vec b_proj;
+    VecDuplicate(b, &b_proj);
+    MatMult(V_r, b_tilde, b_proj);  // Reuse b_tilde = V_r^T b from Step 1
+    // Compute complement: (I - V_r V_r^T) b = b - V_r (V_r^T b)
+    VecWAXPY(temp, -1.0, b_proj, b);  // temp = b - b_proj
+    // Add scaled complement to solution: y += μ^{-1} * temp
+    VecAXPY(y_approx, 1.0/mu, temp);
+    VecDestroy(&temp);
+    VecDestroy(&b_proj);
+  }
 
-    // Step 4: Add complement space contribution: y += μ^{-1} (I - V_r V_r^T) b
-    if (have_complement && mu > 1e-14) {
-        Vec temp;
-        VecDuplicate(b, &temp);
-
-        // Compute V_r (V_r^T b) to get projection onto top-r subspace
-        Vec b_proj;
-        VecDuplicate(b, &b_proj);
-        MatMult(V_r, b_tilde, b_proj);  // Reuse b_tilde = V_r^T b from Step 1
-
-        // Compute complement: (I - V_r V_r^T) b = b - V_r (V_r^T b)
-        VecWAXPY(temp, -1.0, b_proj, b);  // temp = b - b_proj
-
-        // Add scaled complement to solution: y += μ^{-1} * temp
-        VecAXPY(y_approx, 1.0/mu, temp);
-
-        VecDestroy(&temp);
-        VecDestroy(&b_proj);
-    }
-
-    // Cleanup
-    VecDestroy(&b_tilde);
-    VecDestroy(&y_tilde);
+  // Cleanup
+  VecDestroy(&b_tilde);
+  VecDestroy(&y_tilde);
 }
 
 Vec OptimProblem::computeEigenspaceInitialGuessFromStored(const Vec b_rhs){
-  // Compute initial guess using stored low-rank eigendecomposition
-  // Requires: gn_dual_lowrank_U, gn_dual_lowrank_sigma_invsqrt, gn_dual_precond_mu
-  // to be already computed by updateGaussNewtonDualPreconditionerLowRank()
 
   int rank = gn_precond_rank;
 
@@ -2042,12 +1997,11 @@ Vec OptimProblem::computeEigenspaceInitialGuessFromStored(const Vec b_rhs){
   }
   VecRestoreArray(gn_dual_lowrank_sigma_invsqrt, &sigma_invsqrt_data);
 
-  // Compute eigenspace approximation: y ≈ M^{-1} b
+  // Apply eigenspace approximation: y ≈ M^{-1} b
   Vec y_initial;
   VecDuplicate(b_rhs, &y_initial);
   bool have_complement = (gn_dual_precond_mu > 0.0);
-  computeEigenspaceApproximation(b_rhs, gn_dual_lowrank_U, eigenvalues, rank,
-                                 have_complement, gn_dual_precond_mu, y_initial);
+  applyEigenspaceApproximation(b_rhs, gn_dual_lowrank_U, eigenvalues, rank, have_complement, gn_dual_precond_mu, y_initial);
   delete[] eigenvalues;
 
   return y_initial;
@@ -2348,8 +2302,7 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMult(Mat A, Vec v, Vec y)
   // Reset output
   VecZeroEntries(y);
 
-  // Apply linearized forward to get dU/dalpha x v
-  // assumes that the timestepper's trajectory_states are already populated and computes all lin_trajectory_states.
+  // Apply linearized forward to get dU/dalpha x v, stored in lin_trajectory_states.
   self->evalLinearizedForward(self->xeval_GN, v);
 
   // Get U_final matrices. This needs that the matrices are synchronized across comm_init (happens in finalizeJ)

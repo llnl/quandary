@@ -420,7 +420,7 @@ int main(int argc,char **argv)
     } else {
       // Save primal matrix L^T L (design space dimension: ndesign)
       if (mpirank_world == 0 && !quietmode) printf("\nAssembling primal Gauss-Newton matrix (L^T L)...\n");
-      optimctx->updateGaussNewtonMatDense();
+      optimctx->updateGaussNewtonPrimalMatDense();
       Mat mat_primal = optimctx->getGN_Primal_MatDense();
 
       // Only rank 0 writes to file (matrix is replicated on all ranks after MPI_Allreduce)

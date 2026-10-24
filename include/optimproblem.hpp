@@ -214,18 +214,11 @@ class OptimProblem {
 
   /**
    * @brief Override the maximum number of iterations for all Gauss-Newton solvers.
-   *
-   * This sets the maximum iterations for:
-   * - KSP solver (used in solveGaussNewtonPrimalKSP)
-   * - Least Squares solver (used in solveGaussNewtonLeastSquares)
-   * - EPS eigenvalue solver (used in solveGaussNewtonPrimalProjected)
-   *
-   * @param maxiter Maximum number of iterations
    */
   void setGaussNewtonMaxiter(int maxiter);
 
   /**
-   * @brief Sets the evaluation point for Gauss-Newton matrix operators
+   * @brief Sets the evaluation point for Gauss-Newton matrix operators 
    *
    * Copies xinit to xeval_GN and invalidates the nonlinear forward solve cache.
    *
@@ -293,29 +286,43 @@ class OptimProblem {
 
   /**
    * @brief MatMult for GN_Primal_MatShell: Applies L^*WL
+   * 
+   * Solves the linearized forward equation, followed by an adjoint solve with terminal condition WL. 
+   * 
+   * @note: Requires xeval_GN to be set before calling. Performs a nonlinear solveODE at xeval_GN if !nonlinear_forward_valid, so to store U(t;xeval_GN) for all t. 
    */
   static PetscErrorCode GN_Primal_MatMult(Mat A, const Vec v, Vec Av);
 
   /**
    * @brief MatMult for GN_LeastSquares_MatShell: Applies P_G L, and, if damped, augments with lambda_I 
+   * 
+   * @note: Requires xeval_GN to be set before calling. Performs a nonlinear solveODE at xeval_GN if !nonlinear_forward_valid, so to store U(t;xeval_GN) for all t. 
+   * 
+   * @note: TODO: Implement W^1/2 in tangent space representation for the least-squares solver. Probably use the apply_GN_Jacobian_Tangentspace function.
    */
   static PetscErrorCode GN_LeastSquares_MatMult(Mat A, Vec v, Vec y); 
   static PetscErrorCode GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec vout); 
 
   /**
    * @brief MatMult GN_Dual_MatShell: Applies P_G W^1/2 L L^* W^1/2 P_G 
+   * 
+   * Calls apply_GN_Jacobian_Tangentspace_Adjoint (L*^ W^1/2 P_G)followed by apply_GN_Jacobian_Tangentspace (P_G W^1/2 L)
+   * 
+   * @note: Requires xeval_GN to be set before calling. Performs a nonlinear solveODE at xeval_GN if !nonlinear_forward_valid, so to store U(t;xeval_GN) for all t. 
    */
   static PetscErrorCode GN_Dual_MatMult(Mat A, const Vec y, Vec Ay);
 
   /**
-   * @brief MatMult for GN_Dual_LowRank_MatShell: Applies M^{-1/2} A M^{-1/2} z where A=GN_dual_MatShell = P_G W^1/2 L L^* W^1/2 P_G 
+   * @brief MatMult for GN_Dual_LowRank_MatShell: Applies M^{-1/2} A M^{-1/2} z where A=GN_dual_MatShell  
    */
   static PetscErrorCode GN_Dual_LowRank_MatMult(Mat A, const Vec z, Vec output);
 
 
   /**
    * @brief Applies the Gauss-Newton Jacobian projected onto the tangent space: Y = P_G W^1/2 Lv
+   * 
    * @note: Requires xeval_GN to be set before calling. Performs a nonlinear solveODE at xeval_GN if !nonlinear_forward_valid, so to store U(t;xeval_GN) for all t. 
+   * 
    * @param v Input vector in the design space
    * @param y Output vector in the tangent space
    */
@@ -323,47 +330,50 @@ class OptimProblem {
 
   /**
    * @brief Applies the adjoint of the Gauss-Newton Jacobian projected onto the tangent space: vout = (P_G W^1/2 L)^T w
+   * 
    * @note: Requires that U(t; xeval_GN) is valid (i.e., a nonlinear forward solveODE has been performed at xeval_GN)
+   * 
    * @param w Input vector in the tangent space
    * @param vout Output vector in the design space
    */
   void apply_GN_Jacobian_Tangentspace_Adjoint(Vec w, Vec vout); 
 
   /**
-   * @brief Updates the dense full  Gauss-Newton matrix based on the current point of evaluation xeval_GN by calling GN_NormalEqShell_MatMult on each unit vectoor.
+   * @brief Updates the dense primal Gauss-Newton matrix based on the current point of evaluation xeval_GN by calling GN_Primal_MatShell on each unit vectoor.
+   * 
    * @note This operation can be expensive as it involves N^2-1 applications of the MatShell.
    */
-  void updateGaussNewtonMatDense();
+  void updateGaussNewtonPrimalMatDense();
 
   /**
-   * @brief Assembles the dense dual Gauss-Newton matrix L L^T in GN_Dual_MatDense
-   *
-   * Uses matrix-vector products with GN_Dual_MatShell to build the dense representation.
+   * @brief Assembles the dense dual Gauss-Newton matrix using GN_Dual_MatShell
    *
    * @note This operation can be expensive as it involves (dim²-1) applications of the dual MatShell.
    */
   void updateGaussNewtonDualMatDense();
 
   /**
-   * @brief Updates the dual Gauss-Newton low-rank preconditioner 
+   * @brief Updates the dual Gauss-Newton low-rank preconditioner if needed
+   * 
+   * @returns True if the preconditioner was updated, false otherwise.
    */
   bool updateGaussNewtonDualPreconditioner(int iter);
 
   /**
    * @brief Constructs rank-r low-rank approximation M ≈ U Σ U^T for dual Gauss-Newton preconditioner
    *
-  // Construct full-rank preconditioner M = V_r Σ_r V_r^T + μ(I - V_r V_r^T)
-  // Algorithm:
-  //   1. Use EPS to compute r+1 largest eigenvalues/eigenvectors of A
-  //   2. Store V_r (first r eigenvectors), Σ_r (first r eigenvalues), μ = σ_{r+1}
-  //   3. Apply M^{-1/2} = V_r Σ_r^{-1/2} V_r^T + μ^{-1/2}(I - V_r V_r^T)
-   *
+   * Uses EPS solver to compute r+1 largest eigenvalues and eigenvectors of the dual GN_Dual_MatShell. Populates the low-rank preconditioner data structures: V_r (gn_dual_lowrank_U), Σ_r (gn_dual_lowrank_sigma_invsqrt), and μ (gn_dual_precond_mu).
+   * 
    * @param rank Number of basis vectors to use (r)
    */
   void updateGaussNewtonDualPreconditionerLowRank(int rank);
 
   /**
    * @brief Applies the low-rank dual Gauss-Newton preconditioner: y = M^{-1/2} x, where M ≈ U Σ U^T is the precomputed low-rank approximation.
+   * 
+   * This applies the low-rank preconditioner using the formula:
+   *   M^{-1/2} = V_r Σ_r^{-1/2} V_r^T + μ^{-1/2}(I - V_r V_r^T)
+   *   y = V_r (Σ_r^{-1/2} .* (V_r^T x)) + μ^{-1/2} (x - V_r (V_r^T x))
    *
    * @param[in] x Input vector (tangent space, size dim²-1)
    * @param[out] y Output vector after applying M^{-1/2} (tangent space)
@@ -371,7 +381,7 @@ class OptimProblem {
   void apply_GN_Dual_LowRank_Precond(const Vec x, Vec y);
 
   /**
-   * @brief Solves the Gauss-Newton normal equation L^* L(x) v = b for v using CG iterations
+   * @brief Solves the Gauss-Newton normal equation L^*WL v = b for v iteratively using the ksp_gn_normaleq solver
    *
    * @param xinit Point of evaluation for the Gauss-Newton matrix
    * @param initial_guess Initial guess for iterative solver
@@ -381,29 +391,6 @@ class OptimProblem {
   void solveGaussNewtonPrimalKSP(Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b);
 
   /**
-   * @brief Solves the dual Gauss-Newton problem: (L L^T + λI) y = -∇_U J, then v = L^T y
-   *
-   * This is the dual formulation of the Gauss-Newton problem. It can be more efficient
-   * when dim²-1 < ndesign, as the system size is (dim²-1) × (dim²-1) instead of ndesign × ndesign.
-   *
-   * Computes the RHS b = -∇_U J projected to tangent space internally (Riemannian gradient),
-   * similar to how solveGaussNewtonLeastSquares() works.
-   *
-   * @param xinit Point of evaluation for the Gauss-Newton matrix
-   * @param initial_guess Initial guess for iterative solver (in tangent space, size dim²-1)
-   * @param v_out Solution vector (in design space, size ndesign)
-   */
-  Vec computeDualRHS();
-  Vec computeDualInitGuess(Vec b_rhs);
-  void computeEigenspaceApproximation(const Vec b, const Mat V_r,
-      const PetscScalar* eigenvalues, int rank, bool have_complement,
-      PetscScalar mu, Vec y_approx);
-  Vec computeEigenspaceInitialGuessFromStored(const Vec b_rhs);
-  bool solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_guess, const Vec b_rhs, Vec v_out);
-  void solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec v_out);
-  void solveGaussNewtonDual(Vec xinit, const Vec b_rhs, Vec v_out);
-
-  /**
    * @brief Solves the Gauss-Newton normal equation L^* L(x) v = b via eigenvalue decomposition
    *
    * @param xinit Point of evaluation for the Gauss-Newton matrix
@@ -411,6 +398,64 @@ class OptimProblem {
    * @param Ainv_b Solution vector to store the result
    */
   void solveGaussNewtonPrimalProjected(Vec xinit, const Vec b, Vec Ainv_b);
+
+  /**
+   * @brief Solves the dual Gauss-Newton problem iteratively using low-rank preconditioned KSP. 
+   *
+   * @param xinit Point of evaluation for the Gauss-Newton matrix
+   * @param initial_guess Initial guess for iterative solver (in tangent space, size dim²-1)
+   * @param b_rhs Right-hand side vector (tangent space, size dim²-1)
+   * @param v_out Solution vector (in design space, size ndesign)
+   * @return true if eigendecomposition appears stale, false otherwise
+   */
+  bool solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_guess, const Vec b_rhs, Vec v_out);
+
+  /**
+   * @brief Solves the dual Gauss-Newton problem by projection onto dominant eigenspace.
+   *
+   * @param xinit Point of evaluation for the Gauss-Newton matrix
+   * @param b_rhs Right-hand side vector (tangent space, size dim²-1)
+   * @param v_out Solution vector (in design space, size ndesign)
+   */
+  void solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec v_out);
+
+  /**
+   * @brief Compute RHS for dual Gauss-Newton problem: b = -∇_U J projected to tangent space 
+   */
+  Vec computeDualRHS();
+
+  /** 
+   * @brief Computes an initial guess for the dual Gauss-Newton problem: Either from the stored eigenspace approximation or as a zero vector if no preconditioner is available.
+   */
+  Vec computeDualInitGuess(Vec b_rhs);
+
+  /**
+   * @brief Computes a low-rank approximation of the dual Gauss-Newton matrix using provided eigenvalues and eigenvectors.
+   * 
+   * Compute eigenspace approximation: y_approx = M^{-1} * b
+   * where M = V_r Σ_r V_r^T + μ(I - V_r V_r^T)
+   *
+   * @param b Right-hand side vector
+   * @param V_r Matrix of eigenvectors (ndesign x rank)
+   * @param eigenvalues Array of eigenvalues corresponding to V_r
+   * @param rank Number of eigenvectors/eigenvalues
+   * @param have_complement Whether a complementary subspace is available
+   * @param mu Regularization parameter for the complementary subspace
+   * @param y_approx Output vector storing the approximation result
+   */
+  void applyEigenspaceApproximation(const Vec b, const Mat V_r, const PetscScalar* eigenvalues, int rank, bool have_complement, PetscScalar mu, Vec y_approx);
+
+  /**
+   * @brief Computes an initial guess for the dual Gauss-Newton problem using the stored low-rank eigenspace approximation.
+   * 
+   * @note: Requires gn_dual_lowrank_U, gn_dual_lowrank_sigma_invsqrt, gn_dual_precond_mu to be already computed by updateGaussNewtonDualPreconditionerLowRank()
+   * 
+   * @note: The return vector will be allocated within the function and must be destroyed by the caller.
+   *
+   * @param b_rhs Right-hand side vector
+   * @return Newly created initial guess vector
+   */
+  Vec computeEigenspaceInitialGuessFromStored(const Vec b_rhs);
 
   /**
    * @brief Backtracking Armijo line search along a descent direction, projected onto bound constraints.
@@ -426,8 +471,6 @@ class OptimProblem {
    * @return Accepted step length alpha
    */
   double armijoLineSearch(Vec x, double f, Vec grad, Vec dir, Vec xnew, Vec step);
-
-
 
   /**
    * @brief Compute evals and evecs of Gauss-Newton Normal Equation A=L^*L matrix
