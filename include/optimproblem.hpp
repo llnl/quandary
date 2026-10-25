@@ -357,7 +357,7 @@ class OptimProblem {
    * 
    * @returns True if the preconditioner was updated, false otherwise.
    */
-  bool updateGaussNewtonDualPreconditioner(int iter);
+  bool updateGaussNewtonDualPreconditioner(int iter, bool force_update);
 
   /**
    * @brief Constructs rank-r low-rank approximation M ≈ U Σ U^T for dual Gauss-Newton preconditioner

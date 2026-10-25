@@ -1403,7 +1403,7 @@ void OptimProblem::solve(Vec xinit) {
         double f = objective;
 
         // Update the preconditioner . Currently only for the dual mode
-        bool did_update_PC = updateGaussNewtonDualPreconditioner(iter);
+        bool did_update_PC = updateGaussNewtonDualPreconditioner(iter, false);
 
         // Solve for the Gauss-Newton system for the search direction (Gprec) 
         if (gn_solver_mode == "primal") {// Primal via normal equations: (L^*L + λI) v = G
@@ -1433,7 +1433,7 @@ void OptimProblem::solve(Vec xinit) {
                 printf("  Recomputing low-rank eigendecomposition at current point and forcing new solve...\n");
               }
               // Recompute the preconditioner and initial guess
-              did_update_PC = updateGaussNewtonDualPreconditioner(iter);
+              did_update_PC = updateGaussNewtonDualPreconditioner(iter, true);
               y_initial = computeDualInitGuess(b_rhs); // TODO: Check. Previously this was computeEigenspaceInitialGuessFromStored(b_rhs)
               precond_is_stale = solveGaussNewtonDualPrecondKSP(x_GN, y_initial, b_rhs, Gprec);
               VecDestroy(&y_initial);
@@ -1729,14 +1729,15 @@ void OptimProblem::updateGaussNewtonDualMatDense(){
 }
 
 
-bool OptimProblem::updateGaussNewtonDualPreconditioner(int iter){
+bool OptimProblem::updateGaussNewtonDualPreconditioner(int iter, bool force_update){
 
   if (gn_solver_mode != "dual") {
     return false; // no preconditioner for non-dual solver modes available
   }
 
   // At first iteration initialize the preconditioner
-  if (iter == 0){
+  // At any iteration, recompute if forceed, e.g., due to failed KSP convergence
+  if (iter == 0 || force_update){
     bool enable_precond = (gn_prec_update_interval >= -1) && (gn_normaleq_solver != "proj");
     if (enable_precond) {
       updateGaussNewtonDualPreconditionerLowRank(gn_precond_rank);
