@@ -870,18 +870,22 @@ Vec OptimProblem::computeGaussNewtonInitialGuess(const std::string& gn_solver_mo
   assert(gn_solver_mode == "dual" || gn_solver_mode == "primal" || gn_solver_mode == "least_squares");
 
   Vec y_initial = nullptr;
+
+  // Create vector of appropriate size and set default zero initial guess
+  if (gn_solver_mode == "least_squares") {
+    MatCreateVecs(GN_LeastSquares_MatShell, &y_initial, nullptr);
+    VecZeroEntries(y_initial);
+  } else if (gn_solver_mode == "dual") {
+    MatCreateVecs(GN_Dual_MatShell, &y_initial, nullptr);
+    VecZeroEntries(y_initial);
+  } else if (gn_solver_mode == "primal") {
+    MatCreateVecs(GN_Primal_MatShell, &y_initial, nullptr);
+    VecZeroEntries(y_initial);
+  }
+
   // If preconditioner enabled (dual only for now), use initial guess from eigendecomposition. Else, use zero initial guess.
   if (gn_precond_enabled && gn_solver_mode == "dual") {
-    y_initial = computeEigenspaceInitialGuessFromStored(b_rhs);
-  } else {
-    if (gn_solver_mode == "least_squares") {
-      MatCreateVecs(GN_LeastSquares_MatShell, &y_initial, nullptr);
-    } else if (gn_solver_mode == "dual") {
-      MatCreateVecs(GN_Dual_MatShell, &y_initial, nullptr);
-    } else if (gn_solver_mode == "primal") {
-      MatCreateVecs(GN_Primal_MatShell, &y_initial, nullptr);
-    }
-    VecZeroEntries(y_initial);
+    apply_GN_Dual_LowRank_Precond(b_rhs, y_initial);
   }
 
   return y_initial;
@@ -916,11 +920,10 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
     VecDuplicate(b_rhs, &b_scaled);
     apply_GN_Dual_LowRank_Precond(b_rhs, b_scaled);
 
-    // Transform initial guess from y-space to z-space: z0 = M^{1/2} * y0
-    // Use preconditioned RHS as initial guess in z-space
+    // Copy initial guess into solution vector
     Vec z_solution;
     VecDuplicate(y_dual_workspace, &z_solution);
-    VecCopy(b_scaled, z_solution);  
+    VecCopy(y_dual_workspace, z_solution);  
 
     // Solve: M^{-1/2} A M^{-1/2} z = M^{-1/2} b
     KSPReset(ksp_gn_normaleq);
@@ -2004,31 +2007,6 @@ void OptimProblem::applyEigenspaceApproximation(const Vec b, const Mat V_r, cons
   VecDestroy(&b_tilde);
   VecDestroy(&y_tilde);
 }
-
-Vec OptimProblem::computeEigenspaceInitialGuessFromStored(const Vec b_rhs){
-
-  int rank = gn_precond_rank;
-
-  // Convert stored Σ_r^{-1/2} to Σ_r for eigenspace approximation
-  PetscScalar *eigenvalues = new PetscScalar[rank];
-  PetscScalar *sigma_invsqrt_data;
-  VecGetArray(gn_dual_lowrank_sigma_invsqrt, &sigma_invsqrt_data);
-  for (int i = 0; i < rank; i++) {
-    eigenvalues[i] = 1.0 / (sigma_invsqrt_data[i] * sigma_invsqrt_data[i]);
-  }
-  VecRestoreArray(gn_dual_lowrank_sigma_invsqrt, &sigma_invsqrt_data);
-
-  // Apply eigenspace approximation: y ≈ M^{-1} b
-  Vec y_initial;
-  VecDuplicate(b_rhs, &y_initial);
-  bool have_complement = (gn_dual_precond_mu > 0.0);
-  applyEigenspaceApproximation(b_rhs, gn_dual_lowrank_U, eigenvalues, rank, have_complement, gn_dual_precond_mu, y_initial);
-  delete[] eigenvalues;
-
-  return y_initial;
-}
-
-
 
 PetscErrorCode OptimProblem::GN_Dual_LowRank_MatMult(Mat A, const Vec z, Vec output){
   // Applies M^{-1/2} A M^{-1/2} z where A=GN_dual_MatShell = P_G W^1/2 L L^* W^1/2 P_G 
