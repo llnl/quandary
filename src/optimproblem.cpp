@@ -1457,7 +1457,7 @@ void OptimProblem::solve(Vec xinit) {
         double f = objective;
 
         // Update the preconditioner. Currently only for the dual mode.
-        bool did_update_PC = updateGaussNewtonPreconditioner(iter);
+        bool did_update_PC = updateGaussNewtonPreconditioner(iter, false);
 
         // Set RHS and initial guess for the Gauss-Newton system
         Vec b_rhs = computeGaussNewtonRHS(gn_solver_mode, G); 
@@ -1471,7 +1471,7 @@ void OptimProblem::solve(Vec xinit) {
           if (mpirank_world == 0 && !quietmode) {
             printf("  Recomputing the preconditioner at the current iterate and forcing new GN solve...\n");
           }
-          did_update_PC = updateGaussNewtonPreconditioner(iter);
+          did_update_PC = updateGaussNewtonPreconditioner(iter, true); // Force the update
           VecDestroy(&x_initial);
           x_initial = computeGaussNewtonInitialGuess(gn_solver_mode, b_rhs); 
           precond_is_stale = solveGaussNewtonSystem(x_GN, x_initial, b_rhs, Gprec);
@@ -1756,7 +1756,7 @@ void OptimProblem::updateGaussNewtonDualMatDense(){
 }
 
 
-bool OptimProblem::updateGaussNewtonPreconditioner(int iter){
+bool OptimProblem::updateGaussNewtonPreconditioner(int iter, bool force_update){
 
   // no preconditioner for non-dual solver modes available
   if (gn_solver_mode != "dual") {
@@ -1773,8 +1773,8 @@ bool OptimProblem::updateGaussNewtonPreconditioner(int iter){
     return false;
   }
 
-  // At first iteration, always update the preconditioner  
-  if (iter == 0){
+  // Always update the preconditioner at the first iteration, or if forced
+  if (iter == 0 || force_update){
     updateGaussNewtonDualPreconditionerLowRank(gn_precond_rank);
     return true;
   }

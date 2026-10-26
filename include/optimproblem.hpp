@@ -354,13 +354,13 @@ class OptimProblem {
   void updateGaussNewtonDualMatDense();
 
   /**
-   * @brief Updates the Gauss-Newton low-rank preconditioner if needed
+   * @brief Updates the Gauss-Newton preconditioner if needed
    * 
    * Currently only available for the DUAL system
    * 
    * @returns True if the preconditioner was updated, false otherwise.
    */
-  bool updateGaussNewtonPreconditioner(int iter);
+  bool updateGaussNewtonPreconditioner(int iter, bool force_update);
 
   /**
    * @brief Constructs rank-r low-rank approximation M ≈ U Σ U^T for dual Gauss-Newton preconditioner
