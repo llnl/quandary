@@ -149,11 +149,13 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   gn_leastsquares_solver = config.getGnLeastSquaresSolver();
   gn_prec_update_interval = config.getGnPrecUpdateInterval();
   gn_precond_rank = config.getGnPrecondRank();
+
   gn_precond_enabled = (gn_prec_update_interval >= -1);
+  tangent_dim = mastereq->getDim()*mastereq->getDim()-1;
 
   // Create MatShell for least-squares problem
   int N = ndesign;
-  PetscInt M = mastereq->getDim()*mastereq->getDim() - 1;
+  PetscInt M = tangent_dim;
   if (gn_leastsquares_damping > 0.0) {
     M += ndesign;
   }
@@ -199,7 +201,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   MatZeroEntries(GN_Primal_MatDense);
 
   // Create MatShell for dual Gauss-Newton problem
-  PetscInt M_dual = mastereq->getDim() * mastereq->getDim() - 1;
+  PetscInt M_dual = tangent_dim;
   MatCreateShell(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, this, &GN_Dual_MatShell);
   MatShellSetOperation(GN_Dual_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_MatMult);
   MatCreateDense(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, NULL, &GN_Dual_MatDense); // only debug and output
@@ -247,7 +249,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   EPSSetWhichEigenpairs(eps_gn_primal, EPS_LARGEST_REAL); // largest eigenvalues
   double eps_thresh = eps_evals_cutoff;
   EPSSetThreshold(eps_gn_primal, eps_thresh, PETSC_FALSE);  // absolute threshold
-  neigvals = mastereq->getDim()*mastereq->getDim() - 1;
+  neigvals = tangent_dim;
   // ncv = neigvals + 2; // Max Krylov dimension. How to set??
   ncv = 2*neigvals ; // Max Krylov dimension. How to set??
   EPSSetDimensions(eps_gn_primal, neigvals, ncv, PETSC_DEFAULT);
@@ -813,8 +815,6 @@ Vec OptimProblem::computeGaussNewtonRHS(const std::string& gn_solver_mode, const
       VecZeroEntries(b);
     }
 
-    PetscInt tangent_dim = mastereq->getDim()*mastereq->getDim()-1;
-
     // Get U(T) from optim_target
     Mat U_final_re = optim_target->getFinalUnitaryRe();
     Mat U_final_im = optim_target->getFinalUnitaryIm();
@@ -1009,9 +1009,6 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
 
   // Use passed RHS
   const Vec b = b_rhs;
-
-  PetscInt tangent_dim;
-  VecGetSize(b, &tangent_dim);
 
   // Apply damping to the operator
   if (gn_normaleq_damping > 0.0) {
@@ -1713,10 +1710,6 @@ void OptimProblem::updateGaussNewtonPrimalMatDense(){
 void OptimProblem::updateGaussNewtonDualMatDense(){
   MatZeroEntries(GN_Dual_MatDense);
 
-  // Get tangent space dimension (dim²-1)
-  PetscInt tangent_dim;
-  MatGetSize(GN_Dual_MatShell, &tangent_dim, NULL);
-
   Vec e;
   VecCreateSeq(PETSC_COMM_SELF, tangent_dim, &e);
   Vec Ay;
@@ -1823,9 +1816,6 @@ void OptimProblem::updateGaussNewtonDualPreconditionerLowRank(int rank){
   //   1. Use EPS to compute r+1 largest eigenvalues/eigenvectors of A
   //   2. Store V_r (first r eigenvectors), Σ_r (first r eigenvalues), μ = σ_{r+1}
   //   3. Apply M^{-1/2} = V_r Σ_r^{-1/2} V_r^T + μ^{-1/2}(I - V_r V_r^T)
-
-  PetscInt tangent_dim;
-  MatGetSize(GN_Dual_MatShell, &tangent_dim, NULL);
 
   if (rank >= tangent_dim) {
     if (mpirank_world == 0 && !quietmode) {
@@ -2117,7 +2107,6 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
   // }
 
   // // Allreduce b across all comm_init processors
-  // PetscInt tangent_dim = mastereq->getDim()*mastereq->getDim()-1;
   // MPI_Allreduce(MPI_IN_PLACE, b_data, tangent_dim, MPIU_SCALAR, MPI_SUM, comm_init);
   // VecRestoreArray(b, &b_data);
 
@@ -2349,11 +2338,10 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMult(Mat A, Vec v, Vec y)
   MPI_Allreduce(MPI_IN_PLACE, y_data, M, MPIU_SCALAR, MPI_SUM, self->comm_init);
 
   // Fill the bottom of y with damping: lambda * v
-  int tangentdim = self->mastereq->getDim()*self->mastereq->getDim() - 1;
   const PetscScalar *v_data;
   VecGetArrayRead(v, &v_data);
-  for (int i=0; i<M - tangentdim; i++) {
-    y_data[i + tangentdim] = self->gn_leastsquares_damping * v_data[i];
+  for (int i=0; i<M - self->tangent_dim; i++) {
+    y_data[i + self->tangent_dim] = self->gn_leastsquares_damping * v_data[i];
   }
   VecRestoreArrayRead(v, &v_data);
   VecRestoreArray(y, &y_data);
@@ -2420,15 +2408,14 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w_long,
 
   // Create a tangent space vector w and fill it will the first part of w_long
   Vec w;
-  int tangentdim = self->mastereq->getDim()*self->mastereq->getDim() - 1;
-  VecCreateSeq(PETSC_COMM_SELF, tangentdim, &w);
+  VecCreateSeq(PETSC_COMM_SELF, self->tangent_dim, &w);
   VecSetFromOptions(w);
   VecAssemblyBegin(w); VecAssemblyEnd(w);
   PetscScalar *w_ptr;
   const PetscScalar *wl_data;
   VecGetArrayRead(w_long, &wl_data);
   VecGetArray(w, &w_ptr);
-  for (int i=0; i<tangentdim; i++) {
+  for (int i=0; i<self->tangent_dim; i++) {
     w_ptr[i] = wl_data[i];
   }
   VecRestoreArray(w, &w_ptr);
@@ -2473,10 +2460,10 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w_long,
   VecGetArray(vout, &vout_data);
   MPI_Allreduce(MPI_IN_PLACE, vout_data, self->ndesign, MPIU_SCALAR, MPI_SUM, self->comm_init);
 
-  // Add damping lambda * w_long[tangentdim:end] contribution to the output
+  // Add damping lambda * w_long[tangent_dim:end] contribution to the output
   VecGetArrayRead(w_long, &wl_data);
   for (int i=0; i<self->ndesign; i++) {
-    vout_data[i] += self->gn_leastsquares_damping * wl_data[i + tangentdim];
+    vout_data[i] += self->gn_leastsquares_damping * wl_data[i + self->tangent_dim];
   }
   VecRestoreArray(vout, &vout_data);
   VecRestoreArrayRead(w_long, &wl_data);
@@ -2493,9 +2480,6 @@ void OptimProblem::apply_GN_Jacobian_Tangentspace(Vec v, Vec y)
 
   // Reset output
   VecZeroEntries(y);
-
-  PetscInt tangent_dim;
-  VecGetSize(y, &tangent_dim);
 
   // Apply linearized forward to get dU/dalpha * v
   self->evalLinearizedForward(self->xeval_GN, v);

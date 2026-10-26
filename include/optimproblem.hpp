@@ -137,7 +137,7 @@ class OptimProblem {
   double eps_primal_damping = 1e-3; ///< Damping for eigenvalues of the Gauss-Newton matrix
 
   // Workspace for Gauss-Newton solvers
-  // int tangent_dim; ///< Dimension of the tangent space (dim²-1)
+  int tangent_dim; ///< Dimension of the tangent space (dim²-1)
   bool gn_precond_enabled; ///< Flag whether Gauss-Newton preconditioner is enabled
   int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton normal or least squares solvers 
   Vec *wsub_workspace; ///< Pre-allocated workspace to compute -\nabla_U J
@@ -442,7 +442,7 @@ class OptimProblem {
   Vec computeGaussNewtonInitialGuess(const std::string& gn_solver_mode, const Vec b_rhs);
 
   /**
-   * @brief Top level function to solves the Gauss-Newton system. 
+   * @brief Top-level function to solve the Gauss-Newton system. 
    * 
    * Solves either "primal", "dual", or "least_squares" Gauss-Newton systems depending on gn_solver_mode. Delegates to the appropriate solver function.
    * 
