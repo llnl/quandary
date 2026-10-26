@@ -100,7 +100,6 @@ class OptimProblem {
   Vec x_GN; ///< Current iterate for Gauss-Newton optimization. Holds solution after finished. 
   Vec xeval_GN; ///< Point of evaluation for Gauss-Newton (evaluate L(x) at this x) 
   bool nonlinear_forward_valid; ///< True once the nonlinear forward solveODE has been done and stored for the current xeval_GN, reset whenever xeval_GN changes!
-  bool includeHessUJ; ///< Flag to include Hessian of J(U) in the Gauss-Newton approximation 
 
   // Options for the Armijo line search 
   const double c1 = 1e-4;    //< Sufficient decrease parameter
