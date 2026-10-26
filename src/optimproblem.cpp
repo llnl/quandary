@@ -1776,6 +1776,10 @@ bool OptimProblem::updateGaussNewtonPreconditioner(int iter, bool force_update){
   // Always update the preconditioner at the first iteration, or if forced
   if (iter == 0 || force_update){
     updateGaussNewtonDualPreconditionerLowRank(gn_precond_rank);
+    // Reset accumulator after adaptive update
+    if (gn_prec_update_interval == -1) {
+      gn_dual_ksp_excess_accum = 0;
+    }
     return true;
   }
 
