@@ -138,6 +138,7 @@ class OptimProblem {
 
   // Workspace for Gauss-Newton solvers
   // int tangent_dim; ///< Dimension of the tangent space (dim²-1)
+  bool gn_precond_enabled; ///< Flag whether Gauss-Newton preconditioner is enabled
   int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton normal or least squares solvers 
   Vec *wsub_workspace; ///< Pre-allocated workspace to compute -\nabla_U J
   Vec brgn_rhs; ///< Cached RHS vector for BRGN residual evaluation
@@ -264,9 +265,11 @@ class OptimProblem {
    * First fills the VecNest RHS with the appropriate values based on the current point of evaluation xinit, then solves the least-squares problem to obtain v_LeastSquares.
    *
    * @param xinit Point of evaluation for the Gauss-Newton matrix
+   * @param initial_guess Initial guess for the solution
+   * @param b Right-hand side vector
    * @param v_LeastSquares Solution vector to store the result
    */
-  void solveGaussNewtonLeastSquares(const Vec xinit, const Vec initial_guess, Vec v_LeastSquares);
+  void solveGaussNewtonLeastSquares(const Vec xinit, const Vec initial_guess, const Vec b, Vec v_LeastSquares);
 
 
   /**
@@ -353,11 +356,13 @@ class OptimProblem {
   void updateGaussNewtonDualMatDense();
 
   /**
-   * @brief Updates the dual Gauss-Newton low-rank preconditioner if needed
+   * @brief Updates the Gauss-Newton low-rank preconditioner if needed
+   * 
+   * Currently only available for the DUAL system
    * 
    * @returns True if the preconditioner was updated, false otherwise.
    */
-  bool updateGaussNewtonDualPreconditioner(int iter);
+  bool updateGaussNewtonPreconditioner(int iter);
 
   /**
    * @brief Constructs rank-r low-rank approximation M ≈ U Σ U^T for dual Gauss-Newton preconditioner
@@ -381,7 +386,7 @@ class OptimProblem {
   void apply_GN_Dual_LowRank_Precond(const Vec x, Vec y);
 
   /**
-   * @brief Solves the Gauss-Newton normal equation L^*WL v = b for v iteratively using the ksp_gn_normaleq solver
+   * @brief Solves the primal Gauss-Newton equation iteratively using the ksp_gn_normaleq solver
    *
    * @param xinit Point of evaluation for the Gauss-Newton matrix
    * @param initial_guess Initial guess for iterative solver
@@ -391,7 +396,7 @@ class OptimProblem {
   void solveGaussNewtonPrimalKSP(Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b);
 
   /**
-   * @brief Solves the Gauss-Newton normal equation L^* L(x) v = b via eigenvalue decomposition
+   * @brief Solves the primal Gauss-Newton equation via eigenvalue decomposition
    *
    * @param xinit Point of evaluation for the Gauss-Newton matrix
    * @param b Right-hand side vector
@@ -420,14 +425,30 @@ class OptimProblem {
   void solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec v_out);
 
   /**
-   * @brief Compute RHS for dual Gauss-Newton problem: b = -∇_U J projected to tangent space 
+   * @brief Compute RHS for Gauss-Newton problem depending on the solver mode. 
+   * 
+   * primal: b = -G in design space
+   * least-squares and dual: b = -∇_U J projected to tangent space 
+   * 
+   * @return Newly created RHS vector for the Gauss-Newton system
    */
-  Vec computeDualRHS();
+  Vec computeGaussNewtonRHS(const std::string& gn_solver_mode, const Vec G);
 
   /** 
-   * @brief Computes an initial guess for the dual Gauss-Newton problem: Either from the stored eigenspace approximation or as a zero vector if no preconditioner is available.
+   * @brief Computes an initial guess for the Gauss-Newton system depending on the solver mode.
+   * 
+   * @return Newly created initial guess vector for the Gauss-Newton system
    */
-  Vec computeDualInitGuess(Vec b_rhs);
+  Vec computeGaussNewtonInitialGuess(const std::string& gn_solver_mode, const Vec b_rhs);
+
+  /**
+   * @brief Top level function to solves the Gauss-Newton system. 
+   * 
+   * Solves either "primal", "dual", or "least_squares" Gauss-Newton systems depending on gn_solver_mode. Delegates to the appropriate solver function.
+   * 
+   * @return true if the preconditioner is stale (if it is available), false otherwise
+   */
+  bool solveGaussNewtonSystem(const Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b);
 
   /**
    * @brief Computes a low-rank approximation of the dual Gauss-Newton matrix using provided eigenvalues and eigenvectors.

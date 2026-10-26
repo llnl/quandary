@@ -114,7 +114,7 @@ class Config {
   std::string gn_normaleq_solver; ///< KSP solver type for Gauss-Newton Normal equation: "CG", "MINRES", "GMRES", etc.
   bool gn_normaleq_minres_qlp; ///< Use MINRES-QLP variant (more robust than standard MINRES)
   std::string gn_solver_mode; ///< Gauss-Newton solver mode: "primal" or "dual"
-  int gn_prec_update_interval; ///< Preconditioner update interval (0 = only at startup, n>0 = every n iterations)
+  int gn_prec_update_interval; ///< Preconditioner update interval (0 = only at startup, n>0 = every n iterations, -1 = adaptive, otherwise never)
   int gn_precond_rank; ///< Rank for low-rank preconditioner 
 
   // Output and runtypes

@@ -149,6 +149,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   gn_leastsquares_solver = config.getGnLeastSquaresSolver();
   gn_prec_update_interval = config.getGnPrecUpdateInterval();
   gn_precond_rank = config.getGnPrecondRank();
+  gn_precond_enabled = (gn_prec_update_interval >= -1);
 
   // Create MatShell for least-squares problem
   int N = ndesign;
@@ -793,77 +794,99 @@ void OptimProblem::solveGaussNewtonPrimalKSP(Vec xinit, const Vec initial_guess,
     printf("Gauss-Newton KSP (%s) stats: iterations = %d, residual norm = %1.14e\n", ksp_type, iters, rnorm);
   }
 }
-Vec OptimProblem::computeDualRHS(){
+Vec OptimProblem::computeGaussNewtonRHS(const std::string& gn_solver_mode, const Vec G){
+  assert(gn_solver_mode == "dual" || gn_solver_mode == "primal" || gn_solver_mode == "least-squares");
 
-  Vec b;
-  MatCreateVecs(GN_Dual_MatShell, nullptr, &b);
+  Vec b = nullptr;
 
-  PetscInt tangent_dim;
-  VecGetSize(b, &tangent_dim);
+  if (gn_solver_mode == "primal") {
+    MatCreateVecs(GN_Primal_MatShell, nullptr, &b);
+    VecCopy(G, b);
+    VecScale(b, -1.0);
+    
+  } else {
+    if (gn_solver_mode == "dual") {
+      MatCreateVecs(GN_Dual_MatShell, nullptr, &b);
+      VecZeroEntries(b);
+    } else  { // least-squares
+      MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &b);
+      VecZeroEntries(b);
+    }
 
-  // Get U(T) from optim_target
-  Mat U_final_re = optim_target->getFinalUnitaryRe();
-  Mat U_final_im = optim_target->getFinalUnitaryIm();
+    PetscInt tangent_dim = mastereq->getDim()*mastereq->getDim()-1;
 
-  // Compute J(U(T)) needed for ∇_U J
-  double obj_cost_re = 0.0;
-  double obj_cost_im = 0.0;
-  for (int iinit = 0; iinit < ninit_local; iinit++) {
-    int iinit_global = mpirank_init * ninit_local + iinit;
-    optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
-    double obj_lin_iinit_re = 0.0;
-    double obj_lin_iinit_im = 0.0;
-    Vec ui = timestepper->getFinalState(iinit);
-    optim_target->evalJ(ui, &obj_lin_iinit_re, &obj_lin_iinit_im);
-    obj_cost_re += obj_weights[iinit] * obj_lin_iinit_re;
-    obj_cost_im += obj_weights[iinit] * obj_lin_iinit_im;
+    // Get U(T) from optim_target
+    Mat U_final_re = optim_target->getFinalUnitaryRe();
+    Mat U_final_im = optim_target->getFinalUnitaryIm();
+
+    // Compute J(U(T)) needed for ∇_U J
+    double obj_cost_re = 0.0;
+    double obj_cost_im = 0.0;
+    for (int iinit = 0; iinit < ninit_local; iinit++) {
+      int iinit_global = mpirank_init * ninit_local + iinit;
+      optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
+      double obj_lin_iinit_re = 0.0;
+      double obj_lin_iinit_im = 0.0;
+      Vec ui = timestepper->getFinalState(iinit);
+      optim_target->evalJ(ui, &obj_lin_iinit_re, &obj_lin_iinit_im);
+      obj_cost_re += obj_weights[iinit] * obj_lin_iinit_re;
+      obj_cost_im += obj_weights[iinit] * obj_lin_iinit_im;
+    }
+    // Gather result J_inf(U(T))
+    double mycost_re = obj_cost_re;
+    double mycost_im = obj_cost_im;
+    MPI_Allreduce(&mycost_re, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+    MPI_Allreduce(&mycost_im, &obj_cost_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+
+    // Compute -∇_U J and project to tangent space
+    PetscScalar *b_data;
+    VecGetArray(b, &b_data);
+    for (int iinit = 0; iinit < ninit_local; iinit++) {
+      int iinit_global = mpirank_init * ninit_local + iinit;
+      Vec ui = timestepper->getFinalState(iinit);
+
+      // Use pre-allocated workspace vector to compute -∇_U J
+      Vec b_iinit = wsub_workspace[iinit];
+
+      // Copy ui to b_iinit
+      VecCopy(ui, b_iinit);
+
+      double obj_cost_re_bar, obj_cost_im_bar;
+      VecScale(b_iinit, 2.0 / mastereq->getDim());
+      optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
+      optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
+      double scale = 1.0 / mastereq->getDim();
+      optim_target->evalJ_diff(ui, b_iinit, scale*obj_cost_re_bar, scale*obj_cost_im_bar);
+
+      GellMann::projectVecToTangentSpace(b_iinit, U_final_re, U_final_im, mastereq->getDim(), iinit_global, b_data);
+    }
+
+    // Allreduce b across all comm_init processors
+    MPI_Allreduce(MPI_IN_PLACE, b_data, tangent_dim, MPIU_SCALAR, MPI_SUM, comm_init);
+    VecRestoreArray(b, &b_data);
+
+    // Scale to get b = -∇_U J
+    VecScale(b, -1.0);
+
   }
-  // Gather result J_inf(U(T))
-  double mycost_re = obj_cost_re;
-  double mycost_im = obj_cost_im;
-  MPI_Allreduce(&mycost_re, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, comm_init);
-  MPI_Allreduce(&mycost_im, &obj_cost_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
-
-  // Compute -∇_U J and project to tangent space
-  PetscScalar *b_data;
-  VecGetArray(b, &b_data);
-  for (int iinit = 0; iinit < ninit_local; iinit++) {
-    int iinit_global = mpirank_init * ninit_local + iinit;
-    Vec ui = timestepper->getFinalState(iinit);
-
-    // Use pre-allocated workspace vector to compute -∇_U J
-    Vec b_iinit = wsub_workspace[iinit];
-
-    // Copy ui to b_iinit
-    VecCopy(ui, b_iinit);
-
-    double obj_cost_re_bar, obj_cost_im_bar;
-    VecScale(b_iinit, 2.0 / mastereq->getDim());
-    optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
-    optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
-    double scale = 1.0 / mastereq->getDim();
-    optim_target->evalJ_diff(ui, b_iinit, scale*obj_cost_re_bar, scale*obj_cost_im_bar);
-
-    GellMann::projectVecToTangentSpace(b_iinit, U_final_re, U_final_im, mastereq->getDim(), iinit_global, b_data);
-  }
-
-  // Allreduce b across all comm_init processors
-  MPI_Allreduce(MPI_IN_PLACE, b_data, tangent_dim, MPIU_SCALAR, MPI_SUM, comm_init);
-  VecRestoreArray(b, &b_data);
-
-  // Scale to get b = -∇_U J
-  VecScale(b, -1.0);
-
   return b;
 }
 
-Vec OptimProblem::computeDualInitGuess(Vec b_rhs){
+Vec OptimProblem::computeGaussNewtonInitialGuess(const std::string& gn_solver_mode, const Vec b_rhs){
+  assert(gn_solver_mode == "dual" || gn_solver_mode == "primal" || gn_solver_mode == "least_squares");
 
-  Vec y_initial;
-  if (gn_prec_update_interval >= -1) {
+  Vec y_initial = nullptr;
+  // If preconditioner enabled (dual only for now), use initial guess from eigendecomposition. Else, use zero initial guess.
+  if (gn_precond_enabled && gn_solver_mode == "dual") {
     y_initial = computeEigenspaceInitialGuessFromStored(b_rhs);
   } else {
-    VecDuplicate(b_rhs, &y_initial);
+    if (gn_solver_mode == "least_squares") {
+      MatCreateVecs(GN_LeastSquares_MatShell, &y_initial, nullptr);
+    } else if (gn_solver_mode == "dual") {
+      MatCreateVecs(GN_Dual_MatShell, &y_initial, nullptr);
+    } else if (gn_solver_mode == "primal") {
+      MatCreateVecs(GN_Primal_MatShell, &y_initial, nullptr);
+    }
     VecZeroEntries(y_initial);
   }
 
@@ -879,14 +902,12 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
   // Use provided initial guess 
   VecCopy(initial_guess, y_dual_workspace);
 
-  bool use_precond = (gn_prec_update_interval >= -1);
-
   // Optional Levenberg-Marquardt damping: (L L^T + λI)
   if (gn_normaleq_damping > 0.0) {
     MatShift(GN_Dual_MatShell, gn_normaleq_damping);
   }
 
-  if (!use_precond) {
+  if (!gn_precond_enabled) {
     // No preconditioning - solve directly
     KSPReset(ksp_gn_normaleq);
     KSPSetOperators(ksp_gn_normaleq, GN_Dual_MatShell, GN_Dual_MatShell);
@@ -961,7 +982,7 @@ bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_g
   }
 
   // Check 2: Large initial residual (only if we used low-rank preconditioner)
-  if (!eigendecomp_is_stale && use_precond) {
+  if (!eigendecomp_is_stale && gn_precond_enabled) {
     // Check if initial guess led to huge residual
     // For well-conditioned eigenspace approximation, initial residual should be moderate
     // If r_0 is very large compared to ||b||, eigendecomposition is likely stale
@@ -1199,6 +1220,40 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   }
 }
 
+bool OptimProblem::solveGaussNewtonSystem(const Vec x_GN, const Vec initial_guess, const Vec b, Vec Ainv_b){
+
+  // Default return: Preconditioner is NOT state. Currently only "dual" has a precondioner that could change this return.
+  bool precond_is_stale = false; 
+
+  if (gn_solver_mode == "primal") {
+    // Primal normal equations: (L^*WL + λI) v = - \nabla_alpha J
+    if (gn_normaleq_solver == "proj") {
+      solveGaussNewtonPrimalProjected(x_GN, b, Ainv_b);
+    } else {
+      solveGaussNewtonPrimalKSP(x_GN, initial_guess, b, Ainv_b);
+    }
+  } 
+  else if (gn_solver_mode == "dual") {
+    // Dual normal equation: (L L^* + λI) y = -\nabla_U J and v = L^* y
+    if (gn_normaleq_solver == "proj") {
+      solveGaussNewtonDualProjected(x_GN, b, Ainv_b);
+    } else {
+      precond_is_stale = solveGaussNewtonDualPrecondKSP(x_GN, initial_guess, b, Ainv_b);
+    } 
+  } 
+  else if (gn_solver_mode == "least_squares") {
+    // Least squares problem min ||L v - G||^2
+    solveGaussNewtonLeastSquares(x_GN, initial_guess, b, Ainv_b);
+  } 
+  else {
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Unknown Gauss-Newton solver mode: %s. This should never happen.\n", gn_solver_mode.c_str());
+      exit(1);
+    }
+  }
+
+  return precond_is_stale;
+}
 
 void OptimProblem::solveGaussNewtonPrimalProjected(Vec xinit, const Vec b, Vec Ainv_b){
 
@@ -1377,12 +1432,11 @@ void OptimProblem::solve(Vec xinit) {
 
     case OptimSolverType::GAUSS_NEWTON: {
       // Work vectors for gradient, preconditioned search direction, and line search
-      Vec G, Gprec, xnew, step, v_zero;
+      Vec G, Gprec, xnew, step;
       VecDuplicate(x_GN, &G);
       VecDuplicate(x_GN, &Gprec);
       VecDuplicate(x_GN, &xnew);
       VecDuplicate(x_GN, &step);
-      VecDuplicate(x_GN, &v_zero);
 
       // Reset KSP counters. TODO: Missing some? 
       gn_dual_ksp_baseline = 0;  
@@ -1402,61 +1456,39 @@ void OptimProblem::solve(Vec xinit) {
         evalGradF(x_GN, G);
         double f = objective;
 
-        // Update the preconditioner . Currently only for the dual mode
-        bool did_update_PC = updateGaussNewtonDualPreconditioner(iter);
+        // Update the preconditioner. Currently only for the dual mode.
+        bool did_update_PC = updateGaussNewtonPreconditioner(iter);
+
+        // Set RHS and initial guess for the Gauss-Newton system
+        Vec b_rhs = computeGaussNewtonRHS(gn_solver_mode, G); 
+        Vec x_initial = computeGaussNewtonInitialGuess(gn_solver_mode, b_rhs);
 
         // Solve for the Gauss-Newton system for the search direction (Gprec) 
-        if (gn_solver_mode == "primal") {// Primal via normal equations: (L^*L + λI) v = G
-
-          VecZeroEntries(v_zero); // Initial guess for primal solver 
-          if (gn_normaleq_solver == "proj") {
-            solveGaussNewtonPrimalProjected(x_GN, G, Gprec);
-          } else {
-            solveGaussNewtonPrimalKSP(x_GN, v_zero, G, Gprec);
+        bool precond_is_stale = solveGaussNewtonSystem(x_GN, x_initial, b_rhs, Gprec);
+          
+        // If preconditioner is stale, force immediate recomputation and retry
+        if (precond_is_stale) {  
+          if (mpirank_world == 0 && !quietmode) {
+            printf("  Recomputing the preconditioner at the current iterate and forcing new GN solve...\n");
           }
-        
-        } else if (gn_solver_mode == "dual"){  // Dual of normal equation: (L L^* + λI) y = b and v = L^* y
-
-          Vec b_rhs = computeDualRHS(); 
-          if (gn_normaleq_solver == "proj") {
-            // Projected eigenspace solver
-            solveGaussNewtonDualProjected(x_GN, b_rhs, Gprec);
-          } else  {
-            // Solve with preconditioned KSP iterations
-            Vec y_initial = computeDualInitGuess(b_rhs);
-            bool precond_is_stale = solveGaussNewtonDualPrecondKSP(x_GN, y_initial, b_rhs, Gprec);
-            VecDestroy(&y_initial);
-
-            // If low-rank eigendecomposition is stale, force immediate recomputation and retry
-            if (precond_is_stale) {  
-              if (mpirank_world == 0 && !quietmode) {
-                printf("  Recomputing low-rank eigendecomposition at current point and forcing new solve...\n");
-              }
-              // Recompute the preconditioner and initial guess
-              did_update_PC = updateGaussNewtonDualPreconditioner(iter);
-              y_initial = computeDualInitGuess(b_rhs); // TODO: Check. Previously this was computeEigenspaceInitialGuessFromStored(b_rhs)
-              precond_is_stale = solveGaussNewtonDualPrecondKSP(x_GN, y_initial, b_rhs, Gprec);
-              VecDestroy(&y_initial);
-              if (precond_is_stale && mpirank_world == 0 && !quietmode) {
-                printf("  WARNING: Solve still problematic after eigendecomposition update\n");
-              }
-            }
-            // Update baseline KSP iterations 
-            if (iter == 0 || did_update_PC) {
-              gn_dual_ksp_baseline = ksp_iters_last;
-            }
+          did_update_PC = updateGaussNewtonPreconditioner(iter);
+          VecDestroy(&x_initial);
+          x_initial = computeGaussNewtonInitialGuess(gn_solver_mode, b_rhs); 
+          precond_is_stale = solveGaussNewtonSystem(x_GN, x_initial, b_rhs, Gprec);
+          if (precond_is_stale && mpirank_world == 0 && !quietmode) {
+            printf("  WARNING: Solve still problematic after eigendecomposition update\n");
           }
-          VecDestroy(&b_rhs);
-          VecScale(Gprec, -1.0);
+        }
+        VecDestroy(&x_initial);
+        VecDestroy(&b_rhs);
 
-        } else if (gn_solver_mode == "least_squares") {// Least squares formulation min ||L v - G||^2
-
-          VecZeroEntries(v_zero); // Initial guess for least squares
-          solveGaussNewtonLeastSquares(x_GN, v_zero, Gprec);
-          VecScale(Gprec, -1.0);
+        // Update baseline KSP iterations 
+        if (iter == 0 || did_update_PC) {
+          gn_dual_ksp_baseline = ksp_iters_last;
         }
         
         // Backtracking Armijo line search along -Gprec, projected onto the bound constraints
+        VecScale(Gprec, -1.0);
         double alpha = armijoLineSearch(x_GN, f, G, Gprec, xnew, step);
 
         // Accept the step
@@ -1471,7 +1503,6 @@ void OptimProblem::solve(Vec xinit) {
       VecDestroy(&Gprec);
       VecDestroy(&xnew);
       VecDestroy(&step);
-      VecDestroy(&v_zero);
       break;
     }
 
@@ -1595,7 +1626,7 @@ PetscErrorCode TaoSynchronize(Tao tao, PetscInt iter, void*ptr){
 
   /* Synchronize x across all processors: Average solution from each rank. */
   PetscScalar* xdata;
-  PetscErrorCode ierr = VecGetArray(x, &xdata);
+  VecGetArray(x, &xdata);
   MPI_Allreduce(MPI_IN_PLACE, xdata, ctx->getNdesign(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   VecRestoreArray(x, &xdata);
   VecScale(x, 1.0 / ctx->getMPIsize_world());
@@ -1729,61 +1760,60 @@ void OptimProblem::updateGaussNewtonDualMatDense(){
 }
 
 
-bool OptimProblem::updateGaussNewtonDualPreconditioner(int iter){
+bool OptimProblem::updateGaussNewtonPreconditioner(int iter){
 
+  // no preconditioner for non-dual solver modes available
   if (gn_solver_mode != "dual") {
-    return false; // no preconditioner for non-dual solver modes available
+    return false; 
   }
 
-  // At first iteration initialize the preconditioner
+  // Don't update if preconditioner is disabled
+  if (!gn_precond_enabled) {
+    return false; 
+  }
+
+  // Don't update if this is a direct projected eigensolve 
+  if (gn_normaleq_solver == "proj") {
+    return false;
+  }
+
+  // At first iteration, always update the preconditioner  
   if (iter == 0){
-    bool enable_precond = (gn_prec_update_interval >= -1) && (gn_normaleq_solver != "proj");
-    if (enable_precond) {
-      updateGaussNewtonDualPreconditionerLowRank(gn_precond_rank);
-    }
-    return enable_precond;
+    updateGaussNewtonDualPreconditionerLowRank(gn_precond_rank);
+    return true;
   }
 
   // At larger iterations, decide whether to update the preconditioner
-  // TODO: Figure out the logic here, and compare to above. 
-  if (iter > 0) {
-    bool should_update = false;
-    if (gn_prec_update_interval > 0 && iter % gn_prec_update_interval == 0) {
-      // Fixed interval update
+  bool should_update = false;
+  if (gn_prec_update_interval > 0 && iter % gn_prec_update_interval == 0) {
+    // Fixed interval update
+    should_update = true;
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Iteration %d: Updating preconditioner (fixed interval = %d)\n", iter, gn_prec_update_interval);
+    }
+  } else if (gn_prec_update_interval == -1 && gn_dual_ksp_baseline > 0) {
+    // Adaptive: Update if accumulate excess exceeds rank 
+    int excess = ksp_iters_last - gn_dual_ksp_baseline;
+    if (excess > 0) {
+      gn_dual_ksp_excess_accum += excess;
+    }
+    if (gn_dual_ksp_excess_accum >= gn_precond_rank) {
       should_update = true;
       if (mpirank_world == 0 && !quietmode) {
-        printf("Iteration %d: Updating preconditioner (fixed interval = %d)\n", iter, gn_prec_update_interval);
-      }
-    } else if (gn_prec_update_interval == -1 && gn_dual_ksp_baseline > 0) {
-      // Adaptive update: accumulate excess KSP iterations beyond n_0
-      int excess = ksp_iters_last - gn_dual_ksp_baseline;
-      if (excess > 0) {
-        gn_dual_ksp_excess_accum += excess;
-        if (mpirank_world == 0 && !quietmode) {
-          printf("Iteration %d: KSP excess = %d (accumulated = %d, threshold = %d)\n", iter, excess, gn_dual_ksp_excess_accum, gn_precond_rank);
-        }
-      }
-
-      // Update when accumulated excess exceeds r
-      if (gn_dual_ksp_excess_accum >= gn_precond_rank) {
-        should_update = true;
-        if (mpirank_world == 0 && !quietmode) {
-          printf("Iteration %d: Updating preconditioner (accumulated excess %d >= r = %d)\n", iter, gn_dual_ksp_excess_accum, gn_precond_rank);
-        }
+        printf("Iteration %d: Updating preconditioner (accumulated excess %d >= r = %d)\n", iter, gn_dual_ksp_excess_accum, gn_precond_rank);
       }
     }
-
-    if (should_update) {
-      updateGaussNewtonDualPreconditionerLowRank(gn_precond_rank);
-      // Reset accumulator after update
-      if (gn_prec_update_interval == -1) {
-        gn_dual_ksp_excess_accum = 0;
-      }
-    }
-
-    return should_update;
   }
-  return false; // default No update 
+
+  if (should_update) {
+    updateGaussNewtonDualPreconditionerLowRank(gn_precond_rank);
+    // Reset accumulator after adaptive update
+    if (gn_prec_update_interval == -1) {
+      gn_dual_ksp_excess_accum = 0;
+    }
+  }
+
+  return should_update;
 }
 
 
@@ -2028,7 +2058,7 @@ PetscErrorCode OptimProblem::GN_Dual_LowRank_MatMult(Mat A, const Vec z, Vec out
 }
 
 
-void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initial_guess, Vec v_LeastSquares){
+void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initial_guess, const Vec b, Vec v_LeastSquares){
 
   // Store the point of evaluation (design parameters)
   VecCopy(xinit, xeval_GN);
@@ -2037,62 +2067,62 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
   // Fill the RHS: b = -\nabla_U J projected to tangent space
   // \nabla_J = -2/n U - 2/n^2Tr(V^dU)V = 2/n(I-P)U
 
-  Vec b; // RHS
-  MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &b);
-  VecZeroEntries(b);  // Ensure bottom part (for damping rows) is initialized to zero
+  // Vec b; // RHS
+  // MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &b);
+  // VecZeroEntries(b);  // Ensure bottom part (for damping rows) is initialized to zero
 
-  // Get U(T) from optim_target
-  Mat U_final_re = optim_target->getFinalUnitaryRe();
-  Mat U_final_im = optim_target->getFinalUnitaryIm();
+  // // Get U(T) from optim_target
+  // Mat U_final_re = optim_target->getFinalUnitaryRe();
+  // Mat U_final_im = optim_target->getFinalUnitaryIm();
 
-  // first compute J(U(T)) needed for \nabla_UJ
-  double obj_cost_re = 0.0;
-  double obj_cost_im = 0.0;
-  for (int iinit = 0; iinit < ninit_local; iinit++) {
-    int iinit_global = mpirank_init * ninit_local + iinit;
-    optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
-    double obj_lin_iinit_re = 0.0;
-    double obj_lin_iinit_im = 0.0;
-    Vec ui = timestepper->getFinalState(iinit);
-    optim_target->evalJ(ui,  &obj_lin_iinit_re, &obj_lin_iinit_im);
-    obj_cost_re += obj_weights[iinit] * obj_lin_iinit_re;
-    obj_cost_im += obj_weights[iinit] * obj_lin_iinit_im;
-  }
-  // Gather result J_inf(U(T))
-  double mycost_re = obj_cost_re;
-  double mycost_im = obj_cost_im;
-  MPI_Allreduce(&mycost_re, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, comm_init);
-  MPI_Allreduce(&mycost_im, &obj_cost_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+  // // first compute J(U(T)) needed for \nabla_UJ
+  // double obj_cost_re = 0.0;
+  // double obj_cost_im = 0.0;
+  // for (int iinit = 0; iinit < ninit_local; iinit++) {
+  //   int iinit_global = mpirank_init * ninit_local + iinit;
+  //   optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
+  //   double obj_lin_iinit_re = 0.0;
+  //   double obj_lin_iinit_im = 0.0;
+  //   Vec ui = timestepper->getFinalState(iinit);
+  //   optim_target->evalJ(ui,  &obj_lin_iinit_re, &obj_lin_iinit_im);
+  //   obj_cost_re += obj_weights[iinit] * obj_lin_iinit_re;
+  //   obj_cost_im += obj_weights[iinit] * obj_lin_iinit_im;
+  // }
+  // // Gather result J_inf(U(T))
+  // double mycost_re = obj_cost_re;
+  // double mycost_im = obj_cost_im;
+  // MPI_Allreduce(&mycost_re, &obj_cost_re, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+  // MPI_Allreduce(&mycost_im, &obj_cost_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
 
-  PetscScalar *b_data;
-  VecGetArray(b, &b_data);
-  for (int iinit = 0; iinit < ninit_local; iinit++) {
-    int iinit_global = mpirank_init * ninit_local + iinit;
-    Vec ui = timestepper->getFinalState(iinit);
+  // PetscScalar *b_data;
+  // VecGetArray(b, &b_data);
+  // for (int iinit = 0; iinit < ninit_local; iinit++) {
+  //   int iinit_global = mpirank_init * ninit_local + iinit;
+  //   Vec ui = timestepper->getFinalState(iinit);
 
-    // Use pre-allocated workspace vector to compute -nabla_U J
-    Vec b_iinit = wsub_workspace[iinit];
+  //   // Use pre-allocated workspace vector to compute -nabla_U J
+  //   Vec b_iinit = wsub_workspace[iinit];
 
-    // Copy ui to b_iinit
-    VecCopy(ui, b_iinit);
+  //   // Copy ui to b_iinit
+  //   VecCopy(ui, b_iinit);
 
-    double obj_cost_re_bar, obj_cost_im_bar;
-    VecScale(b_iinit, 2.0 / mastereq->getDim());
-    optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
-    optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
-    double scale = 1.0 / mastereq->getDim();
-    optim_target->evalJ_diff(ui, b_iinit, scale*obj_cost_re_bar, scale*obj_cost_im_bar);
+  //   double obj_cost_re_bar, obj_cost_im_bar;
+  //   VecScale(b_iinit, 2.0 / mastereq->getDim());
+  //   optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
+  //   optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
+  //   double scale = 1.0 / mastereq->getDim();
+  //   optim_target->evalJ_diff(ui, b_iinit, scale*obj_cost_re_bar, scale*obj_cost_im_bar);
 
-    GellMann::projectVecToTangentSpace(b_iinit, U_final_re, U_final_im, mastereq->getDim(), iinit_global, b_data);
-  }
+  //   GellMann::projectVecToTangentSpace(b_iinit, U_final_re, U_final_im, mastereq->getDim(), iinit_global, b_data);
+  // }
 
-  // Allreduce b across all comm_init processors
-  PetscInt tangent_dim = mastereq->getDim()*mastereq->getDim()-1;
-  MPI_Allreduce(MPI_IN_PLACE, b_data, tangent_dim, MPIU_SCALAR, MPI_SUM, comm_init);
-  VecRestoreArray(b, &b_data);
+  // // Allreduce b across all comm_init processors
+  // PetscInt tangent_dim = mastereq->getDim()*mastereq->getDim()-1;
+  // MPI_Allreduce(MPI_IN_PLACE, b_data, tangent_dim, MPIU_SCALAR, MPI_SUM, comm_init);
+  // VecRestoreArray(b, &b_data);
 
-  // Scale 
-  VecScale(b, -1.0);
+  // // Scale 
+  // VecScale(b, -1.0);
 
   // /*------ TEST setup of \nabla_U J and tangent space projection ----- */
   // if (mpisize_world > 1) {
@@ -2230,10 +2260,6 @@ void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initi
       exit(1);
     }
   }
-
-  // Clean up
-  VecDestroy(&b);
-
 }
 
 // Callback: Evaluate residual F(v) = L*v - b

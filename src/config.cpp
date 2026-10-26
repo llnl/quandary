@@ -316,7 +316,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     gn_leastsquares_damping = validators::field<double>(optimization_table, "gn_leastsquares_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::GN_LEASTSQUARES_DAMPING);
     gn_normaleq_damping = validators::field<double>(optimization_table, "gn_normaleq_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::GN_NORMALEQ_DAMPING);
     gn_normaleq_minres_qlp = validators::field<bool>(optimization_table, "gn_normaleq_minres_qlp").valueOr(ConfigDefaults::GN_MINRES_QLP);
-    gn_prec_update_interval = validators::field<int>(optimization_table, "gn_prec_update_interval").greaterThanEqual(-1).valueOr(ConfigDefaults::GN_PREC_UPDATE_INTERVAL);
+    gn_prec_update_interval = validators::field<int>(optimization_table, "gn_prec_update_interval").valueOr(ConfigDefaults::GN_PREC_UPDATE_INTERVAL);
     gn_precond_rank = validators::field<int>(optimization_table, "gn_precond_rank").greaterThan(0).valueOr(ConfigDefaults::GN_PRECOND_RANK);
 
     // Parse output options from [output] table
