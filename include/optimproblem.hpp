@@ -211,8 +211,6 @@ class OptimProblem {
   Output* getOutput() { return output; };
   TimeStepper* getTimeStepper() { return timestepper; };
 
-  void setXevalGN(const Vec x){ VecCopy(x, xeval_GN); }
-
   /**
    * @brief Override the maximum number of iterations for all Gauss-Newton solvers.
    */

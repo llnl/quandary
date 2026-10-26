@@ -661,8 +661,7 @@ void OptimProblem::evalLinearizedForward(const Vec x, const Vec v){
 
     int initid = optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
 
-    // Nonlinear forward at x is identical for every MatVec within the same KSP/EPS solve, so only
-    // (re-)solve and store it once per xeval_GN; reuse the stored trajectory_states otherwise.
+    // Solve the ODE only once per new xeval_GN; reuse the stored trajectory_states otherwise.
     if (!nonlinear_forward_valid) {
       bool writeTrajectoryDataFiles = false;
       bool storeStates = true;
@@ -765,8 +764,9 @@ PetscErrorCode OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
 void OptimProblem::solveGaussNewtonPrimalKSP(Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b){
 
   // Store the point of evaluation for the Gauss-Newton matrix shell A(xinit)
-  VecCopy(xinit, xeval_GN);
-  nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
+  setGaussNewtonEvalPoint(xinit); 
+  // Forces a fresh nonlinear forward solve during the next call to evalLinearizedForward via nonlinear_forward_valid flag.
+  // TODO: This can probably be dropped, since it is called before any solveGaussNewtonXYZ(). OR: Get rid of nonlinear_forward_valid alltogether. 
 
   // Set initial guess from initial_guess parameter
   VecCopy(initial_guess, Ainv_b);
@@ -896,8 +896,9 @@ Vec OptimProblem::computeGaussNewtonInitialGuess(const std::string& gn_solver_mo
 bool OptimProblem::solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_guess, const Vec b_rhs, Vec v_out){
 
   // Store the point of evaluation for the Gauss-Newton matrix shell
-  VecCopy(xinit, xeval_GN);
-  nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve (solveODE) within linearizedForwad() for the new xeval_GN
+  setGaussNewtonEvalPoint(xinit); 
+  // Forces a fresh nonlinear forward solve during the next call to evalLinearizedForward() for the new xeval_GN
+  // TODO: This can probably be dropped here, since it should be set before any solveGaussNewtonXYZ calls. 
 
   // Use provided initial guess 
   VecCopy(initial_guess, y_dual_workspace);
@@ -1003,9 +1004,10 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   // TODO: Understand this function and how it interacts with the low-rank preconditioner and the Gauss-Newton dual system.
   // TODO: Remove the KSP iterations. Make this a full-rank rank solver in the projected subspace.
 
-  // // Store the point of evaluation. This should have been done already! 
-  VecCopy(xinit, xeval_GN);
-  nonlinear_forward_valid = false;
+  // Store the point of evaluation. This should have been done already! 
+  setGaussNewtonEvalPoint(xinit); 
+  // Forces a fresh nonlinear forward solve during the next call to evalLinearizedForward() for the new xeval_GN
+  // TODO: This can probably be dropped here, since it should be set before any solveGaussNewtonXYZ calls. 
 
   // Use passed RHS
   const Vec b = b_rhs;
@@ -1305,8 +1307,9 @@ PetscErrorCode KSPMonitorResidualAndSolution(KSP ksp, PetscInt it, PetscReal rno
 std::vector<double> OptimProblem::computeGaussNewtonPrimalEvals(Vec xinit, Mat* evecs_out){
 
   // Store xinit so the MatShell can use it as point of evaluation.
-  VecCopy(xinit, xeval_GN);
-  nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
+  setGaussNewtonEvalPoint(xinit); 
+  // Forces a fresh nonlinear forward solve during the next call to evalLinearizedForward() for the new xeval_GN
+  // TODO: This can probably be dropped here, since it should be set before any solveGaussNewtonXYZ calls. 
 
   // Update EPS for a fresh solve on the new xeval_GN. 
   if (!gn_primal_usedensemat) { 
@@ -2051,8 +2054,9 @@ PetscErrorCode OptimProblem::GN_Dual_LowRank_MatMult(Mat A, const Vec z, Vec out
 void OptimProblem::solveGaussNewtonLeastSquares(const Vec xinit, const Vec initial_guess, const Vec b, Vec v_LeastSquares){
 
   // Store the point of evaluation (design parameters)
-  VecCopy(xinit, xeval_GN);
-  nonlinear_forward_valid = false; // Force a fresh nonlinear forward solve for the new xeval_GN
+  setGaussNewtonEvalPoint(xinit); 
+  // Forces a fresh nonlinear forward solve during the next call to evalLinearizedForward() for the new xeval_GN
+  // TODO: This can probably be dropped here, since it should be set before any solveGaussNewtonXYZ calls. 
 
   // Fill the RHS: b = -\nabla_U J projected to tangent space
   // \nabla_J = -2/n U - 2/n^2Tr(V^dU)V = 2/n(I-P)U

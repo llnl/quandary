@@ -976,7 +976,7 @@ int main(int argc,char **argv)
   optimctx->evalGradF(xinit, grad, writeTrajectoryDataFiles);
 
   // Set point of evaluation for Gauss-Newton matrix
-  optimctx->setXevalGN(xinit);
+  optimctx->setGaussNewtonEvalPoint(xinit);
 
   Vec v, Av;
   int ndesign = optimctx->getNdesign();
@@ -1060,7 +1060,7 @@ int main(int argc,char **argv)
   optimctx->evalGradF(xinit, grad, writeTrajectoryDataFiles_GN);
 
   // Set point of evaluation for Gauss-Newton matrix
-  optimctx->setXevalGN(xinit);
+  optimctx->setGaussNewtonEvalPoint(xinit);
 
   Vec v_GN, Av_GN;
   VecDuplicate(xinit, &v_GN);
