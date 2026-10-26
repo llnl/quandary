@@ -115,6 +115,7 @@ class OptimProblem {
   Mat GN_Dual_MatShell; ///< Applies P_G W^1/2 L L^* W^1/2 P_G
   Mat GN_Dual_MatDense; ///< Dense P_G W^1/2 L L^* W^1/2 P_G
   Mat GN_Dual_LowRank_MatShell; ///< Applies low-rank preconditioned dual: M^{-1/2} (L L^T + λI) M^{-1/2}
+  Mat GN_Dual_Precond_MatDense; // Preconditoning matrix in dense format
 
   // Solvers for the inner Gauss-Newton equations
   KSP ksp_gn_normaleq;  ///< Linear solver for Gauss-Newton normal equation (primal or dual)
@@ -203,6 +204,7 @@ class OptimProblem {
   Vec getGN_Dual_LowRank_Sigma_InvSqrt() { return gn_dual_lowrank_sigma_invsqrt; };
   PetscScalar getGN_Dual_Precond_Mu() { return gn_dual_precond_mu; };
   Mat getGN_Dual_MatDense() { return GN_Dual_MatDense; };
+  Mat getGN_Dual_Precond_MatDense() { return GN_Dual_Precond_MatDense; };
   Mat getGNLeastSquaresShell() { return GN_LeastSquares_MatShell; };
   Mat getGN_LeastSquares_MatShell() { return GN_LeastSquares_MatShell; };
   bool getQuietmode() { return quietmode; };

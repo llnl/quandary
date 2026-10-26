@@ -210,6 +210,9 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   // Create MatShell for dual low-rank preconditioned 
   MatCreateShell(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, this, &GN_Dual_LowRank_MatShell);
   MatShellSetOperation(GN_Dual_LowRank_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_LowRank_MatMult);
+  // only for saving the preconditioned matrix:
+  MatCreateDense(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, NULL, &GN_Dual_Precond_MatDense); // only debug and output
+  MatZeroEntries(GN_Dual_Precond_MatDense);
 
   // Create Gauss-Newton normal equation linear solver (used for both the primal and the dual equations) 
   KSPCreate(PETSC_COMM_SELF, &ksp_gn_normaleq);
