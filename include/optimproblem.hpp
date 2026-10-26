@@ -464,18 +464,6 @@ class OptimProblem {
   void applyEigenspaceApproximation(const Vec b, const Mat V_r, const PetscScalar* eigenvalues, int rank, bool have_complement, PetscScalar mu, Vec y_approx);
 
   /**
-   * @brief Computes an initial guess for the dual Gauss-Newton problem using the stored low-rank eigenspace approximation.
-   * 
-   * @note: Requires gn_dual_lowrank_U, gn_dual_lowrank_sigma_invsqrt, gn_dual_precond_mu to be already computed by updateGaussNewtonDualPreconditionerLowRank()
-   * 
-   * @note: The return vector will be allocated within the function and must be destroyed by the caller.
-   *
-   * @param b_rhs Right-hand side vector
-   * @return Newly created initial guess vector
-   */
-  Vec computeEigenspaceInitialGuessFromStored(const Vec b_rhs);
-
-  /**
    * @brief Backtracking Armijo line search along a descent direction, projected onto bound constraints.
    *
    * Finds a step length alpha such that f(P[x - alpha*dir]) <= f(x) + c1 * grad^T (P[x - alpha*dir] - x), where P[.] clips onto bounds [xlower, xupper]. Falls back to the steepest descent direction if dir is not a descent direction (e.g. after projection).
