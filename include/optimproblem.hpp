@@ -114,6 +114,7 @@ class OptimProblem {
   Mat GN_Dual_MatShell; ///< Applies P_G W^1/2 L L^* W^1/2 P_G
   Mat GN_Dual_MatDense; ///< Dense P_G W^1/2 L L^* W^1/2 P_G
   Mat GN_Dual_LowRank_MatShell; ///< Applies low-rank preconditioned dual: M^{-1/2} (L L^T + λI) M^{-1/2}
+  Mat GN_Primal_LowRank_MatShell; ///< Applies low-rank preconditioned primal: M^{-1/2} (L^* L + λI) M^{-1/2}
 
   // Solvers for the inner Gauss-Newton equations
   KSP ksp_gn_normaleq;  ///< Linear solver for Gauss-Newton normal equation (primal or dual)
@@ -143,7 +144,7 @@ class OptimProblem {
   Vec brgn_rhs; ///< Cached RHS vector for BRGN residual evaluation
   Vec brgn_residual; ///< Cached Residual vector for BRGN solver
   Vec y_dual_workspace; ///< Workspace vector for dual solver (tangent space, size dim²-1)
-  Vec v_dual_workspace; ///< Workspace vector for intermediate L^T y computation (design space)
+  Vec v_workspace; ///< Workspace vector for intermediate L^T y computation (design space)
   int gn_dual_ksp_baseline; ///< Baseline KSP iterations right after preconditioner formation (for adaptive update)
   int gn_dual_ksp_excess_accum; ///< Accumulated excess KSP iterations beyond n_0 (for adaptive update)
   Mat gn_dual_lowrank_U; ///< V_r: first r eigenvectors (tangent_dim × rank, dense)
@@ -316,6 +317,12 @@ class OptimProblem {
    * @brief MatMult for GN_Dual_LowRank_MatShell: Applies M^{-1/2} A M^{-1/2} z where A=GN_dual_MatShell  
    */
   static PetscErrorCode GN_Dual_LowRank_MatMult(Mat A, const Vec z, Vec output);
+  
+
+  /**
+   * @brief MatMult for GN_Primal_LowRank_MatShell: Applies M^{-1/2} (L^* L + λI) M^{-1/2} z
+   */
+  static PetscErrorCode GN_Primal_LowRank_MatMult(Mat A, const Vec z, Vec output);
 
 
   /**
@@ -368,7 +375,7 @@ class OptimProblem {
    * 
    * @param rank Number of basis vectors to use (r)
    */
-  void updateGaussNewtonDualPreconditionerLowRank(int rank);
+  void updateGaussNewtonPreconditionerLowRank(int rank);
 
   /**
    * @brief Applies the low-rank dual Gauss-Newton preconditioner: y = M^{-1/2} x, where M ≈ U Σ U^T is the precomputed low-rank approximation.
@@ -380,17 +387,7 @@ class OptimProblem {
    * @param[in] x Input vector (tangent space, size dim²-1)
    * @param[out] y Output vector after applying M^{-1/2} (tangent space)
    */
-  void apply_GN_Dual_LowRank_Precond(const Vec x, Vec y);
-
-  /**
-   * @brief Solves the primal Gauss-Newton equation iteratively using the ksp_gn_normaleq solver
-   *
-   * @param xinit Point of evaluation for the Gauss-Newton matrix
-   * @param initial_guess Initial guess for iterative solver
-   * @param b Right-hand side vector
-   * @param Ainv_b Solution vector to store the result
-   */
-  void solveGaussNewtonPrimalKSP(Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b);
+  void apply_GN_LowRank_Precond(const Vec x, Vec y);
 
   /**
    * @brief Solves the primal Gauss-Newton equation via eigenvalue decomposition
@@ -402,7 +399,7 @@ class OptimProblem {
   void solveGaussNewtonPrimalProjected(Vec xinit, const Vec b, Vec Ainv_b);
 
   /**
-   * @brief Solves the dual Gauss-Newton problem iteratively using low-rank preconditioned KSP. 
+   * @brief Solves the Gauss-Newton problem iteratively using low-rank preconditioned KSP. 
    *
    * @param xinit Point of evaluation for the Gauss-Newton matrix
    * @param initial_guess Initial guess for iterative solver (in tangent space, size dim²-1)
@@ -410,7 +407,7 @@ class OptimProblem {
    * @param v_out Solution vector (in design space, size ndesign)
    * @return true if eigendecomposition appears stale, false otherwise
    */
-  bool solveGaussNewtonDualPrecondKSP(Vec xinit, const Vec initial_guess, const Vec b_rhs, Vec v_out);
+  bool solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode, Vec xinit, const Vec initial_guess, const Vec b_rhs, Vec v_out);
 
   /**
    * @brief Solves the dual Gauss-Newton problem by projection onto dominant eigenspace.

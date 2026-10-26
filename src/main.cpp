@@ -550,12 +550,12 @@ int main(int argc,char **argv)
     Vec v_KSP;
     VecDuplicate(grad, &v_KSP);
     if (mpirank_world == 0 && !quietmode) printf("\nCalling solveGaussNewtonPrimalKSP\n");
-    optimctx->solveGaussNewtonPrimalKSP(xinit, v_zero, gnrhs, v_KSP);
+    optimctx->solveGaussNewtonPrecondKSP("primal", xinit, v_zero, gnrhs, v_KSP);
 
     // call the Gauss-Newton solver again to re-evaluate the residual
     optimctx->setGaussNewtonMaxiter(1); // just for checking the residual
     if (mpirank_world == 0 && !quietmode) printf("\nTesting: call solveGaussNewtonPrimalKSP again with converged search direction\n");
-    optimctx->solveGaussNewtonPrimalKSP(xinit, v_KSP, gnrhs, v_result);
+    optimctx->solveGaussNewtonPrecondKSP("primal", xinit, v_KSP, gnrhs, v_result);
     // check if the solution norm has changed
     VecNorm(v_result, NORM_2, &v_LeastSquares_norm);
     if (mpirank_world == 0 && !quietmode) {
@@ -596,7 +596,7 @@ int main(int argc,char **argv)
     b_rhs = optimctx->computeGaussNewtonRHS("dual", nullptr);
 
     // Solve with zero initial guess (ignore staleness flag in matrix_save mode)
-    (void) optimctx->solveGaussNewtonDualPrecondKSP(xinit, y_zero_dual, b_rhs, v_Dual);
+    (void) optimctx->solveGaussNewtonPrecondKSP("dual", xinit, y_zero_dual, b_rhs, v_Dual);
 
     VecDestroy(&b_rhs);
     VecDestroy(&y_zero_dual);
