@@ -100,7 +100,6 @@ class OptimProblem {
   Vec x_GN; ///< Current iterate for Gauss-Newton optimization. Holds solution after finished. 
   Vec xeval_GN; ///< Point of evaluation for Gauss-Newton (evaluate L(x) at this x) 
   bool nonlinear_forward_valid; ///< True once the nonlinear forward solveODE has been done and stored for the current xeval_GN, reset whenever xeval_GN changes!
-  bool includeHessUJ; ///< Flag to include Hessian of J(U) in the Gauss-Newton approximation 
 
   // Options for the Armijo line search 
   const double c1 = 1e-4;    //< Sufficient decrease parameter
@@ -474,18 +473,6 @@ class OptimProblem {
    * @param y_approx Output vector storing the approximation result
    */
   void applyEigenspaceApproximation(const Vec b, const Mat V_r, const PetscScalar* eigenvalues, int rank, bool have_complement, PetscScalar mu, Vec y_approx);
-
-  /**
-   * @brief Computes an initial guess for the dual Gauss-Newton problem using the stored low-rank eigenspace approximation.
-   * 
-   * @note: Requires gn_dual_lowrank_U, gn_dual_lowrank_sigma_invsqrt, gn_dual_precond_mu to be already computed by updateGaussNewtonDualPreconditionerLowRank()
-   * 
-   * @note: The return vector will be allocated within the function and must be destroyed by the caller.
-   *
-   * @param b_rhs Right-hand side vector
-   * @return Newly created initial guess vector
-   */
-  Vec computeEigenspaceInitialGuessFromStored(const Vec b_rhs);
 
   /**
    * @brief Backtracking Armijo line search along a descent direction, projected onto bound constraints.
