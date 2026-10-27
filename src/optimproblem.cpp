@@ -246,16 +246,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   VecCreateSeq(PETSC_COMM_SELF, gn_precond_rank, &gn_dual_lowrank_sigma_invsqrt);
   VecCreateSeq(PETSC_COMM_SELF, gn_precond_rank, &gn_dual_lowrank_temp);
 
-  /* Create eigenvalues solver for Gauss-Newton primal equation Ax=b */
-  EPSCreate(PETSC_COMM_SELF, &eps_gn_primal);
-  EPSSetOperators(eps_gn_primal, GN_Primal_MatShell, NULL);
-  EPSSetProblemType(eps_gn_primal, EPS_HEP); // Hermitian
-  EPSSetWhichEigenpairs(eps_gn_primal, EPS_LARGEST_REAL); // largest eigenvalues
-  neigvals = tangent_dim;
-  ncv = 2*neigvals ; // Max Krylov dimension. How to set??
-  EPSSetDimensions(eps_gn_primal, neigvals, ncv, PETSC_DEFAULT);
-  EPSSetTolerances(eps_gn_primal, gn_rtol, gn_maxiter);
-  EPSSetFromOptions(eps_gn_primal);
+
 }
 
 
@@ -285,7 +276,6 @@ OptimProblem::~OptimProblem() {
   VecDestroy(&gn_dual_lowrank_sigma_invsqrt);
   VecDestroy(&gn_dual_lowrank_temp);
   KSPDestroy(&ksp_gn_normaleq);
-  EPSDestroy(&eps_gn_primal);
   KSPDestroy(&ksp_gn_leastsquares);
   if (tao_gn_leastsquares_brgn) {
     TaoDestroy(&tao_gn_leastsquares_brgn);
@@ -331,11 +321,6 @@ void OptimProblem::setGaussNewtonMaxiter(int maxiter) {
   // For Gauss-Newton normal equation KSP solvers
   KSPGetTolerances(ksp_gn_normaleq, &rtol, &abstol, &dtol, &current_maxits);
   KSPSetTolerances(ksp_gn_normaleq, rtol, abstol, dtol, maxiter);
-
-  // For EPS eigenvalue solver (used in solveGaussNewtonPrimalProjected)
-  PetscReal eps_tol;
-  EPSGetTolerances(eps_gn_primal, &eps_tol, &current_maxits);
-  EPSSetTolerances(eps_gn_primal, eps_tol, maxiter);
 }
 
 double OptimProblem::evalF(const Vec x, bool writeTrajectoryDataFiles) {
@@ -1287,6 +1272,19 @@ std::vector<double> OptimProblem::computeGaussNewtonPrimalEvals(Vec xinit, Mat* 
   // Forces a fresh nonlinear forward solve during the next call to evalLinearizedForward() for the new xeval_GN
   // TODO: This can probably be dropped here, since it should be set before any solveGaussNewtonXYZ calls. 
 
+
+  /* Create eigenvalues solver for Gauss-Newton primal equation Ax=b */
+  EPS eps_gn_primal; // EPS solver for the Gauss-Newton primal equation 
+  EPSCreate(PETSC_COMM_SELF, &eps_gn_primal);
+  EPSSetOperators(eps_gn_primal, GN_Primal_MatShell, NULL);
+  EPSSetProblemType(eps_gn_primal, EPS_HEP); // Hermitian
+  EPSSetWhichEigenpairs(eps_gn_primal, EPS_LARGEST_REAL); // largest eigenvalues
+  int neigvals = tangent_dim;
+  int ncv = 2*neigvals ; // Max Krylov dimension. How to set??
+  EPSSetDimensions(eps_gn_primal, neigvals, ncv, PETSC_DEFAULT);
+  EPSSetTolerances(eps_gn_primal, gn_rtol, gn_maxiter);
+  EPSSetFromOptions(eps_gn_primal);
+
   // Update EPS for a fresh solve on the new xeval_GN. 
   if (!gn_primal_usedensemat) { 
     // use MatShell 
@@ -1333,6 +1331,7 @@ std::vector<double> OptimProblem::computeGaussNewtonPrimalEvals(Vec xinit, Mat* 
   PetscInt nconv = std::min(numConv, neigvals);
   evals_re.resize(nconv);
 
+
   // Assemble eigenvectors into a dense matrix, one eigenvector per column.
   MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ndesign, nconv, NULL, evecs_out);
   MatSetUp(*evecs_out);
@@ -1351,6 +1350,7 @@ std::vector<double> OptimProblem::computeGaussNewtonPrimalEvals(Vec xinit, Mat* 
   for (int ix = 0; ix < neigvals; ix++) {
     VecDestroy(&evec_re[ix]);
   }
+  EPSDestroy(&eps_gn_primal);
 
   return evals_re;
 }

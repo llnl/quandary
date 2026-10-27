@@ -120,7 +120,6 @@ class OptimProblem {
   KSP ksp_gn_normaleq;  ///< Linear solver for Gauss-Newton normal equation (primal or dual)
   KSP ksp_gn_leastsquares; ///< Linear solver for Gauss-Newton least-squares problem
   Tao tao_gn_leastsquares_brgn;        ///< Tao BRGN solver for least squares
-  EPS eps_gn_primal; // EPS solver for the Gauss-Newton primal equation 
 
   // Options for Gauss-Newton solvers
   std::string gn_solver_mode; ///< Gauss-Newton solver mode: "primal" or "dual" or "least-squares"
@@ -149,9 +148,6 @@ class OptimProblem {
   Vec gn_dual_lowrank_temp; ///< Workspace for low-rank application (size = rank)
   PetscScalar gn_dual_precond_mu; ///< μ = σ_{r+1} for complement space
 
-  // TODO: Move these to local functions
-  int neigvals; ///< Number of eigenvalues to compute (=N^2-1)
-  int ncv; ///< Number of Lanczos vectors to use in EPS solver. HOW TO CHOOSE?? 
 
   public: 
     Vec xlower, xupper; ///< Lower and upper bounds for optimization variables
