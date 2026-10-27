@@ -305,6 +305,7 @@ void Output::openTrajectoryDataFiles(std::string prefix, int initid){
 
     // State observables, one file each 
     if (writeStateObservables) {
+      state_expectations_files.clear();
       for (size_t ifile = 0; ifile < state_observables_filenames.size(); ifile++) {
         snprintf(filename, 254, "%s/expected_%s.iinit%04d.dat", output_dir.c_str(), state_observables_filenames[ifile].c_str(), initid);
         FILE* file = fopen(filename, "w");
