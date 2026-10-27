@@ -310,7 +310,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     gn_maxiter = validators::field<int>(optimization_table, "gn_maxiter").greaterThan(0).valueOr(ConfigDefaults::GN_MAXITER);
 
 
-    gn_normaleq_solver = validators::field<std::string>(optimization_table, "gn_normaleq_solver").oneOf({"cg", "minres", "gmres"}).valueOr(ConfigDefaults::GN_NORMALEQ_SOLVER);
+    gn_normaleq_solver = validators::field<std::string>(optimization_table, "gn_normaleq_solver").oneOf({"cg", "minres", "gmres", "proj"}).valueOr(ConfigDefaults::GN_NORMALEQ_SOLVER);
     gn_solver_mode = validators::field<std::string>(optimization_table, "gn_solver_mode").oneOf({"primal", "dual", "least_squares"}).valueOr(ConfigDefaults::GN_SOLVER_MODE);
     gn_leastsquares_solver = validators::field<std::string>(optimization_table, "gn_leastsquares_solver").oneOf({"brgn", "lsqr"}).valueOr(ConfigDefaults::GN_LEASTSQUARES_SOLVER);
     gn_leastsquares_damping = validators::field<double>(optimization_table, "gn_leastsquares_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::GN_LEASTSQUARES_DAMPING);
