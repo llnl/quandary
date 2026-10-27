@@ -938,7 +938,7 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
   std::string stale_reason = "";
 
   // Check 1: KSP diverged
-  if (reason < 0) {
+  if (reason < 0 && gn_precond_enabled) {
     eigendecomp_is_stale = true;
     stale_reason = "KSP diverged";
   }
