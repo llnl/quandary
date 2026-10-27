@@ -132,9 +132,6 @@ class OptimProblem {
   int gn_precond_rank; ///< Rank for low-rank preconditioner
   int gn_maxiter; ///< Maximum iterations for Gauss-Newton KSP solver
   double gn_rtol; ///< Relative tolerance for Gauss-Newton KSP solver
-  PetscReal eps_tol = 1e-4; ///< Tolerance for EPS eigenvalue solver in primal mode
-  double eps_evals_cutoff = 1e-5; ///< Cutoff for eigenvalues of the Gauss-Newton matrix in primal mode
-  double eps_primal_damping = 1e-3; ///< Damping for eigenvalues of the Gauss-Newton matrix
 
   // Workspace for Gauss-Newton solvers
   int tangent_dim; ///< Dimension of the tangent space (dim²-1)

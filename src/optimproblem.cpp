@@ -251,13 +251,10 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   EPSSetOperators(eps_gn_primal, GN_Primal_MatShell, NULL);
   EPSSetProblemType(eps_gn_primal, EPS_HEP); // Hermitian
   EPSSetWhichEigenpairs(eps_gn_primal, EPS_LARGEST_REAL); // largest eigenvalues
-  double eps_thresh = eps_evals_cutoff;
-  EPSSetThreshold(eps_gn_primal, eps_thresh, PETSC_FALSE);  // absolute threshold
   neigvals = tangent_dim;
-  // ncv = neigvals + 2; // Max Krylov dimension. How to set??
   ncv = 2*neigvals ; // Max Krylov dimension. How to set??
   EPSSetDimensions(eps_gn_primal, neigvals, ncv, PETSC_DEFAULT);
-  EPSSetTolerances(eps_gn_primal, eps_tol, gn_maxiter);
+  EPSSetTolerances(eps_gn_primal, gn_rtol, gn_maxiter);
   EPSSetFromOptions(eps_gn_primal);
 }
 
@@ -949,12 +946,6 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
     // Print convergence reason for debugging
     const char* reason_str = KSPConvergedReasons[reason];
     printf("  KSP Convergence Reason: %s (code %d)\n", reason_str, (int)reason);
-
-    // Print tolerances for debugging DTOL issues
-    PetscReal rtol, abstol, dtol;
-    PetscInt maxits;
-    KSPGetTolerances(ksp_gn_normaleq, &rtol, &abstol, &dtol, &maxits);
-    printf("  KSP Tolerances: rtol=%e, abstol=%e, dtol=%e, maxits=%d\n", rtol, abstol, dtol, (int)maxits);
   }
 
   // Detect stale eigendecomposition and return flag to caller
@@ -1259,8 +1250,8 @@ void OptimProblem::solveGaussNewtonPrimalProjected(Vec xinit, const Vec b, Vec A
   PetscScalar* tmp_data;
   VecGetArray(tmp, &tmp_data);
   for (int i=0; i<evals.size(); i++) {
-    if (evals[i] > eps_evals_cutoff) {
-      tmp_data[i] /= (evals[i] + eps_primal_damping);
+    if (evals[i] > 1e-14) {
+      tmp_data[i] /= (evals[i] + gn_normaleq_damping);
     } else {
       tmp_data[i] = 0.0;
     }
@@ -1333,7 +1324,7 @@ std::vector<double> OptimProblem::computeGaussNewtonPrimalEvals(Vec xinit, Mat* 
     // Estimate the errror (needs one more application of A)
     double error = 0.0;
     EPSComputeError(eps_gn_primal,i,EPS_ERROR_RELATIVE,&error);
-    if (error > eps_tol) {
+    if (error > gn_rtol) {
       if (mpirank_world==0) printf("ERROR: Relative error of eigenpair %d is large (error=%1.4e)\n", i, error);
     }
   }
