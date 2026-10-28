@@ -677,6 +677,9 @@ PetscErrorCode OptimProblem::GN_Primal_MatMult(Mat A, const Vec v, Vec Av){
   // self->apply_GN_Jacobian(v, self->workvec_tangentspace); // y = P_G W^1/2 L v
   // self->apply_GN_Jacobian_Adjoint(self->workvec_tangentspace, Av);  // Av = (P_G W^1/2 L)^T y
 
+  // Add tikhonov regularization Av += \lambda v
+  VecAXPY(Av, self->gamma_tikhonov, v);
+
   return 0;
 }
 
@@ -788,8 +791,8 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
   Mat Preconditioner = (gn_solver_mode == "dual") ? GN_Dual_LowRank_MatShell : GN_Primal_LowRank_MatShell;
 
 
-  // Optional Levenberg-Marquardt damping: (L L^T + λI)
-  if (gn_normaleq_damping > 0.0) {
+  // Add damping: (L L^T + λI). But not for primal solver because that uses Tikhonov correctly. 
+  if (gn_normaleq_damping > 0.0 && gn_solver_mode != "primal") {
     MatShift(SystemMatrix, gn_normaleq_damping);
   }
 
@@ -833,7 +836,7 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
   } 
 
   // Revert the damping
-  if (gn_normaleq_damping > 0.0) {
+  if (gn_normaleq_damping > 0.0 && gn_solver_mode != "primal") {
     MatShift(SystemMatrix, -gn_normaleq_damping);
   }
 
