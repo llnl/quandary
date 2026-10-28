@@ -110,7 +110,7 @@ class OptimProblem {
   Mat GN_Primal_MatShell; ///< Applies L^*WL  
   Mat GN_Primal_MatDense; ///< Dense L^*WL (debug only)
   bool gn_primal_usedensemat = false; ///< Always false.
-  Mat GN_LeastSquares_MatShell; ///< Applies P_gL and, if damped, augments with lambda I. Misses W^1/2 at this point. TODO: Should probably be calling GN_Jacobian_Tangentspace plus augmentation. 
+  Mat GN_LeastSquares_MatShell; ///< Applies P_gW^1/2L and, if damped, augments with lambda I  
   Mat GN_Dual_MatShell; ///< Applies P_G W^1/2 L L^* W^1/2 P_G
   Mat GN_Dual_MatDense; ///< Dense P_G W^1/2 L L^* W^1/2 P_G
   Mat GN_Dual_LowRank_MatShell; ///< Applies low-rank preconditioned dual: M^{-1/2} (L L^T + λI) M^{-1/2}
@@ -291,8 +291,6 @@ class OptimProblem {
    * @brief MatMult for GN_LeastSquares_MatShell: Applies P_G L, and, if damped, augments with lambda_I 
    * 
    * @note: Requires xeval_GN to be set before calling. Performs a nonlinear solveODE at xeval_GN if !nonlinear_forward_valid, so to store U(t;xeval_GN) for all t. 
-   * 
-   * @note: TODO: Implement W^1/2 in tangent space representation for the least-squares solver. Probably use the apply_GN_Jacobian_Tangentspace function.
    */
   static PetscErrorCode GN_LeastSquares_MatMult(Mat A, Vec v, Vec y); 
   static PetscErrorCode GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec vout); 

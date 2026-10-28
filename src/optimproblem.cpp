@@ -144,8 +144,13 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   gn_prec_update_interval = config.getGnPrecUpdateInterval();
   gn_precond_rank = config.getGnPrecondRank();
 
-  gn_precond_enabled = (gn_prec_update_interval >= -1);
   tangent_dim = mastereq->getDim()*mastereq->getDim()-1;
+  gn_precond_enabled = (gn_prec_update_interval >= -1);
+
+  // Disable preconditioner for least-squares problem
+  if (gn_solver_mode == "least_squares") {
+    gn_precond_enabled = false;
+  }
 
   // Create MatShell for least-squares problem
   int N = ndesign;
