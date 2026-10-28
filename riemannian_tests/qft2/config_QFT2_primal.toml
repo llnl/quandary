@@ -48,7 +48,7 @@ gn_solver_mode = "primal"
 gn_normaleq_solver = "minres"
 gn_normaleq_minres_qlp = true
 #gn_normaleq_solver = "proj"
-gn_normaleq_damping = 1e-5
+gn_normaleq_damping = 0.0
 
 # Stopping criteria for inner GN solvers
 gn_maxiter = 100

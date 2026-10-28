@@ -51,13 +51,13 @@ gn_solver_mode = "primal"
 # gn_solver_mode = "least_squares"
 
 # experimental preconditioner (dual mode only)
-gn_prec_update_interval = -1
+gn_prec_update_interval = -2
 gn_precond_rank = 20
 
 # Those apply to solving the normal equation
 # gn_normaleq_damping = 1e-5
 gn_rtol = 1e-5
-gn_normaleq_damping = 1e-3
+gn_normaleq_damping = 0.0
 gn_normaleq_solver = "minres"
 gn_normaleq_minres_qlp = true  
 
@@ -67,7 +67,7 @@ gn_normaleq_minres_qlp = true
 # gn_leastsquares_damping = 1e-3
 
 [output]
-directory = "./"
+directory = "./primal_project"
 # observables = ["population", "expectedEnergy", "fullstate"]
 timestep_stride = 1
 optimization_stride = 1
