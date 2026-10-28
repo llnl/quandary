@@ -695,6 +695,9 @@ PetscErrorCode OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
   // Ay = P_G W^1/2 L v_temp (design space -> tangent space)
   self->apply_GN_Jacobian(self->workvec_designspace, Ay);
 
+  // Add damping
+  VecAXPY(Ay, self->gn_normaleq_damping, y);
+
   return 0;
 }
 
@@ -790,12 +793,6 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
   Mat SystemMatrix = (gn_solver_mode == "dual") ? GN_Dual_MatShell : GN_Primal_MatShell;
   Mat Preconditioner = (gn_solver_mode == "dual") ? GN_Dual_LowRank_MatShell : GN_Primal_LowRank_MatShell;
 
-
-  // Add damping: (L L^T + λI). But not for primal solver because that uses Tikhonov correctly. 
-  if (gn_normaleq_damping > 0.0 && gn_solver_mode != "primal") {
-    MatShift(SystemMatrix, gn_normaleq_damping);
-  }
-
   Vec vec_workspace = nullptr;
   if (gn_solver_mode == "dual") {
     vec_workspace = workvec_tangentspace;
@@ -834,11 +831,6 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
     VecDestroy(&b_scaled);
     VecDestroy(&z_solution);
   } 
-
-  // Revert the damping
-  if (gn_normaleq_damping > 0.0 && gn_solver_mode != "primal") {
-    MatShift(SystemMatrix, -gn_normaleq_damping);
-  }
 
   // Recover primal solution: v = L^* y 
   if (gn_solver_mode == "dual") {
@@ -904,11 +896,6 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
 
   // Use passed RHS
   const Vec b = b_rhs;
-
-  // Apply damping to the operator
-  if (gn_normaleq_damping > 0.0) {
-    MatShift(GN_Dual_MatShell, gn_normaleq_damping);
-  }
 
   // Compute eigendecomposition: (L L^T + λI) V_{r+1} = Σ_{r+1} V_{r+1}
   // We compute r+1 eigenvalues to get μ = λ_{r+1} for the complement space
@@ -1084,11 +1071,6 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
       // Reset KSP operators to unpreconditioned for next time
       KSPSetOperators(ksp_gn_normaleq, GN_Dual_MatShell, GN_Dual_MatShell);
     }
-  }
-
-  // Revert damping
-  if (gn_normaleq_damping > 0.0) {
-    MatShift(GN_Dual_MatShell, -gn_normaleq_damping);
   }
 
   // Cleanup (b_rhs is destroyed by caller)
