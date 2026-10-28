@@ -370,6 +370,15 @@ class OptimProblem {
    */
   void updateGaussNewtonPreconditionerLowRank(int rank);
 
+
+  /**
+   * @brief Construct dense verson of the rank-r low-rank preconditoner M^{-1/2} ≈ U Σ^{-1/2} U^T + mu^{-1/2} (I - U U^T) for the dual Gauss-Newton preconditioner
+   *
+   * Uses EPS solver to compute r+1 largest eigenvalues and eigenvectors of the dual GN_Dual_MatShell. Populates the low-rank preconditioner data structures: V_r (gn_dual_lowrank_U), Σ_r (gn_dual_lowrank_sigma_invsqrt), and μ (gn_dual_precond_mu).
+   * @returns Dense matrix representing the preconditioned dual Gauss-Newton matrix M^{-1/2} A M^{-1/2}.
+   */
+  Mat updateGaussNewtonDualPreconditionerMatDense();
+
   /**
    * @brief Applies the low-rank dual Gauss-Newton preconditioner: y = M^{-1/2} x, where M ≈ U Σ U^T is the precomputed low-rank approximation.
    * 

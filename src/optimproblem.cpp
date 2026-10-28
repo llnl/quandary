@@ -206,7 +206,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   MatShellSetOperation(GN_Dual_LowRank_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_LowRank_MatMult);
   MatCreateShell(PETSC_COMM_SELF, ndesign, ndesign, ndesign, ndesign, this, &GN_Primal_LowRank_MatShell);
   MatShellSetOperation(GN_Primal_LowRank_MatShell, MATOP_MULT, (void(*)(void))GN_Primal_LowRank_MatMult);
-
+  
   // Create Gauss-Newton normal equation linear solver (used for both the primal and the dual equations) 
   KSPCreate(PETSC_COMM_SELF, &ksp_gn_normaleq);
   KSPSetInitialGuessNonzero(ksp_gn_normaleq, PETSC_TRUE);
@@ -1910,6 +1910,94 @@ void OptimProblem::updateGaussNewtonPreconditionerLowRank(int rank){
 
   delete[] eigenvalues;
 }
+
+Mat OptimProblem::updateGaussNewtonDualPreconditionerMatDense(){
+  Mat mat_dual = getGN_Dual_MatDense();
+  int rank = gn_precond_rank;
+
+  // Get low-rank preconditioner data
+  Mat V_r = getGN_Dual_LowRank_U();
+  Vec sigma_invsqrt = getGN_Dual_LowRank_Sigma_InvSqrt();
+  PetscScalar mu = getGN_Dual_Precond_Mu();
+  PetscScalar mu_invsqrt = 1.0 / PetscSqrtScalar(mu);
+
+  if (mpirank_world == 0 && !quietmode) {
+    printf("  Forming M^{-1/2} as dense matrix (n=%d, r=%d, μ^{-1/2}=%e)...\n",
+            (int)tangent_dim, rank, mu_invsqrt);
+  }
+
+  Mat M_invsqrt;
+  MatCreateSeqDense(PETSC_COMM_SELF, tangent_dim, tangent_dim, NULL, &M_invsqrt);
+  MatZeroEntries(M_invsqrt);
+
+  // Get direct access to dense matrix storage
+  PetscScalar *M_data;
+  MatDenseGetArray(M_invsqrt, &M_data);
+
+  // Get V_r and sigma data
+  PetscScalar *Vr_data;
+  MatDenseGetArray(V_r, &Vr_data);
+
+  PetscScalar *sigma_data;
+  VecGetArray(sigma_invsqrt, &sigma_data);
+
+  // Build M^{-1/2} directly
+  // M_data is column-major: M_data[i + j*tangent_dim] = M(i,j)
+  for (int i = 0; i < tangent_dim; i++) {
+    for (int j = 0; j < tangent_dim; j++) {
+      PetscScalar val = 0.0;
+
+      // Add V_r Σ_r^{-1/2} V_r^T contribution
+      for (int k = 0; k < rank; k++) {
+        // V_r is column-major: Vr_data[i + k*tangent_dim] = V_r(i,k)
+        val += Vr_data[i + k * tangent_dim] * sigma_data[k] * Vr_data[j + k * tangent_dim];
+      }
+
+      // Add μ^{-1/2}(I - V_r V_r^T) contribution
+      PetscScalar vv_sum = 0.0;
+      for (int k = 0; k < rank; k++) {
+        vv_sum += Vr_data[i + k * tangent_dim] * Vr_data[j + k * tangent_dim];
+      }
+      val += mu_invsqrt * ((i == j ? 1.0 : 0.0) - vv_sum);
+
+      M_data[i + j * tangent_dim] = val;
+    }
+  }
+
+  MatDenseRestoreArray(M_invsqrt, &M_data);
+  MatDenseRestoreArray(V_r, &Vr_data);
+  VecRestoreArray(sigma_invsqrt, &sigma_data);
+
+  MatAssemblyBegin(M_invsqrt, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(M_invsqrt, MAT_FINAL_ASSEMBLY);
+
+  if (mpirank_world == 0 && !quietmode) {
+    printf("  Computing M^{-1/2} A M^{-1/2}...\n");
+  }
+
+  // Compute preconditioned matrix: M^{-1/2} A M^{-1/2}
+  // First: temp = A M^{-1/2}
+  Mat temp;
+  MatMatMult(mat_dual, M_invsqrt, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &temp);
+
+  // Assemble the preconditioned dense matrix
+  Mat mat_dual_precond;
+  int M_dual = tangent_dim;
+  MatCreateDense(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, NULL, &mat_dual_precond); // only debug and output
+  MatZeroEntries(mat_dual_precond);
+
+  // Second: mat_dual_precond = M^{-1/2} temp = M^{-1/2} A M^{-1/2}
+  MatMatMult(M_invsqrt, temp, MAT_REUSE_MATRIX, PETSC_DEFAULT, &mat_dual_precond);
+
+  MatAssemblyBegin(mat_dual_precond, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(mat_dual_precond, MAT_FINAL_ASSEMBLY);
+
+  MatDestroy(&temp);
+  MatDestroy(&M_invsqrt);
+
+  return mat_dual_precond;
+}
+
 
 void OptimProblem::apply_GN_LowRank_Precond(const Vec x, Vec y){
   OptimProblem *self = this;
