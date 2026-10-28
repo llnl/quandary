@@ -162,7 +162,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_MULT, (void(*)(void))GN_LeastSquares_MatMult);
   MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_MULT_TRANSPOSE, (void(*)(void))GN_LeastSquares_MatMultTranspose);
   // Pre-allocate workspace vectors for GN_LeastSquares_MatShell operations
-  workvec_statespace = new Vec[ninit_local];
+  workvec_statespace.resize(ninit_local);
   for (int iinit = 0; iinit < ninit_local; iinit++) {
     VecDuplicate(rho_t0_bar, &workvec_statespace[iinit]);
   }
@@ -293,7 +293,7 @@ OptimProblem::~OptimProblem() {
   for (int iinit = 0; iinit < ninit_local; iinit++) {
     VecDestroy(&workvec_statespace[iinit]);
   }
-  delete[] workvec_statespace;
+  workvec_statespace.clear();
 }
 
 
@@ -670,65 +670,12 @@ void OptimProblem::evalLinearizedForward(const Vec x, const Vec v){
 PetscErrorCode OptimProblem::GN_Primal_MatMult(Mat A, const Vec v, Vec Av){
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
-  // if (self->mpirank_world == 0) printf("APPLYING GAUSS-NEWTON...\n");
 
-  // Grab the point of evaluation from the shell
-  Vec x = self->xeval_GN;
+  self->apply_GN_Jacobian(v, self->workvec_tangentspace, false); // fills internal workvec_statespace with the raw output of W^1/2 L v and sets workvec_tangentspace to 0
+  self->apply_GN_Jacobian_Adjoint(self->workvec_tangentspace, Av, false); // ignores the input workvec_tangentspace and uses internal workvec_statespace instead
 
-  //  Reset output 
-  VecZeroEntries(Av);
-  
-  // Apply linearized forward to get dU/dalpha x v
-  // assumes that the timestepper's trajectory_states are already populated and computes all lin_trajectory_states.
-  self->evalLinearizedForward(x, v);
-
-  // If include W^1/2, precompute z = 1/n<V,LinStates> 
-  double z_re = 0.0;
-  double z_im = 0.0;
-  for (int iinit=0; iinit<self->ninit_local; iinit++) {
-    int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-    self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
-    double tmp_re = 0.0;
-    double tmp_im = 0.0;
-    Vec wT = self->timestepper->getLinearizedFinalState(iinit);
-    self->optim_target->HilbertSchmidtOverlap(wT, false, &tmp_re, &tmp_im);
-    z_re +=  tmp_re / self->mastereq->getDim();
-    z_im +=  tmp_im / self->mastereq->getDim();
-  }
-  // Gather result J_inf(W(T))
-  double myz_re = z_re;
-  double myz_im = z_im;
-  MPI_Allreduce(&myz_re, &z_re, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
-  MPI_Allreduce(&myz_im, &z_im, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
-
-  // Solve the adjoint ODE for initial condition 
-  for (int iinit = 0; iinit < self->ninit_local; iinit++) {
-
-    // Set terminal condition for adjoint
-    Vec lin_final_state = self->timestepper->getLinearizedFinalState(iinit);
-
-    // Set the terminal condition 
-    VecCopy(lin_final_state, self->rho_t0_bar);  // w_i(T)
-
-    // Include W = 2/n(I-<V,cdot>V)
-    double scale = 2.0 / self->mastereq->getDim();
-    VecScale(self->rho_t0_bar, scale);
-    int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-    self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
-    self->optim_target->HilbertSchmidtOverlap_diff(self->rho_t0_bar, false, -scale*z_re, -scale*z_im);
-
-    // Solve adjoint backward ODE
-    self->timestepper->solveAdjointODE(iinit, self->rho_t0_bar, 0.0, 0.0, 0.0, 0.0);
-
-    // Add gradient to output
-    VecAXPY(Av, 1.0, self->timestepper->getReducedGradient());
-  }
-
-  /* Sum up the gradient from all initial condition processors */
-  PetscScalar* Av_data; 
-  VecGetArray(Av, &Av_data);
-  MPI_Allreduce(MPI_IN_PLACE, Av_data, self->ndesign, MPIU_SCALAR, MPI_SUM, self->comm_init);
-  VecRestoreArray(Av, &Av_data);
+  // self->apply_GN_Jacobian(v, self->workvec_tangentspace); // y = P_G W^1/2 L v
+  // self->apply_GN_Jacobian_Adjoint(self->workvec_tangentspace, Av);  // Av = (P_G W^1/2 L)^T y
 
   return 0;
 }
@@ -741,9 +688,9 @@ PetscErrorCode OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
   VecZeroEntries(Ay);
 
   // v_temp = L^T W^1/2 P_G y (tangent space -> design space)
-  self->apply_GN_Jacobian_Tangentspace_Adjoint(y, self->workvec_designspace);
+  self->apply_GN_Jacobian_Adjoint(y, self->workvec_designspace);
   // Ay = P_G W^1/2 L v_temp (design space -> tangent space)
-  self->apply_GN_Jacobian_Tangentspace(self->workvec_designspace, Ay);
+  self->apply_GN_Jacobian(self->workvec_designspace, Ay);
 
   return 0;
 }
@@ -761,7 +708,8 @@ Vec OptimProblem::computeGaussNewtonRHS(const std::string& gn_solver_mode, const
     VecScale(b, -1.0);
     
   } else if (gn_solver_mode == "dual" || gn_solver_mode == "least_squares") {
-    // For dual and least-squares solver: - W^1/2 U = -sqrt(n/2)\nabla_U J projected to tangent space 
+    // Dual: b = - \nabla_U J = WU, projected onto tangent space
+    // Least-squares: b = - W^1/2 U, projected onto tangent space
 
     // Create the RHS vector of appropriate size 
     if (gn_solver_mode == "dual") {
@@ -772,53 +720,29 @@ Vec OptimProblem::computeGaussNewtonRHS(const std::string& gn_solver_mode, const
       VecZeroEntries(b);
     }
 
-    // Precompute z = 1/n tr(V^dagger U), needed for ∇_U J
-    double z_re = 0.0;
-    double z_im = 0.0;
-    for (int iinit = 0; iinit < ninit_local; iinit++) {
-      int iinit_global = mpirank_init * ninit_local + iinit;
-      optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
-      double obj_lin_iinit_re = 0.0;
-      double obj_lin_iinit_im = 0.0;
-      Vec ui = timestepper->getFinalState(iinit);
-      optim_target->evalJ(ui, &obj_lin_iinit_re, &obj_lin_iinit_im);
-      z_re += obj_weights[iinit] * obj_lin_iinit_re;
-      z_im += obj_weights[iinit] * obj_lin_iinit_im;
+    // Apply scaled W to U.
+    for (int iinit=0; iinit<ninit_local; iinit++) {
+      VecCopy(timestepper->getFinalState(iinit), workvec_statespace[iinit]); // copy U into workvecs
     }
-    double myz_re = z_re;
-    double myz_im = z_im;
-    MPI_Allreduce(&myz_re, &z_re, 1, MPI_DOUBLE, MPI_SUM, comm_init);
-    MPI_Allreduce(&myz_im, &z_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+    double scale = 2.0 / mastereq->getDim(); // dual: alpha = 2/n, to get WU=\nabla_UJ no W^1/2 ? 
+    if (gn_solver_mode == "least_squares") { // least-squares: alpha = sqrt(2/n) to get W^1/2 U
+      scale = sqrt(2.0 / mastereq->getDim());
+    }
+    projectToGateComplement(workvec_statespace, scale);
 
-    // Compute -sqrt(n/2)∇_U J and project to tangent space
+    // Project result onto tangent space  -> fills b from workvec_statespace
     PetscScalar *b_data;
     VecGetArray(b, &b_data);
     for (int iinit = 0; iinit < ninit_local; iinit++) {
       int iinit_global = mpirank_init * ninit_local + iinit;
-      Vec ui = timestepper->getFinalState(iinit);
-
-      // Use pre-allocated workspace vector
-      VecCopy(ui,  workvec_statespace[iinit]);
-
-      // compute wsub = alpha * (ui - z * V), where z = 1/n tr(V^dagger U)
-      double scale = 2.0 / mastereq->getDim(); // dual: alpha = 2/n, no W^1/2!
-      if (gn_solver_mode == "least_squares") { // for least-squares: alpha = sqrt(2/n) includes W^1/2 factor
-        scale = sqrt(2.0 / mastereq->getDim());
-      }
-      VecScale(workvec_statespace[iinit], scale);
-      optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
-      optim_target->HilbertSchmidtOverlap_diff(workvec_statespace[iinit], false, -scale*z_re, -scale*z_im);
-
-      // Project onto tangent space 
       Mat U_final_re = optim_target->getFinalUnitaryRe();
       Mat U_final_im = optim_target->getFinalUnitaryIm();
       GellMann::projectVecToTangentSpace(workvec_statespace[iinit], U_final_re, U_final_im, mastereq->getDim(), iinit_global, b_data);
     }
-
-    // Allreduce b across all comm_init processors
     MPI_Allreduce(MPI_IN_PLACE, b_data, tangent_dim, MPIU_SCALAR, MPI_SUM, comm_init);
     VecRestoreArray(b, &b_data);
 
+    // Scale to get negative direction
     VecScale(b, -1.0);
 
   } else {
@@ -915,7 +839,7 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
 
   // Recover primal solution: v = L^* y 
   if (gn_solver_mode == "dual") {
-    apply_GN_Jacobian_Tangentspace_Adjoint(workvec_tangentspace, v_out);
+    apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out);
   } else {
     VecCopy(vec_workspace, v_out);
   }
@@ -1169,7 +1093,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   delete[] eigenvalues;
 
   // Recover primal solution: v = L^T y (use pure Jacobian transpose for dual mode)
-  apply_GN_Jacobian_Tangentspace_Adjoint(workvec_tangentspace, v_out);
+  apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out);
 
   // Store KSP iterations for reporting in optimization history
   ksp_iters_last = refine_iters;
@@ -2256,7 +2180,7 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMult(Mat A, Vec v, Vec y)
   MatShellGetContext(A, (void**)&self);
 
   // Fill the top part of y with Lv projected onto tangent space
-  self->apply_GN_Jacobian_Tangentspace(v, y);
+  self->apply_GN_Jacobian(v, y);
 
   // Fill the bottom of y with damping: lambda * v
   PetscInt M;
@@ -2298,7 +2222,7 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w_long,
   VecRestoreArrayRead(w_long, &wl_data);
 
   // Apply adjoint of GN Jacobian in tangent space
-  self->apply_GN_Jacobian_Tangentspace_Adjoint(w, vout);
+  self->apply_GN_Jacobian_Adjoint(w, vout);
 
   // Add damping lambda * w_long[tangent_dim:end] contribution to the output
   PetscScalar* vout_data;
@@ -2314,7 +2238,7 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w_long,
 }
 
 
-void OptimProblem::apply_GN_Jacobian_Tangentspace(Vec v, Vec y)
+void OptimProblem::apply_GN_Jacobian(Vec v, Vec y, bool project_to_tangentspace)
 {
   // Jacobian forward: y = P_G W^1/2 Lv 
 
@@ -2323,58 +2247,32 @@ void OptimProblem::apply_GN_Jacobian_Tangentspace(Vec v, Vec y)
   // Reset output
   VecZeroEntries(y);
 
-  // Apply linearized forward to get dU/dalpha * v
+  // Apply linearized forward to get Lv = dU/dalpha * v
   self->evalLinearizedForward(self->xeval_GN, v);
 
-  // If include W^1/2, precompute z = 1/n<V,W> 
-  double z_re = 0.0;
-  double z_im = 0.0;
+  // Apply W^1/2 to linearized states W^1/2 = sqrt(2/n) (I - 1/n <V, . > V) -> fills workvec_statespace[iinit]
   for (int iinit=0; iinit<self->ninit_local; iinit++) {
-    int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-    self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
-    double tmp_re = 0.0;
-    double tmp_im = 0.0;
-    Vec wT = self->timestepper->getLinearizedFinalState(iinit);
-    self->optim_target->HilbertSchmidtOverlap(wT, false, &tmp_re, &tmp_im);
-    z_re +=  tmp_re / self->mastereq->getDim();
-    z_im +=  tmp_im / self->mastereq->getDim();
+    VecCopy(self->timestepper->getLinearizedFinalState(iinit), self->workvec_statespace[iinit]);
   }
-  // Gather result J_inf(W(T))
-  double myz_re = z_re;
-  double myz_im = z_im;
-  MPI_Allreduce(&myz_re, &z_re, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
-  MPI_Allreduce(&myz_im, &z_im, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
+  self->projectToGateComplement(self->workvec_statespace, sqrt(2.0 / self->mastereq->getDim()));
 
-  // For each initial condition, apply W^1/2 and Project onto tangent space
-  PetscScalar *y_data;
-  VecGetArray(y, &y_data);
-  for (int iinit = 0; iinit < self->ninit_local; iinit++) {
-    int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-
-    // w_i(T). Use rho_t0_bar as temporary storage
-    Vec lin_final_state = self->timestepper->getLinearizedFinalState(iinit);
-    VecCopy(lin_final_state, self->rho_t0_bar);  
-
-    // Include W^1/2 = sqrt(2/n)(I-z*V), if requested
-    double scale = sqrt(2.0 / self->mastereq->getDim());
-    VecScale(self->rho_t0_bar, scale);
-    self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
-    self->optim_target->HilbertSchmidtOverlap_diff(self->rho_t0_bar, false, -scale*z_re, -scale*z_im);
-
-    // Project onto tangent space -> fills the appropriate entries in y_data
+  // Project result onto the tangent space  -> fills y from workvec_statespace
+  if (project_to_tangentspace) {
+    PetscScalar *y_data;
+    VecGetArray(y, &y_data);
     Mat U_final_re = self->optim_target->getFinalUnitaryRe();
     Mat U_final_im = self->optim_target->getFinalUnitaryIm();
-    GellMann::projectVecToTangentSpace(self->rho_t0_bar, U_final_re, U_final_im, self->mastereq->getDim(), iinit_global, y_data);
-  }
-
-  // Allreduce across comm_init processors
-  MPI_Allreduce(MPI_IN_PLACE, y_data, tangent_dim, MPIU_SCALAR, MPI_SUM, self->comm_init);
-  VecRestoreArray(y, &y_data);
-
-  // No damping rows - pure Jacobian only
+    for (int iinit = 0; iinit < self->ninit_local; iinit++) {
+      int iinit_global = self->mpirank_init * self->ninit_local + iinit;
+      // fill the appropriate entries in y_data using the workvec_statespace[iinit] (W^1/2 Lv)
+      GellMann::projectVecToTangentSpace(self->workvec_statespace[iinit], U_final_re, U_final_im, self->mastereq->getDim(), iinit_global, y_data);
+    }
+    MPI_Allreduce(MPI_IN_PLACE, y_data, tangent_dim, MPIU_SCALAR, MPI_SUM, self->comm_init);
+    VecRestoreArray(y, &y_data);
+  } // otherwise leaves y unchanged. 
 }
 
-void OptimProblem::apply_GN_Jacobian_Tangentspace_Adjoint(Vec w, Vec vout)
+void OptimProblem::apply_GN_Jacobian_Adjoint(Vec w, Vec vout, bool recover_from_tangent_space)
 {
   // Jacobian transpose: vout = L^T W^1/2 P_G^{-1} w 
 
@@ -2383,49 +2281,24 @@ void OptimProblem::apply_GN_Jacobian_Tangentspace_Adjoint(Vec w, Vec vout)
   // Reset output
   VecZeroEntries(vout);
 
-  // Get read access to w (tangent space)
-  const PetscScalar *w_data;
-  VecGetArrayRead(w, &w_data);
+  // P_G^{-1}: Reconstruct full state from incoming tangent space vector (adjoint of projectVecToTangentSpace) -> fills workvec_statespace[iinit]
+  if (recover_from_tangent_space) {
+    const PetscScalar *w_data;
+    VecGetArrayRead(w, &w_data);
+    for (int iinit = 0; iinit < self->ninit_local; iinit++) {
+      int iinit_global = self->mpirank_init * self->ninit_local + iinit;
+      Mat U_final_re = self->optim_target->getFinalUnitaryRe();
+      Mat U_final_im = self->optim_target->getFinalUnitaryIm();
+      GellMann::reconstructVecFromTangentSpace(w_data, U_final_re, U_final_im, self->mastereq->getDim(), iinit_global, self->workvec_statespace[iinit]);
+    }
+    VecRestoreArrayRead(w, &w_data);
+  } // otherwise takes workvec_statespace as input directly without reconstructing from the tangent space.
 
-  // P_G^{-1}: For each initial condition, reconstruct full state vectors from tangent space coefficients
+  // Apply W^1/2 to workspace: W^1/2  = sqrt(2/n)(I - 1/n <V, cdot> V) -> updates workvec_statespace[iinit]
+  self->projectToGateComplement(self->workvec_statespace, sqrt(2.0 / self->mastereq->getDim()));
+
+  // Solve adjoint backward ODE for each terminal condition in workvec_statespace[iinit]
   for (int iinit = 0; iinit < self->ninit_local; iinit++) {
-    int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-    // Reconstruct full state vector (adjoint of projectVecToTangentSpace) -> fills workvec_statespace[iinit]
-    Mat U_final_re = self->optim_target->getFinalUnitaryRe();
-    Mat U_final_im = self->optim_target->getFinalUnitaryIm();
-    GellMann::reconstructVecFromTangentSpace(w_data, U_final_re, U_final_im, self->mastereq->getDim(), iinit_global, self->workvec_statespace[iinit]);
-  }
-  VecRestoreArrayRead(w, &w_data);
-
-  // If include W^1/2, precompute z = 1/n<V,workvec_statespace> 
-  double z_re = 0.0;
-  double z_im = 0.0;
-  for (int iinit=0; iinit<self->ninit_local; iinit++) {
-    int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-    self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
-    double tmp_re = 0.0;
-    double tmp_im = 0.0;
-    self->optim_target->HilbertSchmidtOverlap(self->workvec_statespace[iinit], false, &tmp_re, &tmp_im);
-    z_re +=  tmp_re / self->mastereq->getDim();
-    z_im +=  tmp_im / self->mastereq->getDim();
-  }
-  // Gather result J_inf(W(T))
-  double myz_re = z_re;
-  double myz_im = z_im;
-  MPI_Allreduce(&myz_re, &z_re, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
-  MPI_Allreduce(&myz_im, &z_im, 1, MPI_DOUBLE, MPI_SUM, self->comm_init);
-  
-
-  // Solve adjoint backward ODE for each terminal condition
-  for (int iinit = 0; iinit < self->ninit_local; iinit++) {
-
-    // Include W = sqrt(2/n)(I-<V,cdot>V), if requested
-    double scale = sqrt(2.0 / self->mastereq->getDim());
-    VecScale(self->workvec_statespace[iinit], scale);
-    int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-    self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
-    self->optim_target->HilbertSchmidtOverlap_diff(self->workvec_statespace[iinit], false, -scale*z_re, -scale*z_im);
-
     self->timestepper->solveAdjointODE(iinit, self->workvec_statespace[iinit], 0.0, 0.0, 0.0, 0.0);
     VecAXPY(vout, 1.0, self->timestepper->getReducedGradient());
   }
@@ -2435,4 +2308,35 @@ void OptimProblem::apply_GN_Jacobian_Tangentspace_Adjoint(Vec w, Vec vout)
   VecGetArray(vout, &vout_data);
   MPI_Allreduce(MPI_IN_PLACE, vout_data, self->ndesign, MPIU_SCALAR, MPI_SUM, self->comm_init);
   VecRestoreArray(vout, &vout_data);
+}
+
+
+
+void OptimProblem::projectToGateComplement(std::vector<Vec> &states, double alpha){
+  assert(states.size() == ninit_local);
+
+  // Pre-compute z = 1/n<V,states> 
+  double z_re = 0.0;
+  double z_im = 0.0;
+  for (int iinit=0; iinit<ninit_local; iinit++) {
+    int iinit_global = mpirank_init * ninit_local + iinit;
+    optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
+    double tmp_re = 0.0;
+    double tmp_im = 0.0;
+    optim_target->HilbertSchmidtOverlap(states[iinit], false, &tmp_re, &tmp_im);
+    z_re +=  tmp_re / mastereq->getDim();
+    z_im +=  tmp_im / mastereq->getDim();
+  }
+  double myz_re = z_re;
+  double myz_im = z_im;
+  MPI_Allreduce(&myz_re, &z_re, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+  MPI_Allreduce(&myz_im, &z_im, 1, MPI_DOUBLE, MPI_SUM, comm_init);
+
+  // Apply W  = alpha*(I - z * V) using the precomputed z for each initial state
+  for (int iinit = 0; iinit < ninit_local; iinit++) {
+    int iinit_global = mpirank_init * ninit_local + iinit;
+    VecScale(states[iinit], alpha); // states = alpha * states
+    optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
+    optim_target->HilbertSchmidtOverlap_diff(states[iinit], false, -alpha*z_re, -alpha*z_im); // states += -alpha * z * V
+  }
 }

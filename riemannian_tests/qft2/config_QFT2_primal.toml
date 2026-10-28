@@ -55,7 +55,7 @@ gn_maxiter = 100
 gn_rtol = 1e-5
 
 # Preconditioner
-gn_prec_update_interval = -1
+gn_prec_update_interval = -2
 gn_precond_rank = 10
 
 # Inner solver for least squares

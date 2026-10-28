@@ -138,7 +138,7 @@ class OptimProblem {
   int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton normal or least squares solvers 
   Vec brgn_rhs; ///< Cached RHS vector for BRGN residual evaluation
   Vec brgn_residual; ///< Cached Residual vector for BRGN solver
-  Vec *workvec_statespace; ///< Array of workspace vectors in the state space (one per initial condition, size = dim²-1)
+  std::vector<Vec> workvec_statespace; ///< Array of workspace vectors in the state space (one per initial condition, size = dim²-1)
   Vec workvec_tangentspace; ///< Workspace vector in the tangent space (size = tangent_dim)
   Vec workvec_designspace; ///< Workspace vector in the design space (size = ndesign)
   int gn_dual_ksp_baseline; ///< Baseline KSP iterations right after preconditioner formation (for adaptive update)
@@ -298,7 +298,7 @@ class OptimProblem {
   /**
    * @brief MatMult GN_Dual_MatShell: Applies P_G W^1/2 L L^* W^1/2 P_G 
    * 
-   * Calls apply_GN_Jacobian_Tangentspace_Adjoint (L*^ W^1/2 P_G)followed by apply_GN_Jacobian_Tangentspace (P_G W^1/2 L)
+   * Calls apply_GN_Jacobian_Adjoint (L*^ W^1/2 P_G)followed by apply_GN_Jacobian (P_G W^1/2 L)
    * 
    * @note: Requires xeval_GN to be set before calling. Performs a nonlinear solveODE at xeval_GN if !nonlinear_forward_valid, so to store U(t;xeval_GN) for all t. 
    */
@@ -323,8 +323,9 @@ class OptimProblem {
    * 
    * @param v Input vector in the design space
    * @param y Output vector in the tangent space
+   * @param project_to_tangentspace If false, fills internal workvec_statespace with the raw output of W^1/2 L v and sets y to 0. Only used in GN_primal_MatMult.  
    */
-  void apply_GN_Jacobian_Tangentspace(Vec v, Vec y); 
+  void apply_GN_Jacobian(Vec v, Vec y, bool project_to_tangentspace = true); 
 
   /**
    * @brief Applies the adjoint of the Gauss-Newton Jacobian projected onto the tangent space: vout = (P_G W^1/2 L)^T w
@@ -333,8 +334,17 @@ class OptimProblem {
    * 
    * @param w Input vector in the tangent space
    * @param vout Output vector in the design space
+   * @param recover_from_tangent_space If false, takes workvec_statespace as input instead of reconstructing from the tangent space. Only used in GN_primal_MatMult.
    */
-  void apply_GN_Jacobian_Tangentspace_Adjoint(Vec w, Vec vout); 
+  void apply_GN_Jacobian_Adjoint(Vec w, Vec vout, bool recover_from_tangent_space = true); 
+
+  /**
+   * @brief Applies projection W = alpha*(I - 1/n <V, cdot> V) onto orthogonal complement of V
+   * 
+   * @param states Vector of ninit_local states to which W should be applied to
+   * @param alpha Scaling factor 
+   */
+  void projectToGateComplement(std::vector<Vec> &states, double alpha);
 
   /**
    * @brief Updates the dense primal Gauss-Newton matrix based on the current point of evaluation xeval_GN by calling GN_Primal_MatShell on each unit vectoor.
@@ -564,3 +574,4 @@ PetscErrorCode TaoEvalObjectiveAndGradient(Tao tao, Vec x, PetscReal *f, Vec G, 
  * @return PetscErrorCode Error code
  */
 PetscErrorCode KSPMonitorResidualAndSolution(KSP ksp, PetscInt it, PetscReal rnorm, void* ctx);
+
