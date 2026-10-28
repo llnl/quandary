@@ -136,11 +136,11 @@ class OptimProblem {
   int tangent_dim; ///< Dimension of the tangent space (dim²-1)
   bool gn_precond_enabled; ///< Flag whether Gauss-Newton preconditioner is enabled
   int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton normal or least squares solvers 
-  Vec *wsub_workspace; ///< Pre-allocated workspace to compute -\nabla_U J
   Vec brgn_rhs; ///< Cached RHS vector for BRGN residual evaluation
   Vec brgn_residual; ///< Cached Residual vector for BRGN solver
-  Vec y_dual_workspace; ///< Workspace vector for dual solver (tangent space, size dim²-1)
-  Vec v_workspace; ///< Workspace vector for intermediate L^T y computation (design space)
+  Vec *workvec_statespace; ///< Array of workspace vectors in the state space (one per initial condition, size = dim²-1)
+  Vec workvec_tangentspace; ///< Workspace vector in the tangent space (size = tangent_dim)
+  Vec workvec_designspace; ///< Workspace vector in the design space (size = ndesign)
   int gn_dual_ksp_baseline; ///< Baseline KSP iterations right after preconditioner formation (for adaptive update)
   int gn_dual_ksp_excess_accum; ///< Accumulated excess KSP iterations beyond n_0 (for adaptive update)
   Mat gn_dual_lowrank_U; ///< V_r: first r eigenvectors (tangent_dim × rank, dense)

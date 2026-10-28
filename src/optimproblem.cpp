@@ -162,9 +162,9 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_MULT, (void(*)(void))GN_LeastSquares_MatMult);
   MatShellSetOperation(GN_LeastSquares_MatShell, MATOP_MULT_TRANSPOSE, (void(*)(void))GN_LeastSquares_MatMultTranspose);
   // Pre-allocate workspace vectors for GN_LeastSquares_MatShell operations
-  wsub_workspace = new Vec[ninit_local];
+  workvec_statespace = new Vec[ninit_local];
   for (int iinit = 0; iinit < ninit_local; iinit++) {
-    VecDuplicate(rho_t0_bar, &wsub_workspace[iinit]);
+    VecDuplicate(rho_t0_bar, &workvec_statespace[iinit]);
   }
 
   // Create the LSQR and BRGN solvers for least-squares problem
@@ -237,8 +237,8 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   KSPMonitorSet(ksp_gn_normaleq, KSPMonitorResidualAndSolution, (void*)this, NULL);
 
   // Pre-allocate workspace for dual solver and reset
-  VecCreateSeq(PETSC_COMM_SELF, M_dual, &y_dual_workspace);  // tangent space
-  VecDuplicate(xinit, &v_workspace);  // design space
+  VecCreateSeq(PETSC_COMM_SELF, M_dual, &workvec_tangentspace);  // tangent space
+  VecDuplicate(xinit, &workvec_designspace);  // design space
 
   // preallocate preconditioner workspace
   int M_precond = 0;
@@ -275,8 +275,8 @@ OptimProblem::~OptimProblem() {
   MatDestroy(&GN_Primal_LowRank_MatShell);
   MatDestroy(&GN_Dual_MatDense);
   VecDestroy(&xeval_GN);
-  VecDestroy(&y_dual_workspace);
-  VecDestroy(&v_workspace);
+  VecDestroy(&workvec_tangentspace);
+  VecDestroy(&workvec_designspace);
   MatDestroy(&gn_dual_lowrank_U);
   VecDestroy(&gn_dual_lowrank_sigma_invsqrt);
   VecDestroy(&gn_dual_lowrank_temp);
@@ -291,9 +291,9 @@ OptimProblem::~OptimProblem() {
 
   // Clean up workspace vectors
   for (int iinit = 0; iinit < ninit_local; iinit++) {
-    VecDestroy(&wsub_workspace[iinit]);
+    VecDestroy(&workvec_statespace[iinit]);
   }
-  delete[] wsub_workspace;
+  delete[] workvec_statespace;
 }
 
 
@@ -741,9 +741,9 @@ PetscErrorCode OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
   VecZeroEntries(Ay);
 
   // v_temp = L^T W^1/2 P_G y (tangent space -> design space)
-  self->apply_GN_Jacobian_Tangentspace_Adjoint(y, self->v_workspace);
+  self->apply_GN_Jacobian_Tangentspace_Adjoint(y, self->workvec_designspace);
   // Ay = P_G W^1/2 L v_temp (design space -> tangent space)
-  self->apply_GN_Jacobian_Tangentspace(self->v_workspace, Ay);
+  self->apply_GN_Jacobian_Tangentspace(self->workvec_designspace, Ay);
 
   return 0;
 }
@@ -798,21 +798,21 @@ Vec OptimProblem::computeGaussNewtonRHS(const std::string& gn_solver_mode, const
       Vec ui = timestepper->getFinalState(iinit);
 
       // Use pre-allocated workspace vector
-      VecCopy(ui,  wsub_workspace[iinit]);
+      VecCopy(ui,  workvec_statespace[iinit]);
 
       // compute wsub = alpha * (ui - z * V), where z = 1/n tr(V^dagger U)
       double scale = 2.0 / mastereq->getDim(); // dual: alpha = 2/n, no W^1/2!
       if (gn_solver_mode == "least_squares") { // for least-squares: alpha = sqrt(2/n) includes W^1/2 factor
         scale = sqrt(2.0 / mastereq->getDim());
       }
-      VecScale(wsub_workspace[iinit], scale);
+      VecScale(workvec_statespace[iinit], scale);
       optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
-      optim_target->HilbertSchmidtOverlap_diff(wsub_workspace[iinit], false, -scale*z_re, -scale*z_im);
+      optim_target->HilbertSchmidtOverlap_diff(workvec_statespace[iinit], false, -scale*z_re, -scale*z_im);
 
       // Project onto tangent space 
       Mat U_final_re = optim_target->getFinalUnitaryRe();
       Mat U_final_im = optim_target->getFinalUnitaryIm();
-      GellMann::projectVecToTangentSpace(wsub_workspace[iinit], U_final_re, U_final_im, mastereq->getDim(), iinit_global, b_data);
+      GellMann::projectVecToTangentSpace(workvec_statespace[iinit], U_final_re, U_final_im, mastereq->getDim(), iinit_global, b_data);
     }
 
     // Allreduce b across all comm_init processors
@@ -871,9 +871,9 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
 
   Vec vec_workspace = nullptr;
   if (gn_solver_mode == "dual") {
-    vec_workspace = y_dual_workspace;
+    vec_workspace = workvec_tangentspace;
   } else {
-    vec_workspace = v_workspace;
+    vec_workspace = workvec_designspace;
   }
 
   if (!gn_precond_enabled) {
@@ -915,7 +915,7 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
 
   // Recover primal solution: v = L^* y 
   if (gn_solver_mode == "dual") {
-    apply_GN_Jacobian_Tangentspace_Adjoint(y_dual_workspace, v_out);
+    apply_GN_Jacobian_Tangentspace_Adjoint(workvec_tangentspace, v_out);
   } else {
     VecCopy(vec_workspace, v_out);
   }
@@ -1067,7 +1067,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   }
 
   // Compute eigenspace approximation: y = M^{-1} * b
-  applyEigenspaceApproximation(b, V_r, eigenvalues, rank, have_complement, mu, y_dual_workspace);
+  applyEigenspaceApproximation(b, V_r, eigenvalues, rank, have_complement, mu, workvec_tangentspace);
 
   // Optional iterative refinement: refine the projected solution with KSP iterations
   // Refinement is enabled when gn_maxiter > 0
@@ -1089,8 +1089,8 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
 
       // Store projected solution as initial guess (also needs normalization)
       Vec y_proj;
-      VecDuplicate(y_dual_workspace, &y_proj);
-      VecCopy(y_dual_workspace, y_proj);
+      VecDuplicate(workvec_tangentspace, &y_proj);
+      VecCopy(workvec_tangentspace, y_proj);
       VecScale(y_proj, 1.0 / bnorm);  // Normalize to match normalized RHS
 
       // Construct low-rank preconditioner M = V_r Σ_r V_r^T + μ(I - V_r V_r^T)
@@ -1134,10 +1134,10 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
       KSPSolve(ksp_gn_normaleq, b_scaled, z_solution);
 
       // Recover y = M^{-1/2} * z
-      apply_GN_LowRank_Precond(z_solution, y_dual_workspace);
+      apply_GN_LowRank_Precond(z_solution, workvec_tangentspace);
 
       // Scale back by ||b|| to get the actual solution
-      VecScale(y_dual_workspace, bnorm);
+      VecScale(workvec_tangentspace, bnorm);
 
       // Get actual number of iterations performed
       KSPGetIterationNumber(ksp_gn_normaleq, &refine_iters);
@@ -1169,7 +1169,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   delete[] eigenvalues;
 
   // Recover primal solution: v = L^T y (use pure Jacobian transpose for dual mode)
-  apply_GN_Jacobian_Tangentspace_Adjoint(y_dual_workspace, v_out);
+  apply_GN_Jacobian_Tangentspace_Adjoint(workvec_tangentspace, v_out);
 
   // Store KSP iterations for reporting in optimization history
   ksp_iters_last = refine_iters;
@@ -2390,14 +2390,14 @@ void OptimProblem::apply_GN_Jacobian_Tangentspace_Adjoint(Vec w, Vec vout)
   // P_G^{-1}: For each initial condition, reconstruct full state vectors from tangent space coefficients
   for (int iinit = 0; iinit < self->ninit_local; iinit++) {
     int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-    // Reconstruct full state vector (adjoint of projectVecToTangentSpace) -> fills wsub_workspace[iinit]
+    // Reconstruct full state vector (adjoint of projectVecToTangentSpace) -> fills workvec_statespace[iinit]
     Mat U_final_re = self->optim_target->getFinalUnitaryRe();
     Mat U_final_im = self->optim_target->getFinalUnitaryIm();
-    GellMann::reconstructVecFromTangentSpace(w_data, U_final_re, U_final_im, self->mastereq->getDim(), iinit_global, self->wsub_workspace[iinit]);
+    GellMann::reconstructVecFromTangentSpace(w_data, U_final_re, U_final_im, self->mastereq->getDim(), iinit_global, self->workvec_statespace[iinit]);
   }
   VecRestoreArrayRead(w, &w_data);
 
-  // If include W^1/2, precompute z = 1/n<V,wsub_workspace> 
+  // If include W^1/2, precompute z = 1/n<V,workvec_statespace> 
   double z_re = 0.0;
   double z_im = 0.0;
   for (int iinit=0; iinit<self->ninit_local; iinit++) {
@@ -2405,7 +2405,7 @@ void OptimProblem::apply_GN_Jacobian_Tangentspace_Adjoint(Vec w, Vec vout)
     self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
     double tmp_re = 0.0;
     double tmp_im = 0.0;
-    self->optim_target->HilbertSchmidtOverlap(self->wsub_workspace[iinit], false, &tmp_re, &tmp_im);
+    self->optim_target->HilbertSchmidtOverlap(self->workvec_statespace[iinit], false, &tmp_re, &tmp_im);
     z_re +=  tmp_re / self->mastereq->getDim();
     z_im +=  tmp_im / self->mastereq->getDim();
   }
@@ -2421,12 +2421,12 @@ void OptimProblem::apply_GN_Jacobian_Tangentspace_Adjoint(Vec w, Vec vout)
 
     // Include W = sqrt(2/n)(I-<V,cdot>V), if requested
     double scale = sqrt(2.0 / self->mastereq->getDim());
-    VecScale(self->wsub_workspace[iinit], scale);
+    VecScale(self->workvec_statespace[iinit], scale);
     int iinit_global = self->mpirank_init * self->ninit_local + iinit;
     self->optim_target->prepareInitialAndTargetState(iinit_global, self->ninit, self->mastereq->nlevels, self->mastereq->nessential);
-    self->optim_target->HilbertSchmidtOverlap_diff(self->wsub_workspace[iinit], false, -scale*z_re, -scale*z_im);
+    self->optim_target->HilbertSchmidtOverlap_diff(self->workvec_statespace[iinit], false, -scale*z_re, -scale*z_im);
 
-    self->timestepper->solveAdjointODE(iinit, self->wsub_workspace[iinit], 0.0, 0.0, 0.0, 0.0);
+    self->timestepper->solveAdjointODE(iinit, self->workvec_statespace[iinit], 0.0, 0.0, 0.0, 0.0);
     VecAXPY(vout, 1.0, self->timestepper->getReducedGradient());
   }
 
