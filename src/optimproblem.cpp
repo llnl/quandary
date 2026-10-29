@@ -1150,7 +1150,7 @@ void OptimProblem::solveGaussNewtonPrimalProjected(Vec xinit, const Vec b, Vec A
   VecGetArray(tmp, &tmp_data);
   for (int i=0; i<evals.size(); i++) {
     if (evals[i] > 1e-14) {
-      tmp_data[i] /= (evals[i] + gn_normaleq_damping);
+      tmp_data[i] /= evals[i];
     } else {
       tmp_data[i] = 0.0;
     }
