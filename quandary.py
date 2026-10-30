@@ -87,9 +87,18 @@ class Quandary:
     gamma_energy        # Parameter for integral penality term on the control pulse energy. Default: 0.1
     gamma_dpdm          # Parameter for integral penality term on second state derivative. Default: 0.01
     gamma_variation     # Parameter for penality term on variations in the control parameters: Default: 0.01
-    optim_solver_type    # Type of optimization solver ("tao_lbfgs" or "gauss_newton"). Default: "tao_lbfgs"
-    optim_ksp_rtol          # Relative tolerance for the KSP solver. Default: 1e-3
-    optim_ksp_maxiter       # Maximum number of iterations for the KSP solver. Default: 100
+
+    optim_solver_type    # Type of optimization solver ("lbfgs" or "gauss_newton"). Default: "tao_lbfgs"
+    gn_rtol               # Relative tolerance for the Gauss-Newton solver. Default: 1e-3
+    gn_maxiter            # Maximum number of iterations for the Gauss-Newton solver. Default: 100
+    gn_solver_mode        # Solver mode for the Gauss-Newton solver ("primal", "dual", "least_squares"). Default: "primal"
+    gn_normaleq_solver     # Linear solver for the Gauss-Newton normal equations ("cg", "minres", "gmres", "proj"). Default: "minres"
+    gn_leastsquares_solver # Solver for least squares GN problem ("brgn" or "lsqr"). Default: "lsqr"
+    gn_leastsquares_damping # Damping parameter for the least squares GN solver. Default: 0.0
+    gn_normaleq_damping     # Damping parameter for the normal equations GN solver. Default: 0.0
+    gn_normaleq_minres_qlp  # Switch to use MINRES-QLP for the normal equations solver. Default: False
+    gn_prec_update_interval # Interval for updating the preconditioner in the GN solver (-2 = no preconditioner, -1 = adaptive, 0 = only at startup, n>0 = every n iterations). Default: -2
+    gn_precond_rank         # Rank of the preconditioner for the GN solver. Default: 10
 
     # General options
     rand_seed            # Set a fixed random number generator seed. Default: None (non-reproducable)
@@ -182,9 +191,18 @@ class Quandary:
     gamma_energy           : float = 0.1
     gamma_dpdm             : float = 0.01        
     gamma_variation        : float = 0.01        
-    optim_solver_type      : str   = "tao_lbfgs"
-    optim_ksp_rtol         : float = 1e-3
-    optim_ksp_maxiter      : int   = 100
+    optim_solver_type      : str   = "lbfgs"
+    # GaussNewton options
+    gn_rtol                : float = 1e-3
+    gn_maxiter             : int   = 100
+    gn_leastsquares_solver : str   = "lsqr"
+    gn_leastsquares_damping: float = 1e-3
+    gn_normaleq_solver     : str   = "minres"
+    gn_normaleq_damping    : float = 0.0
+    gn_minres_qlp          : bool  = False
+    gn_solver_mode         : str   = "primal"
+    gn_prec_update_interval: int   = -1
+    gn_precond_rank        : int   = 10
     # General options
     rand_seed              : int  = None
     print_frequency_iter   : int  = 1
@@ -888,8 +906,16 @@ class Quandary:
             lines.append(f"tikhonov = {{ coeff = {self.gamma_tik0}, use_x0 = false }}")
         lines.append("penalty = { leakage = " + str(self.gamma_leakage) + ", energy = " + str(self.gamma_energy) + ", dpdm = " + str(self.gamma_dpdm) + ", variation = " + str(self.gamma_variation) + ", weightedcost = 0.0, weightedcost_width = 0.0 }")
         lines.append(f"solver_type = {_toml_str(self.optim_solver_type)}")
-        lines.append(f"ksp_rtol = {self.optim_ksp_rtol}")
-        lines.append(f"ksp_maxiter = {self.optim_ksp_maxiter}")
+        lines.append(f"gn_solver_mode = {_toml_str(self.gn_solver_mode)}")
+        lines.append(f"gn_rtol = {self.gn_rtol}")
+        lines.append(f"gn_maxiter = {self.gn_maxiter}")
+        lines.append(f"gn_normaleq_solver = {_toml_str(self.gn_normaleq_solver)}")
+        lines.append(f"gn_normaleq_damping = {self.gn_normaleq_damping}")
+        lines.append(f"gn_minres_qlp = {_toml_bool(self.gn_minres_qlp)}")
+        lines.append(f"gn_prec_update_interval = {self.gn_prec_update_interval}")
+        lines.append(f"gn_precond_rank = {self.gn_precond_rank}")
+        lines.append(f"gn_leastsquares_solver = {_toml_str(self.gn_leastsquares_solver)}")
+        lines.append(f"gn_leastsquares_damping = {self.gn_leastsquares_damping}")
 
         # [output]
         lines.append("\n[output]")

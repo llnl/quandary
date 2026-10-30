@@ -63,7 +63,7 @@ inline const std::string GN_LEASTSQUARES_SOLVER = "lsqr"; ///< Default solver fo
 const double GN_LEASTSQUARES_DAMPING = 1e-3; ///< Default damping parameter for Least Squares regularization
 inline const std::string GN_NORMALEQ_SOLVER = "minres"; ///< Default KSP solver type for Gauss-Newton Normal Equation ("CG", "MINRES", "GMRES")
 const bool GN_MINRES_QLP = false; ///< Use MINRES-QLP variant (more robust than standard MINRES)
-const double GN_NORMALEQ_DAMPING = 1e-3; ///< Default damping parameter for Gauss-Newton KSP solver (Levenberg-Marquardt)
+const double GN_NORMALEQ_DAMPING = 0.0; ///< Default damping parameter for Gauss-Newton KSP solver (Levenberg-Marquardt)
 inline const std::string GN_SOLVER_MODE = "primal"; ///< Default: use primal formulation for Gauss-Newton ("primal" or "dual")
 const int GN_PREC_UPDATE_INTERVAL = -1; ///< Default preconditioner update interval (-1 = adaptive, 0 = only at startup, n>0 = every n iterations, otherwise never)
 const int GN_PRECOND_RANK = 10; ///< Default rank for low-rank preconditioner
