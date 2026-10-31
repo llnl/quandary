@@ -1708,7 +1708,7 @@ bool OptimProblem::updateGaussNewtonPreconditioner(int iter, bool force_update){
 
 
 void OptimProblem::updateGaussNewtonPreconditionerLowRank(int rank){
-  // Construct full-rank preconditioner M = V_r Σ_r V_r^T + μ(I - V_r V_r^T)
+  // Construct rank-r preconditioner M = V_r Σ_r V_r^T + μ(I - V_r V_r^T)
   // Algorithm:
   //   1. Use EPS to compute r+1 largest eigenvalues/eigenvectors of A
   //   2. Store V_r (first r eigenvectors), Σ_r (first r eigenvalues), μ = σ_{r+1}
@@ -1910,6 +1910,93 @@ Mat OptimProblem::updateGaussNewtonDualPreconditionerMatDense(){
   MatDestroy(&M_invsqrt);
 
   return mat_dual_precond;
+}
+
+
+Mat OptimProblem::updateGaussNewtonPrimalPreconditionerMatDense(){
+  Mat mat_dense = getGN_Primal_MatDense(); // this function exists
+  int rank = gn_precond_rank;
+  int mat_dim = getNdesign();
+  // Get low-rank preconditioner data
+  Mat V_r = getGN_Dual_LowRank_U(); // same as for the dual case
+  Vec sigma_invsqrt = getGN_Dual_LowRank_Sigma_InvSqrt(); // same as for the dual case
+  PetscScalar mu = getGN_Dual_Precond_Mu(); // same as for the dual case
+  PetscScalar mu_invsqrt = 1.0 / PetscSqrtScalar(mu);
+
+  if (mpirank_world == 0 && !quietmode) {
+    printf("  Forming M^{-1/2} as dense matrix (n=%d, r=%d, μ^{-1/2}=%e)...\n",
+            (int)mat_dim, rank, mu_invsqrt);
+  }
+
+  Mat M_invsqrt;
+  MatCreateSeqDense(PETSC_COMM_SELF, mat_dim, mat_dim, NULL, &M_invsqrt);
+  MatZeroEntries(M_invsqrt);
+
+  // Get direct access to dense matrix storage
+  PetscScalar *M_data;
+  MatDenseGetArray(M_invsqrt, &M_data);
+
+  // Get V_r and sigma data
+  PetscScalar *Vr_data;
+  MatDenseGetArray(V_r, &Vr_data);
+
+  PetscScalar *sigma_data;
+  VecGetArray(sigma_invsqrt, &sigma_data);
+
+  // Build M^{-1/2} directly
+  // M_data is column-major: M_data[i + j*mat_dim] = M(i,j)
+  for (int i = 0; i < mat_dim; i++) {
+    for (int j = 0; j < mat_dim; j++) {
+      PetscScalar val = 0.0;
+
+      // Add V_r Σ_r^{-1/2} V_r^T contribution
+      for (int k = 0; k < rank; k++) {
+        // V_r is column-major: Vr_data[i + k*mat_dim] = V_r(i,k)
+        val += Vr_data[i + k * mat_dim] * sigma_data[k] * Vr_data[j + k * mat_dim];
+      }
+
+      // Add μ^{-1/2}(I - V_r V_r^T) contribution
+      PetscScalar vv_sum = 0.0;
+      for (int k = 0; k < rank; k++) {
+        vv_sum += Vr_data[i + k * mat_dim] * Vr_data[j + k * mat_dim];
+      }
+      val += mu_invsqrt * ((i == j ? 1.0 : 0.0) - vv_sum);
+
+      M_data[i + j * mat_dim] = val;
+    }
+  }
+
+  MatDenseRestoreArray(M_invsqrt, &M_data);
+  MatDenseRestoreArray(V_r, &Vr_data);
+  VecRestoreArray(sigma_invsqrt, &sigma_data);
+
+  MatAssemblyBegin(M_invsqrt, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(M_invsqrt, MAT_FINAL_ASSEMBLY);
+
+  if (mpirank_world == 0 && !quietmode) {
+    printf("  Computing M^{-1/2} A M^{-1/2}...\n");
+  }
+
+  // Compute preconditioned matrix: M^{-1/2} A M^{-1/2}
+  // First: temp = A M^{-1/2}
+  Mat temp;
+  MatMatMult(mat_dense, M_invsqrt, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &temp);
+
+  // Assemble the preconditioned dense matrix
+  Mat mat_precond;
+  MatCreateDense(PETSC_COMM_SELF, mat_dim, mat_dim, mat_dim, mat_dim, NULL, &mat_precond); // only debug and output
+  MatZeroEntries(mat_precond);
+
+  // Second: mat_precond = M^{-1/2} temp = M^{-1/2} A M^{-1/2}
+  MatMatMult(M_invsqrt, temp, MAT_REUSE_MATRIX, PETSC_DEFAULT, &mat_precond);
+
+  MatAssemblyBegin(mat_precond, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(mat_precond, MAT_FINAL_ASSEMBLY);
+
+  MatDestroy(&temp);
+  MatDestroy(&M_invsqrt);
+
+  return mat_precond;
 }
 
 

@@ -187,15 +187,18 @@ class OptimProblem {
   int getMPIrank_world() { return mpirank_world;};
   int getMPIsize_world() { return mpisize_world;};
   int getMaxIter()     { return maxiter; };
+  double getTikhonov() { return gamma_tikhonov; };
   OptimTarget* getOptimTarget() { return optim_target; };
   Mat getGN_Primal_MatShell() { return GN_Primal_MatShell; };
   Mat getGN_Primal_MatDense() { return GN_Primal_MatDense; };
+  
   Mat getGN_Dual_MatShell() { return GN_Dual_MatShell; };
+  Mat getGN_Dual_MatDense() { return GN_Dual_MatDense; };
   Mat getGN_Dual_LowRank_MatShell() { return GN_Dual_LowRank_MatShell; };
   Mat getGN_Dual_LowRank_U() { return gn_dual_lowrank_U; };
   Vec getGN_Dual_LowRank_Sigma_InvSqrt() { return gn_dual_lowrank_sigma_invsqrt; };
   PetscScalar getGN_Dual_Precond_Mu() { return gn_dual_precond_mu; };
-  Mat getGN_Dual_MatDense() { return GN_Dual_MatDense; };
+
   Mat getGNLeastSquaresShell() { return GN_LeastSquares_MatShell; };
   Mat getGN_LeastSquares_MatShell() { return GN_LeastSquares_MatShell; };
   bool getQuietmode() { return quietmode; };
@@ -386,6 +389,14 @@ class OptimProblem {
    * @returns Dense matrix representing the preconditioned dual Gauss-Newton matrix M^{-1/2} A M^{-1/2}.
    */
   Mat updateGaussNewtonDualPreconditionerMatDense();
+
+    /**
+   * @brief Construct dense verson of the rank-r low-rank preconditoner M^{-1/2} ≈ U Σ^{-1/2} U^T + mu^{-1/2} (I - U U^T) for the primal Gauss-Newton preconditioner
+   *
+   * Uses EPS solver to compute r+1 largest eigenvalues and eigenvectors of the primal GN_Dual_MatShell. Populates the low-rank preconditioner data structures: V_r (gn_primal_lowrank_U), Σ_r (gn_primal_lowrank_sigma_invsqrt), and μ (gn_primal_precond_mu).
+   * @returns Dense matrix representing the preconditioned primal Gauss-Newton matrix M^{-1/2} A M^{-1/2}.
+   */
+  Mat updateGaussNewtonPrimalPreconditionerMatDense();
 
   /**
    * @brief Applies the low-rank dual Gauss-Newton preconditioner: y = M^{-1/2} x, where M ≈ U Σ U^T is the precomputed low-rank approximation.
