@@ -255,155 +255,101 @@ int main(int argc,char **argv)
 
     std::string mode = config.getGnSolverMode();
     if (mpirank_world == 0 && !quietmode) printf("gn_solver_mode = \"%s\"\n", mode.c_str());
-    if (mode == "dual") {
-      Mat GN_Dual_MatShell = optimctx->getGN_Dual_MatShell();
 
-      // Save dual matrix L L^T + λI (tangent space dimension: dim²-1)
+    // primal /dual specific setup:
+    double damping=0.0;
+    Mat mat_dense;
+    std::string orig_fname, prec_fname;
+
+    if (mode == "dual") {
       // Apply damping before assembling
-      double damping = config.getGnNormaleqDamping();
+      damping = config.getGnNormaleqDamping();
       if (damping > 0.0) {
+        Mat GN_Dual_MatShell = optimctx->getGN_Dual_MatShell();
         MatShift(GN_Dual_MatShell, damping);
       }
-
-      if (mpirank_world == 0 && !quietmode) {
-        if (damping > 0.0) {
-          printf("\nAssembling dual Gauss-Newton matrix (L L^T + λI) with λ = %1.6e...\n", damping);
-        } else {
-          printf("\nAssembling dual Gauss-Newton matrix (L L^T)...\n");
-        }
-      }
+      orig_fname = "GN_dual_matrix.dat";
+      prec_fname = "GN_dual_matrix_preconditioned.dat";
       optimctx->updateGaussNewtonDualMatDense();
-      Mat mat_dual = optimctx->getGN_Dual_MatDense();
-
-      PetscInt tangent_dim;
-      MatGetSize(mat_dual, &tangent_dim, NULL);
-
-      // Only rank 0 writes to file (matrix is replicated on all ranks after MPI_Allreduce)
-      if (mpirank_world == 0) {
-        snprintf(filename, 254, "%s/GN_dual_matrix.dat", output->output_dir.c_str());
-        PetscViewer viewer;
-        PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
-        PetscViewerBinarySetSkipInfo(viewer, PETSC_TRUE);  // Suppress .info file
-        MatView(mat_dual, viewer);
-        PetscViewerDestroy(&viewer);
-
-        if (!quietmode) {
-          if (damping > 0.0) {
-            printf("Dual matrix (L L^T + λI) saved to: %s\n", filename);
-          } else {
-            printf("Dual matrix (L L^T) saved to: %s\n", filename);
-          }
-          printf("Matrix dimensions: %d x %d (tangent space)\n", tangent_dim, tangent_dim);
-        }
-      }
-
-      // Save preconditioned matrix if preconditioner is enabled
-      // (interval >= 0 for fixed/startup, or -1 for adaptive mode)
-      if (config.getGnPrecUpdateInterval() >= -1) {
-        int rank = config.getGnPrecondRank();
-        if (mpirank_world == 0 && !quietmode) {
-          printf("\nAssembling low-rank preconditioned dual matrix with rank=%d...\n", rank);
-        }
-
-        // VERIFY THIS: Damping also needs to be applied to precond shell
-        if (damping > 0.0) {
-          Mat GN_Dual_LowRank_MatShell = optimctx->getGN_Dual_LowRank_MatShell();
-          MatShift(GN_Dual_LowRank_MatShell, damping);
-        }
-
-        // Update MatShell preconditioner
-        optimctx->updateGaussNewtonPreconditionerLowRank(rank);
-
-        // Form M^{-1/2} as a dense matrix; M^{-1/2} = V_r Σ_r^{-1/2} V_r^T + μ^{-1/2}(I - V_r V_r^T)
-        Mat mat_dual_precond = optimctx->updateGaussNewtonDualPreconditionerMatDense();
-
-        // Only rank 0 writes to file
-        if (mpirank_world == 0) {
-          snprintf(filename, 254, "%s/GN_dual_matrix_preconditioned.dat", output->output_dir.c_str());
-          PetscViewer viewer;
-          PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
-          PetscViewerBinarySetSkipInfo(viewer, PETSC_TRUE);  // Suppress .info file
-          MatView(mat_dual_precond, viewer);
-          PetscViewerDestroy(&viewer);
-
-          if (!quietmode) {
-            PetscInt dim;
-            MatGetSize(mat_dual_precond, &dim, NULL);
-            printf("Preconditioned dual matrix (M^{-1/2} (L L^T + λI) M^{-1/2}, rank=%d) saved to: %s\n", rank, filename);
-            printf("Matrix dimensions: %d x %d (tangent space)\n", dim, dim);
-            printf("Damping parameter λ = %1.6e\n", damping);
-          }
-        }
-
-        MatDestroy(&mat_dual_precond);
-
-      }
-
-      // Note: No need to revert damping - we're in matrix_save mode and the program exits after this
-    } else { // primal mode
-      // Save primal matrix L^T L (design space dimension: ndesign)
-      if (mpirank_world == 0 && !quietmode) printf("\nAssembling primal Gauss-Newton matrix (L^T L)...\n");
-
+      mat_dense = optimctx->getGN_Dual_MatDense();
+    }
+    else{ //primal
+      orig_fname = "GN_primal_matrix.dat";
+      prec_fname = "GN_primal_matrix_preconditioned.dat";
+      damping = optimctx->getTikhonov();
       optimctx->updateGaussNewtonPrimalMatDense();
-      double damping = optimctx->getTikhonov();
-      Mat mat_primal = optimctx->getGN_Primal_MatDense();
+      mat_dense = optimctx->getGN_Primal_MatDense();
+    }
 
-      // Only rank 0 writes to file (matrix is replicated on all ranks after MPI_Allreduce)
+    // Save matrix on file
+    PetscInt mat_dim;
+    MatGetSize(mat_dense, &mat_dim, NULL);
+
+    if (mpirank_world == 0 && !quietmode) {
+      if (damping > 0.0) {
+        printf("\nAssembling %s Gauss-Newton matrix (L L^T + λI) with λ = %1.6e...\n", mode.c_str(), damping);
+      } else {
+        printf("\nAssembling %s Gauss-Newton matrix (L L^T)...\n", mode.c_str());
+      }
+    }
+
+    // Only rank 0 writes to file (matrix is replicated on all ranks after MPI_Allreduce)
+    if (mpirank_world == 0) {
+      snprintf(filename, 254, "%s/%s", output->output_dir.c_str(), orig_fname.c_str());
+      PetscViewer viewer;
+      PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
+      PetscViewerBinarySetSkipInfo(viewer, PETSC_TRUE);  // Suppress .info file
+      MatView(mat_dense, viewer);
+      PetscViewerDestroy(&viewer);
+
+      if (!quietmode) {
+        if (damping > 0.0) {
+          printf("Dual matrix (L L^T + λI) saved to: %s\n", filename);
+        } else {
+          printf("Dual matrix (L L^T) saved to: %s\n", filename);
+        }
+        printf("Matrix dimensions: %d x %d (tangent space)\n", mat_dim, mat_dim);
+      }
+    }
+
+    // Save preconditioned matrix if preconditioner is enabled
+    // (interval >= 0 for fixed/startup, or -1 for adaptive mode)
+    if (config.getGnPrecUpdateInterval() >= -1) {
+      int rank = config.getGnPrecondRank();
+      if (mpirank_world == 0 && !quietmode) {
+        printf("\nAssembling low-rank preconditioned %s matrix with rank=%d...\n", mode.c_str(), rank);
+      }
+
+      // VERIFY THIS: In DUAL mode, damping also needs to be applied to precond shell???
+      if (mode == "dual" && damping > 0.0) {
+        Mat GN_Dual_LowRank_MatShell = optimctx->getGN_Dual_LowRank_MatShell();
+        MatShift(GN_Dual_LowRank_MatShell, damping);
+      }
+
+      // Update MatShell preconditioner
+      optimctx->updateGaussNewtonPreconditionerLowRank(rank);
+
+      // Form M^{-1/2} as a dense matrix; M^{-1/2} = V_r Σ_r^{-1/2} V_r^T + μ^{-1/2}(I - V_r V_r^T)
+      Mat mat_dense_precond = optimctx->updateGaussNewtonPreconditionerMatDense(mat_dense, mat_dim);
+
+      // Only rank 0 writes to file
       if (mpirank_world == 0) {
-        snprintf(filename, 254, "%s/GN_primal_matrix.dat", output->output_dir.c_str());
+        snprintf(filename, 254, "%s/%s", output->output_dir.c_str(), prec_fname.c_str());
         PetscViewer viewer;
         PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
         PetscViewerBinarySetSkipInfo(viewer, PETSC_TRUE);  // Suppress .info file
-        MatView(mat_primal, viewer);
+        MatView(mat_dense_precond, viewer);
         PetscViewerDestroy(&viewer);
 
         if (!quietmode) {
           PetscInt dim;
-          MatGetSize(mat_primal, &dim, NULL);
-          printf("Primal matrix (L^T L) saved to: %s\n", filename);
-          printf("Matrix dimensions: %d x %d (design space)\n", dim, dim);
+          MatGetSize(mat_dense_precond, &dim, NULL);
+          printf("Preconditioned %s matrix (M^{-1/2} (L L^T + λI) M^{-1/2}, rank=%d) saved to: %s\n", mode.c_str(), rank, filename);
+          printf("Matrix dimensions: %d x %d (tangent space)\n", dim, dim);
+          printf("Damping parameter λ = %1.6e\n", damping);
         }
       }
-
-      // Save preconditioned matrix if preconditioner is enabled
-      // (interval >= 0 for fixed/startup, or -1 for adaptive mode)
-      if (config.getGnPrecUpdateInterval() >= -1) {
-        int rank = config.getGnPrecondRank();
-        if (mpirank_world == 0 && !quietmode) {
-          printf("\nAssembling low-rank preconditioned primal matrix with rank=%d...\n", rank);
-        }
-
-        // VERIFY THIS: Damping also needs to be applied to precond shell
-        // if (damping > 0.0) {
-        //   Mat GN_Dual_LowRank_MatShell = optimctx->getGN_Dual_LowRank_MatShell();
-        //   MatShift(GN_Dual_LowRank_MatShell, damping);
-        // }
-
-        // Update MatShell preconditioner
-        optimctx->updateGaussNewtonPreconditionerLowRank(rank);
-
-        // Form M^{-1/2} as a dense matrix; M^{-1/2} = V_r Σ_r^{-1/2} V_r^T + μ^{-1/2}(I - V_r V_r^T)
-        Mat mat_precond = optimctx->updateGaussNewtonPrimalPreconditionerMatDense();
-
-        // Only rank 0 writes to file
-        if (mpirank_world == 0) {
-          snprintf(filename, 254, "%s/GN_primal_matrix_preconditioned.dat", output->output_dir.c_str());
-          PetscViewer viewer;
-          PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
-          PetscViewerBinarySetSkipInfo(viewer, PETSC_TRUE);  // Suppress .info file
-          MatView(mat_precond, viewer);
-          PetscViewerDestroy(&viewer);
-
-          if (!quietmode) {
-            PetscInt dim;
-            MatGetSize(mat_precond, &dim, NULL);
-            printf("Preconditioned primal matrix (M^{-1/2} (L L^T + λI) M^{-1/2}, rank=%d) saved to: %s\n", rank, filename);
-            printf("Matrix dimensions: %d x %d (tangent space)\n", dim, dim);
-            printf("Damping parameter λ = %1.6e\n", damping);
-          }
-        }
-        MatDestroy(&mat_precond);
-      }
+      MatDestroy(&mat_dense_precond);
     }
   }
 

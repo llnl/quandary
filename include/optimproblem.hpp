@@ -383,20 +383,12 @@ class OptimProblem {
 
 
   /**
-   * @brief Construct dense verson of the rank-r low-rank preconditoner M^{-1/2} ≈ U Σ^{-1/2} U^T + mu^{-1/2} (I - U U^T) for the dual Gauss-Newton preconditioner
+   * @brief Construct dense version of the rank-r low-rank preconditoner M^{-1/2} ≈ U Σ^{-1/2} U^T + mu^{-1/2} (I - U U^T) for the dual Gauss-Newton preconditioner
    *
    * Uses EPS solver to compute r+1 largest eigenvalues and eigenvectors of the dual GN_Dual_MatShell. Populates the low-rank preconditioner data structures: V_r (gn_dual_lowrank_U), Σ_r (gn_dual_lowrank_sigma_invsqrt), and μ (gn_dual_precond_mu).
    * @returns Dense matrix representing the preconditioned dual Gauss-Newton matrix M^{-1/2} A M^{-1/2}.
    */
-  Mat updateGaussNewtonDualPreconditionerMatDense();
-
-    /**
-   * @brief Construct dense verson of the rank-r low-rank preconditoner M^{-1/2} ≈ U Σ^{-1/2} U^T + mu^{-1/2} (I - U U^T) for the primal Gauss-Newton preconditioner
-   *
-   * Uses EPS solver to compute r+1 largest eigenvalues and eigenvectors of the primal GN_Dual_MatShell. Populates the low-rank preconditioner data structures: V_r (gn_primal_lowrank_U), Σ_r (gn_primal_lowrank_sigma_invsqrt), and μ (gn_primal_precond_mu).
-   * @returns Dense matrix representing the preconditioned primal Gauss-Newton matrix M^{-1/2} A M^{-1/2}.
-   */
-  Mat updateGaussNewtonPrimalPreconditionerMatDense();
+  Mat updateGaussNewtonPreconditionerMatDense(Mat mat_dense, int mat_dim);
 
   /**
    * @brief Applies the low-rank dual Gauss-Newton preconditioner: y = M^{-1/2} x, where M ≈ U Σ U^T is the precomputed low-rank approximation.
