@@ -14,9 +14,9 @@ Oscillator::Oscillator(){
   detuning_freq = 0.0;
   decay_time = 0.0;
   dephase_time = 0.0;
-  drive_basisfunctions_re = new ControlBasis();
-  drive_basisfunctions_im = new ControlBasis();
-  flux_basisfunctions = new ControlBasis();
+  drive_basisfunctions_re = std::make_unique<ControlBasis>();
+  drive_basisfunctions_im = std::make_unique<ControlBasis>();
+  flux_basisfunctions = std::make_unique<ControlBasis>();
 }
 
 Oscillator::Oscillator(const Config& config, size_t id, std::mt19937& rand_engine, int param_offset, bool quietmode) : Oscillator() {
@@ -79,17 +79,13 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937& rand_engin
   const bool drive_zero_bc = config.getControlZeroBoundaryCondition();
   switch (pq_drive_settings.type) {
     case ControlType::BSPLINE: {
-      delete drive_basisfunctions_re;
-      delete drive_basisfunctions_im;
-      drive_basisfunctions_re = new BSpline2nd(static_cast<int>(nspline),static_cast<int>(carrier_freq.size()),tstart, tstop, drive_zero_bc);
-      drive_basisfunctions_im = new BSpline2nd(static_cast<int>(nspline), static_cast<int>(carrier_freq.size()), tstart, tstop, drive_zero_bc);
+      drive_basisfunctions_re = std::make_unique<BSpline2nd>(static_cast<int>(nspline),static_cast<int>(carrier_freq.size()),tstart, tstop, drive_zero_bc);
+      drive_basisfunctions_im = std::make_unique<BSpline2nd>(static_cast<int>(nspline), static_cast<int>(carrier_freq.size()), tstart, tstop, drive_zero_bc);
       break;
     }
     case ControlType::BSPLINE0: {
-      delete drive_basisfunctions_re;
-      delete drive_basisfunctions_im;
-      drive_basisfunctions_re = new BSpline0(static_cast<int>(nspline), static_cast<int>(carrier_freq.size()), tstart, tstop, drive_zero_bc);
-      drive_basisfunctions_im = new BSpline0(static_cast<int>(nspline), static_cast<int>(carrier_freq.size()), tstart, tstop, drive_zero_bc);
+      drive_basisfunctions_re = std::make_unique<BSpline0>(static_cast<int>(nspline), static_cast<int>(carrier_freq.size()), tstart, tstop, drive_zero_bc);
+      drive_basisfunctions_im = std::make_unique<BSpline0>(static_cast<int>(nspline), static_cast<int>(carrier_freq.size()), tstart, tstop, drive_zero_bc);
       break;
     }
     case ControlType::NONE: {
@@ -130,13 +126,11 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937& rand_engin
   auto flux_nspline = flux_settings.nspline.value_or(0);
   switch (flux_settings.type) {
     case ControlType::BSPLINE: {
-      delete flux_basisfunctions;
-      flux_basisfunctions = new BSpline2nd(static_cast<int>(flux_nspline), 1, flux_tstart, flux_tstop, flux_zero_bc);
+      flux_basisfunctions = std::make_unique<BSpline2nd>(static_cast<int>(flux_nspline), 1, flux_tstart, flux_tstop, flux_zero_bc);
       break;
     }
     case ControlType::BSPLINE0: {
-      delete flux_basisfunctions;
-      flux_basisfunctions = new BSpline0(static_cast<int>(flux_nspline), 1, flux_tstart, flux_tstop, flux_zero_bc);
+      flux_basisfunctions = std::make_unique<BSpline0>(static_cast<int>(flux_nspline), 1, flux_tstart, flux_tstop, flux_zero_bc);
       break;
     }
     case ControlType::NONE: {
@@ -167,13 +161,6 @@ Oscillator::Oscillator(const Config& config, size_t id, std::mt19937& rand_engin
   }
   flux_basisfunctions->setParams(params_flux.data(), 0);
   flux_basisfunctions->enforceBoundary();
-}
-
-
-Oscillator::~Oscillator(){
-  delete drive_basisfunctions_re;
-  delete drive_basisfunctions_im;
-  delete flux_basisfunctions;
 }
 
 void Oscillator::setControlParams(const double* x) {
