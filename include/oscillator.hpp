@@ -11,6 +11,7 @@
 #include "config.hpp"
 #include <stdlib.h> 
 #include<random>
+#include <memory>
 
 #pragma once
 
@@ -46,9 +47,9 @@ class Oscillator {
     double dephase_time; ///< Characteristic time for T2 dephasing operations
 
     double total_time; ///< Final evolution time
-    ControlBasis* drive_basisfunctions_re; ///< Real part of drive envelope basis (per carrier), alpha^1
-    ControlBasis* drive_basisfunctions_im; ///< Imaginary part of drive envelope basis (per carrier), alpha^2
-    ControlBasis* flux_basisfunctions; ///< Flux control parameterization
+    std::unique_ptr<ControlBasis> drive_basisfunctions_re; ///< Real part of drive envelope basis (per carrier), alpha^1
+    std::unique_ptr<ControlBasis> drive_basisfunctions_im; ///< Imaginary part of drive envelope basis (per carrier), alpha^2
+    std::unique_ptr<ControlBasis> flux_basisfunctions; ///< Flux control parameterization
     std::vector<double> carrier_freq; ///< Frequencies of the carrier waves for this oscillator
 
     int mpirank_world; ///< Rank of MPI_COMM_WORLD
@@ -75,7 +76,10 @@ class Oscillator {
      */
     Oscillator(const Config& config, size_t id, std::mt19937& rand_engine, int param_offset, bool quietmode);
 
-    virtual ~Oscillator();
+    virtual ~Oscillator() = default;
+
+    Oscillator(Oscillator&&) = default;
+    Oscillator& operator=(Oscillator&&) = default;
 
     /**
      * @brief Retrieves the number of control parameters.
