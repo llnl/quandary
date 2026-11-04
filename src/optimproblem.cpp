@@ -737,16 +737,7 @@ Vec OptimProblem::computeGaussNewtonRHS(const std::string& gn_solver_mode, const
     projectToGateComplement(workvec_statespace, scale);
 
     // Project result onto tangent space  -> fills b from workvec_statespace
-    PetscScalar *b_data;
-    VecGetArray(b, &b_data);
-    for (int iinit = 0; iinit < ninit_local; iinit++) {
-      int iinit_global = mpirank_init * ninit_local + iinit;
-      Mat U_final_re = optim_target->getFinalUnitaryRe();
-      Mat U_final_im = optim_target->getFinalUnitaryIm();
-      GellMann::projectVecToTangentSpace(workvec_statespace[iinit], U_final_re, U_final_im, mastereq->getDim(), iinit_global, b_data);
-    }
-    MPI_Allreduce(MPI_IN_PLACE, b_data, tangent_dim, MPIU_SCALAR, MPI_SUM, comm_init);
-    VecRestoreArray(b, &b_data);
+    projectToGellmannTangentSpace(workvec_statespace, b);
 
     // Scale to get negative direction
     VecScale(b, -1.0);
@@ -2241,17 +2232,7 @@ void OptimProblem::apply_GN_Jacobian(Vec v, Vec y, bool project_to_tangentspace)
 
   // Project result onto the tangent space  -> fills y from workvec_statespace
   if (project_to_tangentspace) {
-    PetscScalar *y_data;
-    VecGetArray(y, &y_data);
-    Mat U_final_re = self->optim_target->getFinalUnitaryRe();
-    Mat U_final_im = self->optim_target->getFinalUnitaryIm();
-    for (int iinit = 0; iinit < self->ninit_local; iinit++) {
-      int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-      // fill the appropriate entries in y_data using the workvec_statespace[iinit] (W^1/2 Lv)
-      GellMann::projectVecToTangentSpace(self->workvec_statespace[iinit], U_final_re, U_final_im, self->mastereq->getDim(), iinit_global, y_data);
-    }
-    MPI_Allreduce(MPI_IN_PLACE, y_data, tangent_dim, MPIU_SCALAR, MPI_SUM, self->comm_init);
-    VecRestoreArray(y, &y_data);
+    projectToGellmannTangentSpace(self->workvec_statespace, y);
   } // otherwise leaves y unchanged. 
 }
 
@@ -2264,17 +2245,9 @@ void OptimProblem::apply_GN_Jacobian_Adjoint(Vec w, Vec vout, bool recover_from_
   // Reset output
   VecZeroEntries(vout);
 
-  // P_G^{-1}: Reconstruct full state from incoming tangent space vector (adjoint of projectVecToTangentSpace) -> fills workvec_statespace[iinit]
+  // P_G^{-1}: Reconstruct full state from incoming tangent space vector -> fills workvec_statespace[iinit]
   if (recover_from_tangent_space) {
-    const PetscScalar *w_data;
-    VecGetArrayRead(w, &w_data);
-    for (int iinit = 0; iinit < self->ninit_local; iinit++) {
-      int iinit_global = self->mpirank_init * self->ninit_local + iinit;
-      Mat U_final_re = self->optim_target->getFinalUnitaryRe();
-      Mat U_final_im = self->optim_target->getFinalUnitaryIm();
-      GellMann::reconstructVecFromTangentSpace(w_data, U_final_re, U_final_im, self->mastereq->getDim(), iinit_global, self->workvec_statespace[iinit]);
-    }
-    VecRestoreArrayRead(w, &w_data);
+    self->recoverFromGellmannTangentSpace(w, self->workvec_statespace);
   } // otherwise takes workvec_statespace as input directly without reconstructing from the tangent space.
 
   // Apply W^1/2 to workspace: W^1/2  = sqrt(2/n)(I - 1/n <V, cdot> V) -> updates workvec_statespace[iinit]
@@ -2322,4 +2295,39 @@ void OptimProblem::projectToGateComplement(std::vector<Vec> &states, double alph
     optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
     optim_target->HilbertSchmidtOverlap_diff(states[iinit], false, -alpha*z_re, -alpha*z_im); // states += -alpha * z * V
   }
+}
+
+void OptimProblem::projectToGellmannTangentSpace(std::vector<Vec> &states, Vec xout){
+  // Grab output array for xout
+  PetscScalar *xout_data;
+  VecGetArray(xout, &xout_data);
+
+  // Project each column of the state vectors to the Gell-Mann tangent space
+  for (int iinit = 0; iinit < ninit_local; iinit++) {
+    int iinit_global = mpirank_init * ninit_local + iinit;
+    Mat U_final_re = optim_target->getFinalUnitaryRe();
+    Mat U_final_im = optim_target->getFinalUnitaryIm();
+    GellMann::projectVecToTangentSpace(states[iinit], U_final_re, U_final_im, mastereq->getDim(), iinit_global, xout_data);
+  }
+
+  // Sum up from all initial condition MPI ranks
+  MPI_Allreduce(MPI_IN_PLACE, xout_data, tangent_dim, MPIU_SCALAR, MPI_SUM, comm_init);
+  VecRestoreArray(xout, &xout_data);
+}
+
+
+void OptimProblem::recoverFromGellmannTangentSpace(Vec w, std::vector<Vec> &states){
+  // Grab input array for w
+  const PetscScalar *w_data;
+  VecGetArrayRead(w, &w_data);
+
+  // Recover each state vector from the Gell-Mann tangent space
+  for (int iinit = 0; iinit < ninit_local; iinit++) {
+    int iinit_global = mpirank_init * ninit_local + iinit;
+    Mat U_final_re = optim_target->getFinalUnitaryRe();
+    Mat U_final_im = optim_target->getFinalUnitaryIm();
+    GellMann::reconstructVecFromTangentSpace(w_data, U_final_re, U_final_im, mastereq->getDim(), iinit_global, states[iinit]);
+  }
+
+  VecRestoreArrayRead(w, &w_data);
 }

@@ -350,6 +350,26 @@ class OptimProblem {
   void projectToGateComplement(std::vector<Vec> &states, double alpha);
 
   /**
+   * @brief Project matrix to Gellmann tangentspace representation 
+   * 
+   * @note Requires that U(t; xeval_GN) is valid (i.e., a nonlinear forward solveODE has been performed at xeval_GN)
+   * 
+   * @param states std::vector<Vec> of states to be projected to the Gellmann tangent space representation
+   * @param xout Output vector in the Gellmann tangent space representation
+   */
+  void projectToGellmannTangentSpace(std::vector<Vec> &states, Vec xout);
+
+  /**
+   * @brief Recovers tangent state matrix from the Gell-Mann tangent space representation
+
+   * @note Requires that U(t; xeval_GN) is valid (i.e., a nonlinear forward solveODE has been performed at xeval_GN)
+   * 
+   * @param w Input vector in the Gell-Mann tangent space representation
+   * @param states std::vector<Vec> of ninit_local states reconstructed from the tangent space
+   */
+  void recoverFromGellmannTangentSpace(Vec w, std::vector<Vec> &states);
+
+  /**
    * @brief Updates the dense primal Gauss-Newton matrix based on the current point of evaluation xeval_GN by calling GN_Primal_MatShell on each unit vectoor.
    * 
    * @note This operation can be expensive as it involves N^2-1 applications of the MatShell.
@@ -577,4 +597,5 @@ PetscErrorCode TaoEvalObjectiveAndGradient(Tao tao, Vec x, PetscReal *f, Vec G, 
  * @return PetscErrorCode Error code
  */
 PetscErrorCode KSPMonitorResidualAndSolution(KSP ksp, PetscInt it, PetscReal rnorm, void* ctx);
+
 
