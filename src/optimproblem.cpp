@@ -671,8 +671,11 @@ PetscErrorCode OptimProblem::GN_Primal_MatMult(Mat A, const Vec v, Vec Av){
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
 
-  self->apply_GN_Jacobian(v, self->workvec_tangentspace, false); // fills internal workvec_statespace with the raw output of W^1/2 L v and sets workvec_tangentspace to 0
-  self->apply_GN_Jacobian_Adjoint(self->workvec_tangentspace, Av, false); // ignores the input workvec_tangentspace and uses internal workvec_statespace instead
+  double project_to_gate_complement = sqrt(2.0 / self->mastereq->getDim());
+  bool project_to_tangentspace = false;
+
+  self->apply_GN_Jacobian(v, self->workvec_tangentspace, project_to_tangentspace, project_to_gate_complement); // fills internal workvec_statespace with the raw output of W^1/2 L v and sets workvec_tangentspace to 0
+  self->apply_GN_Jacobian_Adjoint(self->workvec_tangentspace, Av, project_to_tangentspace, project_to_gate_complement); // ignores the input workvec_tangentspace and uses internal workvec_statespace instead
 
   // self->apply_GN_Jacobian(v, self->workvec_tangentspace); // y = P_G W^1/2 L v
   // self->apply_GN_Jacobian_Adjoint(self->workvec_tangentspace, Av);  // Av = (P_G W^1/2 L)^T y
@@ -690,20 +693,21 @@ PetscErrorCode OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
   // Reset output
   VecZeroEntries(Ay);
 
-  // v_temp = L^T W^1/2 P_G y (tangent space -> design space)
-  self->apply_GN_Jacobian_Adjoint(y, self->workvec_designspace);
-  // Ay = P_G W^1/2 L v_temp (design space -> tangent space)
-  self->apply_GN_Jacobian(self->workvec_designspace, Ay);
+  double project_to_gate_complement = sqrt(2.0 / self->mastereq->getDim());
+  bool project_to_tangentspace = true;
 
-  // Add damping
-  VecAXPY(Ay, self->gn_normaleq_damping, y);
+  // v_temp = L^T W^1/2 P_G y (tangent space -> design space)
+  self->apply_GN_Jacobian_Adjoint(y, self->workvec_designspace, project_to_tangentspace, project_to_gate_complement);
+  // Ay = P_G W^1/2 L v_temp (design space -> tangent space)
+  self->apply_GN_Jacobian(self->workvec_designspace, Ay, project_to_tangentspace, project_to_gate_complement);
+
+  // Add tikhonov regularization
+  VecAXPY(Ay, self->gamma_tikhonov, y);
 
   return 0;
 }
 
 Vec OptimProblem::computeGaussNewtonRHS(const std::string& gn_solver_mode, const Vec G){
-  assert(gn_solver_mode == "dual" || gn_solver_mode == "primal" || gn_solver_mode == "least_squares");
-
   Vec b = nullptr;
 
   if (gn_solver_mode == "primal") {
@@ -713,27 +717,18 @@ Vec OptimProblem::computeGaussNewtonRHS(const std::string& gn_solver_mode, const
     VecCopy(G, b);
     VecScale(b, -1.0);
     
-  } else if (gn_solver_mode == "dual" || gn_solver_mode == "least_squares") {
-    // Dual: b = - \nabla_U J = WU, projected onto tangent space
+  } else if (gn_solver_mode == "least_squares") {
     // Least-squares: b = - W^1/2 U, projected onto tangent space
 
     // Create the RHS vector of appropriate size 
-    if (gn_solver_mode == "dual") {
-      MatCreateVecs(GN_Dual_MatShell, nullptr, &b);
-      VecZeroEntries(b);
-    } else  { // least-squares
-      MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &b);
-      VecZeroEntries(b);
-    }
+    MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &b);
+    VecZeroEntries(b);
 
     // Apply scaled W to U.
     for (int iinit=0; iinit<ninit_local; iinit++) {
       VecCopy(timestepper->getFinalState(iinit), workvec_statespace[iinit]); // copy U into workvecs
     }
-    double scale = 2.0 / mastereq->getDim(); // dual: alpha = 2/n, to get WU=\nabla_UJ no W^1/2 ? 
-    if (gn_solver_mode == "least_squares") { // least-squares: alpha = sqrt(2/n) to get W^1/2 U
-      scale = sqrt(2.0 / mastereq->getDim());
-    }
+    double scale = sqrt(2.0 / mastereq->getDim());
     projectToGateComplement(workvec_statespace, scale);
 
     // Project result onto tangent space  -> fills b from workvec_statespace
@@ -742,6 +737,22 @@ Vec OptimProblem::computeGaussNewtonRHS(const std::string& gn_solver_mode, const
     // Scale to get negative direction
     VecScale(b, -1.0);
 
+  }  else if (gn_solver_mode == "dual") {
+      MatCreateVecs(GN_Dual_MatShell, nullptr, &b);
+      VecZeroEntries(b);
+
+    // Apply scaled W to U.
+    for (int iinit=0; iinit<ninit_local; iinit++) {
+      VecCopy(timestepper->getFinalState(iinit), workvec_statespace[iinit]); 
+    }
+    double scale = 2.0 / mastereq->getDim(); // dual: alpha = 2/n, to get WU=\nabla_UJ no W^1/2 ? 
+    projectToGateComplement(workvec_statespace, scale);
+
+    // Project result onto tangent space  -> fills b from workvec_statespace
+    projectToGellmannTangentSpace(workvec_statespace, b);
+
+    // Scale to get negative direction
+    VecScale(b, -1.0);
   } else {
     printf("Wrong GN solver mode in computeGaussNewtonRHS. This should never happen!\n");
     exit(1);
@@ -825,7 +836,8 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
 
   // Recover primal solution: v = L^* y 
   if (gn_solver_mode == "dual") {
-    apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out);
+    double project_to_gate_complement = sqrt(2.0 / mastereq->getDim());
+    apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, project_to_gate_complement);
   } else {
     VecCopy(vec_workspace, v_out);
   }
@@ -1069,7 +1081,8 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   delete[] eigenvalues;
 
   // Recover primal solution: v = L^T y (use pure Jacobian transpose for dual mode)
-  apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out);
+  double project_to_gate_complement = sqrt(2.0 / mastereq->getDim());
+  apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, project_to_gate_complement);
 
   // Store KSP iterations for reporting in optimization history
   ksp_iters_last = refine_iters;
@@ -2154,7 +2167,8 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMult(Mat A, Vec v, Vec y)
   MatShellGetContext(A, (void**)&self);
 
   // Fill the top part of y with Lv projected onto tangent space
-  self->apply_GN_Jacobian(v, y);
+  double project_to_gate_complement = sqrt(2.0 / self->mastereq->getDim());
+  self->apply_GN_Jacobian(v, y, true, project_to_gate_complement);
 
   // Fill the bottom of y with damping: lambda * v
   PetscInt M;
@@ -2196,7 +2210,8 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w_long,
   VecRestoreArrayRead(w_long, &wl_data);
 
   // Apply adjoint of GN Jacobian in tangent space
-  self->apply_GN_Jacobian_Adjoint(w, vout);
+  double project_to_gate_complement = sqrt(2.0 / self->mastereq->getDim());
+  self->apply_GN_Jacobian_Adjoint(w, vout, true, project_to_gate_complement);
 
   // Add damping lambda * w_long[tangent_dim:end] contribution to the output
   PetscScalar* vout_data;
@@ -2212,7 +2227,7 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w_long,
 }
 
 
-void OptimProblem::apply_GN_Jacobian(Vec v, Vec y, bool project_to_tangentspace)
+void OptimProblem::apply_GN_Jacobian(Vec v, Vec y, bool project_to_tangentspace, double project_to_gate_complement)
 {
   // Jacobian forward: y = P_G W^1/2 Lv 
 
@@ -2228,7 +2243,9 @@ void OptimProblem::apply_GN_Jacobian(Vec v, Vec y, bool project_to_tangentspace)
   for (int iinit=0; iinit<self->ninit_local; iinit++) {
     VecCopy(self->timestepper->getLinearizedFinalState(iinit), self->workvec_statespace[iinit]);
   }
-  self->projectToGateComplement(self->workvec_statespace, sqrt(2.0 / self->mastereq->getDim()));
+  if (project_to_gate_complement > 0) {
+    self->projectToGateComplement(self->workvec_statespace, project_to_gate_complement);
+  }
 
   // Project result onto the tangent space  -> fills y from workvec_statespace
   if (project_to_tangentspace) {
@@ -2236,7 +2253,7 @@ void OptimProblem::apply_GN_Jacobian(Vec v, Vec y, bool project_to_tangentspace)
   } // otherwise leaves y unchanged. 
 }
 
-void OptimProblem::apply_GN_Jacobian_Adjoint(Vec w, Vec vout, bool recover_from_tangent_space)
+void OptimProblem::apply_GN_Jacobian_Adjoint(Vec w, Vec vout, bool recover_from_tangent_space, double project_to_gate_complement)
 {
   // Jacobian transpose: vout = L^T W^1/2 P_G^{-1} w 
 
@@ -2251,7 +2268,9 @@ void OptimProblem::apply_GN_Jacobian_Adjoint(Vec w, Vec vout, bool recover_from_
   } // otherwise takes workvec_statespace as input directly without reconstructing from the tangent space.
 
   // Apply W^1/2 to workspace: W^1/2  = sqrt(2/n)(I - 1/n <V, cdot> V) -> updates workvec_statespace[iinit]
-  self->projectToGateComplement(self->workvec_statespace, sqrt(2.0 / self->mastereq->getDim()));
+  if (project_to_gate_complement > 0) {
+    self->projectToGateComplement(self->workvec_statespace, project_to_gate_complement);
+  }
 
   // Solve adjoint backward ODE for each terminal condition in workvec_statespace[iinit]
   for (int iinit = 0; iinit < self->ninit_local; iinit++) {

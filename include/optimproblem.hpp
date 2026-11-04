@@ -299,9 +299,7 @@ class OptimProblem {
   static PetscErrorCode GN_LeastSquares_MatMultTranspose(Mat A, Vec w, Vec vout); 
 
   /**
-   * @brief MatMult GN_Dual_MatShell: Applies P_G W^1/2 L L^* W^1/2 P_G 
-   * 
-   * Calls apply_GN_Jacobian_Adjoint (L*^ W^1/2 P_G)followed by apply_GN_Jacobian (P_G W^1/2 L)
+   * @brief MatMult GN_Dual_MatShell 
    * 
    * @note: Requires xeval_GN to be set before calling. Performs a nonlinear solveODE at xeval_GN if !nonlinear_forward_valid, so to store U(t;xeval_GN) for all t. 
    */
@@ -326,9 +324,10 @@ class OptimProblem {
    * 
    * @param v Input vector in the design space
    * @param y Output vector in the tangent space
-   * @param project_to_tangentspace If false, fills internal workvec_statespace with the raw output of W^1/2 L v and sets y to 0. Only used in GN_primal_MatMult.  
+   * @param project_to_tangentspace If false, fills internal workvec_statespace with the raw output of Lv or alpha*W*LV and sets y to 0.  
+   * @param project_to_gate_complement If >0, applies projection onto the orthogonal complement of the gate before computing the Jacobian, scaled by this factor
    */
-  void apply_GN_Jacobian(Vec v, Vec y, bool project_to_tangentspace = true); 
+  void apply_GN_Jacobian(Vec v, Vec y, bool project_to_tangentspace, double project_to_gate_complement); 
 
   /**
    * @brief Applies the adjoint of the Gauss-Newton Jacobian projected onto the tangent space: vout = (P_G W^1/2 L)^T w
@@ -338,8 +337,9 @@ class OptimProblem {
    * @param w Input vector in the tangent space
    * @param vout Output vector in the design space
    * @param recover_from_tangent_space If false, takes workvec_statespace as input instead of reconstructing from the tangent space. Only used in GN_primal_MatMult.
+   * @param project_to_gate_complement If >0, applies projection onto the orthogonal complement of the gate before computing the adjoint, scaled by this factor
    */
-  void apply_GN_Jacobian_Adjoint(Vec w, Vec vout, bool recover_from_tangent_space = true); 
+  void apply_GN_Jacobian_Adjoint(Vec w, Vec vout, bool recover_from_tangent_space, double project_to_gate_complement); 
 
   /**
    * @brief Applies projection W = alpha*(I - 1/n <V, cdot> V) onto orthogonal complement of V
