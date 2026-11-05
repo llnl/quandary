@@ -417,6 +417,7 @@ int main(int argc,char **argv)
       printf("\nStarting Gauss-Newton solves ...\n");
     }
     optimctx->getStartingPoint(xinit);
+    optimctx->setGaussNewtonEvalPoint(xinit);
 
     // Do one gradient evaluation first to store the forward states and get the right hand side
     bool writeTrajectoryDataFiles = true;
@@ -484,6 +485,7 @@ int main(int argc,char **argv)
     }
 
     optimctx->setGaussNewtonMaxiter(saved_maxiter); // reset max iterations
+    optimctx->setGaussNewtonEvalPoint(xinit);
 
     // Test dual Gauss-Newton solver
     if (mpirank_world == 0 && !quietmode) {

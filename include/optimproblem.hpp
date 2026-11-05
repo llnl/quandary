@@ -131,6 +131,7 @@ class OptimProblem {
   int gn_precond_rank; ///< Rank for low-rank preconditioner
   int gn_maxiter; ///< Maximum iterations for Gauss-Newton KSP solver
   double gn_rtol; ///< Relative tolerance for Gauss-Newton KSP solver
+  bool gn_dual_symmetric = true; ///< Flag to solve symmetric dual equation
 
   // Workspace for Gauss-Newton solvers
   int tangent_dim; ///< Dimension of the tangent space (dim²-1)
@@ -457,6 +458,8 @@ class OptimProblem {
    * primal: b = -G in design space
    * least-squares and dual: b = -∇_U J projected to tangent space 
    * 
+   * @param gn_solver_mode Specifies which Gauss-Newton solver mode is being used ("primal", "dual", or "least_squares")
+   * @param G Design space gradient vector (used for "primal" mode)
    * @return Newly created RHS vector for the Gauss-Newton system
    */
   Vec computeGaussNewtonRHS(const std::string& gn_solver_mode, const Vec G);
