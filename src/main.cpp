@@ -263,13 +263,14 @@ int main(int argc,char **argv)
 
     if (mode == "dual") {
       // Apply damping before assembling
-      damping = config.getGnNormaleqDamping();
-      if (damping > 0.0) {
-        Mat GN_Dual_MatShell = optimctx->getGN_Dual_MatShell();
-        MatShift(GN_Dual_MatShell, damping);
-      }
+      // damping = config.getGnNormaleqDamping();
+      // if (damping > 0.0) {
+      //   Mat GN_Dual_MatShell = optimctx->getGN_Dual_MatShell();
+      //   MatShift(GN_Dual_MatShell, damping);
+      // }
       orig_fname = "GN_dual_matrix.dat";
       prec_fname = "GN_dual_matrix_preconditioned.dat";
+      damping = optimctx->getTikhonov();
       optimctx->updateGaussNewtonDualMatDense();
       mat_dense = optimctx->getGN_Dual_MatDense();
     }
@@ -321,10 +322,10 @@ int main(int argc,char **argv)
       }
 
       // VERIFY THIS: In DUAL mode, damping also needs to be applied to precond shell???
-      if (mode == "dual" && damping > 0.0) {
-        Mat GN_Dual_LowRank_MatShell = optimctx->getGN_Dual_LowRank_MatShell();
-        MatShift(GN_Dual_LowRank_MatShell, damping);
-      }
+      // if (mode == "dual" && damping > 0.0) {
+      //   Mat GN_Dual_LowRank_MatShell = optimctx->getGN_Dual_LowRank_MatShell();
+      //   MatShift(GN_Dual_LowRank_MatShell, damping);
+      // }
 
       // Update MatShell preconditioner
       optimctx->updateGaussNewtonPreconditionerLowRank(rank);

@@ -694,6 +694,9 @@ PetscErrorCode OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
   VecZeroEntries(Ay);
 
   // For non-symmetric case: apply (W P_TU L) (L^* P_TU^-1) y
+  // W = (2/n) (I-P) = (2/n) Pperp
+  // Apply (Q P_TU L) (L^* P_TU) y, Q = (1/n) P_TU Pperp P_TU^*, Lt = P_TU L
+  // (Q P_TU L) (L^* P_TU^-1) y = (1/n) ( P_TU Pperp L) (L^* P_TU^-1) y = ( P_TU W L) (L^* P_TU^-1) y 
   if (!self->gn_dual_symmetric) {
 
     // Apply L^* P_TU^-1 to y -> fills workvec_designspace

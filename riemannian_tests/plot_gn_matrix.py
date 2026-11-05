@@ -252,6 +252,43 @@ def plot_eigenvalue_distribution(matrix, output_file=None, num_top_eigs=20, show
     plt.show(block=True)
     plt.close()
 
+    # Plot 3: Linear scale to show any negative eigenvalues
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Plot on linear scale
+    ax.plot(range(len(eigenvalues)), eigenvalues, 'g.-', linewidth=1, markersize=3,
+            label=f'κ = {condition_number:.2e}')
+    ax.axhline(y=0, color='r', linestyle='--', linewidth=1, alpha=0.5, label='Zero line')
+    ax.set_xlabel('Eigenvalue index')
+    ax.set_ylabel('Eigenvalue (linear scale)')
+    ax.set_title(f'Eigenvalue Spectrum (Linear Scale)\n{base_filename}')
+    ax.legend(loc='best', fontsize=10)
+    ax.grid(True, alpha=0.3)
+
+    # Check for negative eigenvalues
+    num_negative = np.sum(eigenvalues < 0)
+    if num_negative > 0:
+        print(f"\nWARNING: Found {num_negative} negative eigenvalues!")
+        print(f"Most negative eigenvalue: {np.min(eigenvalues):.6e}")
+        # Add text annotation on plot
+        ax.text(0.98, 0.02, f'{num_negative} negative eigenvalues',
+                transform=ax.transAxes, fontsize=10, color='red',
+                verticalalignment='bottom', horizontalalignment='right',
+                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+    else:
+        print(f"\nAll eigenvalues are non-negative (smallest: {np.min(eigenvalues):.6e})")
+
+    plt.tight_layout()
+
+    # Save linear scale plot
+    linear_file = base + '_eigenvalues_linear.png'
+    plt.savefig(linear_file, dpi=300, bbox_inches='tight')
+    print(f"Saved: {linear_file}")
+
+    # Also show interactively
+    plt.show(block=True)
+    plt.close()
+
 
 def main():
     if len(sys.argv) < 2:
