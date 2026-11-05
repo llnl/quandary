@@ -182,7 +182,7 @@ def plot_eigenvalue_distribution(matrix, output_file=None, num_top_eigs=20, show
         return
 
     print("\nComputing eigenvalues...")
-    eigenvalues = np.linalg.eigvalsh(matrix)  # For symmetric matrices
+    eigenvalues, _ = np.linalg.eig(matrix)  # For general matrices
     eigenvalues = np.sort(eigenvalues)[::-1]  # Sort descending
 
     print(f"Largest eigenvalue: {eigenvalues[0]:.6e}")
