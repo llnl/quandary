@@ -2324,6 +2324,9 @@ void OptimProblem::projectToGateComplement(std::vector<Vec> &states, double alph
 }
 
 void OptimProblem::projectToGellmannTangentSpace(std::vector<Vec> &states, Vec xout){
+
+  VecZeroEntries(xout);
+
   // Grab output array for xout
   PetscScalar *xout_data;
   VecGetArray(xout, &xout_data);
