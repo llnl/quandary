@@ -922,7 +922,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   EPS eps;
   EPSCreate(PETSC_COMM_SELF, &eps);
   EPSSetOperators(eps, GN_Dual_MatShell, NULL);
-  EPSSetProblemType(eps, EPS_HEP);
+  EPSSetProblemType(eps, EPS_NHEP); // used to be EPS_HEP for Hermitian matrices
   EPSSetWhichEigenpairs(eps, EPS_LARGEST_REAL);
   EPSSetDimensions(eps, num_eigs, PETSC_DEFAULT, PETSC_DEFAULT);
   EPSSetFromOptions(eps);
@@ -1748,7 +1748,7 @@ void OptimProblem::updateGaussNewtonPreconditionerLowRank(int rank){
   } else if (gn_solver_mode == "primal") {
     EPSSetOperators(eps, GN_Primal_MatShell, NULL);
   }
-  EPSSetProblemType(eps, EPS_HEP);  // Hermitian eigenvalue problem
+  EPSSetProblemType(eps, EPS_NHEP);  // Hermitian eigenvalue problem
   EPSSetWhichEigenpairs(eps, EPS_LARGEST_REAL);  // Largest eigenvalues
   EPSSetDimensions(eps, nev, PETSC_DEFAULT, PETSC_DEFAULT);
   EPSSetFromOptions(eps);
