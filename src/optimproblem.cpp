@@ -137,7 +137,6 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   gn_maxiter = config.getGnMaxiter();
   gn_rtol = config.getGnRtol();
   gn_solver_mode = config.getGnSolverMode();
-  gn_normaleq_damping = config.getGnNormaleqDamping();
   gn_normaleq_solver = config.getGnNormaleqSolver();  
   gn_leastsquares_damping = config.getGnLeastSquaresDamping();
   gn_leastsquares_solver = config.getGnLeastSquaresSolver();
@@ -693,29 +692,17 @@ PetscErrorCode OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
   // Reset output
   VecZeroEntries(Ay);
 
-  // For non-symmetric case: apply (W P_TU L) (L^* P_TU^-1) y
-  // W = (2/n) (I-P) = (2/n) Pperp
-  // Apply (Q P_TU L) (L^* P_TU) y, Q = (1/n) P_TU Pperp P_TU^*, Lt = P_TU L
-  // (Q P_TU L) (L^* P_TU^-1) y = (1/n) ( P_TU Pperp L) (L^* P_TU^-1) y = ( P_TU W L) (L^* P_TU^-1) y 
-  if (!self->gn_dual_symmetric) {
+  // Compute z =  (P_TU L)(L^* P_TU^-1) y
+  self->apply_GN_Jacobian_Adjoint(y, self->workvec_designspace, true, 0.0);
+  self->apply_GN_Jacobian(self->workvec_designspace, self->workvec_tangentspace, true, 0.0); 
+  
+  // // Compute Ay = P_TU W P_TU^-1 * z  
+  self->recoverFromGellmannTangentSpace(self->workvec_tangentspace, self->workvec_statespace);
+  self->projectToGateComplement(self->workvec_statespace, 2.0 / self->mastereq->getDim());
+  self->projectToGellmannTangentSpace(self->workvec_statespace, Ay);
 
-    // Apply L^* P_TU^-1 to y -> fills workvec_designspace
-    double project_to_gate_complement = 0.0;
-    self->apply_GN_Jacobian_Adjoint(y, self->workvec_designspace, true, project_to_gate_complement);
-    // Apply P_TU W L to workvec_designspace -> fills Av
-    project_to_gate_complement = 2.0 / self->mastereq->getDim();
-    self->apply_GN_Jacobian(self->workvec_designspace, Ay, true, project_to_gate_complement); 
-  }
-  else {
-    // Symmetric: apply (W^1/2 P_TU L L^* P_TU^-1 W^1/2) to y
-    // -> approx (P_TU W^1/2 L) (L^* W^1/2 P_TU^-1) y
-    double project_to_gate_complement = sqrt(2.0 / self->mastereq->getDim());
-    self->apply_GN_Jacobian_Adjoint(y, self->workvec_designspace, true, project_to_gate_complement);
-    self->apply_GN_Jacobian(self->workvec_designspace, Ay, true, project_to_gate_complement);
-  }
-
-  // Add tikhonov regularization
-  VecAXPY(Ay, self->gamma_tikhonov, y);
+  // add lambda*z
+  VecAXPY(Ay, self->gamma_tikhonov, self->workvec_tangentspace);
 
   return 0;
 }
@@ -751,28 +738,25 @@ Vec OptimProblem::computeGaussNewtonRHS(const std::string& gn_solver_mode, const
     VecScale(b, -1.0);
 
   }  else if (gn_solver_mode == "dual") {
-    // non-symmetric dual RHS: b = -P_TU W (U-L\alpha)
+    // non-symmetric dual RHS: b = -P_TU (WU+\lambda*L\alpha)
 
     MatCreateVecs(GN_Dual_MatShell, nullptr, &b);
     VecZeroEntries(b);
-
 
     // workvec_statespace = U(T) 
     for (int iinit=0; iinit<ninit_local; iinit++) {
       VecCopy(timestepper->getFinalState(iinit), workvec_statespace[iinit]); 
     }
 
-    if (!gn_dual_symmetric) {
-      // Compute U-L\alpha  
-      evalLinearizedForward(xeval_GN, xeval_GN); 
-      for (int iinit=0; iinit<ninit_local; iinit++) {
-        VecAXPY(workvec_statespace[iinit], -1.0, timestepper->getLinearizedFinalState(iinit)); 
-      }
-    }
-
     // Apply W = 2/n(I-1/n<V, cdot> V) to workvec_statespace
     double scale = 2.0 / mastereq->getDim();  
     projectToGateComplement(workvec_statespace, scale);
+
+    // Compute WU+\lambda L\alpha  
+    evalLinearizedForward(xeval_GN, xeval_GN); 
+    for (int iinit=0; iinit<ninit_local; iinit++) {
+      VecAXPY(workvec_statespace[iinit], gamma_tikhonov, timestepper->getLinearizedFinalState(iinit)); 
+    }
 
     // Project result onto tangent space 
     projectToGellmannTangentSpace(workvec_statespace, b);
@@ -862,13 +846,8 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
 
   // Recover primal solution: 
   if (gn_solver_mode == "dual") {
-    if (!gn_dual_symmetric) {  // v = L^* P_TU^-1 y - alpha
+      // v = L^* P_TU^-1 
       apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, 0.0);
-      VecAXPY(v_out, -1.0, xinit);
-    } else {
-      double project_to_gate_complement = sqrt(2.0 / mastereq->getDim());
-      apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, project_to_gate_complement);
-    }
   } else {
     VecCopy(vec_workspace, v_out);
   }
@@ -1111,16 +1090,8 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   MatDestroy(&V_r);
   delete[] eigenvalues;
 
-  // Recover primal solution: 
-  if (!gn_dual_symmetric) {
-    // v = L^T P_TU^-1 y - alpha 
-    double project_to_gate_complement = 0.0;
-    apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, project_to_gate_complement);
-    VecAXPY(v_out, -1.0, xinit);
-  } else {
-    double project_to_gate_complement = sqrt(2.0 / mastereq->getDim());
-    apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, project_to_gate_complement);
-  }
+  // Recover primal solution: v = L^T P_TU^-1 y
+  apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, 0.0);
 
   // Store KSP iterations for reporting in optimization history
   ksp_iters_last = refine_iters;

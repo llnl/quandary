@@ -533,10 +533,6 @@ int main(int argc,char **argv)
       if (config.getGnNormaleqSolver() == "minres" && config.getGnNormaleqMinresQlp()) {
         printf(" (QLP variant)");
       }
-      printf("\n");
-      printf("GN NormalEq damping: %1.4e\n", config.getGnNormaleqDamping());
-      printf("\n");
-
       // Compute all pairwise differences
       Vec diff;
       VecDuplicate(grad, &diff);

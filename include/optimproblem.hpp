@@ -126,12 +126,10 @@ class OptimProblem {
   std::string gn_leastsquares_solver; ///< Least-squares solver name: "brgn" or "lsqr"
   double gn_leastsquares_damping; ///< Damping parameter λ for Least Squares regularization
   std::string gn_normaleq_solver; ///< Normal equation solver: "minres", "cg", "gmres", or "proj"
-  double gn_normaleq_damping; ///< Damping parameter for Gauss-Newton matrix shift
   int gn_prec_update_interval; ///< Preconditioner update interval (0 = startup only, -1 = adaptive)
   int gn_precond_rank; ///< Rank for low-rank preconditioner
   int gn_maxiter; ///< Maximum iterations for Gauss-Newton KSP solver
   double gn_rtol; ///< Relative tolerance for Gauss-Newton KSP solver
-  bool gn_dual_symmetric = false; //true; ///< Flag to solve symmetric dual equation
 
   // Workspace for Gauss-Newton solvers
   int tangent_dim; ///< Dimension of the tangent space (dim²-1)
