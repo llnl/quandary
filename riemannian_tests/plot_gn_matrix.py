@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Plot Gauss-Newton matrix as a heatmap in log scale.
 
@@ -190,7 +190,7 @@ def plot_eigenvalue_distribution(matrix, output_file=None, num_top_eigs=20, show
 
     # Compute condition number
     if eigenvalues[-1] != 0:
-        condition_number = eigenvalues[0] / abs(eigenvalues[-1])
+        condition_number = np.real(eigenvalues[0] / abs(eigenvalues[-1]))
     else:
         condition_number = float('inf')
     print(f"Condition number: {condition_number:.6e}")
