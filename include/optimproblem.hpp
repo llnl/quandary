@@ -124,7 +124,7 @@ class OptimProblem {
   // Options for Gauss-Newton solvers
   std::string gn_solver_mode; ///< Gauss-Newton solver mode: "primal" or "dual" or "least-squares"
   std::string gn_leastsquares_solver; ///< Least-squares solver name: "brgn" or "lsqr"
-  double gn_leastsquares_damping; ///< Damping parameter λ for Least Squares regularization
+  double gn_damping; ///< Damping parameter λ for Least Squares regularization
   std::string gn_normaleq_solver; ///< Normal equation solver: "minres", "cg", "gmres", or "proj"
   int gn_prec_update_interval; ///< Preconditioner update interval (0 = startup only, -1 = adaptive)
   int gn_precond_rank; ///< Rank for low-rank preconditioner

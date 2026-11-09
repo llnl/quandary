@@ -50,12 +50,11 @@ gn_rtol = 1e-1
 gn_solver_mode = "least_squares"
 
 # gn_normaleq_solver = "minres"
-# gn_normaleq_damping = 1e-3
+gn_damping = 1e-3
 
 # Those apply to solving the Least Squares problem
 # leastsquares_solver = "brgn"
 gn_leastsquares_solver = "lsqr"
-gn_leastsquares_damping = 1.0
 
 [output]
 directory = "./"

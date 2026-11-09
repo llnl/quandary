@@ -43,6 +43,7 @@ solver_type = "gauss_newton"
 # gn_solver_mode = "primal"
 # gn_solver_mode = "dual"
 gn_solver_mode = "least_squares"
+gn_damping = 1e-5
 
 # Stopping criteria for inner GN solvers
 gn_maxiter = 100
@@ -52,12 +53,10 @@ gn_rtol = 1e-5
 #gn_normaleq_solver = "proj"
 gn_normaleq_solver = "minres"
 gn_normaleq_minres_qlp = true
-gn_normaleq_damping = 1e-5
 
 # Inner solver for least squares
 gn_leastsquares_solver = "lsqr"
 # gn_leastsquares_solver = "brgn"
-gn_leastsquares_damping = 1e-5
 
 # Preconditioner options
 gn_prec_update_interval = -1

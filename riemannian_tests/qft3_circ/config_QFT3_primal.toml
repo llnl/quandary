@@ -55,16 +55,14 @@ gn_prec_update_interval = -2
 gn_precond_rank = 20
 
 # Those apply to solving the normal equation
-# gn_normaleq_damping = 1e-5
 gn_rtol = 1e-5
-gn_normaleq_damping = 0.0
+gn_damping = 0.0
 gn_normaleq_solver = "minres"
 gn_normaleq_minres_qlp = true  
 
 # Those apply to solving the Least Squares problem
 # gn_leastsquares_solver = "brgn"
 # gn_leastsquares_solver = "lsqr"
-# gn_leastsquares_damping = 1e-3
 
 [output]
 directory = "./primal_project"

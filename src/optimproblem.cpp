@@ -138,7 +138,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   gn_rtol = config.getGnRtol();
   gn_solver_mode = config.getGnSolverMode();
   gn_normaleq_solver = config.getGnNormaleqSolver();  
-  gn_leastsquares_damping = config.getGnLeastSquaresDamping();
+  gn_damping = config.getGnDamping();
   gn_leastsquares_solver = config.getGnLeastSquaresSolver();
   gn_prec_update_interval = config.getGnPrecUpdateInterval();
   gn_precond_rank = config.getGnPrecondRank();
@@ -154,7 +154,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   // Create MatShell for least-squares problem
   int N = ndesign;
   PetscInt M = tangent_dim;
-  if (gn_leastsquares_damping > 0.0) {
+  if (gn_damping > 0.0) {
     M += ndesign;
   }
   MatCreateShell(PETSC_COMM_SELF, M, N, M, N, this, &GN_LeastSquares_MatShell);
@@ -186,7 +186,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   // TaoSetMaximumIterations(tao_sub, config.getGnMaxiter());
   TaoSetTolerances(tao_gn_leastsquares_brgn, gn_rtol, PETSC_DEFAULT, PETSC_DEFAULT);
   TaoSetMaximumIterations(tao_gn_leastsquares_brgn, gn_maxiter);
-  TaoBRGNSetRegularizerWeight(tao_gn_leastsquares_brgn, gn_leastsquares_damping);
+  TaoBRGNSetRegularizerWeight(tao_gn_leastsquares_brgn, gn_damping);
   TaoSetResidualRoutine(tao_gn_leastsquares_brgn, brgn_residual, TaoBRGN_EvalResidual, (void*)this);
   TaoSetJacobianResidualRoutine(tao_gn_leastsquares_brgn, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell, TaoBRGN_EvalJacobianResidual, (void*)this);
   TaoMonitorSet(tao_gn_leastsquares_brgn, TaoBRGN_Monitor, (void*)this, NULL);
@@ -691,18 +691,34 @@ PetscErrorCode OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
 
   // Reset output
   VecZeroEntries(Ay);
-
-  // Compute z =  (P_TU L)(L^* P_TU^-1) y
-  self->apply_GN_Jacobian_Adjoint(y, self->workvec_designspace, true, 0.0);
-  self->apply_GN_Jacobian(self->workvec_designspace, self->workvec_tangentspace, true, 0.0); 
   
-  // // Compute Ay = P_TU W P_TU^-1 * z  
-  self->recoverFromGellmannTangentSpace(self->workvec_tangentspace, self->workvec_statespace);
-  self->projectToGateComplement(self->workvec_statespace, 2.0 / self->mastereq->getDim());
-  self->projectToGellmannTangentSpace(self->workvec_statespace, Ay);
+  // Ay = 2/n P_TU P_G L L^* P_G P_TU^-1 y 
+  self->apply_GN_Jacobian_Adjoint(y, self->workvec_designspace, true, 1.0);
+  double scale = 2.0 / self->mastereq->getDim();
+  self->apply_GN_Jacobian(self->workvec_designspace, Ay, true, scale); 
 
-  // add lambda*z
+  // workvec_tangentspace = P_TU P_G P_TU^-1 y
+  self->recoverFromGellmannTangentSpace(y, self->workvec_statespace);
+  self->projectToGateComplement(self->workvec_statespace, 1.0);
+  self->projectToGellmannTangentSpace(self->workvec_statespace, self->workvec_tangentspace);
+
   VecAXPY(Ay, self->gamma_tikhonov, self->workvec_tangentspace);
+
+  // Damping Ay += mu * y
+  VecAXPY(Ay, self->gn_damping, y);
+
+
+  // // Compute z =  (P_TU L)(L^* P_TU^-1) y
+  // self->apply_GN_Jacobian_Adjoint(y, self->workvec_designspace, true, 0.0);
+  // self->apply_GN_Jacobian(self->workvec_designspace, self->workvec_tangentspace, true, 0.0); 
+  
+  // // // Compute Ay = P_TU W P_TU^-1 * z  
+  // self->recoverFromGellmannTangentSpace(self->workvec_tangentspace, self->workvec_statespace);
+  // self->projectToGateComplement(self->workvec_statespace, 2.0 / self->mastereq->getDim());
+  // self->projectToGellmannTangentSpace(self->workvec_statespace, Ay);
+
+  // // add lambda*z
+  // VecAXPY(Ay, self->gamma_tikhonov, self->workvec_tangentspace);
 
   return 0;
 }
@@ -739,30 +755,39 @@ Vec OptimProblem::computeGaussNewtonRHS(const std::string& gn_solver_mode, const
 
   }  else if (gn_solver_mode == "dual") {
     // non-symmetric dual RHS: b = -P_TU (WU+\lambda*L\alpha)
-
     MatCreateVecs(GN_Dual_MatShell, nullptr, &b);
     VecZeroEntries(b);
 
-    // workvec_statespace = U(T) 
+    // b = 2/n P_TU P_G L alpha
+    apply_GN_Jacobian(xeval_GN, b, true, 2.0/mastereq->getDim()); 
+    double factor = gamma_tikhonov / (gamma_tikhonov + gn_damping);
+    VecScale(b, factor);
+
+    // b += -2/n P_TU P_G U
     for (int iinit=0; iinit<ninit_local; iinit++) {
       VecCopy(timestepper->getFinalState(iinit), workvec_statespace[iinit]); 
     }
+    projectToGateComplement(workvec_statespace, -2.0/mastereq->getDim());
+    projectToGellmannTangentSpace(workvec_statespace, workvec_tangentspace);
+    VecAXPY(b, 1.0, workvec_tangentspace);
 
-    // Apply W = 2/n(I-1/n<V, cdot> V) to workvec_statespace
-    double scale = 2.0 / mastereq->getDim();  
-    projectToGateComplement(workvec_statespace, scale);
-
-    // Compute WU+\lambda L\alpha  
-    evalLinearizedForward(xeval_GN, xeval_GN); 
-    for (int iinit=0; iinit<ninit_local; iinit++) {
-      VecAXPY(workvec_statespace[iinit], gamma_tikhonov, timestepper->getLinearizedFinalState(iinit)); 
-    }
-
-    // Project result onto tangent space 
-    projectToGellmannTangentSpace(workvec_statespace, b);
+    // // workvec_statespace = U(T) 
+    // for (int iinit=0; iinit<ninit_local; iinit++) {
+    //   VecCopy(timestepper->getFinalState(iinit), workvec_statespace[iinit]); 
+    // }
+    // // Apply W = 2/n(I-1/n<V, cdot> V) to workvec_statespace
+    // double scale = 2.0 / mastereq->getDim();  
+    // projectToGateComplement(workvec_statespace, scale);
+    // // Compute WU+\lambda L\alpha  
+    // evalLinearizedForward(xeval_GN, xeval_GN); 
+    // for (int iinit=0; iinit<ninit_local; iinit++) {
+    //   VecAXPY(workvec_statespace[iinit], gamma_tikhonov, timestepper->getLinearizedFinalState(iinit)); 
+    // }
+    // // Project result onto tangent space 
+    // projectToGellmannTangentSpace(workvec_statespace, b);
 
     // Scale to get negative direction
-    VecScale(b, -1.0);
+    // VecScale(b, -1.0);
   } else {
     printf("Wrong GN solver mode in computeGaussNewtonRHS. This should never happen!\n");
     exit(1);
@@ -847,7 +872,12 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
   // Recover primal solution: 
   if (gn_solver_mode == "dual") {
       // v = L^* P_TU^-1 
-      apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, 0.0);
+      // apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, 0.0);
+
+      // v = L^* P_G P_TU^-1 y - alpha
+      apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, 1.0);
+      double factor = gamma_tikhonov / (gamma_tikhonov + gn_damping);
+      VecAXPY(v_out, -factor, xeval_GN);
   } else {
     VecCopy(vec_workspace, v_out);
   }
@@ -1163,7 +1193,7 @@ void OptimProblem::solveGaussNewtonPrimalProjected(Vec xinit, const Vec b, Vec A
   VecGetArray(tmp, &tmp_data);
   for (int i=0; i<evals.size(); i++) {
     if (evals[i] > 1e-14) {
-      tmp_data[i] /= evals[i];
+      tmp_data[i] /= (evals[i] + gn_damping);
     } else {
       tmp_data[i] = 0.0;
     }
@@ -1368,6 +1398,14 @@ void OptimProblem::solve(Vec xinit) {
 
         // Solve for the Gauss-Newton system for the search direction (Gprec) 
         bool precond_is_stale = solveGaussNewtonSystem(x_GN, x_initial, b_rhs, Gprec);
+
+        // sanity check if Gprec is a descent direction
+        PetscScalar dot;
+        VecDot(G, Gprec, &dot);
+        if (dot > 0.0) {
+          printf("  ERROR: Gprec is not a descent direction, dot = %g\n", PetscRealPart(dot));
+          exit(1);
+        }
           
         // If preconditioner is stale, force immediate recomputation and retry
         if (precond_is_stale) {  
@@ -2187,7 +2225,7 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMult(Mat A, Vec v, Vec y)
   VecGetArrayRead(v, &v_data);
   VecGetArray(y, &y_data);
   for (int i=0; i<M - self->tangent_dim; i++) {
-    y_data[i + self->tangent_dim] = self->gn_leastsquares_damping * v_data[i];
+    y_data[i + self->tangent_dim] = self->gn_damping * v_data[i];
   }
   VecRestoreArrayRead(v, &v_data);
   VecRestoreArray(y, &y_data);
@@ -2227,7 +2265,7 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w_long,
   VecGetArray(vout, &vout_data);
   VecGetArrayRead(w_long, &wl_data);
   for (int i=0; i<self->ndesign; i++) {
-    vout_data[i] += self->gn_leastsquares_damping * wl_data[i + self->tangent_dim];
+    vout_data[i] += self->gn_damping * wl_data[i + self->tangent_dim];
   }
   VecRestoreArray(vout, &vout_data);
   VecRestoreArrayRead(w_long, &wl_data);

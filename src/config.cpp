@@ -313,7 +313,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     gn_normaleq_solver = validators::field<std::string>(optimization_table, "gn_normaleq_solver").oneOf({"cg", "minres", "gmres", "proj"}).valueOr(ConfigDefaults::GN_NORMALEQ_SOLVER);
     gn_solver_mode = validators::field<std::string>(optimization_table, "gn_solver_mode").oneOf({"primal", "dual", "least_squares"}).valueOr(ConfigDefaults::GN_SOLVER_MODE);
     gn_leastsquares_solver = validators::field<std::string>(optimization_table, "gn_leastsquares_solver").oneOf({"brgn", "lsqr"}).valueOr(ConfigDefaults::GN_LEASTSQUARES_SOLVER);
-    gn_leastsquares_damping = validators::field<double>(optimization_table, "gn_leastsquares_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::GN_LEASTSQUARES_DAMPING);
+    gn_damping = validators::field<double>(optimization_table, "gn_damping").greaterThanEqual(0.0).valueOr(ConfigDefaults::GN_DAMPING);
     gn_normaleq_minres_qlp = validators::field<bool>(optimization_table, "gn_normaleq_minres_qlp").valueOr(ConfigDefaults::GN_MINRES_QLP);
     gn_prec_update_interval = validators::field<int>(optimization_table, "gn_prec_update_interval").valueOr(ConfigDefaults::GN_PREC_UPDATE_INTERVAL);
     gn_precond_rank = validators::field<int>(optimization_table, "gn_precond_rank").greaterThan(0).valueOr(ConfigDefaults::GN_PRECOND_RANK);
@@ -702,10 +702,10 @@ void Config::printConfig(std::stringstream& log) const {
     log << "gn_normaleq_solver = \"" << gn_normaleq_solver << "\"\n";
     log << "gn_normaleq_minres_qlp = " << (gn_normaleq_minres_qlp ? "true" : "false") << "\n";
     log << "gn_solver_mode = \"" << gn_solver_mode << "\"\n";
+    log << "gn_damping = " << gn_damping << "\n";
     log << "gn_prec_update_interval = " << gn_prec_update_interval << "\n";
     log << "gn_precond_rank = " << gn_precond_rank << "\n";
     log << "gn_leastsquares_solver = \"" << gn_leastsquares_solver << "\"\n";
-    log << "gn_leastsquares_damping = " << gn_leastsquares_damping << "\n";
   }
 
   log << "\n";
