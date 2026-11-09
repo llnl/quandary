@@ -94,8 +94,7 @@ class Quandary:
     gn_solver_mode        # Solver mode for the Gauss-Newton solver ("primal", "dual", "least_squares"). Default: "primal"
     gn_normaleq_solver     # Linear solver for the Gauss-Newton normal equations ("cg", "minres", "gmres", "proj"). Default: "minres"
     gn_leastsquares_solver # Solver for least squares GN problem ("brgn" or "lsqr"). Default: "lsqr"
-    gn_leastsquares_damping # Damping parameter for the least squares GN solver. Default: 0.0
-    gn_normaleq_damping     # Damping parameter for the normal equations GN solver. Default: 0.0
+    gn_damping             # Damping parameter for the GN solver. Default: 0.0
     gn_normaleq_minres_qlp  # Switch to use MINRES-QLP for the normal equations solver. Default: False
     gn_prec_update_interval # Interval for updating the preconditioner in the GN solver (-2 = no preconditioner, -1 = adaptive, 0 = only at startup, n>0 = every n iterations). Default: -2
     gn_precond_rank         # Rank of the preconditioner for the GN solver. Default: 10
@@ -196,9 +195,8 @@ class Quandary:
     gn_rtol                : float = 1e-3
     gn_maxiter             : int   = 100
     gn_leastsquares_solver : str   = "lsqr"
-    gn_leastsquares_damping: float = 1e-3
+    gn_damping             : float = 0.0
     gn_normaleq_solver     : str   = "minres"
-    gn_normaleq_damping    : float = 0.0
     gn_minres_qlp          : bool  = False
     gn_solver_mode         : str   = "primal"
     gn_prec_update_interval: int   = -1
@@ -910,12 +908,11 @@ class Quandary:
         lines.append(f"gn_rtol = {self.gn_rtol}")
         lines.append(f"gn_maxiter = {self.gn_maxiter}")
         lines.append(f"gn_normaleq_solver = {_toml_str(self.gn_normaleq_solver)}")
-        lines.append(f"gn_normaleq_damping = {self.gn_normaleq_damping}")
+        lines.append(f"gn_damping = {self.gn_damping}")
         lines.append(f"gn_minres_qlp = {_toml_bool(self.gn_minres_qlp)}")
         lines.append(f"gn_prec_update_interval = {self.gn_prec_update_interval}")
         lines.append(f"gn_precond_rank = {self.gn_precond_rank}")
         lines.append(f"gn_leastsquares_solver = {_toml_str(self.gn_leastsquares_solver)}")
-        lines.append(f"gn_leastsquares_damping = {self.gn_leastsquares_damping}")
 
         # [output]
         lines.append("\n[output]")
