@@ -106,13 +106,13 @@ class OptimProblem {
   const double rho_backtrack = 0.5;   ///< Backtracking factor
   const int max_ls_iter = 20; ///< Maximum number of backtracking steps
 
-  // All matshells/densemats for Gauss-Newton solvers
+  // MatShell for full Hessian
+  Mat Hessian_MatShell; ///< MatShell for full Hessian
+
+  // All matshells for Gauss-Newton solvers
   Mat GN_Primal_MatShell; ///< Applies L^*WL  
-  Mat GN_Primal_MatDense; ///< Dense L^*WL (debug only)
-  bool gn_primal_usedensemat = false; ///< Always false.
   Mat GN_LeastSquares_MatShell; ///< Applies P_gW^1/2L and, if damped, augments with lambda I  
   Mat GN_Dual_MatShell; ///< Applies P_G W^1/2 L L^* W^1/2 P_G
-  Mat GN_Dual_MatDense; ///< Dense P_G W^1/2 L L^* W^1/2 P_G
   Mat GN_Dual_LowRank_MatShell; ///< Applies low-rank preconditioned dual: M^{-1/2} (L L^T + λI) M^{-1/2}
   Mat GN_Primal_LowRank_MatShell; ///< Applies low-rank preconditioned primal: M^{-1/2} (L^* L + λI) M^{-1/2}
 
@@ -189,10 +189,9 @@ class OptimProblem {
   double getTikhonov() { return gamma_tikhonov; };
   OptimTarget* getOptimTarget() { return optim_target; };
   Mat getGN_Primal_MatShell() { return GN_Primal_MatShell; };
-  Mat getGN_Primal_MatDense() { return GN_Primal_MatDense; };
+  Mat getHessian_MatShell() { return Hessian_MatShell; };
   
   Mat getGN_Dual_MatShell() { return GN_Dual_MatShell; };
-  Mat getGN_Dual_MatDense() { return GN_Dual_MatDense; };
   Mat getGN_Dual_LowRank_MatShell() { return GN_Dual_LowRank_MatShell; };
   Mat getGN_Dual_LowRank_U() { return gn_dual_lowrank_U; };
   Vec getGN_Dual_LowRank_Sigma_InvSqrt() { return gn_dual_lowrank_sigma_invsqrt; };
@@ -290,6 +289,13 @@ class OptimProblem {
    */
   static PetscErrorCode TaoBRGN_Monitor(Tao tao, void *ctx);
 
+  /** 
+   * @brief MatMult for Hessian_MatShell: Applies the full Hessian to a vector v.
+   *
+   * @note: Requires xeval_GN to be set before calling. 
+   */
+  static PetscErrorCode Hessian_MatMult(Mat A, const Vec v, Vec Av);
+
   /**
    * @brief MatMult for GN_Primal_MatShell: Applies L^*WL
    * 
@@ -379,20 +385,6 @@ class OptimProblem {
   void recoverFromGellmannTangentSpace(Vec w, std::vector<Vec> &states);
 
   /**
-   * @brief Updates the dense primal Gauss-Newton matrix based on the current point of evaluation xeval_GN by calling GN_Primal_MatShell on each unit vectoor.
-   * 
-   * @note This operation can be expensive as it involves N^2-1 applications of the MatShell.
-   */
-  void updateGaussNewtonPrimalMatDense();
-
-  /**
-   * @brief Assembles the dense dual Gauss-Newton matrix using GN_Dual_MatShell
-   *
-   * @note This operation can be expensive as it involves (dim²-1) applications of the dual MatShell.
-   */
-  void updateGaussNewtonDualMatDense();
-
-  /**
    * @brief Updates the Gauss-Newton preconditioner if needed
    * 
    * Currently only available for the DUAL system
@@ -417,7 +409,7 @@ class OptimProblem {
    * Uses EPS solver to compute r+1 largest eigenvalues and eigenvectors of the dual GN_Dual_MatShell. Populates the low-rank preconditioner data structures: V_r (gn_dual_lowrank_U), Σ_r (gn_dual_lowrank_sigma_invsqrt), and μ (gn_dual_precond_mu).
    * @returns Dense matrix representing the preconditioned dual Gauss-Newton matrix M^{-1/2} A M^{-1/2}.
    */
-  Mat updateGaussNewtonPreconditionerMatDense(Mat mat_dense, int mat_dim);
+  Mat computeGaussNewtonPreconditionerMatDense(Mat mat_dense);
 
   /**
    * @brief Applies the low-rank dual Gauss-Newton preconditioner: y = M^{-1/2} x, where M ≈ U Σ U^T is the precomputed low-rank approximation.

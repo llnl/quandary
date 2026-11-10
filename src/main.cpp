@@ -256,47 +256,27 @@ int main(int argc,char **argv)
     }
 
     std::string mode = config.getGnSolverMode();
-    if (mpirank_world == 0 && !quietmode) printf("gn_solver_mode = \"%s\"\n", mode.c_str());
+    if (mpirank_world == 0 && !quietmode) {
+      printf("\nAssembling %s Gauss-Newton matrix (L L^T + λI) with λ = %1.6e...\n", mode.c_str(), optimctx->getTikhonov());
+    }
 
-    // primal /dual specific setup:
-    double damping=0.0;
+    // Evaluate the primal or dual MatShell on all unit vectors
     Mat mat_dense;
     std::string orig_fname, prec_fname;
-
     if (mode == "dual") {
-      // Apply damping before assembling
-      // damping = config.getGnNormaleqDamping();
-      // if (damping > 0.0) {
-      //   Mat GN_Dual_MatShell = optimctx->getGN_Dual_MatShell();
-      //   MatShift(GN_Dual_MatShell, damping);
-      // }
       orig_fname = "GN_dual_matrix.dat";
       prec_fname = "GN_dual_matrix_preconditioned.dat";
-      damping = optimctx->getTikhonov();
-      optimctx->updateGaussNewtonDualMatDense();
-      mat_dense = optimctx->getGN_Dual_MatDense();
+      mat_dense = evalDenseMatFromMatshell(optimctx->getGN_Dual_MatShell());
     }
     else{ //primal
       orig_fname = "GN_primal_matrix.dat";
       prec_fname = "GN_primal_matrix_preconditioned.dat";
-      damping = optimctx->getTikhonov();
-      optimctx->updateGaussNewtonPrimalMatDense();
-      mat_dense = optimctx->getGN_Primal_MatDense();
+      mat_dense = evalDenseMatFromMatshell(optimctx->getGN_Primal_MatShell());
     }
 
-    // Save matrix on file
-    PetscInt mat_dim;
-    MatGetSize(mat_dense, &mat_dim, NULL);
-
-    if (mpirank_world == 0 && !quietmode) {
-      if (damping > 0.0) {
-        printf("\nAssembling %s Gauss-Newton matrix (L L^T + λI) with λ = %1.6e...\n", mode.c_str(), damping);
-      } else {
-        printf("\nAssembling %s Gauss-Newton matrix (L L^T)...\n", mode.c_str());
-      }
-    }
-
-    // Only rank 0 writes to file (matrix is replicated on all ranks after MPI_Allreduce)
+    // Save matrix on file. Only rank 0 writes to file (matrix is replicated on all ranks after MPI_Allreduce)
+    PetscInt nrows, ncols;
+    MatGetSize(mat_dense, &nrows, &ncols);
     if (mpirank_world == 0) {
       snprintf(filename, 254, "%s/%s", output->output_dir.c_str(), orig_fname.c_str());
       PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
@@ -305,17 +285,12 @@ int main(int argc,char **argv)
       PetscViewerDestroy(&viewer);
 
       if (!quietmode) {
-        if (damping > 0.0) {
-          printf("Dual matrix (L L^T + λI) saved to: %s\n", filename);
-        } else {
-          printf("Dual matrix (L L^T) saved to: %s\n", filename);
-        }
-        printf("Matrix dimensions: %d x %d (tangent space)\n", mat_dim, mat_dim);
+        printf("Matrix saved to: %s\n", filename);
+        printf("Matrix dimensions: %d x %d \n", nrows, ncols);
       }
     }
 
-    // Save preconditioned matrix if preconditioner is enabled
-    // (interval >= 0 for fixed/startup, or -1 for adaptive mode)
+    // Assemble and save the preconditioned matrix, if enabled
     if (config.getGnPrecUpdateInterval() >= -1) {
       int rank = config.getGnPrecondRank();
       if (mpirank_world == 0 && !quietmode) {
@@ -332,7 +307,7 @@ int main(int argc,char **argv)
       optimctx->updateGaussNewtonPreconditionerLowRank(rank);
 
       // Form M^{-1/2} as a dense matrix; M^{-1/2} = V_r Σ_r^{-1/2} V_r^T + μ^{-1/2}(I - V_r V_r^T)
-      Mat mat_dense_precond = optimctx->updateGaussNewtonPreconditionerMatDense(mat_dense, mat_dim);
+      Mat mat_dense_precond = optimctx->computeGaussNewtonPreconditionerMatDense(mat_dense);
 
       // Only rank 0 writes to file
       if (mpirank_world == 0) {
@@ -345,9 +320,8 @@ int main(int argc,char **argv)
         if (!quietmode) {
           PetscInt dim;
           MatGetSize(mat_dense_precond, &dim, NULL);
-          printf("Preconditioned %s matrix (M^{-1/2} (L L^T + λI) M^{-1/2}, rank=%d) saved to: %s\n", mode.c_str(), rank, filename);
-          printf("Matrix dimensions: %d x %d (tangent space)\n", dim, dim);
-          printf("Damping parameter λ = %1.6e\n", damping);
+          printf("Preconditioned %s matrix (M^{-1/2} A M^{-1/2}, rank=%d) saved to: %s\n", mode.c_str(), rank, filename);
+          printf("Matrix dimensions: %d x %d \n", dim, dim);
         }
       }
       MatDestroy(&mat_dense_precond);
@@ -1074,38 +1048,8 @@ double fnorm;
   // First one gradient evaluation to store all primal and adjoint trajectory states
   optimctx->evalGradF(xinit, grad, false, true);
 
-  Mat Hessian;
-  MatCreateSeqDense(PETSC_COMM_SELF, optimctx->getNdesign(), optimctx->getNdesign(), NULL, &Hessian);
-  MatSetUp(Hessian);
-
-  Vec ej, Hej;
-  VecCreateSeq(PETSC_COMM_SELF, optimctx->getNdesign(), &ej);
-  VecDuplicate(ej, &Hej);
-
-  /* Iterate over all unit vectors and evaluate HessVec product. Store each column in Hessian. */
-  for (int j = 0; j < optimctx->getNdesign(); j++) {
-    if (mpirank_world == 0) printf("Evaluating HessVec for unit vector %d / %d\n", j, optimctx->getNdesign());
-    VecZeroEntries(ej);
-    VecZeroEntries(Hej);
-
-    // Set unit vector
-    VecSetValue(ej, j, 1.0, INSERT_VALUES);
-    VecAssemblyBegin(ej);
-    VecAssemblyEnd(ej);
-
-    // Eval H*ej
-    optimctx->evalHessVec(xinit, ej, Hej);
-
-    // Store result in Hessian
-    for (int i = 0; i < optimctx->getNdesign(); i++) {
-      double Hij;
-      VecGetValues(Hej, 1, &i, &Hij);
-      MatSetValue(Hessian, i, j, Hij, INSERT_VALUES);
-    }
-  }
-  MatAssemblyBegin(Hessian, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(Hessian, MAT_FINAL_ASSEMBLY);
-
+  Mat Hessian = evalDenseMatFromMatshell(optimctx->getHessian_MatShell());
+  
   /* Symmetry test: compute ||1/2(H-H^T)||_F  */
   MatScale(Hessian, 0.5);
   MatDuplicate(Hessian, MAT_COPY_VALUES, &Htest);
@@ -1127,8 +1071,6 @@ double fnorm;
   PetscViewerDestroy(&viewer);
 
   MatDestroy(&Hessian);
-  VecDestroy(&ej);
-  VecDestroy(&Hej);
 
 #endif
 

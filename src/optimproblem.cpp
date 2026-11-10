@@ -192,18 +192,18 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   TaoMonitorSet(tao_gn_leastsquares_brgn, TaoBRGN_Monitor, (void*)this, NULL);
   TaoSetFromOptions(tao_gn_leastsquares_brgn);
 
+  // Create MatShell for Full Hessian
+  MatCreateShell(PETSC_COMM_SELF, ndesign, ndesign, ndesign, ndesign, this, &Hessian_MatShell);
+  MatShellSetOperation(Hessian_MatShell, MATOP_MULT, (void(*)(void))Hessian_MatMult);
+
   // Create MatShell for Gauss-Newton primal equation
   MatCreateShell(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, ndesign, ndesign, this, &GN_Primal_MatShell);
   MatShellSetOperation(GN_Primal_MatShell, MATOP_MULT, (void(*) (void)) GN_Primal_MatMult);
-  MatCreateDense(PETSC_COMM_SELF, ndesign, ndesign, ndesign, ndesign, NULL, &GN_Primal_MatDense); // only used for debug and output 
-  MatZeroEntries(GN_Primal_MatDense);
 
   // Create MatShell for dual Gauss-Newton problem
   PetscInt M_dual = tangent_dim;
   MatCreateShell(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, this, &GN_Dual_MatShell);
   MatShellSetOperation(GN_Dual_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_MatMult);
-  MatCreateDense(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, NULL, &GN_Dual_MatDense); // only debug and output
-  MatZeroEntries(GN_Dual_MatDense);
 
   // Create MatShell for dual and primal low-rank preconditioned 
   MatCreateShell(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, this, &GN_Dual_LowRank_MatShell);
@@ -265,14 +265,12 @@ OptimProblem::~OptimProblem() {
   VecDestroy(&x_GN);
   VecDestroy(&xprev);
 
-  MatDestroy(&GN_Primal_MatDense);
   MatDestroy(&GN_Primal_MatShell);
-  MatDestroy(&GN_Primal_MatDense);
+  MatDestroy(&Hessian_MatShell);
   MatDestroy(&GN_LeastSquares_MatShell);
   MatDestroy(&GN_Dual_MatShell);
   MatDestroy(&GN_Dual_LowRank_MatShell);
   MatDestroy(&GN_Primal_LowRank_MatShell);
-  MatDestroy(&GN_Dual_MatDense);
   VecDestroy(&xeval_GN);
   VecDestroy(&workvec_tangentspace);
   VecDestroy(&workvec_designspace);
@@ -1234,14 +1232,7 @@ std::vector<double> OptimProblem::computeGaussNewtonPrimalEvals(Vec xinit, Mat* 
   EPSSetFromOptions(eps_gn_primal);
 
   // Update EPS for a fresh solve on the new xeval_GN. 
-  if (!gn_primal_usedensemat) { 
-    // use MatShell 
-    EPSSetOperators(eps_gn_primal, GN_Primal_MatShell, NULL);
-  } else {
-    // use dense Matrix representation of the Gauss-Newton matrix
-    updateGaussNewtonPrimalMatDense(); // does N2-1 applications of the MatShell
-    EPSSetOperators(eps_gn_primal, GN_Primal_MatDense, NULL);
-  }
+  EPSSetOperators(eps_gn_primal, GN_Primal_MatShell, NULL);
 
   // Solve the eigenvalue problem for the Gauss-Newton matrix
   EPSSolve(eps_gn_primal);
@@ -1586,100 +1577,6 @@ PetscErrorCode TaoEvalObjectiveAndGradient(Tao tao, Vec x, PetscReal *f, Vec G, 
   return 0;
 }
 
-void OptimProblem::updateGaussNewtonPrimalMatDense(){
-  MatZeroEntries(GN_Primal_MatDense);
-
-  Vec e;
-  VecDuplicate(xeval_GN, &e);
-  Vec Av;
-  VecDuplicate(e, &Av);
-
-  // Parallelize of comm_optim threads
-  int ncols_per_rank = ndesign / mpisize_optim;
-  int ncols_local = ncols_per_rank;
-  if (mpirank_optim == mpisize_optim - 1) {
-    ncols_local = ndesign - mpirank_optim * ncols_per_rank;
-  }
-  // printf("%d: Number of local columns = %d\n", mpirank_optim, ncols_local);
-
-  // iterate over local columns
-  for (int ix_local = 0; ix_local < ncols_local; ++ix_local) {
-    int ix = ix_local + mpirank_optim * ncols_per_rank;
-    // if (mpirank_init == 0 && !quietmode) printf("%d: Eval A*e_%d / %d \n", mpirank_optim, ix, ndesign);
-
-    VecSet(e, 0.0);
-    VecSetValue(e, ix, 1.0, INSERT_VALUES);
-    VecAssemblyBegin(e);
-    VecAssemblyEnd(e);
-    MatMult(this->getGN_Primal_MatShell(), e, Av);
-    for (int jx = 0; jx < ndesign; ++jx) {
-      PetscScalar val;
-      VecGetValues(Av, 1, &jx, &val);
-      MatSetValue(GN_Primal_MatDense, jx, ix, val, INSERT_VALUES);
-    }
-  }
-  VecDestroy(&e);
-  VecDestroy(&Av);
-
-  MatAssemblyBegin(GN_Primal_MatDense, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(GN_Primal_MatDense, MAT_FINAL_ASSEMBLY);
-
-  // Allreduce to combine contributions from all MPI ranks
-  PetscScalar *data;
-  MatDenseGetArray(GN_Primal_MatDense, &data);
-  int size = ndesign * ndesign;
-  MPI_Allreduce(MPI_IN_PLACE, data, size, MPIU_SCALAR, MPI_SUM, comm_optim);
-  MatDenseRestoreArray(GN_Primal_MatDense, &data);
-
-}
-
-
-void OptimProblem::updateGaussNewtonDualMatDense(){
-  MatZeroEntries(GN_Dual_MatDense);
-
-  Vec e;
-  VecCreateSeq(PETSC_COMM_SELF, tangent_dim, &e);
-  Vec Ay;
-  VecDuplicate(e, &Ay);
-
-  // Parallelize over comm_optim threads
-  int ncols_per_rank = tangent_dim / mpisize_optim;
-  int ncols_local = ncols_per_rank;
-  if (mpirank_optim == mpisize_optim - 1) {
-    ncols_local = tangent_dim - mpirank_optim * ncols_per_rank;
-  }
-
-  // Iterate over local columns: apply GN_Dual_MatShell to each unit vector
-  for (int ix_local = 0; ix_local < ncols_local; ++ix_local) {
-    int ix = ix_local + mpirank_optim * ncols_per_rank;
-
-    VecSet(e, 0.0);
-    VecSetValue(e, ix, 1.0, INSERT_VALUES);
-    VecAssemblyBegin(e);
-    VecAssemblyEnd(e);
-    MatMult(GN_Dual_MatShell, e, Ay);
-    for (int jy = 0; jy < tangent_dim; ++jy) {
-      PetscScalar val;
-      VecGetValues(Ay, 1, &jy, &val);
-      MatSetValue(GN_Dual_MatDense, jy, ix, val, INSERT_VALUES);
-    }
-  }
-  VecDestroy(&e);
-  VecDestroy(&Ay);
-
-  MatAssemblyBegin(GN_Dual_MatDense, MAT_FINAL_ASSEMBLY);
-  MatAssemblyEnd(GN_Dual_MatDense, MAT_FINAL_ASSEMBLY);
-
-  // Allreduce to combine contributions from all MPI ranks
-  PetscScalar *dual_data;
-  MatDenseGetArray(GN_Dual_MatDense, &dual_data);
-  int dual_size = tangent_dim * tangent_dim;
-  MPI_Allreduce(MPI_IN_PLACE, dual_data, dual_size, MPIU_SCALAR, MPI_SUM, comm_optim);
-  MatDenseRestoreArray(GN_Dual_MatDense, &dual_data);
-
-}
-
-
 bool OptimProblem::updateGaussNewtonPreconditioner(int iter, bool force_update){
 
   // preconditioner only available for dual or primal solver modes
@@ -1859,9 +1756,12 @@ void OptimProblem::updateGaussNewtonPreconditionerLowRank(int rank){
   delete[] eigenvalues;
 }
 
-Mat OptimProblem::updateGaussNewtonPreconditionerMatDense(Mat mat_dense, int mat_dim){
+Mat OptimProblem::computeGaussNewtonPreconditionerMatDense(Mat mat_dense){
   // Mat mat_dense = getGN_Dual_MatDense();
   int rank = gn_precond_rank;
+
+  int mat_dim;
+  MatGetSize(mat_dense, &mat_dim, NULL);
 
   // Get low-rank preconditioner data
   Mat V_r = getGN_Dual_LowRank_U();
@@ -1870,8 +1770,7 @@ Mat OptimProblem::updateGaussNewtonPreconditionerMatDense(Mat mat_dense, int mat
   PetscScalar mu_invsqrt = 1.0 / PetscSqrtScalar(mu);
 
   if (mpirank_world == 0 && !quietmode) {
-    printf("  Forming M^{-1/2} as dense matrix (n=%d, r=%d, μ^{-1/2}=%e)...\n",
-            (int)mat_dim, rank, mu_invsqrt);
+    printf("  Forming M^{-1/2} as dense matrix (n=%d, r=%d, μ^{-1/2}=%e)...\n",(int)mat_dim, rank, mu_invsqrt);
   }
 
   Mat M_invsqrt;
@@ -2380,6 +2279,16 @@ void OptimProblem::recoverFromGellmannTangentSpace(Vec w, std::vector<Vec> &stat
   }
 
   VecRestoreArrayRead(w, &w_data);
+}
+
+
+PetscErrorCode OptimProblem::Hessian_MatMult(Mat A, const Vec v, Vec Av){
+  OptimProblem *self;
+  MatShellGetContext(A, (void**)&self);
+
+  self->evalHessVec(self->xeval_GN, v, Av);
+
+  return 0;
 }
 
 void OptimProblem::evalHessVec(const Vec x, const Vec v, Vec Hv){

@@ -473,3 +473,12 @@ void ComputeAdagB(const Mat A_re, const Mat A_im, const Mat B_re, const Mat B_im
  * @param trace_im Output imaginary part of the trace.
  */
 void ComputeTrace(const Mat A_re, const Mat A_im, double* trace_re, double* trace_im);
+
+
+/** 
+ * @brief Evaluates a dense matrix from a given MatShell by evaluating Ae_i for each unit vector.
+ *
+ * @param A_matshell Input MatShell matrix.
+ * @return Newly created dense matrix corresponding to the MatShell.
+ */
+Mat evalDenseMatFromMatshell(const Mat A_matshell);

@@ -1627,3 +1627,37 @@ void ComputeTrace(const Mat A_re, const Mat A_im, double* trace_re, double* trac
     *trace_im += a_im;
   }
 }
+
+Mat evalDenseMatFromMatshell(const Mat A_matshell){
+  int nrows, ncols;
+  MatGetSize(A_matshell, &nrows, &ncols);
+
+  Mat A_dense;
+  MatCreateSeqDense(PETSC_COMM_SELF, nrows, ncols, NULL, &A_dense);
+  MatZeroEntries(A_dense);
+
+  Vec e, Ae;
+  VecCreateSeq(PETSC_COMM_SELF, ncols, &e);
+  VecCreateSeq(PETSC_COMM_SELF, nrows, &Ae);
+
+  for (int col = 0; col < ncols; ++col) {
+    VecSet(e, 0.0);
+    VecSetValue(e, col, 1.0, INSERT_VALUES);
+    VecAssemblyBegin(e);
+    VecAssemblyEnd(e);
+    MatMult(A_matshell, e, Ae);
+    for (int row = 0; row < nrows; ++row) {
+      PetscScalar val;
+      VecGetValues(Ae, 1, &row, &val);
+      MatSetValue(A_dense, row, col, val, INSERT_VALUES);
+    }
+  }
+
+  VecDestroy(&e);
+  VecDestroy(&Ae);
+
+  MatAssemblyBegin(A_dense, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(A_dense, MAT_FINAL_ASSEMBLY);
+
+  return A_dense;
+}
