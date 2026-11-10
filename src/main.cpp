@@ -21,7 +21,8 @@
 #endif
 
 #define TEST_FD_GRAD 0    // Run Finite Differences gradient test
-#define TEST_FD_HESS 0    // Run Finite Differences Hessian test
+#define TEST_HESSIAN_FD 0    // Compute Hessian via Finite Differences
+#define TEST_HESSIAN_MATVEC 0 // Compute Hessian from evalHessVec calls
 #define TEST_FD_LINEARIZED_FWD 0 // Run Finite Differences Linearized Forward test
 #define TEST_GAUSSNEWTON_LINEARSYSTEM 0
 #define TEST_GAUSSNEWTON_LEASTSQUARES 0
@@ -35,6 +36,7 @@ int main(int argc,char **argv)
 
   char filename[255];
   PetscErrorCode ierr;
+  PetscViewer viewer;
 
   /* Initialize MPI */
   int mpisize_world, mpirank_world;
@@ -245,7 +247,7 @@ int main(int argc,char **argv)
     // Set evaluation point and compute gradient
     if (mpirank_world == 0 && !quietmode) printf("Setting up evaluation point and computing gradient...\n");
     optimctx->setGaussNewtonEvalPoint(xinit);
-    optimctx->evalGradF(xinit, grad);
+    optimctx->evalGradF(xinit, grad, false, false);
     if (mpirank_world == 0 && !quietmode) {
       printf("Objective value: %1.14e\n", optimctx->getObjective());
       double gnorm;
@@ -297,7 +299,6 @@ int main(int argc,char **argv)
     // Only rank 0 writes to file (matrix is replicated on all ranks after MPI_Allreduce)
     if (mpirank_world == 0) {
       snprintf(filename, 254, "%s/%s", output->output_dir.c_str(), orig_fname.c_str());
-      PetscViewer viewer;
       PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
       PetscViewerBinarySetSkipInfo(viewer, PETSC_TRUE);  // Suppress .info file
       MatView(mat_dense, viewer);
@@ -336,7 +337,6 @@ int main(int argc,char **argv)
       // Only rank 0 writes to file
       if (mpirank_world == 0) {
         snprintf(filename, 254, "%s/%s", output->output_dir.c_str(), prec_fname.c_str());
-        PetscViewer viewer;
         PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
         PetscViewerBinarySetSkipInfo(viewer, PETSC_TRUE);  // Suppress .info file
         MatView(mat_dense_precond, viewer);
@@ -422,7 +422,7 @@ int main(int argc,char **argv)
 
     // Do one gradient evaluation first to store the forward states and get the right hand side
     bool writeTrajectoryDataFiles = true;
-    optimctx->evalGradF(xinit, grad, writeTrajectoryDataFiles);
+    optimctx->evalGradF(xinit, grad, writeTrajectoryDataFiles, false);
 
     Vec v_LeastSquares, v_result, v_zero;
     VecDuplicate(xinit, &v_LeastSquares);
@@ -600,7 +600,7 @@ int main(int argc,char **argv)
 
     if (mpirank_world == 0 && !quietmode) printf("\nStarting adjoint solver...\n");
     bool writeTrajectoryDataFiles=true;
-    optimctx->evalGradF(xinit, grad, writeTrajectoryDataFiles);
+    optimctx->evalGradF(xinit, grad, writeTrajectoryDataFiles, false);
     VecNorm(grad, NORM_2, &gnorm);
     // VecView(grad, PETSC_VIEWER_STDOUT_WORLD);
     if (mpirank_world == 0 && !quietmode) {
@@ -711,7 +711,7 @@ int main(int argc,char **argv)
 
   /* --- Solve adjoint --- */
   if (mpirank_world == 0) printf("\nRunning optimizer eval_grad_f...\n");
-  optimctx->evalGradF(xinit, grad);
+  optimctx->evalGradF(xinit, grad, false, false);
   // VecView(grad, PETSC_VIEWER_STDOUT_WORLD);
   
 
@@ -883,7 +883,7 @@ int main(int argc,char **argv)
 
   // One forward and backward first to populate final_states.
   bool writeTrajectoryDataFiles = true;
-  optimctx->evalGradF(xinit, grad, writeTrajectoryDataFiles);
+  optimctx->evalGradF(xinit, grad, writeTrajectoryDataFiles, false);
 
   // Set point of evaluation for Gauss-Newton matrix
   optimctx->setGaussNewtonEvalPoint(xinit);
@@ -967,7 +967,7 @@ int main(int argc,char **argv)
 
   // One forward and backward first to populate final_states.
   bool writeTrajectoryDataFiles_GN = true;
-  optimctx->evalGradF(xinit, grad, writeTrajectoryDataFiles_GN);
+  optimctx->evalGradF(xinit, grad, writeTrajectoryDataFiles_GN, false);
 
   // Set point of evaluation for Gauss-Newton matrix
   optimctx->setGaussNewtonEvalPoint(xinit);
@@ -1059,8 +1059,80 @@ int main(int argc,char **argv)
 
 #endif
 
+Mat HessT, Htest;
+double fnorm;
 
-#if TEST_FD_HESS
+#if TEST_HESSIAN_MATVEC
+  if (mpirank_world == 0)  {
+    printf("\n\n#########################\n");
+    printf(" Testing HessVec routine... \n");
+    printf("#########################\n\n");
+  }
+  optimctx->getStartingPoint(xinit);
+  output->writeControlParams(xinit); // Write params to file
+
+  // First one gradient evaluation to store all primal and adjoint trajectory states
+  optimctx->evalGradF(xinit, grad, false, true);
+
+  Mat Hessian;
+  MatCreateSeqDense(PETSC_COMM_SELF, optimctx->getNdesign(), optimctx->getNdesign(), NULL, &Hessian);
+  MatSetUp(Hessian);
+
+  Vec ej, Hej;
+  VecCreateSeq(PETSC_COMM_SELF, optimctx->getNdesign(), &ej);
+  VecDuplicate(ej, &Hej);
+
+  /* Iterate over all unit vectors and evaluate HessVec product. Store each column in Hessian. */
+  for (int j = 0; j < optimctx->getNdesign(); j++) {
+    if (mpirank_world == 0) printf("Evaluating HessVec for unit vector %d / %d\n", j, optimctx->getNdesign());
+    VecZeroEntries(ej);
+    VecZeroEntries(Hej);
+
+    // Set unit vector
+    VecSetValue(ej, j, 1.0, INSERT_VALUES);
+    VecAssemblyBegin(ej);
+    VecAssemblyEnd(ej);
+
+    // Eval H*ej
+    optimctx->evalHessVec(xinit, ej, Hej);
+
+    // Store result in Hessian
+    for (int i = 0; i < optimctx->getNdesign(); i++) {
+      double Hij;
+      VecGetValues(Hej, 1, &i, &Hij);
+      MatSetValue(Hessian, i, j, Hij, INSERT_VALUES);
+    }
+  }
+  MatAssemblyBegin(Hessian, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(Hessian, MAT_FINAL_ASSEMBLY);
+
+  /* Symmetry test: compute ||1/2(H-H^T)||_F  */
+  MatScale(Hessian, 0.5);
+  MatDuplicate(Hessian, MAT_COPY_VALUES, &Htest);
+  MatTranspose(Hessian, MAT_INITIAL_MATRIX, &HessT);
+  MatAXPY(Htest, -1.0, HessT, SAME_NONZERO_PATTERN);
+  MatNorm(Htest, NORM_FROBENIUS, &fnorm);
+  if (mpirank_world == 0) printf("Hessian symmetry test: ||1/2(H-H^T)||= %1.14e\n", fnorm);
+
+  // Print Hessian to file
+  snprintf(filename, 254, "%s/hessian.dat", output->output_dir.c_str());
+  if (mpirank_world == 0) printf("File written: %s.\n", filename);
+  PetscViewerCreate(MPI_COMM_WORLD, &viewer);
+  PetscViewerSetType(viewer, PETSCVIEWERASCII);
+  PetscViewerFileSetMode(viewer, FILE_MODE_WRITE);
+  PetscViewerFileSetName(viewer, filename);
+  // PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_DENSE);
+  MatView(Hessian, viewer);
+  PetscViewerPopFormat(viewer);
+  PetscViewerDestroy(&viewer);
+
+  MatDestroy(&Hessian);
+  VecDestroy(&ej);
+  VecDestroy(&Hej);
+
+#endif
+
+#if TEST_HESSIAN_FD
   if (mpirank_world == 0)  {
     printf("\n\n#########################\n");
     printf(" FD Testing for Hessian... \n");
@@ -1069,53 +1141,33 @@ int main(int argc,char **argv)
   optimctx->getStartingPoint(xinit);
   output->writeControlParams(xinit); // Write params to file
 
-  /* Figure out which parameters are hitting bounds */
-  double bound_tol = 1e-3;
-  std::vector<int> Ihess; // Index set for all elements that do NOT hit a bound
-  for (PetscInt i=0; i<optimctx->getNdesign(); i++){
-    // get x_i and bounds for x_i
-    double xi, blower, bupper;
-    VecGetValues(xinit, 1, &i, &xi);
-    VecGetValues(optimctx->xlower, 1, &i, &blower);
-    VecGetValues(optimctx->xupper, 1, &i, &bupper);
-    // compare 
-    if (fabs(xi - blower) < bound_tol || 
-        fabs(xi - bupper) < bound_tol  ) {
-          printf("Parameter %d hits bound: x=%f\n", i, xi);
-    } else {
-      Ihess.push_back(i);
-    }
-  }
-
   double grad_org;
   double grad_pert1, grad_pert2;
   Mat Hess;
-  int nhess = Ihess.size();
-  MatCreateSeqDense(PETSC_COMM_SELF, nhess, nhess, NULL, &Hess);
+  MatCreateSeqDense(PETSC_COMM_SELF, optimctx->getNdesign(), optimctx->getNdesign(), NULL, &Hess);
   MatSetUp(Hess);
 
   Vec grad1, grad2;
   VecDuplicate(grad, &grad1);
   VecDuplicate(grad, &grad2);
 
-
-  /* Iterate over all params that do not hit a bound */
-  for (PetscInt k=0; k< Ihess.size(); k++){
-    PetscInt j = Ihess[k];
-    printf("Computing column %d\n", j);
+  /* Iterate over all params */
+  for (PetscInt k=0; k< optimctx->getNdesign(); k++){
+    PetscInt j = k;
+    printf("Computing column %d/%d\n", j, optimctx->getNdesign());
 
     /* Evaluate \nabla_x J(x + eps * e_j) */
     VecSetValue(xinit, j, EPS, ADD_VALUES); 
-    optimctx->evalGradF(xinit, grad);        
+    optimctx->evalGradF(xinit, grad, false, false);        
     VecCopy(grad, grad1);
 
     /* Evaluate \nabla_x J(x - eps * e_j) */
     VecSetValue(xinit, j, -2.*EPS, ADD_VALUES); 
-    optimctx->evalGradF(xinit, grad);
+    optimctx->evalGradF(xinit, grad, false, false);
     VecCopy(grad, grad2);
 
-    for (PetscInt l=0; l<Ihess.size(); l++){
-      PetscInt i = Ihess[l];
+    for (PetscInt l=0; l<optimctx->getNdesign(); l++){
+      PetscInt i = l;
 
       /* Get the derivative wrt parameter i */
       VecGetValues(grad1, 1, &i, &grad_pert1);   // \nabla_x_i J(x+eps*e_j)
@@ -1124,6 +1176,7 @@ int main(int argc,char **argv)
       /* Finite difference for element Hess(l,k) */
       double fd = (grad_pert1 - grad_pert2) / (2.*EPS);
       MatSetValue(Hess, l, k, fd, INSERT_VALUES);
+
     }
 
     /* Restore parameters xinit */
@@ -1140,22 +1193,19 @@ int main(int argc,char **argv)
 
   /* Epsilon test: compute ||1/2(H-H^T)||_F  */
   MatScale(Hess, 0.5);
-  Mat HessT, Htest;
   MatDuplicate(Hess, MAT_COPY_VALUES, &Htest);
   MatTranspose(Hess, MAT_INITIAL_MATRIX, &HessT);
   MatAXPY(Htest, -1.0, HessT, SAME_NONZERO_PATTERN);
-  double fnorm;
   MatNorm(Htest, NORM_FROBENIUS, &fnorm);
   printf("EPS-test: ||1/2(H-H^T)||= %1.14e\n", fnorm);
 
   /* symmetrize H_symm = 1/2(H+H^T) */
-  MatAXPY(Hess, 1.0, HessT, SAME_NONZERO_PATTERN);
+  // MatAXPY(Hess, 1.0, HessT, SAME_NONZERO_PATTERN);
 
   /* --- Print Hessian to file */
   
-  snprintf(filename, 254, "%s/hessian.dat", output->output_dir.c_str());
+  snprintf(filename, 254, "%s/hessian_FD.dat", output->output_dir.c_str());
   printf("File written: %s.\n", filename);
-  PetscViewer viewer;
   PetscViewerCreate(MPI_COMM_WORLD, &viewer);
   PetscViewerSetType(viewer, PETSCVIEWERASCII);
   PetscViewerFileSetMode(viewer, FILE_MODE_WRITE);
@@ -1165,12 +1215,12 @@ int main(int argc,char **argv)
   PetscViewerPopFormat(viewer);
   PetscViewerDestroy(&viewer);
 
-  // write again in binary
-  snprintf(filename, 254, "%s/hessian_bin.dat", output->output_dir.c_str());
-  printf("File written: %s.\n", filename);
-  PetscViewerBinaryOpen(MPI_COMM_WORLD, filename, FILE_MODE_WRITE, &viewer);
-  MatView(Hess, viewer);
-  PetscViewerDestroy(&viewer);
+  // // write again in binary
+  // snprintf(filename, 254, "%s/hessian_bin.dat", output->output_dir.c_str());
+  // printf("File written: %s.\n", filename);
+  // PetscViewerBinaryOpen(MPI_COMM_WORLD, filename, FILE_MODE_WRITE, &viewer);
+  // MatView(Hess, viewer);
+  // PetscViewerDestroy(&viewer);
 
   MatDestroy(&Hess);
 
