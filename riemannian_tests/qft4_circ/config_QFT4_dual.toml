@@ -50,13 +50,12 @@ target = { type = "gate", gate_type = "qft", gate_rot_freq = [0.0, 0.0, 0.0, 0.0
 objective = "Jtrace"
 tolerance = { grad_abs = 1e-05, grad_rel = 1e-05, final_cost = 1e-08, infidelity = 1e-06 }
 maxiter = 120
-tikhonov = { coeff = 1e-5, use_x0 = false }
+tikhonov = { coeff = 0.0, use_x0 = false }
 penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0}
 
 # Switch between lbfgs and gauss_newton optimization
 solver_type = "gauss_newton"
 
-gn_normaleq_damping = 1e-3
 gn_solver_mode = "dual"
 #gn_solver_mode = "least_squares"
 
@@ -76,8 +75,8 @@ timestep_stride = 1
 optimization_stride = 1
 
 [solver]
-runtype = "optimization"
-#runtype = "matrix_save"
+#runtype = "optimization"
+runtype = "matrix_save"
 usematfree = true
 linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"

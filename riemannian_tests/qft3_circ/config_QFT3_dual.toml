@@ -2,7 +2,8 @@
 nlevels = [2, 2, 2]
 nessential = [2, 2, 2]
 total_time = 200.0
-ntime = 1327
+# ntime = 1327
+ntime = 2000
 # dt = 0.15071590052750566
 transition_frequency = [4.94, 5.0, 5.06]
 selfkerr = [0.0, 0.0, 0.0]
@@ -39,7 +40,7 @@ objective = "Jtrace"
 # objective = "Jgeodesic_phasefree"
 tolerance = { grad_abs = 1e-05, grad_rel = 1e-05, final_cost = 1e-08, infidelity = 1e-06 }
 maxiter = 200
-tikhonov = { coeff = 1e-05, use_x0 = false }
+tikhonov = { coeff = 0.0, use_x0 = false }
 penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0 }
 
 # Switch between lbfgs and gauss_newton optimization
@@ -52,23 +53,18 @@ gn_solver_mode = "dual"
 #gn_solver_mode = "least_squares"
 
 # options are "minres", "cg", "gmres", or "proj"
-gn_normaleq_solver = "minres"
-#gn_normaleq_solver = "proj"
+gn_normaleq_solver = "gmres"
+# gn_normaleq_solver = "proj"
 gn_normaleq_minres_qlp = true 
-gn_normaleq_damping = 1e-5
 
 # Stopping criteria for inner GN solvers
 gn_maxiter = 100 
 gn_rtol = 1e-5
 
 # Preconditioner
-gn_precond_rank = 30
+# Recompute every iteration
 gn_prec_update_interval = -1
-
-# Inner solver for least squares
-gn_leastsquares_solver = "lsqr"
-# gn_leastsquares_solver = "brgn"
-gn_leastsquares_damping = 1e-5
+gn_precond_rank = 40
 
 # preconditioner update interval (dual mode only)
 # keyword gn_prec_update_interval:
@@ -78,15 +74,17 @@ gn_leastsquares_damping = 1e-5
 # every n iteration: n
 
 [output]
-directory = "./dual_test"
+# writing to '.' is required by 'plot_seeds_infidelity.py'
+directory = "."
+# directory = "./dual_test"
 # observables = ["population", "expectedEnergy", "fullstate"]
 timestep_stride = 1
 optimization_stride = 1
 
 [solver]
-runtype = "optimization"
+# runtype = "optimization"
 # runtype = "gaussnewton_ls"
-# runtype = "matrix_save"
+runtype = "matrix_save"
 usematfree = true
 linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"

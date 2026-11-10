@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Plot the Objective function convergence from optimization history file.
 """

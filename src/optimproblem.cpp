@@ -686,17 +686,33 @@ PetscErrorCode OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
   // Reset output
   VecZeroEntries(Ay);
 
-  // Compute z =  (P_TU L)(L^* P_TU^-1) y
-  self->apply_GN_Jacobian_Adjoint(y, self->workvec_designspace, true, 0.0);
+  // symmetric formulation:
+  // W = (1/n) Pp
+  // M = P_TU^-1, M^* = P_TU
+  // B = M^* L = P_TU L
+  // B^T = L^* M = L^* P_TU^-1
+  // Overall operation:
+  // (1/n) (M^* Pp M) (B B^T) (1/n) (M^* \Pp M) y
+
+  // Compute wk_vec_ts = P_TU W P_TU^-1 * y  = (1/n) (M^* Pp M) y
+  self->recoverFromGellmannTangentSpace(y, self->workvec_statespace);
+  // self->projectToGateComplement(self->workvec_statespace, 2.0 / self->mastereq->getDim());
+  self->projectToGateComplement(self->workvec_statespace, sqrt(2.0 / self->mastereq->getDim()));
+  self->projectToGellmannTangentSpace(self->workvec_statespace, self->workvec_tangentspace);
+
+  // Compute wk_vec_ts :=  (P_TU L)(L^* P_TU^-1) wk_vec_ts
+  self->apply_GN_Jacobian_Adjoint(self->workvec_tangentspace, self->workvec_designspace, true, 0.0);
   self->apply_GN_Jacobian(self->workvec_designspace, self->workvec_tangentspace, true, 0.0); 
-  
-  // // Compute Ay = P_TU W P_TU^-1 * z  
+
+  // Compute Ay = P_TU W P_TU^-1 * z  = (1/n) (M^* Pp M) wk_vec_ts
   self->recoverFromGellmannTangentSpace(self->workvec_tangentspace, self->workvec_statespace);
-  self->projectToGateComplement(self->workvec_statespace, 2.0 / self->mastereq->getDim());
+  // self->projectToGateComplement(self->workvec_statespace, 2.0 / self->mastereq->getDim());
+  self->projectToGateComplement(self->workvec_statespace, sqrt(2.0 / self->mastereq->getDim()));
   self->projectToGellmannTangentSpace(self->workvec_statespace, Ay);
 
-  // add lambda*z
-  VecAXPY(Ay, self->gamma_tikhonov, self->workvec_tangentspace);
+  // add lambda*z (not sure if this will work anymore?)
+  if (self->gamma_tikhonov > 0.0)
+    VecAXPY(Ay, self->gamma_tikhonov, self->workvec_tangentspace);
 
   return 0;
 }
@@ -732,6 +748,8 @@ Vec OptimProblem::computeGaussNewtonRHS(const std::string& gn_solver_mode, const
     VecScale(b, -1.0);
 
   }  else if (gn_solver_mode == "dual") {
+    // Overall operation:
+    // - M^* \nabla_U J(U) = - P_TU b = -P_TU WU
     // non-symmetric dual RHS: b = -P_TU (WU+\lambda*L\alpha)
 
     MatCreateVecs(GN_Dual_MatShell, nullptr, &b);
@@ -743,13 +761,17 @@ Vec OptimProblem::computeGaussNewtonRHS(const std::string& gn_solver_mode, const
     }
 
     // Apply W = 2/n(I-1/n<V, cdot> V) to workvec_statespace
-    double scale = 2.0 / mastereq->getDim();  
+    // double scale = 2.0 / mastereq->getDim(); 
+    double scale = sqrt(2.0 / mastereq->getDim());  
     projectToGateComplement(workvec_statespace, scale);
 
-    // Compute WU+\lambda L\alpha  
-    evalLinearizedForward(xeval_GN, xeval_GN); 
-    for (int iinit=0; iinit<ninit_local; iinit++) {
-      VecAXPY(workvec_statespace[iinit], gamma_tikhonov, timestepper->getLinearizedFinalState(iinit)); 
+    // Compute WU+\lambda L\alpha
+    if (gamma_tikhonov>0.0){
+      evalLinearizedForward(xeval_GN, xeval_GN); 
+      for (int iinit=0; iinit<ninit_local; iinit++) {
+        VecAXPY(workvec_statespace[iinit], gamma_tikhonov, timestepper->getLinearizedFinalState(iinit)); 
+      }
+      // Should there be some MPI syncronization here???
     }
 
     // Project result onto tangent space 
@@ -840,8 +862,13 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
 
   // Recover primal solution: 
   if (gn_solver_mode == "dual") {
-      // v = L^* P_TU^-1 
-      apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, 0.0);
+    // Updated reconstruction: v = L^* P_TU^-1 Q wk_vec_ts = L^* P_TU^-1 (1/n)(M^* Pp M) wk_vec_ts
+    recoverFromGellmannTangentSpace(workvec_tangentspace, workvec_statespace);
+    // projectToGateComplement(workvec_statespace, 2.0 / mastereq->getDim());
+    projectToGateComplement(workvec_statespace, sqrt(2.0 / mastereq->getDim()));
+    projectToGellmannTangentSpace(workvec_statespace, workvec_tangentspace);
+    // Previous reconstruction: v = L^* P_TU^-1 
+    apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, 0.0);
   } else {
     VecCopy(vec_workspace, v_out);
   }
@@ -916,7 +943,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   EPS eps;
   EPSCreate(PETSC_COMM_SELF, &eps);
   EPSSetOperators(eps, GN_Dual_MatShell, NULL);
-  EPSSetProblemType(eps, EPS_HEP);
+  EPSSetProblemType(eps, EPS_HEP); // for Hermitian matrices
   EPSSetWhichEigenpairs(eps, EPS_LARGEST_REAL);
   EPSSetDimensions(eps, num_eigs, PETSC_DEFAULT, PETSC_DEFAULT);
   EPSSetFromOptions(eps);
@@ -1103,7 +1130,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
 
 bool OptimProblem::solveGaussNewtonSystem(const Vec x_GN, const Vec initial_guess, const Vec b, Vec Ainv_b){
 
-  // Default return: Preconditioner is NOT state. Currently only "dual" has a precondioner that could change this return.
+  // Default return: Preconditioner is NOT stale. Currently only "dual" has a precondioner that could change this return.
   bool precond_is_stale = false; 
 
   if (gn_solver_mode == "primal") {
