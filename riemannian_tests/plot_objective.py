@@ -21,18 +21,42 @@ def plot_objective(filenames):
         filenames = [filenames]
 
     # First pass: check if control norm column exists (column 13 = index 12)
+    # and if KSP iterations are all zero
     has_control_norm = False
+    has_nonzero_ksp = False
     for filename in filenames:
         data = np.loadtxt(filename, skiprows=1)
         if data.ndim == 2 and data.shape[1] >= 13:
             has_control_norm = True
-            break
+        # Check if KSP iterations (column 12 = index 11) are non-zero
+        if data.ndim == 2 and data.shape[1] >= 12:
+            ksp_iters = data[:, 11]
+            if np.any(ksp_iters != 0):
+                has_nonzero_ksp = True
 
-    # Create figure with three or four subplots depending on data availability
+    # Create figure with subplots depending on data availability
+    num_subplots = 2  # Always have objective and infidelity
+    if has_nonzero_ksp:
+        num_subplots += 1
     if has_control_norm:
-        fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(10, 18))
-    else:
-        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 14))
+        num_subplots += 1
+
+    fig_height = 6 * num_subplots
+    fig, axes = plt.subplots(num_subplots, 1, figsize=(10, fig_height))
+
+    # Unpack axes for consistent naming
+    if num_subplots == 2:
+        ax1, ax2 = axes
+        ax3, ax4 = None, None
+    elif num_subplots == 3:
+        if has_nonzero_ksp:
+            ax1, ax2, ax3 = axes
+            ax4 = None
+        else:  # has control norm but no KSP
+            ax1, ax2, ax4 = axes
+            ax3 = None
+    else:  # num_subplots == 4
+        ax1, ax2, ax3, ax4 = axes
 
     # First pass: find the maximum number of data points across all files
     max_points = 0
@@ -65,59 +89,60 @@ def plot_objective(filenames):
         import os
         label = os.path.basename(filename).replace('.dat', '').replace('optim_history_', '')
 
-        # Top subplot: Objective and Tikhonov (log scale)
+        # Top subplot: Objective and Tikhonov (log scale, use absolute value)
         # Use alternating line styles and semi-transparency for better distinguishability
         linestyles = ['-', '--', '-.', ':']
-        ax1.plot(iteration, objective, marker='o', linestyle=linestyles[idx % len(linestyles)],
+        ax1.plot(iteration, np.abs(objective), marker='o', linestyle=linestyles[idx % len(linestyles)],
                 linewidth=2, markersize=4, alpha=0.7,
                 label=f'{label} (Obj)', color=f'C{idx}', markevery=marker_every)
-        ax1.plot(iteration, tikhonov, marker='s', linestyle=linestyles[idx % len(linestyles)],
+        ax1.plot(iteration, np.abs(tikhonov), marker='s', linestyle=linestyles[idx % len(linestyles)],
                 linewidth=1.5, markersize=3, alpha=0.5,
                 label=f'{label} (Tikh)', color=f'C{idx}', markevery=marker_every)
 
-        # Middle subplot: Infidelity (log scale)
+        # Middle subplot: Infidelity (log scale, use absolute value)
         # Use same linestyles as defined above
-        ax2.plot(iteration, infidelity, marker='o', linestyle=linestyles[idx % len(linestyles)],
+        ax2.plot(iteration, np.abs(infidelity), marker='o', linestyle=linestyles[idx % len(linestyles)],
                 linewidth=2, markersize=4, alpha=0.7,
                 label=label, color=f'C{idx}', markevery=marker_every)
 
-        # Third subplot: KSP iterations (linear scale)
-        # Use alternating line styles and semi-transparency for better distinguishability
-        ax3.plot(iteration, ksp_iters, marker='o', linestyle=linestyles[idx % len(linestyles)],
-                linewidth=2, markersize=4, alpha=0.7,
-                label=label, color=f'C{idx}', markevery=marker_every)
+        # Third subplot: KSP iterations (linear scale) - only if non-zero KSP iterations exist
+        if has_nonzero_ksp and ax3 is not None:
+            ax3.plot(iteration, ksp_iters, marker='o', linestyle=linestyles[idx % len(linestyles)],
+                    linewidth=2, markersize=4, alpha=0.7,
+                    label=label, color=f'C{idx}', markevery=marker_every)
 
         # Fourth subplot: Control vector norm (linear scale) - only if data available
-        if has_control_norm and control_norm is not None:
+        if has_control_norm and control_norm is not None and ax4 is not None:
             ax4.plot(iteration, control_norm, marker='o', linestyle=linestyles[idx % len(linestyles)],
                     linewidth=2, markersize=4, alpha=0.7,
                     label=label, color=f'C{idx}', markevery=marker_every)
 
     # Format top subplot
     ax1.set_xlabel('Iteration', fontsize=12)
-    ax1.set_ylabel('Objective', fontsize=12)
-    ax1.set_title('Objective Function Convergence', fontsize=14)
+    ax1.set_ylabel('|Objective|', fontsize=12)
+    ax1.set_title('Objective Function Convergence (magnitude)', fontsize=14)
     ax1.grid(True, alpha=0.3)
     ax1.legend(fontsize=10)
     ax1.set_yscale('log')
 
     # Format middle subplot
     ax2.set_xlabel('Iteration', fontsize=12)
-    ax2.set_ylabel('Infidelity', fontsize=12)
-    ax2.set_title('Infidelity Convergence', fontsize=14)
+    ax2.set_ylabel('|Infidelity|', fontsize=12)
+    ax2.set_title('Infidelity Convergence (magnitude)', fontsize=14)
     ax2.grid(True, alpha=0.3)
     ax2.legend(fontsize=10)
     ax2.set_yscale('log')
 
-    # Format third subplot
-    ax3.set_xlabel('Iteration', fontsize=12)
-    ax3.set_ylabel('KSP iterations', fontsize=12)
-    ax3.set_title('KSP Iterations per Gauss-Newton Step', fontsize=14)
-    ax3.grid(True, alpha=0.3)
-    ax3.legend(fontsize=10)
+    # Format third subplot - only if non-zero KSP iterations exist
+    if has_nonzero_ksp and ax3 is not None:
+        ax3.set_xlabel('Iteration', fontsize=12)
+        ax3.set_ylabel('KSP iterations', fontsize=12)
+        ax3.set_title('KSP Iterations per Gauss-Newton Step', fontsize=14)
+        ax3.grid(True, alpha=0.3)
+        ax3.legend(fontsize=10)
 
     # Format fourth subplot (Control vector norm - linear scale) - only if data available
-    if has_control_norm:
+    if has_control_norm and ax4 is not None:
         ax4.set_xlabel('Iteration', fontsize=12)
         ax4.set_ylabel('||x||', fontsize=12)
         ax4.set_title('Control Vector Norm', fontsize=14)

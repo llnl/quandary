@@ -927,23 +927,16 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
 
 void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec v_out){
   // TODO: Understand this function and how it interacts with the low-rank preconditioner and the Gauss-Newton dual system.
-  // TODO: Remove the KSP iterations. Make this a full-rank rank solver in the projected subspace.
-
-  // Store the point of evaluation. This should have been done already! 
-  setGaussNewtonEvalPoint(xinit); 
-  // Forces a fresh nonlinear forward solve during the next call to evalLinearizedForward() for the new xeval_GN
-  // TODO: This can probably be dropped here, since it should be set before any solveGaussNewtonXYZ calls. 
 
   // Use passed RHS
   const Vec b = b_rhs;
 
-  // Compute eigendecomposition: (L L^T + λI) V_{r+1} = Σ_{r+1} V_{r+1}
-  // We compute r+1 eigenvalues to get μ = λ_{r+1} for the complement space
-  int rank = gn_precond_rank;
-  int num_eigs = (rank < tangent_dim) ? rank + 1 : rank;  // Compute r+1 unless at full rank
+  // Compute eigendecomposition: (L L^T + λI) V_{r} = Σ_{r+1} V_{r}
+  int rank = tangent_dim; // Always go for the full rank
+  int num_eigs = tangent_dim;
 
   if (mpirank_world == 0 && !quietmode) {
-    printf("Computing %d largest eigenvalues/eigenvectors of dual GN matrix (n=%d)...\n", num_eigs, (int)tangent_dim);
+    printf("Computing %d largest eigenvalues/eigenvectors of dual GN matrix (tangent-dim=%d)...\n", num_eigs, (int)tangent_dim);
   }
 
   EPS eps;
@@ -962,22 +955,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
     printf("EPS converged %d/%d eigenvalues\n", (int)nconv, num_eigs);
   }
 
-  // Check if we got enough eigenvalues
-  bool have_complement = false;
-  PetscScalar mu = 0.0;  // μ = λ_{r+1} for complement space
-
-  if (nconv < rank) {
-    if (mpirank_world == 0 && !quietmode) {
-      printf("Warning: Only %d eigenvalues converged (requested rank %d). Using rank %d.\n", (int)nconv, rank, (int)nconv);
-    }
-    rank = nconv;
-    have_complement = false;
-  } else if (rank < tangent_dim && nconv >= rank + 1) {
-    // We have r+1 eigenvalues, use the (r+1)-th for complement
-    have_complement = true;
-  }
-
-  // Extract eigenvectors into V_r (only first r)
+  // Extract eigenvectors into V_r (full set of eigenvectors)
   Mat V_r;
   MatCreateSeqDense(PETSC_COMM_SELF, tangent_dim, rank, NULL, &V_r);
 
@@ -985,7 +963,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   VecCreateSeq(PETSC_COMM_SELF, tangent_dim, &eigvec_real);
   VecCreateSeq(PETSC_COMM_SELF, tangent_dim, &eigvec_imag);
 
-  // Allocate eigenvalues array for actual number converged (may be > num_eigs requested)
+  // Allocate eigenvalues array for actual number converged (may be > num_eigs requested ???)
   PetscScalar *eigenvalues = new PetscScalar[nconv];
 
   for (int i = 0; i < nconv; i++) {
@@ -993,15 +971,12 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
     EPSGetEigenpair(eps, i, &eigval_r, &eigval_i, eigvec_real, eigvec_imag);
     eigenvalues[i] = PetscRealPart(eigval_r);
 
-    // Store only first r eigenvectors in V_r
+    // Store r eigenvectors in V_r
     if (i < rank) {
       Vec v_col;
       MatDenseGetColumnVecWrite(V_r, i, &v_col);
       VecCopy(eigvec_real, v_col);
       MatDenseRestoreColumnVecWrite(V_r, i, &v_col);
-    } else if (i == rank && have_complement) {
-      // This is λ_{r+1}, use it for μ
-      mu = eigenvalues[i];
     }
   }
 
@@ -1015,122 +990,26 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   if (mpirank_world == 0 && !quietmode) {
     printf("Eigenvalue range: λ_1 = %e (largest), λ_%d = %e (smallest)\n",
            eigenvalues[0], rank, eigenvalues[rank-1]);
-    if (have_complement) {
-      printf("Using μ = λ_%d = %e for complement space approximation\n", rank+1, mu);
-    }
   }
 
   // Compute eigenspace approximation: y = M^{-1} * b
-  applyEigenspaceApproximation(b, V_r, eigenvalues, rank, have_complement, mu, workvec_tangentspace);
-
-  // Optional iterative refinement: refine the projected solution with KSP iterations
-  // Refinement is enabled when gn_maxiter > 0
-  // Reuse the eigendecomposition (V_r, Σ_r, μ) to construct low-rank preconditioner at zero cost
-  int refine_iters = 0;
-  if (gn_maxiter > 0) {
-    // Normalize the RHS to avoid small ||b|| issues near optimum
-    // Solve: (L L^T + λI) y = b_normalized, then scale: y_final = y * bnorm
-    double bnorm;
-    VecNorm(b, NORM_2, &bnorm);
-
-    // Only refine if RHS is non-negligible
-    if (bnorm > 1e-14) {
-      // Normalize RHS: b_normalized = b / ||b||
-      Vec b_normalized;
-      VecDuplicate(b, &b_normalized);
-      VecCopy(b, b_normalized);
-      VecScale(b_normalized, 1.0 / bnorm);
-
-      // Store projected solution as initial guess (also needs normalization)
-      Vec y_proj;
-      VecDuplicate(workvec_tangentspace, &y_proj);
-      VecCopy(workvec_tangentspace, y_proj);
-      VecScale(y_proj, 1.0 / bnorm);  // Normalize to match normalized RHS
-
-      // Construct low-rank preconditioner M = V_r Σ_r V_r^T + μ(I - V_r V_r^T)
-      // using the eigendecomposition already computed above (zero additional cost!)
-
-      // Store eigenvalues^{-1/2} for preconditioning
-      Vec sigma_invsqrt_temp;
-      VecCreateSeq(PETSC_COMM_SELF, rank, &sigma_invsqrt_temp);
-      PetscScalar *sigma_data;
-      VecGetArray(sigma_invsqrt_temp, &sigma_data);
-      for (int i = 0; i < rank; i++) {
-        sigma_data[i] = 1.0 / sqrt(eigenvalues[i]);
-      }
-      VecRestoreArray(sigma_invsqrt_temp, &sigma_data);
-
-      // Temporarily store the eigendecomposition in the preconditioner data structures
-      // Save current state
-      Mat V_r_saved = gn_dual_lowrank_U;
-      Vec sigma_saved = gn_dual_lowrank_sigma_invsqrt;
-      PetscScalar mu_saved = gn_dual_precond_mu;
-
-      // Set preconditioner data to current eigendecomposition
-      gn_dual_lowrank_U = V_r;  // V_r already computed above
-      gn_dual_lowrank_sigma_invsqrt = sigma_invsqrt_temp;
-      gn_dual_precond_mu = have_complement ? mu : eigenvalues[rank-1];  // Use μ if available
-
-      // Apply low-rank preconditioning: M^{-1/2} A M^{-1/2} z = M^{-1/2} b_normalized
-      Vec b_scaled, z_solution;
-      VecDuplicate(b_normalized, &b_scaled);
-      VecDuplicate(y_proj, &z_solution);
-
-      // Scale normalized RHS: b_scaled = M^{-1/2} * b_normalized
-      apply_GN_LowRank_Precond(b_normalized, b_scaled);
-
-      // Scale initial guess
-      VecCopy(y_proj, z_solution);
-
-      // Solve preconditioned system: M^{-1/2} A M^{-1/2} z = M^{-1/2} b_normalized
-      KSPReset(ksp_gn_normaleq);
-      KSPSetOperators(ksp_gn_normaleq, GN_Dual_LowRank_MatShell, GN_Dual_LowRank_MatShell);
-      KSPSolve(ksp_gn_normaleq, b_scaled, z_solution);
-
-      // Recover y = M^{-1/2} * z
-      apply_GN_LowRank_Precond(z_solution, workvec_tangentspace);
-
-      // Scale back by ||b|| to get the actual solution
-      VecScale(workvec_tangentspace, bnorm);
-
-      // Get actual number of iterations performed
-      KSPGetIterationNumber(ksp_gn_normaleq, &refine_iters);
-
-      // Restore preconditioner data structures
-      gn_dual_lowrank_U = V_r_saved;
-      gn_dual_lowrank_sigma_invsqrt = sigma_saved;
-      gn_dual_precond_mu = mu_saved;
-
-      // Cleanup
-      VecDestroy(&b_scaled);
-      VecDestroy(&z_solution);
-      VecDestroy(&sigma_invsqrt_temp);
-      VecDestroy(&y_proj);
-      VecDestroy(&b_normalized);
-
-      // Reset KSP operators to unpreconditioned for next time
-      KSPSetOperators(ksp_gn_normaleq, GN_Dual_MatShell, GN_Dual_MatShell);
-    }
-  }
+  applyEigenspaceApproximation(b, V_r, eigenvalues, rank, false, 0.0, workvec_tangentspace);
 
   // Cleanup (b_rhs is destroyed by caller)
   MatDestroy(&V_r);
   delete[] eigenvalues;
 
-  // Recover primal solution: v = L^T P_TU^-1 y
+  // Updated reconstruction: v = L^* P_TU^-1 Q wk_vec_ts = L^* P_TU^-1 (1/n)(M^* Pp M) wk_vec_ts
+  recoverFromGellmannTangentSpace(workvec_tangentspace, workvec_statespace);
+  projectToGateComplement(workvec_statespace, sqrt(2.0 / mastereq->getDim()));
+  projectToGellmannTangentSpace(workvec_statespace, workvec_tangentspace);
   apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, 0.0);
 
   // Store KSP iterations for reporting in optimization history
-  ksp_iters_last = refine_iters;
+  ksp_iters_last = 0;
 
   if (mpirank_world == 0 && !quietmode) {
-    if (refine_iters > 0) {
-      printf("Gauss-Newton Dual Projected: solved using rank-%d subspace + %d refinement iterations\n", rank, refine_iters);
-    } else if (have_complement) {
-      printf("Gauss-Newton Dual Projected: solved using rank-%d subspace + complement approximation (no KSP iterations)\n", rank);
-    } else {
-      printf("Gauss-Newton Dual Projected: solved in rank-%d subspace (no KSP iterations)\n", rank);
-    }
+    printf("Gauss-Newton Dual Projected: solved system in rank-%d (sub)space \n", rank);
   }
 }
 
@@ -1378,6 +1257,7 @@ void OptimProblem::solve(Vec xinit) {
       VecCopy(xinit, x_GN);
 
       bool stop = false;
+      double alpha = 0.0; // for reporting the step length 
       for (int iter = 0; !stop; iter++) {
         // Set the current evaluation point for the Gauss-Newton matrix
         setGaussNewtonEvalPoint(x_GN);
@@ -1416,17 +1296,20 @@ void OptimProblem::solve(Vec xinit) {
         if (iter == 0 || did_update_PC) {
           gn_dual_ksp_baseline = ksp_iters_last;
         }
-        
+
+        // Note: the monitor function needs to be called before the line-search to avoid inconsistencies
+        // between the total cost and the sub-costs 
+        // (terminal cost, Tikhonov, etc.). The reason is that the line-search calls evalF(), which over-writes 
+        // the sub-cost fields. A side effect is that the step length will lag one iteration.
+        stop = monitor(iter, f, gnorm, alpha);
+
         // Backtracking Armijo line search along -Gprec, projected onto the bound constraints
         VecScale(Gprec, -1.0);
-        double alpha = armijoLineSearch(x_GN, f, G, Gprec, xnew, step);
+        alpha = armijoLineSearch(x_GN, f, G, Gprec, xnew, step); // returns updated step length
 
         // Accept the step
         VecCopy(x_GN, xprev);
         VecCopy(xnew, x_GN);
-
-        // Monitor progress and check stopping criteria
-        stop = monitor(iter, f, gnorm, alpha);
       }
 
       VecDestroy(&G);
@@ -1990,12 +1873,50 @@ void OptimProblem::applyEigenspaceApproximation(const Vec b, const Mat V_r, cons
   VecCreateSeq(PETSC_COMM_SELF, rank, &b_tilde);
   MatMultTranspose(V_r, b, b_tilde);
 
+  // // evaluate approximation (for debugging)
+  // // Lift to full space: b_approx = V_r b_tilde (top-r subspace part)
+  // Vec b_approx, b_temp;
+  // VecDuplicate(b, &b_approx);
+  // VecDuplicate(b, &b_temp);
+  // MatMult(V_r, b_tilde, b_approx);
+  // VecWAXPY(b_temp, -1.0, b_approx, b);  // b_temp = b - b_approx
+  // double bnorm, b_approx_norm;
+  // VecNorm(b_approx, NORM_2, &b_approx_norm);
+  // VecNorm(b, NORM_2, &bnorm);
+  // if (mpirank_world == 0 && !quietmode) {
+  //   printf("RHS approx: ||b|| = %10.3e, ||b_approx|| = %10.3e\n", bnorm, b_approx_norm);
+  // }
+  // // Cleanup
+  // VecDestroy(&b_approx);
+  // VecDestroy(&b_temp);
+
   // Solve in subspace: ỹ = Σ_r^{-1} b̃ (direct diagonal solve)
   Vec y_tilde;
   VecDuplicate(b_tilde, &y_tilde);
   PetscScalar *b_tilde_data, *y_tilde_data;
   VecGetArray(b_tilde, &b_tilde_data);
   VecGetArray(y_tilde, &y_tilde_data);
+
+  // Save eigenspace projection data to file (for debugging)
+  static int call_counter = 0;
+  if (mpirank_world == 0) {
+    char filename[256];
+    snprintf(filename, sizeof(filename), "eigenspace_projection_%04d.dat", call_counter++);
+    FILE *fp = fopen(filename, "w");
+    if (fp != NULL) {
+      fprintf(fp, "# i eigenvalue b_tilde\n");
+      for (int i = 0; i < rank; i++) {
+        fprintf(fp, "%d %20.12e %20.12e\n", i, eigenvalues[i], b_tilde_data[i]);
+      }
+      fclose(fp);
+      if (!quietmode) {
+        printf("Saved eigenspace projection data to %s\n", filename);
+      }
+    } else {
+      printf("Warning: Could not open file %s for writing\n", filename);
+    }
+  }
+
   for (int i = 0; i < rank; i++) {
     if (eigenvalues[i] > 1e-14) {
       y_tilde_data[i] = b_tilde_data[i] / eigenvalues[i];
@@ -2006,13 +1927,14 @@ void OptimProblem::applyEigenspaceApproximation(const Vec b, const Mat V_r, cons
       }
     }
   }
+
   VecRestoreArray(b_tilde, &b_tilde_data);
   VecRestoreArray(y_tilde, &y_tilde_data);
 
   // Lift to full space: y = V_r ỹ (top-r subspace part)
   MatMult(V_r, y_tilde, y_approx);
 
-  // Add complement space contribution: y += μ^{-1} (I - V_r V_r^T) b
+  // tmp: disable by calling with have_compliment = false
   if (have_complement && mu > 1e-14) {
     Vec temp;
     VecDuplicate(b, &temp);
