@@ -451,7 +451,7 @@ double OptimProblem::evalF(const Vec x, bool writeTrajectoryDataFiles) {
 
 
 
-void OptimProblem::evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles){
+void OptimProblem::evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles, bool storeAdjTrajectory){
   if (mpirank_world == 0 && !quietmode) std::cout<< "EVAL GRAD F... " << std::endl;
 
   /* Pass design vector x to oscillators */
@@ -592,27 +592,21 @@ void OptimProblem::evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles){
   /* Sum, store and return objective value */
   objective = obj_cost + obj_regul + obj_penal_leakage + obj_penal_dpdm + obj_penal_energy + obj_penal_variation + obj_penal_weightedcost;
 
-  double obj_cost_re_bar, obj_cost_im_bar;
-  optim_target->finalizeJ_diff(obj_cost_re, obj_cost_im, &obj_cost_re_bar, &obj_cost_im_bar);
+  // Compute terminal conditions for adjoint solve: \nabla_U^2J = 2/n(I-1/n<V,dot>V) for all columns, stored temporarily in workvec_statespace
+  for (int iinit=0; iinit<ninit_local; iinit++) {
+      VecCopy(timestepper->getFinalState(iinit), workvec_statespace[iinit]);
+  }
+  projectToGateComplement(workvec_statespace, 2.0 / mastereq->getDim());
 
-  /* Solve adjoint equations for all initial conditions . */
+  /* Solve adjoint equations for all initial conditions. */
   for (int iinit = 0; iinit < ninit_local; iinit++) {
     int iinit_global = mpirank_init * ninit_local + iinit;
 
-    /* Recompute the initial state and target */
-    optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
-   
-    /* Reset adjoint */
-    VecZeroEntries(rho_t0_bar);
+    /* Copy the terminal condition from workvec_statespace into rho_t0_bar */
+    VecCopy(workvec_statespace[iinit], rho_t0_bar);
 
-    /* Terminal condition for adjoint variable: Derivative of final time objective J */
-    optim_target->evalJ_diff(timestepper->getFinalState(iinit), rho_t0_bar, obj_weights[iinit_global]*obj_cost_re_bar, obj_weights[iinit_global]*obj_cost_im_bar);
-
-    // Derivative of storing final unitary (adds a column of U_final_bar into rho_t0_bar)
-    optim_target->storeFinalUnitaryColumn_diff(iinit_global, rho_t0_bar);
-
-    /* Derivative of time-stepping */
-    timestepper->solveAdjointODE(iinit, rho_t0_bar, obj_weights[iinit_global] * gamma_penalty_leakage, obj_weights[iinit_global]*gamma_penalty_weightedcost, obj_weights[iinit_global]*gamma_penalty_dpdm, obj_weights[iinit_global]*gamma_penalty_energy);
+    /* Adjoint solve */
+    timestepper->solveAdjointODE(iinit, rho_t0_bar, obj_weights[iinit_global] * gamma_penalty_leakage, obj_weights[iinit_global]*gamma_penalty_weightedcost, obj_weights[iinit_global]*gamma_penalty_dpdm, obj_weights[iinit_global]*gamma_penalty_energy, storeAdjTrajectory);
 
     /* Add to optimizers's gradient */
     VecAXPY(G, 1.0, timestepper->getReducedGradient());
@@ -1263,7 +1257,7 @@ void OptimProblem::solve(Vec xinit) {
         setGaussNewtonEvalPoint(x_GN);
         
         // Compute gradient and objective at the current iterate
-        evalGradF(x_GN, G);
+        evalGradF(x_GN, G, false, false);
         double f = objective;
 
         // Update the preconditioner. Currently only for the dual mode.
@@ -1469,7 +1463,7 @@ PetscErrorCode TaoMonitor(Tao tao,void*ptr){
 PetscErrorCode TaoEvalObjectiveAndGradient(Tao tao, Vec x, PetscReal *f, Vec G, void*ptr){
   OptimProblem* ctx = (OptimProblem*) ptr;
 
-  ctx->evalGradF(x, G, false);
+  ctx->evalGradF(x, G, false, false);
   *f = ctx->getObjective();
 
   return 0;
@@ -2230,7 +2224,7 @@ void OptimProblem::apply_GN_Jacobian_Adjoint(Vec w, Vec vout, bool recover_from_
 
   // Solve adjoint backward ODE for each terminal condition in workvec_statespace[iinit]
   for (int iinit = 0; iinit < self->ninit_local; iinit++) {
-    self->timestepper->solveAdjointODE(iinit, self->workvec_statespace[iinit], 0.0, 0.0, 0.0, 0.0);
+    self->timestepper->solveAdjointODE(iinit, self->workvec_statespace[iinit], 0.0, 0.0, 0.0, 0.0, false);
     VecAXPY(vout, 1.0, self->timestepper->getReducedGradient());
   }
 
@@ -2308,4 +2302,66 @@ void OptimProblem::recoverFromGellmannTangentSpace(Vec w, std::vector<Vec> &stat
   }
 
   VecRestoreArrayRead(w, &w_data);
+}
+
+void OptimProblem::evalHessVec(const Vec x, const Vec v, Vec Hv){
+
+  if (mpirank_world == 0 && !quietmode) std::cout<< "EVAL HESS VEC... " << std::endl;
+
+  /* Reset output */
+  VecZeroEntries(Hv);
+
+  /* Pass design vector x to oscillators */
+  mastereq->setControlAmplitudes(x); 
+
+  // Solve forward and adjoint ODE so to store the primal and adjoint states
+  // -> fills timestepper's trajectory_states, final_states, and adj_trajectory_states
+  VecZeroEntries(xtmp); // dummy gradient
+  bool storeAdjTrajectory = true;
+  evalGradF(x, xtmp, false, storeAdjTrajectory);  
+
+  // Solve linearized forward: Lv = dU/dalpha * v 
+  // -> fills timestepper's lin_trajectory_states
+  evalLinearizedForward(x, v);
+
+  // Solve linearized adjoint ODE -> Fills Hv
+  evalLinearizedAdjoint(v, Hv);
+
+  /* Hessian of Tikhonov regularization */
+  if (mpirank_init == 0) { // ADD ON ONE PROC ONLY!
+    VecAXPY(Hv, gamma_tikhonov, v);   
+  }
+
+}
+
+
+void OptimProblem::evalLinearizedAdjoint(const Vec v, Vec Hv){
+
+  // REQUIRES current:
+  // * timestepper->trajectory_states
+  // * timestepper->lin_trajectory_states
+  // * timestepper->adj_trajectory_states
+
+  // Set terminal condition for linearized adjoint: p(T) = W * Lv
+  for (int iinit=0; iinit<ninit_local; iinit++) {
+    VecCopy(timestepper->getLinearizedFinalState(iinit), workvec_statespace[iinit]);
+  }
+  projectToGateComplement(workvec_statespace, 2.0/mastereq->getDim());
+
+  /* Solve linearized adjoint ODE */
+  for (int iinit = 0; iinit < ninit_local; iinit++) {
+    int iinit_global = mpirank_init * ninit_local + iinit;
+
+    timestepper->solveLinearizedAdjointODE(iinit, workvec_statespace[iinit], v, Hv);
+  }
+
+  /* Sum up from all initial condition processors */
+  PetscScalar* hess_data; 
+  VecGetArray(Hv, &hess_data);
+  for (int i=0; i<ndesign; i++) {
+    mygrad[i] = hess_data[i];
+  }
+  MPI_Allreduce(mygrad, hess_data, ndesign, MPI_DOUBLE, MPI_SUM, comm_init);
+  VecRestoreArray(Hv, &hess_data);
+
 }

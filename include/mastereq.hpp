@@ -356,6 +356,22 @@ void compute_dRHS_dParams_matfree(const PetscInt dim, const double t,const Vec x
  */
 void apply_linearized_RHS_matfree(const PetscInt dim, const double t, const Vec v, const Vec xhalf, Vec xout, std::vector<size_t>& nlevels, DecoherenceType decoherence_type, Oscillator** oscil_vec);
 
+/**
+ * @brief Matrix-free transpose version of the linearized RHS application.
+ *
+ * Applies the transpose of the linearized RHS Jacobian (with respect to control parameters) to a vector.
+ * This is the matrix-free analog of the sparse-matrix version using control_T inline functions.
+ *
+ * @param[in] dim Dimension of the full vectorized system (N^2 for Lindblad, N for Schrödinger)
+ * @param[in] t Current time
+ * @param[in] v Direction vector for linearization
+ * @param[in] xhalf State at which to evaluate the linearized transpose RHS
+ * @param[out] xout Result: (d RHS / d params)^T * v
+ * @param[in] nlevels Vector with number of levels per oscillator
+ * @param[in] decoherence_type Type of decoherence (Lindblad or Schrödinger)
+ * @param[in] oscil_vec Vector of quantum oscillators
+ */
+void apply_linearized_RHS_transpose_matfree(const PetscInt dim, const double t, const Vec v, const Vec xhalf, Vec xout, std::vector<size_t>& nlevels, DecoherenceType decoherence_type, Oscillator** oscil_vec);
 
 
 // Inline functions for the Matrix-free RHS application

@@ -59,6 +59,8 @@ TimeStepper::TimeStepper(const Config& config, MasterEq* mastereq_, Output* outp
   VecDuplicate(x, &xadj);
   VecDuplicate(x, &xprimal);
   VecDuplicate(x, &xhalf);
+  VecDuplicate(x, &xadjhalf);
+
 
   /* Allocate the reduced gradient */
   int ndesign = 0;
@@ -88,10 +90,17 @@ TimeStepper::~TimeStepper() {
       VecDestroy(&(lin_trajectory_states[iinit][n]));
     }
   }
+  // Destroy adjoint state storage if allocated
+  for (size_t iinit = 0; iinit < adj_trajectory_states.size(); iinit++) {
+    for (size_t n = 0; n < adj_trajectory_states[iinit].size(); n++) {
+      VecDestroy(&(adj_trajectory_states[iinit][n]));
+    }
+  }
   VecDestroy(&x);
   VecDestroy(&xadj);
   VecDestroy(&xprimal);
   VecDestroy(&xhalf);
+  VecDestroy(&xadjhalf);
   VecDestroy(&redgrad);
 }
 
@@ -273,13 +282,33 @@ Vec TimeStepper::getLinearizedFinalState(int iinit_local) {
 }
 
 
-void TimeStepper::solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) {
+void TimeStepper::solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy, bool storeTrajectories) {
+
+  // Allocate storage for adjoint trajectory if requested
+  if (storeTrajectories && adj_trajectory_states.size() < ninit_local) {
+    adj_trajectory_states.resize(ninit_local);
+    for (int i=0; i<ninit_local; i++){
+      adj_trajectory_states[i].resize(ntime+1);
+      for (int n = 0; n <= ntime; n++) {
+        Vec state;
+        VecCreate(PETSC_COMM_WORLD, &state);
+        PetscInt globalsize = 2 * mastereq->getDim();
+        PetscInt localsize = globalsize / mpisize_petsc;
+        VecSetSizes(state, localsize, globalsize);
+        VecSetFromOptions(state);
+        adj_trajectory_states[i][n] = state;
+      }
+    }
+  }
 
   /* Reset gradient */
   VecZeroEntries(redgrad);
 
-  /* Set terminal adjoint condition */
+  /* Set terminal adjoint condition and store it */
   VecCopy(rho_t0_bar, xadj);
+
+  /* Store terminal adjoint state if requested */
+  if (storeTrajectories) VecCopy(xadj, adj_trajectory_states[iinit_local][ntime]);
 
   /* Set terminal primal state */
   VecCopy(final_states[iinit_local], xprimal);  
@@ -328,6 +357,9 @@ void TimeStepper::solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_l
     /* Take one time step backwards for the adjoint */
     evolveBWD(tstop, tstart, xprimal, xadj, redgrad, true);
 
+    // Store adjoint state if requested
+    if (storeTrajectories) VecCopy(xadj, adj_trajectory_states[iinit_local][n-1]);
+
     /* Update dpdm storage */
     if (eval_dpdm) {
       int k = ntime - n;
@@ -345,6 +377,31 @@ void TimeStepper::solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_l
     }
     dpdm_states.clear();
   }
+}
+
+
+void TimeStepper::solveLinearizedAdjointODE(int iinit_local, const Vec rho_t0_bar, const Vec v, Vec hessvec){
+
+  // Check that primal and linearized primal trajectory states exists:
+  if (trajectory_states.size() == 0 || trajectory_states[iinit_local].size() == 0) {
+    printf("ERROR: Primal trajectory states not available inside solveLinearizedAdjointODE for iinit_local = %d\n", iinit_local);
+  }
+  if (lin_trajectory_states.size() == 0 || lin_trajectory_states[iinit_local].size() == 0) {
+    printf("ERROR: Linearized primal trajectory states not available inside solveLinearizedAdjointODE for iinit_local = %d\n", iinit_local);
+  }
+
+  /* Set terminal condition */
+  VecCopy(rho_t0_bar, xadj); // w(T)
+
+  /* Loop over time interval */
+  for (int n = ntime; n > 0; n--){
+    double tstop  = n * dt;
+    double tstart = (n-1) * dt;
+
+    /* Take one step backwards for linearized adjoint */
+    evolveLinearizedBWD(iinit_local, tstop, tstart, v, xadj, hessvec);
+  }
+
 }
 
 double TimeStepper::evalLeakage(const Vec x){
@@ -848,6 +905,68 @@ void ImplMidpoint::evolveLinearizedFWD(const int iinit, const double tstart, con
 }
 
 
+void ImplMidpoint::evolveLinearizedBWD(const int iinit, const double tstop, const double tstart, const Vec v, Vec x, Vec hessvec){
+
+  // Prepare the RHS at this time-step
+  double thalf = (tstart + tstop) / 2.0;
+  mastereq->assemble_RHS(thalf);
+
+  // Compute rhs = A x + sum_i dRHS(t_n+1/2)^T/dparam_i * vi * adjoint_state(t_n+1/2)
+  int n = std::round(tstart / dt);
+  VecCopy(adj_trajectory_states[iinit][n], xadjhalf);
+  VecAXPY(xadjhalf, 1.0, adj_trajectory_states[iinit][n+1]);
+  VecScale(xadjhalf, 0.5); // xadjhalf = 1/2*(lambda_n + lambda_{n+1})
+  mastereq->apply_linearized_RHS_transpose((tstart+tstop)/2.0, v, xadjhalf, rhs); // rhs = sum dRHS^T/dalpha_i v_i * xadjhalf
+  MatMultTransposeAdd(mastereq->getRHS(), x, rhs, rhs); // rhs = rhs + RHS^T*x
+
+  double dt = tstop - tstart;
+  Mat A = mastereq->getRHS();
+
+  /* Solve for adjoint stage variable */
+  switch (linsolve_type) {
+    case LinearSolverType::GMRES:
+      MatScale(A, - dt/2.0);
+      MatShift(A, 1.0);  // WARNING: this can be very slow if some diagonal elements are missing.
+      KSPSolveTranspose(ksp, rhs, stage_adj);
+      double rnorm;
+      KSPGetResidualNorm(ksp, &rnorm);
+      if (rnorm > 1e-3)  {
+        printf("WARNING: Linear solver residual norm: %1.5e\n", rnorm);
+      }
+      /* Revert the scaling and shifting if gmres solver */
+      MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
+      MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
+      break;
+    case LinearSolverType::NEUMANN: 
+      NeumannSolve(A, x, stage_adj, dt/2.0, true);
+      break;
+  }
+  
+  /* --- Update linearized adjoint state x += dt * stage_adj --- */
+  VecAXPY(x, dt, stage_adj); 
+
+  /* Add to hessian vector product */
+  // Now compute xhalf = 1/2(x_n + x_n+1) for states (x)
+  VecCopy(trajectory_states[iinit][n], xhalf);
+  VecAXPY(xhalf, 1.0, trajectory_states[iinit][n+1]);
+  VecScale(xhalf, 0.5); // xhalf = 1/2*(x_n + x_{n-1})
+  // and stage = 1/2*(w_n + w_n+1) for linearized states (w)
+  VecCopy(lin_trajectory_states[iinit][n], stage);
+  VecAXPY(stage, 1.0, lin_trajectory_states[iinit][n+1]);
+  VecScale(stage, 0.5); // stage = 1/2*(w_n + w_{n+1})
+  // and stage_adj = 1/2*(p_n + p_n+1) for linearized adjoint states (this) (p)
+  VecAYPX(stage_adj, -dt/2.0, x); // stage_adj = x -dt/2*stage_adj
+  // and we already have: xadjhalf = 1/2*(lambda_n + lambda_{n+1}) for adjoint states (lambda)
+
+  // Compute the Hessian-vector product x^T dRHS^T p 
+  // printf("Add to hessian at time t_n+1/2=%1.5e, n=%d\n", (tstart + tstop) / 2.0, n);
+  mastereq->compute_dRHS_dParams((tstart + tstop) / 2.0, xhalf, stage_adj,  1.0*dt, hessvec);
+  // Compute the Hessian-vector product + w^T dRHS^T lambda 
+  mastereq->compute_dRHS_dParams((tstart + tstop) / 2.0, stage, xadjhalf,  1.0*dt, hessvec);
+
+}
+
+
 int ImplMidpoint::NeumannSolve(Mat A, Vec b, Vec y, double alpha, bool transpose){
 
   double errnorm, errnorm0;
@@ -1148,7 +1267,7 @@ Vec PetscTS::solveODE(int initid, int iinit_local, Vec rho_t0, bool writeTraject
   return x;
 }
 
-void PetscTS::solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) {
+void PetscTS::solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy, bool storeTrajectories) {
   TS ts_run = ts_pool[iinit_local];
   (void)Jbar_dpdm;
 

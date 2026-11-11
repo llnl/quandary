@@ -36,9 +36,12 @@ class TimeStepper{
     Vec xadj; ///< Auxiliary vector needed for adjoint (backward) time stepping
     Vec xprimal; ///< Auxiliary vector for backward time stepping
     Vec xhalf; ///< Auxiliary vector for midpoint evaluations in linearized forward solve
+    Vec xadjhalf; ///< Auxiliary vector holding xadj_n+1/2
+
     int ninit_local; ///< Number of initial conditions local to this processor
     std::vector<std::vector<Vec>> trajectory_states; ///< Storage for primal states during forward evolution, one trajectory for each local initial condition.
     std::vector<std::vector<Vec>> lin_trajectory_states; ///< Optional storage for linearized forward states, allocated on demand
+    std::vector<std::vector<Vec>> adj_trajectory_states; ///< Storage for adjoint states during backward evolution, one trajectory for each local initial condition.
     std::vector<Vec> final_states; ///< Storage for final states for each local initial condition. Always filled after solveODE.
     std::vector<Vec> dpdm_states; ///< Storage for states needed for second-order derivative penalty
     int mpirank_world; ///< MPI rank in global communicator
@@ -135,7 +138,7 @@ class TimeStepper{
      * @param Jbar_dpdm Adjoint of second-order derivative variation
      * @param Jbar_energy Adjoint of energy integral term
      */
-    virtual void solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy);
+    virtual void solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy, bool storeTrajectories);
 
     /**
      * @brief Solves the linearized ODE forward in time.
@@ -162,6 +165,16 @@ class TimeStepper{
      */
     Vec getLinearizedState(int iinit_local, int itimestep);
     Vec getLinearizedFinalState(int iinit_local);
+
+    /**
+     * @brief Solve the linearized adjoint ODE backward in time
+     * 
+     * @param iinit_local Local index of initial condition for this processor
+     * @param rho_t0_bar Terminal condition for linearized adjoint state
+     * @param v Direction vector for parameter perturbation
+     * @param hessvec Output vector for the Hessian-vector product
+     */
+    void solveLinearizedAdjointODE(int iinit_local, const Vec rho_t0_bar, const Vec v, Vec hessvec);
 
     /**
      * @brief Evaluates leakage into guard levels 
@@ -273,6 +286,19 @@ class TimeStepper{
      * @param compute_gradient Flag to compute gradient
      */
     virtual void evolveBWD(const double tstart, const double tstop, const Vec x_stop, Vec x_adj, Vec grad, bool compute_gradient);
+
+    /**
+     * @brief Evolves the linearized adjoint equation (in direction v) backwards by one time-step from tstop to start
+     * 
+     * @param iinit_local Local index of initial condition for this processor
+     * @param tstart Start time
+     * @param tstop Stop time
+     * @param v Direction of linearization
+     * @param x Linearized State vector to evolve
+     * @param hessvec Output vector for the Hessian-vector product
+     */
+    virtual void evolveLinearizedBWD(const int iinit_local, const double tstop, const double tstart, const Vec v, Vec x, Vec hessvec)=0;
+
 };
 
 /**
@@ -322,6 +348,8 @@ class ExplEuler : public TimeStepper {
      * @brief Stub for linearized forward evolution (not implemented for ExplEuler).
      */
     virtual void evolveLinearizedFWD(const int iinit, const double tstart, const double tstop, const Vec v, Vec x);
+    void evolveLinearizedBWD(const int /*iinit*/, const double /*tstop*/, const double /*tstart*/, const Vec /*v*/, Vec /*x*/, Vec /*hessvec*/) {printf("NOT AVAIL.\n"); exit(1);}
+
 };
 
 /**
@@ -396,6 +424,19 @@ class ImplMidpoint : public TimeStepper {
      * @param x Linearized state vector to evolve
      */
     virtual void evolveLinearizedFWD(const int iinit, const double tstart, const double tstop, const Vec v, Vec x);
+
+    /**
+     * @brief Evolves the linearized adjoint equation (in direction v) backwards by one time-step from tstop to tstart.
+     *
+     * @param iinit Local index of initial condition for this processor
+     * @param tstop Stop time (backward evolution)
+     * @param tstart Start time (backward evolution)
+     * @param v Direction of linearization
+     * @param x Linearized state vector to evolve
+     * @param hessvec Output vector for the Hessian-vector product
+     */
+    virtual void evolveLinearizedBWD(const int iinit, const double tstop, const double tstart, const Vec v, Vec x, Vec hessvec);
+
 
     /**
      * @brief Solves (I - alpha*A) * x = b using Neumann iterations.
@@ -515,8 +556,9 @@ class PetscTS : public TimeStepper {
      * @param Jbar_weightedcost Adjoint seed of weighted cost integral term
      * @param Jbar_dpdm Adjoint seed of second-order derivative variation term
      * @param Jbar_energy Adjoint seed of energy integral term
+     * @param storeTrajectories Flag to store full adjoint trajectories in memory
      */
-    void solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy) override;
+    void solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_leakage, double Jbar_weightedcost, double Jbar_dpdm, double Jbar_energy, bool storeTrajectories) override;
 
     /** 
      * @brief PETSc callback to update the RHS matrix for the forward system at time t.
@@ -611,6 +653,8 @@ class PetscTS : public TimeStepper {
     void evolveFWD(const double, const double, Vec) override {};
     void evolveBWD(const double, const double, const Vec, Vec, Vec, bool) override {};
     void evolveLinearizedFWD(const int, const double, const double, const Vec, Vec) override {};
+    void evolveLinearizedBWD(const int /*iinit_local*/, const double /*tstop*/, const double /*tstart*/, const Vec /*v*/, Vec /*x*/, Vec /*hessvec*/) override {printf("NOT AVAIL.\n"); exit(1);}
+
 
     /**
      * @brief Get the smallest timestep size chosen during adaptive timestepping.

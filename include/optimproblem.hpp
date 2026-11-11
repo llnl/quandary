@@ -237,8 +237,10 @@ class OptimProblem {
    *
    * @param x Design (optimization) vector
    * @param G Gradient vector to store result
+   * @param writeTrajectoryDataFiles Flag to determine whether trajectory data should be written during forward simulations to files 
+   * @param storeAdjTrajectory Flag to determine whether the adjoint trajectory should be stored in the timestepper during the gradient evaluation
    */
-  void evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles=false);
+  void evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles, bool storeAdjTrajectory);
 
   /**
    * @brief Evaluate linearized forward operator: Lv = \sum_k dU/dv_k v_k. 
@@ -251,6 +253,14 @@ class OptimProblem {
    * @param[in] v Direction vector 
    */
   void evalLinearizedForward(const Vec x, const Vec v);
+
+  /**
+   * @brief Evaluate the linearized adjoint operator
+   *
+   * @param[in] v Direction vector
+   * @param[out] Hv Resulting vector after solving the linearized adjoint ODE
+   */
+  void evalLinearizedAdjoint(const Vec v, Vec Hv);
 
   /**
    * @brief Solves the Gauss-Newton least-squares problem min_v ||W^1/2 L v + W^-1/2 \nabla_UJ||_F^2
@@ -517,6 +527,16 @@ class OptimProblem {
    * @return Eigenvalues of Gauss-Newton matrix
    */
   std::vector<double> computeGaussNewtonPrimalEvals(Vec xinit, Mat* evecs_out);
+
+  /**
+   * @brief Evaluates the Hessian-vector product at a given point.
+   *
+   * @param x Point of evaluation
+   * @param v Vector to be multiplied with the Hessian
+   * @param Hv Output vector storing the result of Hessian-vector product
+   */
+  void evalHessVec(const Vec x, const Vec v, Vec Hv);
+
 
   /**
    * @brief Runs the optimization solver.
