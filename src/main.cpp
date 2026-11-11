@@ -243,6 +243,8 @@ int main(int argc,char **argv)
   if (config.getRuntype() == RunType::MATRIX_SAVE) {
     if (mpirank_world == 0 && !quietmode) printf("\nSaving Gauss-Newton matrix to file...\n");
     optimctx->getStartingPoint(xinit);
+    output->writeControlParams(xinit);
+
 
     // Set evaluation point and compute gradient
     if (mpirank_world == 0 && !quietmode) printf("Setting up evaluation point and computing gradient...\n");
@@ -326,6 +328,24 @@ int main(int argc,char **argv)
       }
       MatDestroy(&mat_dense_precond);
     }
+
+    /* Assemble and write full Hessian to file */
+    if (false) {
+      // this typically takes a while. Putting it into if (false) for now so it can be enabled if needed. 
+      if (mpirank_world == 0 && !quietmode) {
+        printf("\n\n Assembling full Hessian matrix...\n");
+      }
+      orig_fname = "Hessian.dat";
+      mat_dense = evalDenseMatFromMatshell(optimctx->getHessian_MatShell());
+      // Write to file
+      snprintf(filename, 254, "%s/%s", output->output_dir.c_str(), orig_fname.c_str());
+      PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
+      PetscViewerBinarySetSkipInfo(viewer, PETSC_TRUE);  // Suppress .info file
+      MatView(mat_dense, viewer);
+      PetscViewerDestroy(&viewer);
+      MatDestroy(&mat_dense);
+    }
+
   }
 
   if (config.getRuntype() == RunType::GAUSSNEWTON_EVALS) {
