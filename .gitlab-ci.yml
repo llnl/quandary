@@ -134,7 +134,8 @@ performance-test:
   trigger:
     include:
       - local: '.gitlab/custom-jobs.yml'
-      - component: $CI_SERVER_FQDN/radiuss/radiuss-shared-ci/performance-pipeline@v2026.02.2
+      # Temporary test of PR benchmark dispatch using the shared CI branch.
+      - component: $CI_SERVER_FQDN/radiuss/radiuss-shared-ci/performance-pipeline@tdrwenski/add-dispatch-ref
         inputs:
           job_cmd: $JOB_CMD
           perf_processing_cmd: "${CI_PROJECT_DIR}/tests/performance/convert_benchmark_format.py"
