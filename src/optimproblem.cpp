@@ -595,7 +595,7 @@ void OptimProblem::evalGradF(const Vec x, Vec G, bool writeTrajectoryDataFiles, 
   for (int iinit=0; iinit<ninit_local; iinit++) {
       VecCopy(timestepper->getFinalState(iinit), workvec_statespace[iinit]);
   }
-  projectToGateComplement(workvec_statespace, 2.0 / mastereq->getDim());
+  projectToGateComplement(workvec_statespace, 2.0 / ninit);
 
   /* Solve adjoint equations for all initial conditions. */
   for (int iinit = 0; iinit < ninit_local; iinit++) {
@@ -663,7 +663,7 @@ PetscErrorCode OptimProblem::GN_Primal_MatMult(Mat A, const Vec v, Vec Av){
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
 
-  double project_to_gate_complement = sqrt(2.0 / self->mastereq->getDim());
+  double project_to_gate_complement = sqrt(2.0 / self->ninit);
   bool project_to_tangentspace = false;
 
   self->apply_GN_Jacobian(v, self->workvec_tangentspace, project_to_tangentspace, project_to_gate_complement); // fills internal workvec_statespace with the raw output of W^1/2 L v and sets workvec_tangentspace to 0
@@ -696,7 +696,7 @@ PetscErrorCode OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
   // Compute wk_vec_ts = P_TU W P_TU^-1 * y  = (1/n) (M^* Pp M) y
   self->recoverFromGellmannTangentSpace(y, self->workvec_statespace);
   // self->projectToGateComplement(self->workvec_statespace, 2.0 / self->mastereq->getDim());
-  self->projectToGateComplement(self->workvec_statespace, sqrt(2.0 / self->mastereq->getDim()));
+  self->projectToGateComplement(self->workvec_statespace, sqrt(2.0 / self->ninit));
   self->projectToGellmannTangentSpace(self->workvec_statespace, self->workvec_tangentspace);
 
   // Compute wk_vec_ts :=  (P_TU L)(L^* P_TU^-1) wk_vec_ts
@@ -706,7 +706,7 @@ PetscErrorCode OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
   // Compute Ay = P_TU W P_TU^-1 * z  = (1/n) (M^* Pp M) wk_vec_ts
   self->recoverFromGellmannTangentSpace(self->workvec_tangentspace, self->workvec_statespace);
   // self->projectToGateComplement(self->workvec_statespace, 2.0 / self->mastereq->getDim());
-  self->projectToGateComplement(self->workvec_statespace, sqrt(2.0 / self->mastereq->getDim()));
+  self->projectToGateComplement(self->workvec_statespace, sqrt(2.0 / self->ninit));
   self->projectToGellmannTangentSpace(self->workvec_statespace, Ay);
 
   // add lambda*z (not sure if this will work anymore?)
@@ -761,7 +761,7 @@ Vec OptimProblem::computeGaussNewtonRHS(const std::string& gn_solver_mode, const
 
     // Apply W = 2/n(I-1/n<V, cdot> V) to workvec_statespace
     // double scale = 2.0 / mastereq->getDim(); 
-    double scale = sqrt(2.0 / mastereq->getDim());  
+    double scale = sqrt(2.0 / ninit);  
     projectToGateComplement(workvec_statespace, scale);
 
     // Compute WU+\lambda L\alpha
@@ -864,7 +864,7 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
     // Updated reconstruction: v = L^* P_TU^-1 Q wk_vec_ts = L^* P_TU^-1 (1/n)(M^* Pp M) wk_vec_ts
     recoverFromGellmannTangentSpace(workvec_tangentspace, workvec_statespace);
     // projectToGateComplement(workvec_statespace, 2.0 / mastereq->getDim());
-    projectToGateComplement(workvec_statespace, sqrt(2.0 / mastereq->getDim()));
+    projectToGateComplement(workvec_statespace, sqrt(2.0 / ninit));
     projectToGellmannTangentSpace(workvec_statespace, workvec_tangentspace);
     // Previous reconstruction: v = L^* P_TU^-1 
     apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, 0.0);
@@ -1226,7 +1226,8 @@ std::vector<double> OptimProblem::computeGaussNewtonPrimalEvals(Vec xinit, Mat* 
   EPSSetOperators(eps_gn_primal, GN_Primal_MatShell, NULL);
   EPSSetProblemType(eps_gn_primal, EPS_HEP); // Hermitian
   EPSSetWhichEigenpairs(eps_gn_primal, EPS_LARGEST_REAL); // largest eigenvalues
-  int neigvals = tangent_dim;
+  // int neigvals = tangent_dim;
+  int neigvals = mastereq->getDim() * ninit;
   int ncv = 2*neigvals ; // Max Krylov dimension. How to set??
   EPSSetDimensions(eps_gn_primal, neigvals, ncv, PETSC_DEFAULT);
   EPSSetTolerances(eps_gn_primal, gn_rtol, gn_maxiter);
@@ -2097,7 +2098,7 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMult(Mat A, Vec v, Vec y)
   MatShellGetContext(A, (void**)&self);
 
   // Fill the top part of y with Lv projected onto tangent space
-  double project_to_gate_complement = sqrt(2.0 / self->mastereq->getDim());
+  double project_to_gate_complement = sqrt(2.0 / self->ninit);
   self->apply_GN_Jacobian(v, y, true, project_to_gate_complement);
 
   // Fill the bottom of y with damping: lambda * v
@@ -2140,7 +2141,7 @@ PetscErrorCode OptimProblem::GN_LeastSquares_MatMultTranspose(Mat A, Vec w_long,
   VecRestoreArrayRead(w_long, &wl_data);
 
   // Apply adjoint of GN Jacobian in tangent space
-  double project_to_gate_complement = sqrt(2.0 / self->mastereq->getDim());
+  double project_to_gate_complement = sqrt(2.0 / self->ninit);
   self->apply_GN_Jacobian_Adjoint(w, vout, true, project_to_gate_complement);
 
   // Add damping lambda * w_long[tangent_dim:end] contribution to the output
@@ -2227,8 +2228,8 @@ void OptimProblem::projectToGateComplement(std::vector<Vec> &states, double alph
     double tmp_re = 0.0;
     double tmp_im = 0.0;
     optim_target->HilbertSchmidtOverlap(states[iinit], false, &tmp_re, &tmp_im);
-    z_re +=  tmp_re / mastereq->getDim();
-    z_im +=  tmp_im / mastereq->getDim();
+    z_re +=  tmp_re / ninit;
+    z_im +=  tmp_im / ninit;
   }
   double myz_re = z_re;
   double myz_im = z_im;
@@ -2334,7 +2335,7 @@ void OptimProblem::evalLinearizedAdjoint(const Vec v, Vec Hv){
   for (int iinit=0; iinit<ninit_local; iinit++) {
     VecCopy(timestepper->getLinearizedFinalState(iinit), workvec_statespace[iinit]);
   }
-  projectToGateComplement(workvec_statespace, 2.0/mastereq->getDim());
+  projectToGateComplement(workvec_statespace, 2.0/ninit);
 
   /* Solve linearized adjoint ODE */
   for (int iinit = 0; iinit < ninit_local; iinit++) {
