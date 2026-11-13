@@ -107,6 +107,7 @@ class Config {
   double optim_penalty_variation; ///< Amplitude variation penalty coefficient
   OptimSolverType optim_solver_type; ///< Type of optimization solver to use
   double gn_rtol; ///< Relative tolerance for inner Gauss-Newton iterations (Normal or Least Squares)
+  double gn_atol; ///< Absolute tolerance for inner Gauss-Newton iterations (Normal or Least Squares)
   int gn_maxiter; ///< Maximum iterations for inner Gauss-Newton iterations (Normal or Least Squares)
   std::string gn_leastsquares_solver; ///< Least-squares solver: "brgn" or "lsqr"
   double gn_leastsquares_damping; ///< Damping parameter for Least Squares regularization
@@ -199,6 +200,7 @@ class Config {
   int getGnPrecUpdateInterval() const { return gn_prec_update_interval; }
   int getGnPrecondRank() const { return gn_precond_rank; }
   double getGnRtol() const { return gn_rtol; }
+  double getGnAtol() const { return gn_atol; }
   int getGnMaxiter() const { return gn_maxiter; }
 
   const std::string& getOutputDirectory() const { return output_directory; }

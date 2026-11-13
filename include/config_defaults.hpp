@@ -58,6 +58,7 @@ const double OPTIM_PENALTY_ENERGY = 0.0; ///< Default energy penalty coefficient
 const double OPTIM_PENALTY_VARIATION = 0.01; ///< Default amplitude variation penalty coefficient
 const OptimSolverType OPTIM_SOLVER_TYPE = OptimSolverType::TAO_LBFGS; ///< Default optimization solver type
 const double GN_RTOL = 1e-3; ///< Default relative tolerance for Gauss-Newton inner solver
+const double GN_ATOL = 1e-6; ///< Default absolute tolerance for Gauss-Newton inner solver
 const int GN_MAXITER = 100; ///< Default maximum iterations for the Gauss-Newton inner solver
 inline const std::string GN_LEASTSQUARES_SOLVER = "lsqr"; ///< Default solver for Least Squares problem ("brgn" or "lsqr")
 const double GN_LEASTSQUARES_DAMPING = 1e-3; ///< Default damping parameter for Least Squares regularization

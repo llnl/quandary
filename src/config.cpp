@@ -307,6 +307,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
 
     // Parse Gauss-Newton solver options
     gn_rtol = validators::field<double>(optimization_table, "gn_rtol").greaterThan(0.0).valueOr(ConfigDefaults::GN_RTOL);
+    gn_atol = validators::field<double>(optimization_table, "gn_atol").greaterThan(0.0).valueOr(ConfigDefaults::GN_ATOL);
     gn_maxiter = validators::field<int>(optimization_table, "gn_maxiter").greaterThan(0).valueOr(ConfigDefaults::GN_MAXITER);
 
 
@@ -698,6 +699,7 @@ void Config::printConfig(std::stringstream& log) const {
   log << "solver_type = \"" << enumToString(optim_solver_type, OPTIM_SOLVER_TYPE_MAP) << "\"\n";
   if (optim_solver_type == OptimSolverType::GAUSS_NEWTON) {
     log << "gn_rtol = " << gn_rtol << "\n";
+    log << "gn_atol = " << gn_atol << "\n";
     log << "gn_maxiter = " << gn_maxiter << "\n";
     log << "gn_normaleq_solver = \"" << gn_normaleq_solver << "\"\n";
     log << "gn_normaleq_minres_qlp = " << (gn_normaleq_minres_qlp ? "true" : "false") << "\n";

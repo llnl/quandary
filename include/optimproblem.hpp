@@ -130,6 +130,7 @@ class OptimProblem {
   int gn_precond_rank; ///< Rank for low-rank preconditioner
   int gn_maxiter; ///< Maximum iterations for Gauss-Newton KSP solver
   double gn_rtol; ///< Relative tolerance for Gauss-Newton KSP solver
+  double gn_atol; ///< Absolute tolerance for Gauss-Newton KSP solver
 
   // Workspace for Gauss-Newton solvers
   int tangent_dim; ///< Dimension of the tangent space (dim²-1)

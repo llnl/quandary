@@ -136,6 +136,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   // Get for the inner Gauss-Newton solvers from config 
   gn_maxiter = config.getGnMaxiter();
   gn_rtol = config.getGnRtol();
+  gn_atol = config.getGnAtol();
   gn_solver_mode = config.getGnSolverMode();
   gn_normaleq_solver = config.getGnNormaleqSolver();  
   gn_leastsquares_damping = config.getGnLeastSquaresDamping();
@@ -170,7 +171,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   KSPCreate(PETSC_COMM_SELF, &ksp_gn_leastsquares);
   KSPSetOperators(ksp_gn_leastsquares, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell);
   KSPSetType(ksp_gn_leastsquares, KSPLSQR);
-  KSPSetTolerances(ksp_gn_leastsquares,gn_rtol,PETSC_DEFAULT,PETSC_DEFAULT,gn_maxiter);
+  KSPSetTolerances(ksp_gn_leastsquares,gn_rtol,gn_atol,PETSC_DEFAULT,gn_maxiter);
   // KSPSetComputeSingularValues(ksp_gn_leastsquares, PETSC_TRUE);
   KSPSetFromOptions(ksp_gn_leastsquares);
   KSPMonitorCancel(ksp_gn_leastsquares);
@@ -184,7 +185,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   // TaoBRGNGetSubsolver(tao_gn_leastsquares_brgn, &tao_sub);
   // TaoSetTolerances(tao_sub, config.getGnRtol(), PETSC_DEFAULT, PETSC_DEFAULT);
   // TaoSetMaximumIterations(tao_sub, config.getGnMaxiter());
-  TaoSetTolerances(tao_gn_leastsquares_brgn, gn_rtol, PETSC_DEFAULT, PETSC_DEFAULT);
+  TaoSetTolerances(tao_gn_leastsquares_brgn, gn_rtol, gn_atol, PETSC_DEFAULT);
   TaoSetMaximumIterations(tao_gn_leastsquares_brgn, gn_maxiter);
   TaoBRGNSetRegularizerWeight(tao_gn_leastsquares_brgn, gn_leastsquares_damping);
   TaoSetResidualRoutine(tao_gn_leastsquares_brgn, brgn_residual, TaoBRGN_EvalResidual, (void*)this);
@@ -231,7 +232,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   } 
   KSPSetFromOptions(ksp_gn_normaleq);
   // KSPSetNormType(ksp_gn_normaleq, KSP_NORM_UNPRECONDITIONED); // Uncomment if unpreconditioned norm is desired, but is slower. 
-  KSPSetTolerances(ksp_gn_normaleq, gn_rtol, PETSC_DEFAULT, PETSC_DEFAULT, gn_maxiter);
+  KSPSetTolerances(ksp_gn_normaleq, gn_rtol, gn_atol, PETSC_DEFAULT, gn_maxiter);
   KSPMonitorCancel(ksp_gn_normaleq);
   KSPMonitorSet(ksp_gn_normaleq, KSPMonitorResidualAndSolution, (void*)this, NULL);
 
