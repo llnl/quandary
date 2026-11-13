@@ -28,13 +28,13 @@ def find_seed_directories(parent_dir='.', basename='seed'):
     Returns
     -------
     list of str
-        Sorted list of seed directory paths
+        Sorted list of seed directory paths (excludes directories ending with 'timeout')
     """
     pattern = os.path.join(parent_dir, f'{basename}_*')
     seed_dirs = sorted(glob.glob(pattern))
 
-    # Filter to only actual directories
-    seed_dirs = [d for d in seed_dirs if os.path.isdir(d)]
+    # Filter to only actual directories and exclude those ending with 'timeout'
+    seed_dirs = [d for d in seed_dirs if os.path.isdir(d) and not d.endswith('timeout')]
 
     return seed_dirs
 
@@ -66,6 +66,15 @@ def read_infidelity(seed_dir):
 
         iteration = data[:, 0].astype(int)
         infidelity = data[:, 5]  # Column 6 (1-indexed) = index 5 (0-indexed)
+
+        # Filter out negative infidelity values
+        positive_mask = infidelity > 0
+        if not np.any(positive_mask):
+            print(f"Warning: All infidelity values are non-positive in {history_file}, skipping")
+            return None
+
+        iteration = iteration[positive_mask]
+        infidelity = infidelity[positive_mask]
 
         # Extract initial control vector norm (column 13 = index 12)
         x0_norm = data[0, 12] if data.shape[1] >= 13 else None
@@ -144,25 +153,6 @@ def plot_seeds_infidelity(parent_dir='.', basenames=None, title_suffix='', show_
 
         print(f"Successfully read data from {len(all_data)} seeds for '{basename}'")
 
-        # Filter out traces that stop at infidelity > threshold
-        filtered_data = []
-        threshold = infidelity_threshold
-        for iteration, infidelity, seed_num, x0_norm in all_data:
-            final_infidelity = infidelity[-1]
-            if final_infidelity <= threshold:
-                filtered_data.append((iteration, infidelity, seed_num, x0_norm))
-            else:
-                print(f"  Excluding seed {seed_num}: stopped at infidelity {final_infidelity:.2e} > {threshold:.2e}")
-
-        if len(filtered_data) == 0:
-            print(f"Warning: No seeds reached infidelity <= {threshold:.2e} for basename '{basename}'")
-            continue
-
-        print(f"Using {len(filtered_data)} seeds that reached infidelity <= {threshold:.2e} (excluded {len(all_data) - len(filtered_data)})")
-
-        # Use filtered data from here on
-        all_data = filtered_data
-
         # Create label for this dataset
         if len(basenames) > 1:
             dataset_label = basename.replace('_seed', '').replace('config_', '')
@@ -186,90 +176,107 @@ def plot_seeds_infidelity(parent_dir='.', basenames=None, title_suffix='', show_
 
         # Compute and plot statistics on interpolated grid
         if show_statistics and len(all_data) > 1:
-            # Find global infidelity range across all seeds
-            all_infidelities = np.concatenate([data[1] for data in all_data])
-            min_infidelity_global = np.min(all_infidelities)
-            max_infidelity_global = np.max(all_infidelities)
-
-            # Create infidelity grid (logarithmically spaced)
-            n_grid = 100
-            infidelity_grid = np.logspace(np.log10(min_infidelity_global),
-                                          np.log10(max_infidelity_global),
-                                          n_grid)
-
-            # For each seed, interpolate to find iteration at each infidelity level
-            iteration_at_infidelity = []
-
+            # Filter data for statistics: only include traces with final infidelity <= 1e-6
+            stats_threshold = 1e-6
+            stats_data = []
             for iteration, infidelity, seed_num, x0_norm in all_data:
-                # Infidelity should be monotonically decreasing, but might have small increases
-                # Use only the decreasing envelope to avoid interpolation issues
-
-                # Create monotonic decreasing infidelity by taking cumulative minimum
-                infidelity_mono = np.minimum.accumulate(infidelity)
-
-                # Interpolate in log space (more stable for log-scale data)
-                # Need to reverse arrays since np.interp requires x to be increasing
-                iter_interp = np.interp(
-                    np.log10(infidelity_grid),           # x values to interpolate at
-                    np.log10(infidelity_mono)[::-1],     # x data (reversed - increasing)
-                    iteration[::-1],                      # y data (reversed)
-                    left=np.nan, right=np.nan             # NaN for out-of-range values
-                )
-
-                iteration_at_infidelity.append(iter_interp)
-
-            # Convert to array: shape (n_seeds, n_grid)
-            iteration_at_infidelity = np.array(iteration_at_infidelity)
-
-            # Compute statistics (ignoring NaN values)
-            with np.errstate(invalid='ignore'):  # Suppress warnings for all-NaN slices
-                mean_iterations = np.nanmean(iteration_at_infidelity, axis=0)
-                std_iterations = np.nanstd(iteration_at_infidelity, axis=0)
-                min_iterations = np.nanmin(iteration_at_infidelity, axis=0)
-                max_iterations = np.nanmax(iteration_at_infidelity, axis=0)
-
-            # Only plot where we have valid data from ALL seeds
-            n_valid = np.sum(~np.isnan(iteration_at_infidelity), axis=0)
-            valid_mask = (n_valid == len(all_data))
-
-            if np.any(valid_mask):
-                infidelity_valid = infidelity_grid[valid_mask]
-                mean_iter_valid = mean_iterations[valid_mask]
-                std_iter_valid = std_iterations[valid_mask]
-                min_iter_valid = min_iterations[valid_mask]
-                max_iter_valid = max_iterations[valid_mask]
-
-                # Plot mean with dataset-specific color
-                if dataset_label:
-                    mean_label = f'{dataset_label} mean'
-                    std_label = f'{dataset_label} ±1σ'
+                if infidelity[-1] <= stats_threshold:
+                    stats_data.append((iteration, infidelity, seed_num, x0_norm))
                 else:
-                    mean_label = 'Mean'
-                    std_label = '±1 std dev'
+                    print(f"  Excluding seed {seed_num} from statistics: final infidelity {infidelity[-1]:.2e} > {stats_threshold:.2e}")
 
-                ax.plot(mean_iter_valid, infidelity_valid,
-                       linestyle='-', linewidth=2.5, color=color,
-                       marker='o', markersize=5, markevery=max(1, len(mean_iter_valid)//20),
-                       label=mean_label, zorder=10)
+            if len(stats_data) == 0:
+                print(f"  Warning: No seeds with final infidelity <= {stats_threshold:.2e}, skipping statistics")
+            elif len(stats_data) == 1:
+                print(f"  Warning: Only 1 seed with final infidelity <= {stats_threshold:.2e}, skipping statistics")
+            else:
+                print(f"  Computing statistics from {len(stats_data)} seeds (excluded {len(all_data) - len(stats_data)} from statistics)")
 
-                # Plot standard deviation band
-                ax.fill_betweenx(infidelity_valid,
-                               mean_iter_valid - std_iter_valid,
-                               mean_iter_valid + std_iter_valid,
-                               alpha=0.2, color=color, label=std_label)
+            if len(stats_data) > 1:
+                # Find global infidelity range across seeds used for statistics
+                all_infidelities = np.concatenate([data[1] for data in stats_data])
+                min_infidelity_global = np.min(all_infidelities)
+                max_infidelity_global = np.max(all_infidelities)
 
-                # Also show min and max
-                if dataset_label:
-                    minmax_label = f'{dataset_label} min/max'
-                else:
-                    minmax_label = 'Min/Max'
+                # Create infidelity grid (logarithmically spaced)
+                n_grid = 100
+                infidelity_grid = np.logspace(np.log10(min_infidelity_global),
+                                              np.log10(max_infidelity_global),
+                                              n_grid)
 
-                ax.plot(min_iter_valid, infidelity_valid,
-                       linestyle='--', linewidth=1.5, color=color,
-                       alpha=0.4, label=minmax_label, zorder=5)
-                ax.plot(max_iter_valid, infidelity_valid,
-                       linestyle='--', linewidth=1.5, color=color,
-                       alpha=0.4, label='_nolegend_', zorder=5)
+                # For each seed, interpolate to find iteration at each infidelity level
+                iteration_at_infidelity = []
+
+                for iteration, infidelity, seed_num, x0_norm in stats_data:
+                    # Infidelity should be monotonically decreasing, but might have small increases
+                    # Use only the decreasing envelope to avoid interpolation issues
+
+                    # Create monotonic decreasing infidelity by taking cumulative minimum
+                    infidelity_mono = np.minimum.accumulate(infidelity)
+
+                    # Interpolate in log space (more stable for log-scale data)
+                    # Need to reverse arrays since np.interp requires x to be increasing
+                    iter_interp = np.interp(
+                        np.log10(infidelity_grid),           # x values to interpolate at
+                        np.log10(infidelity_mono)[::-1],     # x data (reversed - increasing)
+                        iteration[::-1],                      # y data (reversed)
+                        left=np.nan, right=np.nan             # NaN for out-of-range values
+                    )
+
+                    iteration_at_infidelity.append(iter_interp)
+
+                # Convert to array: shape (n_seeds, n_grid)
+                iteration_at_infidelity = np.array(iteration_at_infidelity)
+
+                # Compute statistics (ignoring NaN values)
+                with np.errstate(invalid='ignore'):  # Suppress warnings for all-NaN slices
+                    mean_iterations = np.nanmean(iteration_at_infidelity, axis=0)
+                    std_iterations = np.nanstd(iteration_at_infidelity, axis=0)
+                    min_iterations = np.nanmin(iteration_at_infidelity, axis=0)
+                    max_iterations = np.nanmax(iteration_at_infidelity, axis=0)
+
+                # Only plot where we have valid data from ALL seeds used in statistics
+                n_valid = np.sum(~np.isnan(iteration_at_infidelity), axis=0)
+                valid_mask = (n_valid == len(stats_data))
+
+                if np.any(valid_mask):
+                    infidelity_valid = infidelity_grid[valid_mask]
+                    mean_iter_valid = mean_iterations[valid_mask]
+                    std_iter_valid = std_iterations[valid_mask]
+                    min_iter_valid = min_iterations[valid_mask]
+                    max_iter_valid = max_iterations[valid_mask]
+
+                    # Plot mean with dataset-specific color
+                    if dataset_label:
+                        mean_label = f'{dataset_label} mean'
+                        std_label = f'{dataset_label} ±1σ'
+                    else:
+                        mean_label = 'Mean'
+                        std_label = '±1 std dev'
+
+                    ax.plot(mean_iter_valid, infidelity_valid,
+                           linestyle='-', linewidth=2.5, color=color,
+                           marker='o', markersize=5, markevery=max(1, len(mean_iter_valid)//20),
+                           label=mean_label, zorder=10)
+
+                    # Plot standard deviation band
+                    ax.fill_betweenx(infidelity_valid,
+                                   mean_iter_valid - std_iter_valid,
+                                   mean_iter_valid + std_iter_valid,
+                                   alpha=0.2, color=color, label=std_label)
+
+                    # Also show min and max
+                    if dataset_label:
+                        minmax_label = f'{dataset_label} min/max converged'
+                    else:
+                        minmax_label = 'Min/Max converged'
+
+                    ax.plot(min_iter_valid, infidelity_valid,
+                           linestyle='--', linewidth=1.5, color=color,
+                           alpha=0.4, label=minmax_label, zorder=5)
+                    ax.plot(max_iter_valid, infidelity_valid,
+                           linestyle='--', linewidth=1.5, color=color,
+                           alpha=0.4, label='_nolegend_', zorder=5)
 
     # Format plot
     # Get directory name for title
@@ -288,15 +295,15 @@ def plot_seeds_infidelity(parent_dir='.', basenames=None, title_suffix='', show_
     ax.legend(fontsize=9, loc='best')
     ax.set_yscale('log')
 
-    # Set y-axis limits and ticks to ensure 10^-6 and 1.0 are visible
+    # Set y-axis limits and ticks
     from matplotlib.ticker import LogLocator, LogFormatter
     ax.yaxis.set_major_locator(LogLocator(base=10.0, numticks=15))
     ax.yaxis.set_minor_locator(LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1, numticks=100))
     ax.yaxis.set_major_formatter(LogFormatter(base=10.0, labelOnlyBase=False))
 
-    # Ensure y-limits include 1e-6 and 1.0
+    # Set y-limits: start at 1e-7, ensure 1.0 is visible
     current_ylim = ax.get_ylim()
-    new_ymin = min(current_ylim[0], 1e-6)
+    new_ymin = 1e-7
     new_ymax = max(current_ylim[1], 1.0)
     ax.set_ylim([new_ymin, new_ymax])
 
@@ -376,15 +383,13 @@ def plot_convergence_vs_initial_norm(parent_dir='.', basenames=None, title_suffi
 
         print(f"Successfully read data from {len(all_data)} seeds for '{basename}'")
 
-        # Filter out traces that stop at infidelity > threshold and extract convergence data
-        threshold = infidelity_threshold
+        # Extract convergence data
         x0_norms = []
         xf_norms = []
         iters_to_converge = []
 
         for iteration, infidelity, seed_num, x0_norm in all_data:
-            final_infidelity = infidelity[-1]
-            if final_infidelity <= threshold and x0_norm is not None:
+            if x0_norm is not None:
                 # Read final control norm from the same file
                 seed_dir = seed_dirs[seed_num - 1] if seed_num <= len(seed_dirs) else None
                 if seed_dir:
@@ -403,10 +408,7 @@ def plot_convergence_vs_initial_norm(parent_dir='.', basenames=None, title_suffi
                     except:
                         print(f"  Excluding seed {seed_num}: error reading final norm")
             else:
-                if x0_norm is None:
-                    print(f"  Excluding seed {seed_num}: no initial norm data")
-                else:
-                    print(f"  Excluding seed {seed_num}: stopped at infidelity {final_infidelity:.2e} > {threshold:.2e}")
+                print(f"  Excluding seed {seed_num}: no initial norm data")
 
         if len(x0_norms) == 0:
             print(f"Warning: No seeds with valid convergence data for basename '{basename}'")
