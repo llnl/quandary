@@ -260,8 +260,8 @@ int main(int argc,char **argv)
 
     // primal /dual specific setup:
     double damping=0.0;
-    Mat mat_dense;
-    std::string orig_fname, prec_fname;
+    Mat mat_dense, BT_mat_dense;
+    std::string orig_fname, prec_fname, B_fname;
 
     if (mode == "dual") {
       // Apply damping before assembling
@@ -272,9 +272,15 @@ int main(int argc,char **argv)
       // }
       orig_fname = "GN_dual_matrix.dat";
       prec_fname = "GN_dual_matrix_preconditioned.dat";
+      B_fname = "GN_dual_matrix_Btranspose.dat";
       damping = optimctx->getTikhonov();
       optimctx->updateGaussNewtonDualMatDense();
       mat_dense = optimctx->getGN_Dual_MatDense();
+
+      // get the dense version of the rectangular matrix 'B'
+      if (mpirank_world == 0) printf("\n **** Constructing the dense Btranspose-matrix\n\n");
+      optimctx->updateGaussNewtonDual_Btranspose_MatDense();
+      BT_mat_dense = optimctx->getGN_Dual_BT_MatDense();
     }
     else{ //primal
       orig_fname = "GN_primal_matrix.dat";
@@ -314,6 +320,30 @@ int main(int argc,char **argv)
       }
     }
 
+    if (mode == "dual") {
+      // Save B-transpose matrix on file
+      PetscInt mat_rows, mat_cols;
+      MatGetSize(BT_mat_dense, &mat_rows, &mat_cols);
+
+      if (mpirank_world == 0 && !quietmode) {
+        printf("\nSaving the dual B-transpose matrix B^T = L^* M = L P_TU^-1 ...\n", mode.c_str());
+      }
+
+      // Only rank 0 writes to file (matrix is replicated on all ranks after MPI_Allreduce)
+      if (mpirank_world == 0) {
+        snprintf(filename, 254, "%s/%s", output->output_dir.c_str(), B_fname.c_str());
+        PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
+        PetscViewerBinarySetSkipInfo(viewer, PETSC_TRUE);  // Suppress .info file
+        MatView(BT_mat_dense, viewer);
+        PetscViewerDestroy(&viewer);
+
+        if (!quietmode) {
+          printf("Dual B-transpose matrix saved to: %s\n", filename);
+          printf("Matrix dimensions: %d x %d (tangent space x design space )\n", mat_rows, mat_cols);
+        }
+      }
+    }
+
     // Save preconditioned matrix if preconditioner is enabled
     // (interval >= 0 for fixed/startup, or -1 for adaptive mode)
     if (config.getGnPrecUpdateInterval() >= -1) {
@@ -321,12 +351,6 @@ int main(int argc,char **argv)
       if (mpirank_world == 0 && !quietmode) {
         printf("\nAssembling low-rank preconditioned %s matrix with rank=%d...\n", mode.c_str(), rank);
       }
-
-      // VERIFY THIS: In DUAL mode, damping also needs to be applied to precond shell???
-      // if (mode == "dual" && damping > 0.0) {
-      //   Mat GN_Dual_LowRank_MatShell = optimctx->getGN_Dual_LowRank_MatShell();
-      //   MatShift(GN_Dual_LowRank_MatShell, damping);
-      // }
 
       // Update MatShell preconditioner
       optimctx->updateGaussNewtonPreconditionerLowRank(rank);

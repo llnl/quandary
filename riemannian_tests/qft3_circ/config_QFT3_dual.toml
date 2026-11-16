@@ -39,7 +39,7 @@ target = { type = "gate", gate_type = "qft", gate_rot_freq = [0.0, 0.0, 0.0] }
 objective = "Jtrace"
 # objective = "Jgeodesic_phasefree"
 tolerance = { grad_abs = 1e-05, grad_rel = 1e-05, final_cost = 1e-08, infidelity = 1e-06 }
-maxiter = 200
+maxiter = 100
 tikhonov = { coeff = 0.0, use_x0 = false }
 penalty = { leakage = 0.0, energy = 0.0, dpdm = 0.0, variation = 0.0, weightedcost = 0.0, weightedcost_width = 0.0 }
 
@@ -52,19 +52,14 @@ solver_type = "gauss_newton"
 gn_solver_mode = "dual"
 #gn_solver_mode = "least_squares"
 
-# options are "minres", "cg", "gmres", or "proj"
-gn_normaleq_solver = "gmres"
+# Inner solver for primal or dual normal equation, "minres", "cg", "gmres", or "proj"
+gn_normaleq_solver = "minres"
 # gn_normaleq_solver = "proj"
 gn_normaleq_minres_qlp = true 
 
 # Stopping criteria for inner GN solvers
 gn_maxiter = 100 
-gn_rtol = 1e-5
-
-# Preconditioner
-# Recompute every iteration
-gn_prec_update_interval = -1
-gn_precond_rank = 40
+gn_rtol = 1e-9
 
 # preconditioner update interval (dual mode only)
 # keyword gn_prec_update_interval:
@@ -72,6 +67,10 @@ gn_precond_rank = 40
 # Enable adaptive: -1
 # Only at first iteration: 0
 # every n iteration: n
+
+# Preconditioner
+gn_prec_update_interval = -2
+gn_precond_rank = 63
 
 [output]
 # writing to '.' is required by 'plot_seeds_infidelity.py'
@@ -82,9 +81,9 @@ timestep_stride = 1
 optimization_stride = 1
 
 [solver]
-# runtype = "optimization"
+runtype = "optimization"
 # runtype = "gaussnewton_ls"
-runtype = "matrix_save"
+# runtype = "matrix_save"
 usematfree = true
 linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"

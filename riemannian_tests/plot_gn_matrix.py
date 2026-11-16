@@ -169,6 +169,110 @@ def plot_matrix_heatmap(matrix, filename, output_file=None):
     plt.close()
 
 
+def plot_r_spectrum(matrix, output_file=None, input_filename=""):
+    """For rectangular matrix B, compute QR decomposition and plot spectrum of R.
+
+    - If B has more rows than columns (tall): compute B = QR, R is square (ncols x ncols)
+    - If B has fewer rows than columns (wide): compute B^T = QR, so B = R^T Q^T, R is square (nrows x nrows)
+    """
+
+    nrows, ncols = matrix.shape
+
+    if nrows == ncols:
+        print(f"Matrix is square ({nrows} x {ncols}), no QR decomposition needed")
+        return
+
+    if nrows > ncols:
+        # Tall matrix: more rows than columns
+        # Compute QR of B directly: B = QR
+        print(f"\nMatrix B is {nrows} x {ncols} (more rows than columns - tall)")
+        print("Computing QR decomposition B = QR...")
+
+        Q, R = np.linalg.qr(matrix, mode='reduced')
+
+        print(f"Reduced QR - Q dimensions: {Q.shape}, R dimensions: {R.shape}")
+
+        # R should be (ncols x ncols) which is square
+        if R.shape[0] != R.shape[1]:
+            print(f"Warning: R is not square: {R.shape}")
+            return
+
+        qr_description = f"B = QR"
+
+    else:
+        # Wide matrix: fewer rows than columns
+        # Compute QR of B^T: B^T = QR, so B = R^T Q^T
+        print(f"\nMatrix B is {nrows} x {ncols} (fewer rows than columns - wide)")
+        print("Computing QR decomposition of B^T = QR, so B = R^T Q^T...")
+
+        Q, R = np.linalg.qr(matrix.T, mode='reduced')
+
+        print(f"Reduced QR - Q dimensions: {Q.shape}, R dimensions: {R.shape}")
+
+        # R should be (nrows x nrows) which is square
+        if R.shape[0] != R.shape[1]:
+            print(f"Warning: R is not square: {R.shape}")
+            return
+
+        qr_description = f"B = R^T Q^T"
+
+    print(f"R is {R.shape[0]} x {R.shape[1]} (square)")
+    print(f"R min value: {np.min(R):.6e}")
+    print(f"R max value: {np.max(R):.6e}")
+
+    # Check if R is upper triangular (it should be from QR)
+    lower_norm = np.linalg.norm(np.tril(R, -1))
+    r_norm = np.linalg.norm(R)
+    if r_norm > 0:
+        triangularity = lower_norm / r_norm
+        print(f"Triangularity check (||lower||/||R||): {triangularity:.6e}")
+        if triangularity < 1e-10:
+            print("R is upper triangular (as expected from QR decomposition)")
+
+    # Compute eigenvalues of R
+    print("\nComputing eigenvalues of R...")
+    eigenvalues = np.linalg.eigvals(R)
+    eigenvalues = np.sort(np.abs(eigenvalues))[::-1]  # Sort by magnitude, descending
+
+    print(f"Largest |eigenvalue|: {eigenvalues[0]:.6e}")
+    print(f"Smallest |eigenvalue|: {eigenvalues[-1]:.6e}")
+
+    # Compute condition number
+    if eigenvalues[-1] != 0:
+        condition_number = eigenvalues[0] / eigenvalues[-1]
+    else:
+        condition_number = float('inf')
+    print(f"Condition number of R: {condition_number:.6e}")
+
+    # Get base filename for title
+    import os
+    base_filename = os.path.basename(input_filename)
+
+    # Create figure
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Plot eigenvalue spectrum with condition number in legend
+    ax.semilogy(range(len(eigenvalues)), eigenvalues, 'b.-', linewidth=1, markersize=3,
+                label=f'κ(R) = {condition_number:.2e}')
+    ax.set_xlabel('Eigenvalue index')
+    ax.set_ylabel('|Eigenvalue| (log scale)')
+    ax.set_title(f'Spectrum of R from QR Decomposition\n{qr_description}, {base_filename}\nR dimensions: {R.shape[0]} x {R.shape[1]}')
+    ax.legend(loc='best', fontsize=10)
+    ax.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+
+    # Save to file
+    base = output_file.rsplit('.', 1)[0].replace('_heatmap', '')
+    r_spectrum_file = base + '_R_spectrum.png'
+    plt.savefig(r_spectrum_file, dpi=300, bbox_inches='tight')
+    print(f"\nSaved: {r_spectrum_file}")
+
+    # Also show interactively
+    plt.show(block=True)
+    plt.close()
+
+
 def plot_eigenvalue_distribution(matrix, output_file=None, num_top_eigs=20, show_top_eigs=False, input_filename=""):
     """Plot eigenvalue distribution of the matrix."""
 
@@ -293,15 +397,18 @@ def plot_eigenvalue_distribution(matrix, output_file=None, num_top_eigs=20, show
 def main():
     if len(sys.argv) < 2:
         print("Usage: python plot_gn_matrix.py <matrix_file.dat> [output_file_prefix.png] [num_top_eigenvalues]")
-        print("\nGenerates two plots:")
-        print("  1. Matrix heatmap (log scale)")
-        print("  2. Eigenvalue distribution")
-        print("\nFor primal matrices, the eigenvalue plot shows both full spectrum and top N eigenvalues.")
+        print("\nGenerates plots:")
+        print("  1. Matrix heatmap (log scale) - always generated")
+        print("  2. Eigenvalue distribution - only for square matrices")
+        print("\nFor rectangular matrices, only the heatmap is generated.")
+        print("For primal matrices, the eigenvalue plot shows both full spectrum and top N eigenvalues.")
         print("\nExamples:")
         print("  python plot_gn_matrix.py GN_dual_matrix.dat")
-        print("    -> Creates GN_dual_matrix_heatmap.png and GN_dual_matrix_eigenvalues.png")
+        print("    -> Creates GN_dual_matrix_heatmap.png and GN_dual_matrix_eigenvalues.png (if square)")
         print("\n  python plot_gn_matrix.py GN_primal_matrix.dat my_plot.png 30")
-        print("    -> Creates my_plot.png and my_plot_eigenvalues.png, showing top 30 eigenvalues")
+        print("    -> Creates my_plot.png and my_plot_eigenvalues.png (if square), showing top 30 eigenvalues")
+        print("\n  python plot_gn_matrix.py jacobian_matrix.dat")
+        print("    -> Creates jacobian_matrix_heatmap.png (no eigenvalue plot for rectangular matrix)")
         sys.exit(1)
 
     input_file = sys.argv[1]
@@ -348,8 +455,17 @@ def main():
     print("\n=== Matrix Heatmap ===")
     plot_matrix_heatmap(matrix, input_file, output_file)
 
-    print("\n=== Eigenvalue Analysis ===")
-    plot_eigenvalue_distribution(matrix, output_file, num_top_eigs, show_top_eigs, input_file)
+    # Only compute eigenvalues for square matrices
+    if matrix.shape[0] == matrix.shape[1]:
+        print("\n=== Eigenvalue Analysis ===")
+        plot_eigenvalue_distribution(matrix, output_file, num_top_eigs, show_top_eigs, input_file)
+    else:
+        print("\n=== Eigenvalue Analysis ===")
+        print(f"Matrix is rectangular ({matrix.shape[0]} x {matrix.shape[1]}), skipping direct eigenvalue computation.")
+
+        # For rectangular matrices, compute QR analysis
+        print("\n=== QR Decomposition Analysis ===")
+        plot_r_spectrum(matrix, output_file, input_file)
 
 
 if __name__ == "__main__":

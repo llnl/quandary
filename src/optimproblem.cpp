@@ -166,15 +166,24 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
     VecDuplicate(rho_t0_bar, &workvec_statespace[iinit]);
   }
 
-  // Create the LSQR and BRGN solvers for least-squares problem
+  // Create the LSQR solvers for least-squares problem
   KSPCreate(PETSC_COMM_SELF, &ksp_gn_leastsquares);
-  KSPSetOperators(ksp_gn_leastsquares, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell);
+  // previous (primal LSQR)
+  // KSPSetOperators(ksp_gn_leastsquares, GN_LeastSquares_MatShell, GN_LeastSquares_MatShell);
+  // dual LSQR for solving Bv = theta
+  KSPSetOperators(ksp_gn_leastsquares, GN_Dual_B_MatShell, GN_Dual_B_MatShell);
+  // Always use KSPLSQR
   KSPSetType(ksp_gn_leastsquares, KSPLSQR);
-  KSPSetTolerances(ksp_gn_leastsquares,gn_rtol,PETSC_DEFAULT,PETSC_DEFAULT,gn_maxiter);
-  // KSPSetComputeSingularValues(ksp_gn_leastsquares, PETSC_TRUE);
+  KSPSetTolerances(ksp_gn_leastsquares, gn_rtol, PETSC_DEFAULT, PETSC_DEFAULT, gn_maxiter);
+  PC pc;
+  KSPGetPC(ksp_gn_leastsquares, &pc);
+  PCSetType(pc, PCNONE); // Don't use a pre-conditioner for LSQR
+
   KSPSetFromOptions(ksp_gn_leastsquares);
   KSPMonitorCancel(ksp_gn_leastsquares);
   KSPMonitorSet(ksp_gn_leastsquares, KSPMonitorResidualAndSolution, (void*)this, NULL);
+
+  // Create the BRGN solvers for the least-squares problem 
   TaoCreate(PETSC_COMM_SELF, &tao_gn_leastsquares_brgn);
   TaoSetType(tao_gn_leastsquares_brgn, TAOBRGN);
   MatCreateVecs(GN_LeastSquares_MatShell, nullptr, &brgn_rhs);
@@ -204,6 +213,16 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   MatShellSetOperation(GN_Dual_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_MatMult);
   MatCreateDense(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, NULL, &GN_Dual_MatDense); // only debug and output
   MatZeroEntries(GN_Dual_MatDense);
+
+  // MatShell for dual B-matrix
+  MatCreateShell(PETSC_COMM_SELF, M_dual, ndesign, M_dual, ndesign, this, &GN_Dual_B_MatShell); // rectangular tangent x design dimensions
+  MatShellSetOperation(GN_Dual_B_MatShell, MATOP_MULT, (void(*)(void))GN_Dual_B_MatMult);
+  MatShellSetOperation(GN_Dual_B_MatShell, MATOP_MULT_TRANSPOSE, (void(*)(void))GN_Dual_B_MatMultTranspose);
+  
+  MatCreateDense(PETSC_COMM_SELF, M_dual, ndesign, M_dual, ndesign, NULL, &GN_Dual_B_MatDense); // only for plotting
+  MatZeroEntries(GN_Dual_B_MatDense);
+  MatCreateDense(PETSC_COMM_SELF, ndesign, M_dual, ndesign, M_dual, NULL, &GN_Dual_BT_MatDense); // for QR factorization and plotting
+  MatZeroEntries(GN_Dual_BT_MatDense);
 
   // Create MatShell for dual and primal low-rank preconditioned 
   MatCreateShell(PETSC_COMM_SELF, M_dual, M_dual, M_dual, M_dual, this, &GN_Dual_LowRank_MatShell);
@@ -273,6 +292,11 @@ OptimProblem::~OptimProblem() {
   MatDestroy(&GN_Dual_LowRank_MatShell);
   MatDestroy(&GN_Primal_LowRank_MatShell);
   MatDestroy(&GN_Dual_MatDense);
+
+  MatDestroy(&GN_Dual_B_MatShell);
+  MatDestroy(&GN_Dual_B_MatDense);
+  MatDestroy(&GN_Dual_BT_MatDense);
+
   VecDestroy(&xeval_GN);
   VecDestroy(&workvec_tangentspace);
   VecDestroy(&workvec_designspace);
@@ -356,7 +380,7 @@ double OptimProblem::evalF(const Vec x, bool writeTrajectoryDataFiles) {
     int initid = optim_target->prepareInitialAndTargetState(iinit_global, ninit, mastereq->nlevels, mastereq->nessential);
 
     /* Run forward with initial condition initid */
-    if (mpirank_optim == 0 && !quietmode) printf("%d: Initial condition id=%d ...\n", mpirank_init, initid);
+    // if (mpirank_optim == 0 && !quietmode) printf("%d: Initial condition id=%d ...\n", mpirank_init, initid);
     Vec finalstate = timestepper->solveODE(initid, iinit, optim_target->getInitialState(), writeTrajectoryDataFiles, false);
 
     /* Store the final state for Geodesic Riemannian objective function */
@@ -679,41 +703,74 @@ PetscErrorCode OptimProblem::GN_Primal_MatMult(Mat A, const Vec v, Vec Av){
   return 0;
 }
 
+PetscErrorCode OptimProblem::GN_Dual_B_MatMult(Mat B, const Vec v, Vec Bv){
+  OptimProblem *self;
+  MatShellGetContext(B, (void**)&self);
+  // Reset output
+  VecZeroEntries(Bv);
+
+  // Evaluate B*v = M^* L v = P_TU L v (in a single call)
+  self->apply_GN_Jacobian(v, Bv, true, 0.0); 
+  return 0;
+}
+
+
+PetscErrorCode OptimProblem::GN_Dual_B_MatMultTranspose(Mat BT, const Vec w, Vec BTw){
+  OptimProblem *self;
+  MatShellGetContext(BT, (void**)&self);
+  // Reset output
+  VecZeroEntries(BTw);
+
+  // Evaluate B^T*w = L* M w = L P_TU^{-1} w (in a single call)
+  self->apply_GN_Jacobian_Adjoint(w, BTw, true, 0.0); 
+  return 0;
+}
+
 PetscErrorCode OptimProblem::GN_Dual_MatMult(Mat A, const Vec y, Vec Ay){
   OptimProblem *self;
   MatShellGetContext(A, (void**)&self);
-
   // Reset output
   VecZeroEntries(Ay);
 
-  // symmetric formulation:
+  // Try the simple approach:
+  bool simple_approach = true;
+
+  // Notation:
   // W = (1/n) Pp
   // M = P_TU^-1, M^* = P_TU
   // B = M^* L = P_TU L
   // B^T = L^* M = L^* P_TU^-1
-  // Overall operation:
-  // (1/n) (M^* Pp M) (B B^T) (1/n) (M^* \Pp M) y
 
-  // Compute wk_vec_ts = P_TU W P_TU^-1 * y  = (1/n) (M^* Pp M) y
-  self->recoverFromGellmannTangentSpace(y, self->workvec_statespace);
-  // self->projectToGateComplement(self->workvec_statespace, 2.0 / self->mastereq->getDim());
-  self->projectToGateComplement(self->workvec_statespace, sqrt(2.0 / self->mastereq->getDim()));
-  self->projectToGellmannTangentSpace(self->workvec_statespace, self->workvec_tangentspace);
+  if (simple_approach){
+    // Overall operation: Ay = P_TU W P_TU^-1 * y  = (1/n) (M^* Pp M) y
+    self->recoverFromGellmannTangentSpace(y, self->workvec_statespace);
+    self->projectToGateComplement(self->workvec_statespace, 2.0 / self->mastereq->getDim());
+    self->projectToGellmannTangentSpace(self->workvec_statespace, Ay);
 
-  // Compute wk_vec_ts :=  (P_TU L)(L^* P_TU^-1) wk_vec_ts
-  self->apply_GN_Jacobian_Adjoint(self->workvec_tangentspace, self->workvec_designspace, true, 0.0);
-  self->apply_GN_Jacobian(self->workvec_designspace, self->workvec_tangentspace, true, 0.0); 
+    // Is tikhonov needed/appropriate here?
+  }
+  else{
+    // Overall operation (divided into 3 sub-steps):
+    // (1/n) (M^* Pp M) (B B^T) (1/n) (M^* \Pp M) y
 
-  // Compute Ay = P_TU W P_TU^-1 * z  = (1/n) (M^* Pp M) wk_vec_ts
-  self->recoverFromGellmannTangentSpace(self->workvec_tangentspace, self->workvec_statespace);
-  // self->projectToGateComplement(self->workvec_statespace, 2.0 / self->mastereq->getDim());
-  self->projectToGateComplement(self->workvec_statespace, sqrt(2.0 / self->mastereq->getDim()));
-  self->projectToGellmannTangentSpace(self->workvec_statespace, Ay);
+    // Sub-step (1): wk_vec_ts = P_TU W P_TU^-1 * y  = (1/n) (M^* Pp M) y
+    self->recoverFromGellmannTangentSpace(y, self->workvec_statespace);
+    self->projectToGateComplement(self->workvec_statespace, sqrt(2.0 / self->mastereq->getDim()));
+    self->projectToGellmannTangentSpace(self->workvec_statespace, self->workvec_tangentspace);
 
-  // add lambda*z (not sure if this will work anymore?)
-  if (self->gamma_tikhonov > 0.0)
-    VecAXPY(Ay, self->gamma_tikhonov, self->workvec_tangentspace);
+    // Sub-step (2): Compute wk_vec_ts :=  (P_TU L)(L^* P_TU^-1) wk_vec_ts
+    self->apply_GN_Jacobian_Adjoint(self->workvec_tangentspace, self->workvec_designspace, true, 0.0);
+    self->apply_GN_Jacobian(self->workvec_designspace, self->workvec_tangentspace, true, 0.0); 
 
+    // Sub-step (3): Compute Ay = P_TU W P_TU^-1 * z  = (1/n) (M^* Pp M) wk_vec_ts
+    self->recoverFromGellmannTangentSpace(self->workvec_tangentspace, self->workvec_statespace);
+    self->projectToGateComplement(self->workvec_statespace, sqrt(2.0 / self->mastereq->getDim()));
+    self->projectToGellmannTangentSpace(self->workvec_statespace, Ay);
+
+    // add lambda*z (not sure if this will work anymore?)
+    if (self->gamma_tikhonov > 0.0)
+      VecAXPY(Ay, self->gamma_tikhonov, self->workvec_tangentspace);
+  }
   return 0;
 }
 
@@ -765,7 +822,7 @@ Vec OptimProblem::computeGaussNewtonRHS(const std::string& gn_solver_mode, const
     double scale = sqrt(2.0 / mastereq->getDim());  
     projectToGateComplement(workvec_statespace, scale);
 
-    // Compute WU+\lambda L\alpha
+    // Compute WU + \lambda L\alpha
     if (gamma_tikhonov>0.0){
       evalLinearizedForward(xeval_GN, xeval_GN); 
       for (int iinit=0; iinit<ninit_local; iinit++) {
@@ -862,13 +919,71 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
 
   // Recover primal solution: 
   if (gn_solver_mode == "dual") {
-    // Updated reconstruction: v = L^* P_TU^-1 Q wk_vec_ts = L^* P_TU^-1 (1/n)(M^* Pp M) wk_vec_ts
-    recoverFromGellmannTangentSpace(workvec_tangentspace, workvec_statespace);
-    // projectToGateComplement(workvec_statespace, 2.0 / mastereq->getDim());
-    projectToGateComplement(workvec_statespace, sqrt(2.0 / mastereq->getDim()));
-    projectToGellmannTangentSpace(workvec_statespace, workvec_tangentspace);
-    // Previous reconstruction: v = L^* P_TU^-1 
-    apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, 0.0);
+    // Solve B v = theta; theta is stored in workvec_tangentspace (no new allocation is needed)
+    // Note: in the dual case: the pointer: vec_workspace = workvec_tangentspace;
+    bool qr_direct = true;
+
+    if (qr_direct){
+      // Setup the B^T matrix as a dense matrix. B^T: Ndesign by Ntangent
+      if (mpirank_world == 0) printf("**** Reconstructing search direction by solving B v_out = ws_ts\n");
+      updateGaussNewtonDual_Btranspose_MatDense();
+      Mat BT_mat_dense = getGN_Dual_BT_MatDense();
+
+      // Factorize B^T = QR with Slepc/BV and solve R^T y = theta, valuate v_out = Q y
+      MinNormSolveBV_TSQR(BT_mat_dense, workvec_tangentspace, v_out);
+
+      // // tmp: Save B-transpose matrix on file
+      // std::string B_fname = "GN_dual_matrix_B^T_QR.dat";
+      // PetscInt mat_rows, mat_cols;
+      // MatGetSize(BT_mat_dense, &mat_rows, &mat_cols);
+
+      // if (mpirank_world == 0 && !quietmode) {
+      //   printf("\nSaving the dual B-transpose matrix B^T = L^* M = L P_TU^-1 ...\n");
+      // }
+
+      // // Only rank 0 writes to file (matrix is replicated on all ranks after MPI_Allreduce)
+      // PetscViewer viewer;
+      // PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, 	PETSC_VIEWER_ASCII_MATLAB );
+      // if (mpirank_world == 0) {
+      //   char filename[255];
+      //   snprintf(filename, 254, "%s/%s", output->output_dir.c_str(), B_fname.c_str());
+      //   PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
+      //   PetscViewerBinarySetSkipInfo(viewer, PETSC_TRUE);  // Suppress .info file
+      //   MatView(BT_mat_dense, viewer);
+      //   PetscViewerDestroy(&viewer);
+
+      //   if (!quietmode) {
+      //     printf("Dual B-transpose matrix saved to: %s\n", filename);
+      //     printf("Matrix dimensions: %d x %d (tangent space x design space )\n", mat_rows, mat_cols);
+      //   }
+      // }
+
+    }
+    else{
+      // Iterative solutions of the Gauss-Newton least-squares problem
+      KSPReset(ksp_gn_leastsquares);
+      KSPSetOperators(ksp_gn_leastsquares, GN_Dual_B_MatShell, GN_Dual_B_MatShell);
+      KSPSetInitialGuessNonzero(ksp_gn_leastsquares, PETSC_FALSE); // Important to start from zero?
+      KSPSolve(ksp_gn_leastsquares, workvec_tangentspace, v_out);
+
+      // Report convergence
+      KSPConvergedReason reason;
+      int iters;
+      double rnorm;
+      KSPGetConvergedReason(ksp_gn_leastsquares, &reason);
+      KSPGetIterationNumber(ksp_gn_leastsquares, &iters);
+      KSPGetResidualNorm(ksp_gn_leastsquares, &rnorm);
+      ksp_iters_last = iters;
+      if (mpirank_world == 0 && !quietmode) {
+        printf("Gauss-Newton B-matrix Least-Squares stats: iterations = %d, residual norm = %1.14e\n", iters, rnorm);
+      }
+    }
+    // previous stuff:
+    // // Updated reconstruction: v = L^* P_TU^-1 Q wk_vec_ts = L^* P_TU^-1 (1/n)(M^* Pp M) wk_vec_ts
+    // recoverFromGellmannTangentSpace(workvec_tangentspace, workvec_statespace);
+    // projectToGateComplement(workvec_statespace, sqrt(2.0 / mastereq->getDim()));
+    // projectToGellmannTangentSpace(workvec_statespace, workvec_tangentspace);
+    // apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, 0.0);
   } else {
     VecCopy(vec_workspace, v_out);
   }
@@ -918,6 +1033,84 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
   return eigendecomp_is_stale;
 }
 
+#include <slepcbv.h>
+#include <vector>
+
+PetscErrorCode MinNormSolveBV_TSQR(Mat Bt, Vec rhs, Vec x)
+{
+  BV                 V;
+  Mat                R;
+  PetscInt           n, m, ldr;
+  PetscScalar       *r;
+  const PetscScalar *ba;
+
+  bool test_residual = false; // only for testing
+
+  PetscFunctionBeginUser;
+  PetscCall(MatGetSize(Bt, &n, &m));
+  PetscCheck(m <= n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Bt must be tall (n >= m)");
+
+  Mat Bcopy;
+  if (test_residual){
+    /* debug: keep an untouched copy of A^T for the residual check */
+    PetscCall(MatDuplicate(Bt, MAT_COPY_VALUES, &Bcopy));
+  }
+  /* QR of Bt using TSQR */
+  PetscCall(BVCreateFromMat(Bt, &V));
+  PetscCall(BVSetType(V, BVMAT));      /* no-op if the type is already BVMAT */
+
+  /* If BVView shows type (null), add: PetscCall(BVSetType(V, BVMAT)); */
+  PetscCall(BVSetOrthogonalization(V, BV_ORTHOG_CGS, BV_ORTHOG_REFINE_IFNEEDED,
+                                   PETSC_DEFAULT, BV_ORTHOG_BLOCK_TSQR));
+  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, m, m, NULL, &R));
+  PetscCall(BVOrthogonalize(V, R));
+
+  /* y = rhs */
+  std::vector<PetscScalar> y(m);
+  PetscCall(VecGetArrayRead(rhs, &ba));
+  for (PetscInt i = 0; i < m; i++) y[i] = ba[i];
+  PetscCall(VecRestoreArrayRead(rhs, &ba));
+
+  /* Solve R^T y = rhs by forward substitution; R(j,i) = r[j + i*ldr] */
+  PetscCall(MatDenseGetLDA(R, &ldr));
+  PetscCall(MatDenseGetArray(R, &r));
+  for (PetscInt i = 0; i < m; i++) {
+    PetscCheck(PetscAbsScalar(r[i + i*ldr]) > 0.0, PETSC_COMM_SELF, PETSC_ERR_LIB,
+               "R(%" PetscInt_FMT ",%" PetscInt_FMT ") = 0: rank deficient", i, i);
+    PetscScalar s = y[i];
+    for (PetscInt j = 0; j < i; j++) s -= r[j + i*ldr] * y[j];
+    y[i] = s / r[i + i*ldr];
+  }
+  PetscCall(MatDenseRestoreArray(R, &r));
+
+  /* x = Q y */
+  PetscCall(BVMultVec(V, 1.0, 0.0, x, y.data()));
+
+  if (test_residual){
+  /* residual check: A x = (A^T)^T x = Bcopy^T x, compare with rhs */
+  {
+    Vec       res;
+    PetscReal rnorm, bnorm, xnorm;
+
+    PetscCall(VecDuplicate(rhs, &res));              /* size m */
+    PetscCall(MatMultTranspose(Bcopy, x, res));      /* res = A x */
+    PetscCall(VecAXPY(res, -1.0, rhs));              /* res = A x - rhs */
+    PetscCall(VecNorm(res, NORM_2, &rnorm));
+    PetscCall(VecNorm(rhs, NORM_2, &bnorm));
+    PetscCall(VecNorm(x, NORM_2, &xnorm));
+    PetscCall(PetscPrintf(PETSC_COMM_SELF,
+              "MinNormSolveBV_TSQR: ||Ax-b|| = %.3e, ||Ax-b||/||b|| = %.3e, ||x|| = %.3e\n",
+              (double)rnorm, (double)(bnorm > 0.0 ? rnorm / bnorm : rnorm), (double)xnorm));
+    // cleanup
+    PetscCall(VecDestroy(&res));
+    PetscCall(MatDestroy(&Bcopy));
+  }
+
+  }
+  PetscCall(MatDestroy(&R));
+  PetscCall(BVDestroy(&V));
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
 
 void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec v_out){
   // TODO: Understand this function and how it interacts with the low-rank preconditioner and the Gauss-Newton dual system.
@@ -1559,6 +1752,96 @@ void OptimProblem::updateGaussNewtonDualMatDense(){
   int dual_size = tangent_dim * tangent_dim;
   MPI_Allreduce(MPI_IN_PLACE, dual_data, dual_size, MPIU_SCALAR, MPI_SUM, comm_optim);
   MatDenseRestoreArray(GN_Dual_MatDense, &dual_data);
+
+}
+
+void OptimProblem::updateGaussNewtonDual_B_MatDense(){
+  MatZeroEntries(GN_Dual_B_MatDense);
+
+  Vec e, Be;
+  VecCreateSeq(PETSC_COMM_SELF, ndesign, &e);
+  VecCreateSeq(PETSC_COMM_SELF, tangent_dim, &Be); // result has size tangent_dim
+
+  // Parallelize over comm_optim threads
+  int ncols_per_rank = ndesign / mpisize_optim; //  ndesign columns
+  int ncols_local = ncols_per_rank;
+  if (mpirank_optim == mpisize_optim - 1) { // last rank needs to take the rest
+    ncols_local = ndesign - mpirank_optim * ncols_per_rank;
+  }
+
+  // Iterate over local columns: apply GN_Dual_B_MatShell to each unit vector
+  for (int ix_local = 0; ix_local < ncols_local; ++ix_local) {
+    int ix = ix_local + mpirank_optim * ncols_per_rank;
+
+    VecSet(e, 0.0);
+    VecSetValue(e, ix, 1.0, INSERT_VALUES);
+    VecAssemblyBegin(e);
+    VecAssemblyEnd(e);
+    MatMult(GN_Dual_B_MatShell, e, Be);
+    for (int jy = 0; jy < tangent_dim; ++jy) {
+      PetscScalar val;
+      VecGetValues(Be, 1, &jy, &val);
+      MatSetValue(GN_Dual_B_MatDense, jy, ix, val, INSERT_VALUES);
+    }
+  }
+  VecDestroy(&e);
+  VecDestroy(&Be);
+
+  MatAssemblyBegin(GN_Dual_B_MatDense, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(GN_Dual_B_MatDense, MAT_FINAL_ASSEMBLY);
+
+  // Allreduce to combine contributions from all MPI ranks
+  PetscScalar *dual_data;
+  MatDenseGetArray(GN_Dual_B_MatDense, &dual_data);
+  int dual_size = tangent_dim * ndesign;
+  MPI_Allreduce(MPI_IN_PLACE, dual_data, dual_size, MPIU_SCALAR, MPI_SUM, comm_optim);
+  MatDenseRestoreArray(GN_Dual_B_MatDense, &dual_data);
+}
+
+
+void OptimProblem::updateGaussNewtonDual_Btranspose_MatDense(){
+  MatZeroEntries(GN_Dual_BT_MatDense);
+
+  Vec e, BTe;
+  VecCreateSeq(PETSC_COMM_SELF, ndesign, &BTe); // result has size ndesign
+  VecCreateSeq(PETSC_COMM_SELF, tangent_dim, &e); // unit vector has size tangent_dim
+
+  // Parallelize over comm_optim threads
+  int ncols_per_rank = tangent_dim/ mpisize_optim; //  ndesign columns
+  int ncols_local = ncols_per_rank;
+  if (mpirank_optim == mpisize_optim - 1) { // last rank needs to evaluate the remaining columns
+    ncols_local = tangent_dim - mpirank_optim * ncols_per_rank;
+  }
+
+  // Iterate over local columns: apply GN_Dual_B_MatShell to each unit vector
+  for (int ix_local = 0; ix_local < ncols_local; ++ix_local) {
+    int ix = ix_local + mpirank_optim * ncols_per_rank;
+
+    VecSet(e, 0.0);
+    VecSetValue(e, ix, 1.0, INSERT_VALUES);
+    VecAssemblyBegin(e);
+    VecAssemblyEnd(e);
+    // MatMultTranspose() is a PETSc function that calls the function previously registered with 
+    // MatShellSetOperation(GN_Dual_B_MatShell, MATOP_MULT_TRANSPOSE)
+    MatMultTranspose(GN_Dual_B_MatShell, e, BTe); 
+    for (int jy = 0; jy < ndesign; ++jy) {
+      PetscScalar val;
+      VecGetValues(BTe, 1, &jy, &val);
+      MatSetValue(GN_Dual_BT_MatDense, jy, ix, val, INSERT_VALUES);
+    }
+  }
+  VecDestroy(&e);
+  VecDestroy(&BTe);
+
+  MatAssemblyBegin(GN_Dual_BT_MatDense, MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(GN_Dual_BT_MatDense, MAT_FINAL_ASSEMBLY);
+
+  // Allreduce to combine contributions from all MPI ranks
+  PetscScalar *dual_data;
+  MatDenseGetArray(GN_Dual_BT_MatDense, &dual_data);
+  int dual_size = tangent_dim * ndesign;
+  MPI_Allreduce(MPI_IN_PLACE, dual_data, dual_size, MPIU_SCALAR, MPI_SUM, comm_optim);
+  MatDenseRestoreArray(GN_Dual_BT_MatDense, &dual_data);
 
 }
 

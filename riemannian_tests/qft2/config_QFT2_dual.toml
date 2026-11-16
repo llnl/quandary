@@ -45,23 +45,23 @@ gn_solver_mode = "dual"
 #gn_solver_mode = "least_squares"
 
 # Inner solver for primal or dual normal equation, "minres", "cg", "proj", "gmres"
-gn_normaleq_solver = "gmres"
-#gn_normaleq_solver = "proj"
+gn_normaleq_solver = "minres"
+# gn_normaleq_solver = "proj"
 gn_normaleq_minres_qlp = true
-#gn_normaleq_solver = "proj"
 
 # Stopping criteria for inner GN solvers
 gn_maxiter = 100
-gn_rtol = 1e-5
+gn_rtol = 1e-9
 
 # Preconditioner
-gn_prec_update_interval = -1
-gn_precond_rank = 10
+# disable with -2
+gn_prec_update_interval = -2
+gn_precond_rank = 15
 
 [output]
 # writing to '.' is required by 'plot_seeds_infidelity.py'
 directory = "."
-#directory = "./dual_test"
+# directory = "./dual_test"
 #directory = "./QFT2_includeW_params_init"
 #observables = ["population", "expectedEnergy", "fullstate"]
 timestep_stride = 1

@@ -111,10 +111,14 @@ class OptimProblem {
   Mat GN_Primal_MatDense; ///< Dense L^*WL (debug only)
   bool gn_primal_usedensemat = false; ///< Always false.
   Mat GN_LeastSquares_MatShell; ///< Applies P_gW^1/2L and, if damped, augments with lambda I  
-  Mat GN_Dual_MatShell; ///< Applies P_G W^1/2 L L^* W^1/2 P_G
+  Mat GN_Dual_MatShell; ///< Applies P_G W^1/2 L L^* W^1/2 P_G. Updated to P_G W P_G^{-1}
   Mat GN_Dual_MatDense; ///< Dense P_G W^1/2 L L^* W^1/2 P_G
   Mat GN_Dual_LowRank_MatShell; ///< Applies low-rank preconditioned dual: M^{-1/2} (L L^T + λI) M^{-1/2}
   Mat GN_Primal_LowRank_MatShell; ///< Applies low-rank preconditioned primal: M^{-1/2} (L^* L + λI) M^{-1/2}
+
+  Mat GN_Dual_B_MatShell;  // For representing the action of the matrix B = M^* L = P_TU L
+  Mat GN_Dual_B_MatDense;  // Dense representation of the matrix B = M^* L = P_TU L (only for plotting)
+  Mat GN_Dual_BT_MatDense;  // Dense representation of the matrix B^T = L^* M^* = L^* P_TU^-1 (for QR factorization and plotting)
 
   // Solvers for the inner Gauss-Newton equations
   KSP ksp_gn_normaleq;  ///< Linear solver for Gauss-Newton normal equation (primal or dual)
@@ -197,6 +201,10 @@ class OptimProblem {
   Mat getGN_Dual_LowRank_U() { return gn_dual_lowrank_U; };
   Vec getGN_Dual_LowRank_Sigma_InvSqrt() { return gn_dual_lowrank_sigma_invsqrt; };
   PetscScalar getGN_Dual_Precond_Mu() { return gn_dual_precond_mu; };
+
+  Mat getGN_Dual_B_MatShell() { return GN_Dual_B_MatShell; };
+  Mat getGN_Dual_B_MatDense() { return GN_Dual_B_MatDense; };
+  Mat getGN_Dual_BT_MatDense() { return GN_Dual_BT_MatDense; };
 
   Mat getGNLeastSquaresShell() { return GN_LeastSquares_MatShell; };
   Mat getGN_LeastSquares_MatShell() { return GN_LeastSquares_MatShell; };
@@ -315,6 +323,14 @@ class OptimProblem {
   static PetscErrorCode GN_Dual_MatMult(Mat A, const Vec y, Vec Ay);
 
   /**
+   * @brief MatMult GN_Dual_B_MatShell 
+   * 
+   * @note: Calls apply_GN_Jacobian on the design variable v and returns Bv = B*v
+   */
+  static PetscErrorCode GN_Dual_B_MatMult(Mat B, const Vec v, Vec Bv);
+  static PetscErrorCode GN_Dual_B_MatMultTranspose(Mat B, Vec w, Vec vout);
+
+  /**
    * @brief MatMult for GN_Dual_LowRank_MatShell: Applies M^{-1/2} A M^{-1/2} z where A=GN_dual_MatShell  
    */
   static PetscErrorCode GN_Dual_LowRank_MatMult(Mat A, const Vec z, Vec output);
@@ -391,6 +407,20 @@ class OptimProblem {
    * @note This operation can be expensive as it involves (dim²-1) applications of the dual MatShell.
    */
   void updateGaussNewtonDualMatDense();
+
+  /**
+   * @brief Assembles the dense B matrix using GN_Dual_B_MatShell
+   *
+   * @note This operation can be expensive as it involves Ndesign applications of the dual MatShell.
+   */
+  void updateGaussNewtonDual_B_MatDense();
+
+  /**
+   * @brief Assembles the dense B-transpose matrix using GN_Dual_B_MatShell
+   *
+   * @note This operation can be expensive as it involves tangent_dim applications of the dual MatShell.
+   */
+  void updateGaussNewtonDual_Btranspose_MatDense();
 
   /**
    * @brief Updates the Gauss-Newton preconditioner if needed
@@ -619,4 +649,12 @@ PetscErrorCode TaoEvalObjectiveAndGradient(Tao tao, Vec x, PetscReal *f, Vec G, 
  */
 PetscErrorCode KSPMonitorResidualAndSolution(KSP ksp, PetscInt it, PetscReal rnorm, void* ctx);
 
+/**
+ * @brief QR-factorize the tall and skinny matrix Bt and calculate the minimum norm solution Bt^T x = rhs.
+ * @param Bt PETSc dense matrix of size ndesign x tangentdim 
+ * @param rhs PETSc vector of size tangent_dim holding the right hand side
+ * @param x PETSc vector of size ndesign holding the min-norm solution
+ * @return PetscErrorCode Error code
+ */
+PetscErrorCode MinNormSolveBV_TSQR(Mat Bt, Vec rhs, Vec x);
 
