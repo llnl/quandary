@@ -67,14 +67,9 @@ def read_infidelity(seed_dir):
         iteration = data[:, 0].astype(int)
         infidelity = data[:, 5]  # Column 6 (1-indexed) = index 5 (0-indexed)
 
-        # Filter out negative infidelity values
-        positive_mask = infidelity > 0
-        if not np.any(positive_mask):
-            print(f"Warning: All infidelity values are non-positive in {history_file}, skipping")
-            return None
-
-        iteration = iteration[positive_mask]
-        infidelity = infidelity[positive_mask]
+        # Use absolute value to avoid issues with very small negative numbers
+        # (which can occur due to numerical precision issues but should be non-negative)
+        infidelity = np.abs(infidelity)
 
         # Extract initial control vector norm (column 13 = index 12)
         x0_norm = data[0, 12] if data.shape[1] >= 13 else None
