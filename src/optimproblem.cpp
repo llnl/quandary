@@ -1106,7 +1106,7 @@ std::vector<double> OptimProblem::computeGaussNewtonPrimalEvals(Vec xinit, Mat* 
   EPSSetProblemType(eps_gn_primal, EPS_HEP); // Hermitian
   EPSSetWhichEigenpairs(eps_gn_primal, EPS_LARGEST_REAL); // largest eigenvalues
   // int neigvals = tangent_dim;
-  int neigvals = mastereq->getDim() * ninit;
+  int neigvals = mastereq->getDim() * ninit - 1;
   int ncv = 2*neigvals ; // Max Krylov dimension. How to set??
   EPSSetDimensions(eps_gn_primal, neigvals, ncv, PETSC_DEFAULT);
   EPSSetTolerances(eps_gn_primal, gn_rtol, gn_maxiter);
