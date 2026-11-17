@@ -69,8 +69,8 @@ optimization_stride = 1
 
 [solver]
 # runtype = "gaussnewton_ls"
-runtype = "optimization"
-# runtype = "matrix_save"
+# runtype = "optimization"
+runtype = "matrix_save"
 usematfree = true
 linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"

@@ -119,6 +119,8 @@ class OptimProblem {
   Mat GN_Dual_B_MatShell;  // For representing the action of the matrix B = M^* L = P_TU L
   Mat GN_Dual_B_MatDense;  // Dense representation of the matrix B = M^* L = P_TU L (only for plotting)
   Mat GN_Dual_BT_MatDense;  // Dense representation of the matrix B^T = L^* M^* = L^* P_TU^-1 (for QR factorization and plotting)
+  BV GN_Dual_BT_Q; // B^T = QR: QR-factorization of B^T in Dense rep.
+  Mat GN_Dual_BT_R;
 
   // Solvers for the inner Gauss-Newton equations
   KSP ksp_gn_normaleq;  ///< Linear solver for Gauss-Newton normal equation (primal or dual)
@@ -601,6 +603,23 @@ class OptimProblem {
    * @return True if this stopping criterion is satisfied (if last iteration)
    */
   bool monitor(int iter, double f, double gnorm, double deltax);
+
+  /**
+ * @brief QR-factorize the tall and skinny matrix Bt and calculate the minimum norm solution Bt^T x = rhs.
+ * @param Bt PETSc dense matrix of size ndesign x tangentdim 
+ * @param rhs PETSc vector of size tangent_dim holding the right hand side
+ * @param x PETSc vector of size ndesign holding the min-norm solution
+ * @return PetscErrorCode Error code
+ */
+PetscErrorCode MinNormSolveBV_TSQR(Mat Bt, Vec rhs, Vec x);
+
+/**
+ * @brief QR-factorize the tall and skinny matrix Bt
+ * @param Bt PETSc dense matrix of size ndesign x tangentdim
+ * @return PetscErrorCode Error code
+  */
+PetscErrorCode QR_factor_BT(Mat Bt);
+
 };
 
 /**
@@ -648,13 +667,4 @@ PetscErrorCode TaoEvalObjectiveAndGradient(Tao tao, Vec x, PetscReal *f, Vec G, 
  * @return PetscErrorCode Error code
  */
 PetscErrorCode KSPMonitorResidualAndSolution(KSP ksp, PetscInt it, PetscReal rnorm, void* ctx);
-
-/**
- * @brief QR-factorize the tall and skinny matrix Bt and calculate the minimum norm solution Bt^T x = rhs.
- * @param Bt PETSc dense matrix of size ndesign x tangentdim 
- * @param rhs PETSc vector of size tangent_dim holding the right hand side
- * @param x PETSc vector of size ndesign holding the min-norm solution
- * @return PetscErrorCode Error code
- */
-PetscErrorCode MinNormSolveBV_TSQR(Mat Bt, Vec rhs, Vec x);
 

@@ -929,7 +929,7 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
       updateGaussNewtonDual_Btranspose_MatDense();
       Mat BT_mat_dense = getGN_Dual_BT_MatDense();
 
-      // Factorize B^T = QR with Slepc/BV and solve R^T y = theta, valuate v_out = Q y
+      // Factorize B^T = QR with Slepc/BV and solve R^T y = theta, evaluate v_out = Q y
       MinNormSolveBV_TSQR(BT_mat_dense, workvec_tangentspace, v_out);
 
       // // tmp: Save B-transpose matrix on file
@@ -1036,7 +1036,29 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
 #include <slepcbv.h>
 #include <vector>
 
-PetscErrorCode MinNormSolveBV_TSQR(Mat Bt, Vec rhs, Vec x)
+PetscErrorCode OptimProblem::QR_factor_BT(Mat Bt)
+{
+  PetscInt           n, m, ldr;
+  PetscScalar       *r;
+  const PetscScalar *ba;
+
+  bool test_residual = false; // only for testing
+
+  PetscFunctionBeginUser;
+  PetscCall(MatGetSize(Bt, &n, &m));
+  PetscCheck(m <= n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Bt must be tall (n >= m)");
+
+  /* QR of Bt using TSQR */
+  PetscCall(BVCreateFromMat(Bt, &GN_Dual_BT_Q));
+  PetscCall(BVSetType(GN_Dual_BT_Q, BVMAT));      /* no-op if the type is already BVMAT */
+
+  PetscCall(BVSetOrthogonalization(GN_Dual_BT_Q, BV_ORTHOG_CGS, BV_ORTHOG_REFINE_IFNEEDED,
+                                   PETSC_DEFAULT, BV_ORTHOG_BLOCK_TSQR));
+  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, m, m, NULL, &GN_Dual_BT_R));
+  PetscCall(BVOrthogonalize(GN_Dual_BT_Q, GN_Dual_BT_R));
+}
+
+PetscErrorCode OptimProblem::MinNormSolveBV_TSQR(Mat Bt, Vec rhs, Vec x)
 {
   BV                 V;
   Mat                R;
@@ -1055,16 +1077,17 @@ PetscErrorCode MinNormSolveBV_TSQR(Mat Bt, Vec rhs, Vec x)
     /* debug: keep an untouched copy of A^T for the residual check */
     PetscCall(MatDuplicate(Bt, MAT_COPY_VALUES, &Bcopy));
   }
+
   /* QR of Bt using TSQR */
-  PetscCall(BVCreateFromMat(Bt, &V));
-  PetscCall(BVSetType(V, BVMAT));      /* no-op if the type is already BVMAT */
+  // PetscCall(BVCreateFromMat(Bt, &V));
+  // PetscCall(BVSetType(V, BVMAT));      /* no-op if the type is already BVMAT */
 
-  /* If BVView shows type (null), add: PetscCall(BVSetType(V, BVMAT)); */
-  PetscCall(BVSetOrthogonalization(V, BV_ORTHOG_CGS, BV_ORTHOG_REFINE_IFNEEDED,
-                                   PETSC_DEFAULT, BV_ORTHOG_BLOCK_TSQR));
-  PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, m, m, NULL, &R));
-  PetscCall(BVOrthogonalize(V, R));
+  // PetscCall(BVSetOrthogonalization(V, BV_ORTHOG_CGS, BV_ORTHOG_REFINE_IFNEEDED,
+  //                                  PETSC_DEFAULT, BV_ORTHOG_BLOCK_TSQR));
+  // PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, m, m, NULL, &R));
+  // PetscCall(BVOrthogonalize(V, R));
 
+  PetscCall(QR_factor_BT(Bt)); // saves result in GN_Dual_BT_Q and GN_Dual_BT_R
   /* y = rhs */
   std::vector<PetscScalar> y(m);
   PetscCall(VecGetArrayRead(rhs, &ba));
@@ -1072,8 +1095,8 @@ PetscErrorCode MinNormSolveBV_TSQR(Mat Bt, Vec rhs, Vec x)
   PetscCall(VecRestoreArrayRead(rhs, &ba));
 
   /* Solve R^T y = rhs by forward substitution; R(j,i) = r[j + i*ldr] */
-  PetscCall(MatDenseGetLDA(R, &ldr));
-  PetscCall(MatDenseGetArray(R, &r));
+  PetscCall(MatDenseGetLDA(GN_Dual_BT_R, &ldr));
+  PetscCall(MatDenseGetArray(GN_Dual_BT_R, &r));
   for (PetscInt i = 0; i < m; i++) {
     PetscCheck(PetscAbsScalar(r[i + i*ldr]) > 0.0, PETSC_COMM_SELF, PETSC_ERR_LIB,
                "R(%" PetscInt_FMT ",%" PetscInt_FMT ") = 0: rank deficient", i, i);
@@ -1081,10 +1104,10 @@ PetscErrorCode MinNormSolveBV_TSQR(Mat Bt, Vec rhs, Vec x)
     for (PetscInt j = 0; j < i; j++) s -= r[j + i*ldr] * y[j];
     y[i] = s / r[i + i*ldr];
   }
-  PetscCall(MatDenseRestoreArray(R, &r));
+  PetscCall(MatDenseRestoreArray(GN_Dual_BT_R, &r));
 
   /* x = Q y */
-  PetscCall(BVMultVec(V, 1.0, 0.0, x, y.data()));
+  PetscCall(BVMultVec(GN_Dual_BT_Q, 1.0, 0.0, x, y.data()));
 
   if (test_residual){
   /* residual check: A x = (A^T)^T x = Bcopy^T x, compare with rhs */
@@ -1107,8 +1130,9 @@ PetscErrorCode MinNormSolveBV_TSQR(Mat Bt, Vec rhs, Vec x)
   }
 
   }
-  PetscCall(MatDestroy(&R));
-  PetscCall(BVDestroy(&V));
+  // Where should the garbage collection be called?
+  // PetscCall(MatDestroy(&R));
+  // PetscCall(BVDestroy(&V));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 

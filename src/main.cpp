@@ -264,23 +264,19 @@ int main(int argc,char **argv)
     std::string orig_fname, prec_fname, B_fname;
 
     if (mode == "dual") {
-      // Apply damping before assembling
-      // damping = config.getGnNormaleqDamping();
-      // if (damping > 0.0) {
-      //   Mat GN_Dual_MatShell = optimctx->getGN_Dual_MatShell();
-      //   MatShift(GN_Dual_MatShell, damping);
-      // }
+
       orig_fname = "GN_dual_matrix.dat";
       prec_fname = "GN_dual_matrix_preconditioned.dat";
       B_fname = "GN_dual_matrix_Btranspose.dat";
       damping = optimctx->getTikhonov();
-      optimctx->updateGaussNewtonDualMatDense();
-      mat_dense = optimctx->getGN_Dual_MatDense();
 
       // get the dense version of the rectangular matrix 'B'
       if (mpirank_world == 0) printf("\n **** Constructing the dense Btranspose-matrix\n\n");
       optimctx->updateGaussNewtonDual_Btranspose_MatDense();
       BT_mat_dense = optimctx->getGN_Dual_BT_MatDense();
+
+      optimctx->updateGaussNewtonDualMatDense();
+      mat_dense = optimctx->getGN_Dual_MatDense();
     }
     else{ //primal
       orig_fname = "GN_primal_matrix.dat";
