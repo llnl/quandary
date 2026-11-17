@@ -13,15 +13,19 @@ on:
       commit_sha:
         description: 'Commit SHA the benchmark data corresponds to'
         required: true
+      source_ref:
+        description: 'Original GitLab ref when the workflow is dispatched on a different branch'
+        required: false
 
 jobs:
   check-performance:
-    if: github.ref != 'refs/heads/main'
+    if: inputs.source_ref != '' || github.ref != 'refs/heads/main'
     permissions:
       # Needed to write PR check status
       checks: write
       # Need write for commit comments
       contents: write
+      pull-requests: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -31,13 +35,31 @@ jobs:
       - name: Find associated PR
         id: findpr
         run: |
-          echo "Looking for PR with head branch: ${{ github.ref_name }}"
-          gh pr list --head ${{ github.ref_name }} --json number,title
-          PR_NUMBER=$(gh pr list --head ${{ github.ref_name }} --json number -q '.[0].number')
+          if [[ ! "$COMMIT_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "Invalid benchmark commit SHA: $COMMIT_SHA" >&2
+            exit 1
+          fi
+
+          PR_NUMBER=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 1000 \
+            --json number,headRefOid \
+            --jq ".[] | select(.headRefOid == \"$COMMIT_SHA\") | .number")
+
+          if [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "Expected one open PR with head SHA $COMMIT_SHA; found: ${PR_NUMBER:-none}" >&2
+            exit 1
+          fi
+
+          PR_HEAD_SHA=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq .head.sha)
+          if [ "$PR_HEAD_SHA" != "$COMMIT_SHA" ]; then
+            echo "PR #${PR_NUMBER} now points to ${PR_HEAD_SHA}, not benchmarked commit ${COMMIT_SHA}" >&2
+            exit 1
+          fi
+
           echo "Found PR number: $PR_NUMBER"
-          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMIT_SHA: ${{ inputs.commit_sha }}
 
       - name: Decode benchmark data
         run: echo "${{ github.event.inputs.benchmark_data }}" | base64 -d > benchmark.json
@@ -82,7 +104,7 @@ jobs:
         run: exit 1
 
   store-and-visualize-on-main:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && inputs.source_ref == ''
     permissions:
       # Needed to push to gh-pages branch
       contents: write
