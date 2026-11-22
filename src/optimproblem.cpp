@@ -1,6 +1,8 @@
 #include "optimproblem.hpp"
 #include "gellmann.hpp"
 #include <algorithm>
+#include <slepcbv.h>
+#include <vector>
 
 OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, TimeStepper* timestepper_, MasterEq* mastereq_, MPI_Comm comm_init_, MPI_Comm comm_optim_, Output* output_, bool quietmode_){
 
@@ -929,35 +931,30 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
       updateGaussNewtonDual_Btranspose_MatDense();
       Mat BT_mat_dense = getGN_Dual_BT_MatDense();
 
-      // Factorize B^T = QR with Slepc/BV and solve R^T y = theta, evaluate v_out = Q y
-      MinNormSolveBV_TSQR(BT_mat_dense, workvec_tangentspace, v_out);
+      // Factorize B^T = QR with Slepc/BV 
+      PetscCall(QR_factor_BT(BT_mat_dense));
 
-      // // tmp: Save B-transpose matrix on file
-      // std::string B_fname = "GN_dual_matrix_B^T_QR.dat";
-      // PetscInt mat_rows, mat_cols;
-      // MatGetSize(BT_mat_dense, &mat_rows, &mat_cols);
+      // min-norm solve R^T y = theta and evaluate v_out = Q y
+      PetscCall(MinNormSolveBV_TSQR(workvec_tangentspace, v_out));
 
-      // if (mpirank_world == 0 && !quietmode) {
-      //   printf("\nSaving the dual B-transpose matrix B^T = L^* M = L P_TU^-1 ...\n");
-      // }
+      // Evaluate xproj = (I - Q Q^T)*xinit and subtract it from v_out
+      PetscScalar damping = getTikhonov();
+      if (damping > 0.0){
+        Vec x_proj;
+        PetscCall(VecDuplicate(xinit, &x_proj)); // allocate and initialize x_proj
 
-      // // Only rank 0 writes to file (matrix is replicated on all ranks after MPI_Allreduce)
-      // PetscViewer viewer;
-      // PetscViewerPushFormat(PETSC_VIEWER_STDOUT_WORLD, 	PETSC_VIEWER_ASCII_MATLAB );
-      // if (mpirank_world == 0) {
-      //   char filename[255];
-      //   snprintf(filename, 254, "%s/%s", output->output_dir.c_str(), B_fname.c_str());
-      //   PetscViewerBinaryOpen(PETSC_COMM_SELF, filename, FILE_MODE_WRITE, &viewer);
-      //   PetscViewerBinarySetSkipInfo(viewer, PETSC_TRUE);  // Suppress .info file
-      //   MatView(BT_mat_dense, viewer);
-      //   PetscViewerDestroy(&viewer);
+        // evaluate
+        std::vector<PetscScalar> y(tangent_dim);
+        PetscCall(BVDotVec(GN_Dual_BT_Q, xinit, y.data())); //  y = Q^T xinit
+        PetscCall(BVMultVec(GN_Dual_BT_Q, -1.0, 0.0, x_proj, y.data())); // x = -Q y
+        PetscCall(VecAXPY(x_proj, 1.0, xinit)); // x_proj := 1.0*xinit + x_proj = xinit - Q Q^T * xinit
+        PetscCall(VecAXPY(v_out, damping, x_proj)); // v_out := damping*x_proj + v_out
 
-      //   if (!quietmode) {
-      //     printf("Dual B-transpose matrix saved to: %s\n", filename);
-      //     printf("Matrix dimensions: %d x %d (tangent space x design space )\n", mat_rows, mat_cols);
-      //   }
-      // }
-
+        // Where should the garbage collection be called?
+        PetscCall(VecDestroy(&x_proj));
+      }
+      PetscCall(MatDestroy(&GN_Dual_BT_R));
+      PetscCall(BVDestroy(&GN_Dual_BT_Q));
     }
     else{
       // Iterative solutions of the Gauss-Newton least-squares problem
@@ -1033,8 +1030,80 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
   return eigendecomp_is_stale;
 }
 
-#include <slepcbv.h>
-#include <vector>
+bool OptimProblem::solveGaussNewtonDualBoxConstraint(Vec xinit, const Vec initial_guess, const Vec b_rhs, Vec v_out){
+
+  // Store the point of evaluation for the Gauss-Newton matrix shell
+  setGaussNewtonEvalPoint(xinit); 
+  // Forces a fresh nonlinear forward solve during the next call to evalLinearizedForward() for the new xeval_GN
+  // TODO: This can probably be dropped here, since it should be set before any solveGaussNewtonXYZ calls. 
+
+  Mat SystemMatrix = GN_Dual_MatShell;
+  
+  Vec vec_workspace = nullptr;
+  vec_workspace = workvec_tangentspace;
+
+  // No preconditioning - solve directly
+  VecCopy(initial_guess, vec_workspace);
+  KSPReset(ksp_gn_normaleq);
+  KSPSetOperators(ksp_gn_normaleq, SystemMatrix, SystemMatrix);
+  KSPSolve(ksp_gn_normaleq, b_rhs, vec_workspace);
+
+  // Report convergence
+  KSPConvergedReason reason;
+  int iters;
+  double rnorm;
+  KSPGetConvergedReason(ksp_gn_normaleq, &reason);
+  KSPGetIterationNumber(ksp_gn_normaleq, &iters);
+  KSPGetResidualNorm(ksp_gn_normaleq, &rnorm);
+  ksp_iters_last = iters;
+  if (mpirank_world == 0 && !quietmode) {
+    KSPType ksp_type;
+    KSPGetType(ksp_gn_normaleq, &ksp_type);
+    printf("Gauss-Newton Dual Box Constraint KSP (%s) stats: iterations = %d, residual norm = %1.14e\n", ksp_type, iters, rnorm);
+    // Print convergence reason for debugging
+    const char* reason_str = KSPConvergedReasons[reason];
+    printf("  KSP Convergence Reason: %s (code %d)\n", reason_str, (int)reason);
+  }
+
+  // Recover primal solution
+  // Solve B v = theta; theta is stored in workvec_tangentspace (no new allocation is needed)
+  // Note: in the dual case: the pointer: vec_workspace = workvec_tangentspace;
+
+  // Setup the B^T matrix as a dense matrix. B^T: Ndesign by Ntangent
+  if (mpirank_world == 0) printf("**** Reconstructing search direction by solving B v_out = ws_ts\n");
+  updateGaussNewtonDual_Btranspose_MatDense();
+  Mat BT_mat_dense = getGN_Dual_BT_MatDense();
+
+  // Factorize B^T = QR with Slepc/BV 
+  PetscCall(QR_factor_BT(BT_mat_dense));
+
+  // min-norm solve R^T y = theta and evaluate v_out = Q y
+  PetscCall(MinNormSolveBV_TSQR(workvec_tangentspace, v_out));
+
+  // Evaluate xproj = (I - Q Q^T)*xinit and subtract it from v_out
+  PetscScalar damping = getTikhonov();
+  if (damping > 0.0){
+    Vec x_proj;
+    PetscCall(VecDuplicate(xinit, &x_proj)); // allocate and initialize x_proj
+
+    // evaluate
+    std::vector<PetscScalar> y(tangent_dim);
+    PetscCall(BVDotVec(GN_Dual_BT_Q, xinit, y.data())); //  y = Q^T xinit
+    PetscCall(BVMultVec(GN_Dual_BT_Q, -1.0, 0.0, x_proj, y.data())); // x = -Q y
+    PetscCall(VecAXPY(x_proj, 1.0, xinit)); // x_proj := 1.0*xinit + x_proj = xinit - Q Q^T * xinit
+    PetscCall(VecAXPY(v_out, damping, x_proj)); // v_out := damping*x_proj + v_out
+
+    // Where should the garbage collection be called?
+    PetscCall(VecDestroy(&x_proj));
+  }
+  PetscCall(MatDestroy(&GN_Dual_BT_R));
+  PetscCall(BVDestroy(&GN_Dual_BT_Q));
+
+  // Detect stale eigendecomposition and return flag to caller
+  bool eigendecomp_is_stale = false;
+
+  return eigendecomp_is_stale;
+}
 
 PetscErrorCode OptimProblem::QR_factor_BT(Mat Bt)
 {
@@ -1049,16 +1118,18 @@ PetscErrorCode OptimProblem::QR_factor_BT(Mat Bt)
   PetscCheck(m <= n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Bt must be tall (n >= m)");
 
   /* QR of Bt using TSQR */
-  PetscCall(BVCreateFromMat(Bt, &GN_Dual_BT_Q));
+  PetscCall(BVCreateFromMat(Bt, &GN_Dual_BT_Q)); /* Creates a Bv object who will destroy it? */
   PetscCall(BVSetType(GN_Dual_BT_Q, BVMAT));      /* no-op if the type is already BVMAT */
 
   PetscCall(BVSetOrthogonalization(GN_Dual_BT_Q, BV_ORTHOG_CGS, BV_ORTHOG_REFINE_IFNEEDED,
                                    PETSC_DEFAULT, BV_ORTHOG_BLOCK_TSQR));
   PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, m, m, NULL, &GN_Dual_BT_R));
   PetscCall(BVOrthogonalize(GN_Dual_BT_Q, GN_Dual_BT_R));
+
+  PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-PetscErrorCode OptimProblem::MinNormSolveBV_TSQR(Mat Bt, Vec rhs, Vec x)
+PetscErrorCode OptimProblem::MinNormSolveBV_TSQR(Vec rhs, Vec x)
 {
   BV                 V;
   Mat                R;
@@ -1069,25 +1140,14 @@ PetscErrorCode OptimProblem::MinNormSolveBV_TSQR(Mat Bt, Vec rhs, Vec x)
   bool test_residual = false; // only for testing
 
   PetscFunctionBeginUser;
-  PetscCall(MatGetSize(Bt, &n, &m));
-  PetscCheck(m <= n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Bt must be tall (n >= m)");
 
-  Mat Bcopy;
-  if (test_residual){
-    /* debug: keep an untouched copy of A^T for the residual check */
-    PetscCall(MatDuplicate(Bt, MAT_COPY_VALUES, &Bcopy));
-  }
+  PetscCall(VecGetSize(x, &n));
+  PetscCall(VecGetSize(rhs, &m));
+  PetscCheck(m <= n, PETSC_COMM_SELF, PETSC_ERR_ARG_SIZ, "Not satisfying Ndesign >= Ntangent (n >= m)");
 
-  /* QR of Bt using TSQR */
-  // PetscCall(BVCreateFromMat(Bt, &V));
-  // PetscCall(BVSetType(V, BVMAT));      /* no-op if the type is already BVMAT */
+  /* QR of Bt using TSQR is now done in QR_factor_BT(Bt)); 
+  // saves result in GN_Dual_BT_Q and GN_Dual_BT_R
 
-  // PetscCall(BVSetOrthogonalization(V, BV_ORTHOG_CGS, BV_ORTHOG_REFINE_IFNEEDED,
-  //                                  PETSC_DEFAULT, BV_ORTHOG_BLOCK_TSQR));
-  // PetscCall(MatCreateSeqDense(PETSC_COMM_SELF, m, m, NULL, &R));
-  // PetscCall(BVOrthogonalize(V, R));
-
-  PetscCall(QR_factor_BT(Bt)); // saves result in GN_Dual_BT_Q and GN_Dual_BT_R
   /* y = rhs */
   std::vector<PetscScalar> y(m);
   PetscCall(VecGetArrayRead(rhs, &ba));
@@ -1109,30 +1169,9 @@ PetscErrorCode OptimProblem::MinNormSolveBV_TSQR(Mat Bt, Vec rhs, Vec x)
   /* x = Q y */
   PetscCall(BVMultVec(GN_Dual_BT_Q, 1.0, 0.0, x, y.data()));
 
-  if (test_residual){
-  /* residual check: A x = (A^T)^T x = Bcopy^T x, compare with rhs */
-  {
-    Vec       res;
-    PetscReal rnorm, bnorm, xnorm;
-
-    PetscCall(VecDuplicate(rhs, &res));              /* size m */
-    PetscCall(MatMultTranspose(Bcopy, x, res));      /* res = A x */
-    PetscCall(VecAXPY(res, -1.0, rhs));              /* res = A x - rhs */
-    PetscCall(VecNorm(res, NORM_2, &rnorm));
-    PetscCall(VecNorm(rhs, NORM_2, &bnorm));
-    PetscCall(VecNorm(x, NORM_2, &xnorm));
-    PetscCall(PetscPrintf(PETSC_COMM_SELF,
-              "MinNormSolveBV_TSQR: ||Ax-b|| = %.3e, ||Ax-b||/||b|| = %.3e, ||x|| = %.3e\n",
-              (double)rnorm, (double)(bnorm > 0.0 ? rnorm / bnorm : rnorm), (double)xnorm));
-    // cleanup
-    PetscCall(VecDestroy(&res));
-    PetscCall(MatDestroy(&Bcopy));
-  }
-
-  }
   // Where should the garbage collection be called?
-  // PetscCall(MatDestroy(&R));
-  // PetscCall(BVDestroy(&V));
+  // PetscCall(MatDestroy(&GN_Dual_BT_R));
+  // PetscCall(BVDestroy(&GN_Dual_BT_Q));
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
@@ -1484,20 +1523,26 @@ void OptimProblem::solve(Vec xinit) {
         Vec b_rhs = computeGaussNewtonRHS(gn_solver_mode, G); 
         Vec x_initial = computeGaussNewtonInitialGuess(gn_solver_mode, b_rhs);
 
-        // Solve for the Gauss-Newton system for the search direction (Gprec) 
-        bool precond_is_stale = solveGaussNewtonSystem(x_GN, x_initial, b_rhs, Gprec);
-          
-        // If preconditioner is stale, force immediate recomputation and retry
-        if (precond_is_stale) {  
-          if (mpirank_world == 0 && !quietmode) {
-            printf("  Recomputing the preconditioner at the current iterate and forcing new GN solve...\n");
-          }
-          did_update_PC = updateGaussNewtonPreconditioner(iter, true); // Force the update
-          VecDestroy(&x_initial);
-          x_initial = computeGaussNewtonInitialGuess(gn_solver_mode, b_rhs); 
-          precond_is_stale = solveGaussNewtonSystem(x_GN, x_initial, b_rhs, Gprec);
-          if (precond_is_stale && mpirank_world == 0 && !quietmode) {
-            printf("  WARNING: Solve still problematic after eigendecomposition update\n");
+        // new approach including modified line search
+        if (gn_solver_mode == "dual" && !gn_precond_enabled) {
+          bool dummy = solveGaussNewtonDualBoxConstraint(x_GN, x_initial, b_rhs, Gprec);
+        } 
+        else{ // general solver
+          // Solve for the Gauss-Newton system for the search direction (Gprec) 
+          bool precond_is_stale = solveGaussNewtonSystem(x_GN, x_initial, b_rhs, Gprec);
+            
+          // If preconditioner is stale, force immediate recomputation and retry
+          if (precond_is_stale) {  
+            if (mpirank_world == 0 && !quietmode) {
+              printf("  Recomputing the preconditioner at the current iterate and forcing new GN solve...\n");
+            }
+            did_update_PC = updateGaussNewtonPreconditioner(iter, true); // Force the update
+            VecDestroy(&x_initial);
+            x_initial = computeGaussNewtonInitialGuess(gn_solver_mode, b_rhs); 
+            precond_is_stale = solveGaussNewtonSystem(x_GN, x_initial, b_rhs, Gprec);
+            if (precond_is_stale && mpirank_world == 0 && !quietmode) {
+              printf("  WARNING: Solve still problematic after eigendecomposition update\n");
+            }
           }
         }
         VecDestroy(&x_initial);

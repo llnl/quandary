@@ -521,6 +521,14 @@ class OptimProblem {
   bool solveGaussNewtonSystem(const Vec xinit, const Vec initial_guess, const Vec b, Vec Ainv_b);
 
   /**
+   * @brief Solve the Gauss-Newton system in the dual case, using QR factorization to
+   * recover primal search direction, and line search enforcing box constraints
+   * 
+   * @return true if the preconditioner is stale (if it is available), false otherwise
+   */
+  bool solveGaussNewtonDualBoxConstraint(Vec xinit, const Vec initial_guess, const Vec b_rhs, Vec v_out);
+
+  /**
    * @brief Computes a low-rank approximation of the dual Gauss-Newton matrix using provided eigenvalues and eigenvectors.
    * 
    * Compute eigenspace approximation: y_approx = M^{-1} * b
@@ -605,13 +613,13 @@ class OptimProblem {
   bool monitor(int iter, double f, double gnorm, double deltax);
 
   /**
- * @brief QR-factorize the tall and skinny matrix Bt and calculate the minimum norm solution Bt^T x = rhs.
- * @param Bt PETSc dense matrix of size ndesign x tangentdim 
+ * @brief QR-factorize the tall and skinny matrix Bt and calculate the minimum norm solution Bt^T x = rhs. Note: Assumes that the function QR_factor_BT() has already been called
+ * 
  * @param rhs PETSc vector of size tangent_dim holding the right hand side
  * @param x PETSc vector of size ndesign holding the min-norm solution
  * @return PetscErrorCode Error code
  */
-PetscErrorCode MinNormSolveBV_TSQR(Mat Bt, Vec rhs, Vec x);
+PetscErrorCode MinNormSolveBV_TSQR(Vec rhs, Vec x);
 
 /**
  * @brief QR-factorize the tall and skinny matrix Bt
