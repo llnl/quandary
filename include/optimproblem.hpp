@@ -140,6 +140,7 @@ class OptimProblem {
   // Workspace for Gauss-Newton solvers
   int tangent_dim; ///< Dimension of the tangent space (dim²-1)
   bool gn_precond_enabled; ///< Flag whether Gauss-Newton preconditioner is enabled
+  bool gn_impose_box_constraints; // Impose box constraints during the QR-based reconstruction
   int ksp_iters_last; ///< Number of KSP iterations used in the most recent Gauss-Newton normal or least squares solvers 
   Vec brgn_rhs; ///< Cached RHS vector for BRGN residual evaluation
   Vec brgn_residual; ///< Cached Residual vector for BRGN solver
@@ -153,6 +154,7 @@ class OptimProblem {
   Vec gn_dual_lowrank_temp; ///< Workspace for low-rank application (size = rank)
   PetscScalar gn_dual_precond_mu; ///< μ = σ_{r+1} for complement space
 
+  double drive_bound0; // for scaling of the active set
 
   public: 
     Vec xlower, xupper; ///< Lower and upper bounds for optimization variables
@@ -524,9 +526,9 @@ class OptimProblem {
    * @brief Solve the Gauss-Newton system in the dual case, using QR factorization to
    * recover primal search direction, and line search enforcing box constraints
    * 
-   * @return true if the preconditioner is stale (if it is available), false otherwise
+   * @return step length alpha
    */
-  bool solveGaussNewtonDualBoxConstraint(Vec xinit, const Vec initial_guess, const Vec b_rhs, Vec v_out);
+  double solveGaussNewtonDualBoxConstraint(Vec xinit, double f_init, Vec xnew, Vec step, Vec workspace, const Vec initial_guess, const Vec b_rhs, double eps_active);
 
   /**
    * @brief Computes a low-rank approximation of the dual Gauss-Newton matrix using provided eigenvalues and eigenvectors.
@@ -557,7 +559,40 @@ class OptimProblem {
    * @param[out] step Work vector to store the accepted step xnew-x
    * @return Accepted step length alpha
    */
+
+   // Required includes: <algorithm>, <cmath>, <vector>, <mpi.h>, <petscmat.h>, <slepcbv.h>
   double armijoLineSearch(Vec x, double f, Vec grad, Vec dir, Vec xnew, Vec step);
+
+  /**
+   * Converts the Gauss-Newton direction θ ∈ ℝⁿ in tangent coordinates into a search direction in α coordinates that respects the constraints. The direction δ ∈ ℝᵈ satisfies Bδ = θ and has minimal norm among the vectors whose components on the active set are zero. Each pass computes δ = QR^{-T}θ from the factorization of the matrix B^T restricted to the inactive indices, and makes active every inactive index whose δ_i points outward at, or within ε of, a constraint. Passes continue until no further index becomes active. The result is passed to ArmijoConstrainedLineSearch.
+   * 
+   * @param[in] x Current iterate α_k, a feasible vector of length d. It is compared with xlower and xupper in the activation condition and is not modified.
+   * @param[in] theta Gauss-Newton direction θ of length n^2-1, the solution of Hθ = −g_θ. It must be available on every rank and is not modified. Pass it without swapping its sign.
+   * @param[in] eps_active Tolerance ε ≥ 0 of the activation condition. An inactive index is made active if δ_i < 0 and α_i ≤ l_i + ε, or δ_i > 0 and α_i ≥ u_i − ε.
+   * @param[in] kappa_max Threshold for the rank test. A pass fails if the diagonal-ratio lower bound for cond(R), max|R_ii|/min|R_ii|, exceeds this value.
+   * @param[out] dir Search direction with the same layout as x, allocated by the caller. On success it holds −δ, in the convention xnew = x − α·dir. It must not alias x or theta.
+   * @param[out] defined Set to true if a direction was produced. It is false if the rank test failed, in which case dir is meaningless and the caller should pass grad to the line search instead.
+   * @return PetscErrorCode Error code.
+   */
+  PetscErrorCode activeSetDirection(Vec x, Vec theta, double eps_active, double kappa_max, Vec dir, bool *defined);
+
+  /**
+   * Select the step length for one outer iteration so that the new iterate lies within [xlower, xupper] and satisfies the Armijo sufficient-decrease condition. Stage 1 searches along the straight line x − α·dir, with α truncated by the ratio test. If no direction is available, it is not a descent direction, no feasible step exists along it, or Stage 1 finds no sufficient decrease, Stage 2 searches along the projected steepest-descent path P(x − α·grad), using the modified Armijo condition.
+   * 
+   * @param[in] x Current iterate α_k, a distributed vector of length d. It must be feasible and is not modified.
+   * @param[in] f Objective value F(U(x)) at x, already computed. It is the reference value in the Armijo condition.
+   * @param[in] grad Gradient of F∘U in α coordinates, g_α = B^Tg_θ. Used for descent test and slope, and as the search direction in Stage 2; not modified.
+   * @param[in] dir Search direction in the convention xnew = x − α·dir, that is, dir = −δ. It is normally the output of activeSetDirection, with the active components already zero. If that direction is undefined, pass grad; not modified.
+   * @param[out] xnew Accepted trial point. It must be allocated with the same layout as x.
+   *  @param[out] step The actual step xnew − x, including any clipping by the constraints. It must be allocated with the same layout as x.
+   * @return accepted step length alpha.
+   */
+  double armijoConstrainedLineSearch(Vec x, double f, Vec grad, Vec dir, Vec xnew, Vec step);
+
+  /**
+   * Largest tau >= 0 for which the straight line x - tau*dir remains within [xlower, xupper] (ratio test). Returns PETSC_MAX_REAL if no component of dir restricts the step.
+   */
+  double maxFeasibleStep(Vec x, Vec dir);
 
   /**
    * @brief Compute evals and evecs of Gauss-Newton Normal Equation A=L^*L matrix

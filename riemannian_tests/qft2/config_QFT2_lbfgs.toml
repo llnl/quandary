@@ -24,7 +24,9 @@ initialization = [
   { subsystem = 1, type = "random", amplitude = 0.0035355339059327372 },
 ]
 #initialization = { type="file", filename="./params_opt_QFT2.dat"}
-amplitude_bound = 1.0e12
+# Note: Actual amplitude bound [GHz] is scaled by 1/(sqrt(2)*Nfreq(iosc))
+amplitude_bound = 7.77e-2
+# amplitude_bound = 1.0e12
 zero_boundary_condition = false
 
 [optimization]

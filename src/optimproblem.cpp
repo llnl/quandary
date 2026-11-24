@@ -81,6 +81,7 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   VecSetFromOptions(xlower);
   VecDuplicate(xlower, &xupper);
   int col = 0;
+  drive_bound0 = -1.0;
   for (size_t iosc = 0; iosc < mastereq->getNOscillators(); iosc++){
     // Drive bounds (existing p/q controls)
     double drive_bound = config.getControlAmplitudeBound(iosc);
@@ -92,6 +93,8 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
     }
     col += mastereq->getOscillator(iosc)->getNDriveParams();
 
+    if (iosc==0) drive_bound0 = drive_bound; // needed for scaling of active set
+
     // Flux bounds (independent f controls)
     double flux_bound = config.getControlFluxAmplitudeBound(iosc) * 2.0 * M_PI;
     for (size_t i = 0; i < mastereq->getOscillator(iosc)->getNFluxParams(); i++) {
@@ -102,6 +105,10 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   }
   VecAssemblyBegin(xlower); VecAssemblyEnd(xlower);
   VecAssemblyBegin(xupper); VecAssemblyEnd(xupper);
+
+  if (mpirank_world==0 && !quietmode){
+    printf("INFO: max ctrl vector amplitude (osc #0): %e [GHz]\n", drive_bound0/(2*M_PI));
+  }
 
   /* Create TAO optimization solver. */
   // Each processor runs an independent TAO solver on the same replicated control vector. The control vector x is synchronized via the TaoSynchronize callback which is called at the start of each evaluation.
@@ -148,9 +155,15 @@ OptimProblem::OptimProblem(const Config& config, OptimTarget* optim_target_, Tim
   tangent_dim = mastereq->getDim()*mastereq->getDim()-1;
   gn_precond_enabled = (gn_prec_update_interval >= -1);
 
+  // Impose box constraints during the QR-based reconstruction?
+  gn_impose_box_constraints = true; // put this one in the toml file
+
+  if (gn_impose_box_constraints) gn_precond_enabled = false;
+
   // Disable preconditioner for least-squares problem
   if (gn_solver_mode == "least_squares") {
     gn_precond_enabled = false;
+    gn_impose_box_constraints = false;
   }
 
   // Create MatShell for least-squares problem
@@ -923,64 +936,30 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
   if (gn_solver_mode == "dual") {
     // Solve B v = theta; theta is stored in workvec_tangentspace (no new allocation is needed)
     // Note: in the dual case: the pointer: vec_workspace = workvec_tangentspace;
-    bool qr_direct = true;
 
-    if (qr_direct){
-      // Setup the B^T matrix as a dense matrix. B^T: Ndesign by Ntangent
-      if (mpirank_world == 0) printf("**** Reconstructing search direction by solving B v_out = ws_ts\n");
-      updateGaussNewtonDual_Btranspose_MatDense();
-      Mat BT_mat_dense = getGN_Dual_BT_MatDense();
+    // Iterative solutions of the Gauss-Newton least-squares problem
+    KSPReset(ksp_gn_leastsquares);
+    KSPSetOperators(ksp_gn_leastsquares, GN_Dual_B_MatShell, GN_Dual_B_MatShell);
+    KSPSetInitialGuessNonzero(ksp_gn_leastsquares, PETSC_FALSE); // Important to start from zero?
+    KSPSolve(ksp_gn_leastsquares, workvec_tangentspace, v_out);
 
-      // Factorize B^T = QR with Slepc/BV 
-      PetscCall(QR_factor_BT(BT_mat_dense));
-
-      // min-norm solve R^T y = theta and evaluate v_out = Q y
-      PetscCall(MinNormSolveBV_TSQR(workvec_tangentspace, v_out));
-
-      // Evaluate xproj = (I - Q Q^T)*xinit and subtract it from v_out
-      PetscScalar damping = getTikhonov();
-      if (damping > 0.0){
-        Vec x_proj;
-        PetscCall(VecDuplicate(xinit, &x_proj)); // allocate and initialize x_proj
-
-        // evaluate
-        std::vector<PetscScalar> y(tangent_dim);
-        PetscCall(BVDotVec(GN_Dual_BT_Q, xinit, y.data())); //  y = Q^T xinit
-        PetscCall(BVMultVec(GN_Dual_BT_Q, -1.0, 0.0, x_proj, y.data())); // x = -Q y
-        PetscCall(VecAXPY(x_proj, 1.0, xinit)); // x_proj := 1.0*xinit + x_proj = xinit - Q Q^T * xinit
-        PetscCall(VecAXPY(v_out, damping, x_proj)); // v_out := damping*x_proj + v_out
-
-        // Where should the garbage collection be called?
-        PetscCall(VecDestroy(&x_proj));
-      }
-      PetscCall(MatDestroy(&GN_Dual_BT_R));
-      PetscCall(BVDestroy(&GN_Dual_BT_Q));
+    // Report convergence
+    KSPConvergedReason reason;
+    int iters;
+    double rnorm;
+    KSPGetConvergedReason(ksp_gn_leastsquares, &reason);
+    KSPGetIterationNumber(ksp_gn_leastsquares, &iters);
+    KSPGetResidualNorm(ksp_gn_leastsquares, &rnorm);
+    ksp_iters_last = iters;
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Gauss-Newton B-matrix Least-Squares stats: iterations = %d, residual norm = %1.14e\n", iters, rnorm);
     }
-    else{
-      // Iterative solutions of the Gauss-Newton least-squares problem
-      KSPReset(ksp_gn_leastsquares);
-      KSPSetOperators(ksp_gn_leastsquares, GN_Dual_B_MatShell, GN_Dual_B_MatShell);
-      KSPSetInitialGuessNonzero(ksp_gn_leastsquares, PETSC_FALSE); // Important to start from zero?
-      KSPSolve(ksp_gn_leastsquares, workvec_tangentspace, v_out);
 
-      // Report convergence
-      KSPConvergedReason reason;
-      int iters;
-      double rnorm;
-      KSPGetConvergedReason(ksp_gn_leastsquares, &reason);
-      KSPGetIterationNumber(ksp_gn_leastsquares, &iters);
-      KSPGetResidualNorm(ksp_gn_leastsquares, &rnorm);
-      ksp_iters_last = iters;
-      if (mpirank_world == 0 && !quietmode) {
-        printf("Gauss-Newton B-matrix Least-Squares stats: iterations = %d, residual norm = %1.14e\n", iters, rnorm);
-      }
-    }
-    // previous stuff:
-    // // Updated reconstruction: v = L^* P_TU^-1 Q wk_vec_ts = L^* P_TU^-1 (1/n)(M^* Pp M) wk_vec_ts
-    // recoverFromGellmannTangentSpace(workvec_tangentspace, workvec_statespace);
-    // projectToGateComplement(workvec_statespace, sqrt(2.0 / mastereq->getDim()));
-    // projectToGellmannTangentSpace(workvec_statespace, workvec_tangentspace);
-    // apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, 0.0);
+    // Updated reconstruction: v = L^* P_TU^-1 Q wk_vec_ts = L^* P_TU^-1 (1/n)(M^* Pp M) wk_vec_ts
+    recoverFromGellmannTangentSpace(workvec_tangentspace, workvec_statespace);
+    projectToGateComplement(workvec_statespace, sqrt(2.0 / mastereq->getDim()));
+    projectToGellmannTangentSpace(workvec_statespace, workvec_tangentspace);
+    apply_GN_Jacobian_Adjoint(workvec_tangentspace, v_out, true, 0.0);
   } else {
     VecCopy(vec_workspace, v_out);
   }
@@ -1030,23 +1009,20 @@ bool OptimProblem::solveGaussNewtonPrecondKSP(const std::string& gn_solver_mode,
   return eigendecomp_is_stale;
 }
 
-bool OptimProblem::solveGaussNewtonDualBoxConstraint(Vec xinit, const Vec initial_guess, const Vec b_rhs, Vec v_out){
+double OptimProblem::solveGaussNewtonDualBoxConstraint(Vec xinit, double f_init, Vec xnew, Vec step, Vec grad_alpha, const Vec initial_guess, const Vec theta_rhs, double eps_active){
 
   // Store the point of evaluation for the Gauss-Newton matrix shell
-  setGaussNewtonEvalPoint(xinit); 
-  // Forces a fresh nonlinear forward solve during the next call to evalLinearizedForward() for the new xeval_GN
-  // TODO: This can probably be dropped here, since it should be set before any solveGaussNewtonXYZ calls. 
-
-  Mat SystemMatrix = GN_Dual_MatShell;
+  setGaussNewtonEvalPoint(xinit);
   
-  Vec vec_workspace = nullptr;
-  vec_workspace = workvec_tangentspace;
+  Vec delta = workvec_designspace; // delta (dir in design space) (no new allocation is needed)
+  Vec theta = workvec_tangentspace; // theta (dir in tangent space) (no new allocation is needed)
+  double alpha = -1.0; // step length in line search, to be returned
 
   // No preconditioning - solve directly
-  VecCopy(initial_guess, vec_workspace);
+  VecCopy(initial_guess, theta);
   KSPReset(ksp_gn_normaleq);
-  KSPSetOperators(ksp_gn_normaleq, SystemMatrix, SystemMatrix);
-  KSPSolve(ksp_gn_normaleq, b_rhs, vec_workspace);
+  KSPSetOperators(ksp_gn_normaleq, GN_Dual_MatShell, GN_Dual_MatShell);
+  KSPSolve(ksp_gn_normaleq, theta_rhs, theta);
 
   // Report convergence
   KSPConvergedReason reason;
@@ -1066,47 +1042,57 @@ bool OptimProblem::solveGaussNewtonDualBoxConstraint(Vec xinit, const Vec initia
   }
 
   // Recover primal solution
-  // Solve B v = theta; theta is stored in workvec_tangentspace (no new allocation is needed)
-  // Note: in the dual case: the pointer: vec_workspace = workvec_tangentspace;
+  // Solve B v = theta; theta is stored in theta = workvec_tangentspace
 
   // Setup the B^T matrix as a dense matrix. B^T: Ndesign by Ntangent
-  if (mpirank_world == 0) printf("**** Reconstructing search direction by solving B v_out = ws_ts\n");
+  if (mpirank_world == 0) printf("**** Reconstructing search direction by solving B delta = ws_ts\n");
   updateGaussNewtonDual_Btranspose_MatDense();
   Mat BT_mat_dense = getGN_Dual_BT_MatDense();
 
   // Factorize B^T = QR with Slepc/BV 
-  PetscCall(QR_factor_BT(BT_mat_dense));
+  PetscCall(QR_factor_BT(BT_mat_dense)); // Allocates BV GN_Dual_BT_Q and Mat GN_Dual_BT_R
 
-  // min-norm solve R^T y = theta and evaluate v_out = Q y
-  PetscCall(MinNormSolveBV_TSQR(workvec_tangentspace, v_out));
+  // min-norm solve R^T y = theta and evaluate delta = Q y
+  PetscCall(MinNormSolveBV_TSQR(theta, delta));
 
-  // Evaluate xproj = (I - Q Q^T)*xinit and subtract it from v_out
-  PetscScalar damping = getTikhonov();
-  if (damping > 0.0){
-    Vec x_proj;
-    PetscCall(VecDuplicate(xinit, &x_proj)); // allocate and initialize x_proj
+  // Backtracking Armijo line search along -theta, 
+  // currently projected on the bound constraints
+  // VecScale(theta, -1.0); No sign swap with the new line search
+  // alpha = armijoLineSearch(xinit, f_init, workspace, theta, xnew, step); // returns updated step length
 
-    // evaluate
-    std::vector<PetscScalar> y(tangent_dim);
-    PetscCall(BVDotVec(GN_Dual_BT_Q, xinit, y.data())); //  y = Q^T xinit
-    PetscCall(BVMultVec(GN_Dual_BT_Q, -1.0, 0.0, x_proj, y.data())); // x = -Q y
-    PetscCall(VecAXPY(x_proj, 1.0, xinit)); // x_proj := 1.0*xinit + x_proj = xinit - Q Q^T * xinit
-    PetscCall(VecAXPY(v_out, damping, x_proj)); // v_out := damping*x_proj + v_out
+  bool defined=false;
+  double kappa_max = 1.0e8; // Rank threshold for the 'R' matrix
+  PetscCall(activeSetDirection(xinit, theta, eps_active, kappa_max, delta, &defined));
 
-    // Where should the garbage collection be called?
-    PetscCall(VecDestroy(&x_proj));
-  }
+  alpha = armijoConstrainedLineSearch(xinit, f_init, grad_alpha, defined ? delta : grad_alpha, xnew, step);
+
+  // Evaluate xproj = (I - Q Q^T)*xinit and subtract it from theta
+  // PetscScalar damping = getTikhonov();
+  // if (damping > 0.0){
+  //   Vec x_proj;
+  //   PetscCall(VecDuplicate(xinit, &x_proj)); // allocate and initialize x_proj
+
+  //   // evaluate
+  //   std::vector<PetscScalar> y(tangent_dim);
+  //   PetscCall(BVDotVec(GN_Dual_BT_Q, xinit, y.data())); //  y = Q^T xinit
+  //   PetscCall(BVMultVec(GN_Dual_BT_Q, -1.0, 0.0, x_proj, y.data())); // x = -Q y
+  //   PetscCall(VecAXPY(x_proj, 1.0, xinit)); // x_proj := 1.0*xinit + x_proj = xinit - Q Q^T * xinit
+  //   PetscCall(VecAXPY(theta, damping, x_proj)); // theta := damping*x_proj + theta
+
+  //   // Where should the garbage collection be called?
+  //   PetscCall(VecDestroy(&x_proj));
+  // }
   PetscCall(MatDestroy(&GN_Dual_BT_R));
   PetscCall(BVDestroy(&GN_Dual_BT_Q));
 
-  // Detect stale eigendecomposition and return flag to caller
-  bool eigendecomp_is_stale = false;
-
-  return eigendecomp_is_stale;
+  // return step length to caller
+  return alpha;
 }
 
 PetscErrorCode OptimProblem::QR_factor_BT(Mat Bt)
 {
+  // Note: this routine allocates the BV GN_Dual_BT_Q and Mat GN_Dual_BT_R.
+  // They need to be deallocated separately.
   PetscInt           n, m, ldr;
   PetscScalar       *r;
   const PetscScalar *ba;
@@ -1175,11 +1161,11 @@ PetscErrorCode OptimProblem::MinNormSolveBV_TSQR(Vec rhs, Vec x)
   PetscFunctionReturn(PETSC_SUCCESS);
 }
 
-void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec v_out){
+void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec theta_rhs, Vec v_out){
   // TODO: Understand this function and how it interacts with the low-rank preconditioner and the Gauss-Newton dual system.
 
   // Use passed RHS
-  const Vec b = b_rhs;
+  const Vec b = theta_rhs;
 
   // Compute eigendecomposition: (L L^T + λI) V_{r} = Σ_{r+1} V_{r}
   int rank = tangent_dim; // Always go for the full rank
@@ -1245,7 +1231,7 @@ void OptimProblem::solveGaussNewtonDualProjected(Vec xinit, const Vec b_rhs, Vec
   // Compute eigenspace approximation: y = M^{-1} * b
   applyEigenspaceApproximation(b, V_r, eigenvalues, rank, false, 0.0, workvec_tangentspace);
 
-  // Cleanup (b_rhs is destroyed by caller)
+  // Cleanup (theta_rhs is destroyed by caller)
   MatDestroy(&V_r);
   delete[] eigenvalues;
 
@@ -1481,6 +1467,264 @@ double OptimProblem::armijoLineSearch(Vec x, double f, Vec grad, Vec dir, Vec xn
   return alpha; // unreachable
 }
 
+// Lower bound for the condition number of the upper triangular n x n matrix R (column-major,
+// leading dimension lda), based on its diagonal: kappa(R) >= max_i |R_ii| / min_i |R_ii|.
+// The bound holds for the infinity norm and for the 2-norm. Cost O(n).
+static double condEstimateDiag(const PetscScalar *R, PetscInt n, PetscInt lda) {
+  double dmax = 0.0, dmin = PETSC_MAX_REAL;
+  for (PetscInt i = 0; i < n; i++) {
+    double a = std::fabs(R[i + i * lda]);
+    dmax = std::max(dmax, a);
+    dmin = std::min(dmin, a);
+  }
+  if (dmin == 0.0) return PETSC_MAX_REAL;   // singular R
+  return dmax / dmin;
+}
+
+// Minimum-norm lift of the Gauss-Newton direction theta to alpha-coordinates under the bound
+// constraints, by the active-set procedure:
+//   - delta = Q R^{-T} theta, with B_I^T = Q R the QR factorization of B^T restricted to the
+//     inactive indices I (rows of the active indices are zeroed in a working copy of B^T);
+//   - an inactive index i becomes active if delta_i points outward at (or within eps_active of) a bound;
+//   - delta is recomputed after each pass, until no further index becomes active.
+// Input:  theta = solution of H theta = -g_theta (length n, replicated on every rank).
+// Output: dir = -delta, so that xnew = x - alpha*dir as in armijoConstrainedLineSearch. *defined = false if the
+//         rank test fails (fewer than n inactive indices, or cond(R) > kappa_max); dir is then undefined.
+// Note:   QR_factor_BT allocates GN_Dual_BT_Q and GN_Dual_BT_R and does not release them. Any existing
+//         factors are therefore destroyed before each (re)factorization, and the factors computed here
+//         are destroyed before returning; both members are NULL on exit.
+PetscErrorCode OptimProblem::activeSetDirection(Vec x, Vec theta, double eps_active, double kappa_max,
+                                                Vec dir, bool *defined) {
+  PetscFunctionBeginUser;
+  *defined = false;
+  MPI_Comm comm = PetscObjectComm((PetscObject)x);
+
+  Mat BT = getGN_Dual_BT_MatDense();        // d x n, row i belongs to component i of alpha
+  PetscInt d, n, nlocal;
+  PetscCall(MatGetSize(BT, &d, &n));
+  PetscCall(MatGetLocalSize(BT, &nlocal, NULL));
+
+  // Working copy of B^T: the rows of the active indices are set to zero
+  Mat BTwork;
+  PetscCall(MatDuplicate(BT, MAT_COPY_VALUES, &BTwork));
+
+  std::vector<char> active(nlocal, 0);      // local flags of the active indices
+  PetscInt n_active = 0;                    // global number of active indices
+  std::vector<PetscScalar> y(n);
+
+  const PetscScalar *theta_ptr;
+  PetscCall(VecGetArrayRead(theta, &theta_ptr));
+
+  PetscInt pass;
+  // At most d-n+1 active-set passes can be completed
+  for (pass = 0; pass <= d - n + 1; pass++) {
+
+    // Rank test (a): at least n inactive indices are required
+    if (d - n_active < n) break;
+
+    // QR factorization B_I^T = Q R (allocates GN_Dual_BT_Q and GN_Dual_BT_R):
+    // release the previous factors before recomputing
+    PetscCall(MatDestroy(&GN_Dual_BT_R));
+    PetscCall(BVDestroy(&GN_Dual_BT_Q));
+    PetscCall(QR_factor_BT(BTwork));
+
+    // Rank test (b): estimated cond(R) <= kappa_max; then y = R^{-T} theta by forward substitution
+    const PetscScalar *Rptr;
+    PetscInt ldaR;
+    PetscCall(MatDenseGetArrayRead(GN_Dual_BT_R, &Rptr));
+    PetscCall(MatDenseGetLDA(GN_Dual_BT_R, &ldaR));
+    double cond = condEstimateDiag(Rptr, n, ldaR);
+    if (cond > kappa_max) {
+      PetscCall(MatDenseRestoreArrayRead(GN_Dual_BT_R, &Rptr));
+      break;
+    }
+    for (PetscInt i = 0; i < n; i++) {
+      double s = theta_ptr[i];
+      for (PetscInt k = 0; k < i; k++) s -= Rptr[k + i * ldaR] * y[k];   // (R^T)_{ik} = R_{ki}
+      y[i] = s / Rptr[i + i * ldaR];
+    }
+    PetscCall(MatDenseRestoreArrayRead(GN_Dual_BT_R, &Rptr));
+
+    // delta = Q y (stored in dir)
+    PetscCall(BVMultVec(GN_Dual_BT_Q, 1.0, 0.0, dir, y.data()));
+
+    // Enforce delta_i = 0 on the active indices (removes round-off) and apply the activation condition
+    const PetscScalar *xptr, *lptr, *uptr;
+    PetscScalar *dptr;
+    PetscCall(VecGetArrayRead(x, &xptr));
+    PetscCall(VecGetArrayRead(xlower, &lptr));
+    PetscCall(VecGetArrayRead(xupper, &uptr));
+    PetscCall(VecGetArray(dir, &dptr));
+    std::vector<PetscInt> newly;            // local indices that become active in this pass
+    for (PetscInt i = 0; i < nlocal; i++) {
+      if (active[i]) { dptr[i] = 0.0; continue; }
+      if ((xptr[i] <= lptr[i] + eps_active && dptr[i] < 0.0) ||
+          (xptr[i] >= uptr[i] - eps_active && dptr[i] > 0.0)) {
+        newly.push_back(i);
+      }
+    }
+    PetscCall(VecRestoreArray(dir, &dptr));
+    PetscCall(VecRestoreArrayRead(x, &xptr));
+    PetscCall(VecRestoreArrayRead(xlower, &lptr));
+    PetscCall(VecRestoreArrayRead(xupper, &uptr));
+
+    // Global number of newly active indices
+    PetscInt nnew_loc = (PetscInt)newly.size(), nnew;
+    PetscCallMPI(MPI_Allreduce(&nnew_loc, &nnew, 1, MPIU_INT, MPI_SUM, comm));
+    if (mpirank_world == 0){
+      printf("ActiveSetDirection: pass #%d, size of the active set: %d\n", pass, nnew);
+    }
+    if (nnew == 0) { 
+      *defined = true; 
+      break; 
+    }
+    n_active += nnew;
+
+    // Zero the rows of the newly active indices in the working copy of B^T
+    PetscScalar *bptr;
+    PetscInt ldaB;
+    PetscCall(MatDenseGetArray(BTwork, &bptr));
+    PetscCall(MatDenseGetLDA(BTwork, &ldaB));
+    for (PetscInt i : newly) {
+      active[i] = 1;
+      for (PetscInt j = 0; j < n; j++) bptr[i + j * ldaB] = 0.0;
+    }
+    PetscCall(MatDenseRestoreArray(BTwork, &bptr));
+  }
+
+  PetscCall(VecRestoreArrayRead(theta, &theta_ptr));
+  PetscCall(MatDestroy(&BTwork));
+
+  // Release the factors of the last working copy (the result is contained in dir)
+  PetscCall(MatDestroy(&GN_Dual_BT_R));
+  PetscCall(BVDestroy(&GN_Dual_BT_Q));
+
+  // Convention of armijoConstrainedLineSearch: xnew = x - alpha*dir, i.e. dir = -delta
+  if (*defined){
+    PetscCall(VecScale(dir, -1.0));
+  }
+  else{
+    if (mpirank_world == 0){
+      printf("ActiveSetDirection: WARNING: unable to find search dir s.t. B delta = theta\n");
+    }
+  }
+  PetscFunctionReturn(PETSC_SUCCESS);
+}
+
+// ---------------------------------------------------------------------------
+// Declarations to add to class OptimProblem (header):
+//   double armijoConstrainedLineSearch(Vec x, double f, Vec grad, Vec dir, Vec xnew, Vec step);
+//   double maxFeasibleStep(Vec x, Vec dir);
+// Required includes: <algorithm>, <mpi.h>, <petscvec.h>
+// ---------------------------------------------------------------------------
+
+// Largest alpha >= 0 for which the straight line x - alpha*dir remains within
+// [xlower, xupper] (ratio test). Returns PETSC_MAX_REAL if no component of dir
+// restricts the step.
+double OptimProblem::maxFeasibleStep(Vec x, Vec dir) {
+  PetscInt nlocal;
+  VecGetLocalSize(x, &nlocal);
+
+  const PetscScalar *xptr, *dptr, *lptr, *uptr;
+  VecGetArrayRead(x, &xptr);
+  VecGetArrayRead(dir, &dptr);
+  VecGetArrayRead(xlower, &lptr);
+  VecGetArrayRead(xupper, &uptr);
+
+  double alpha_loc = PETSC_MAX_REAL;
+  for (PetscInt i = 0; i < nlocal; i++) {
+    // The update is x - alpha*dir, hence the search direction component is delta_i = -dir_i
+    double delta = -dptr[i];
+    if (delta > 0.0) {
+      alpha_loc = std::min(alpha_loc, (uptr[i] - xptr[i]) / delta);   // upper bound reached first
+    } else if (delta < 0.0) {
+      alpha_loc = std::min(alpha_loc, (lptr[i] - xptr[i]) / delta);   // lower bound reached first
+    }
+  }
+
+  VecRestoreArrayRead(x, &xptr);
+  VecRestoreArrayRead(dir, &dptr);
+  VecRestoreArrayRead(xlower, &lptr);
+  VecRestoreArrayRead(xupper, &uptr);
+
+  // Round-off safeguard, then global minimum over all ranks
+  alpha_loc = std::max(alpha_loc, 0.0);
+  double alpha_max;
+  MPI_Allreduce(&alpha_loc, &alpha_max, 1, MPI_DOUBLE, MPI_MIN, PetscObjectComm((PetscObject)x));
+  return alpha_max;
+}
+
+double OptimProblem::armijoConstrainedLineSearch(Vec x, double f, Vec grad, Vec dir, Vec xnew, Vec step) {
+
+  // ---------------------------------------------------------------------
+  // Stage 1: straight-line search along the given direction, with the step
+  // length truncated by the ratio test so that every trial point is feasible.
+  // The projection is not needed along this line (up to round-off).
+  // ---------------------------------------------------------------------
+
+  // Slope of the update x - alpha*dir at alpha = 0 is -g^T dir; descent requires g^T dir > 0
+  double gdir;
+  VecDot(grad, dir, &gdir);
+
+  // Largest feasible step length, capped at the initial step size alpha = 1.0
+  double alpha_max = std::min(1.0, maxFeasibleStep(x, dir));
+
+  if (gdir > 0.0 && alpha_max > 0.0) {
+    double alpha = alpha_max;
+    for (int ls = 0; ls < max_ls_iter; ls++) {
+
+      // Trial point xnew = x - alpha*dir
+      VecWAXPY(xnew, -alpha, dir, x);
+
+      // Safeguard against round-off at alpha = alpha_max (no effect otherwise)
+      VecPointwiseMax(xnew, xnew, xlower);
+      VecPointwiseMin(xnew, xnew, xupper);
+
+      // Actual step and its descent condition g^T step < 0
+      VecWAXPY(step, -1.0, x, xnew); // step = xnew - x
+      double gts;
+      VecDot(grad, step, &gts);
+      if (gts >= 0.0) break;         // no descent: leave the search and use Stage 2
+
+      double fnew = evalF(xnew);
+      if (fnew <= f + c1 * gts) {
+        return alpha;
+      }
+      alpha *= rho_backtrack;
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Stage 2: projected steepest descent with the modified Armijo condition.
+  // Used if the direction is not a descent direction, if no feasible step
+  // exists along it (alpha_max = 0), or if Stage 1 found no sufficient decrease.
+  // ---------------------------------------------------------------------
+  double alpha = 1.0;
+  for (int ls = 0; ls < max_ls_iter; ls++) {
+
+    // Trial point xnew = P(x - alpha*grad), projected onto the bound constraints
+    VecWAXPY(xnew, -alpha, grad, x);
+    VecPointwiseMax(xnew, xnew, xlower);
+    VecPointwiseMin(xnew, xnew, xupper);
+
+    // Actual (clipped) step and its directional derivative g^T (xnew - x)
+    VecWAXPY(step, -1.0, x, xnew);
+    double gts;
+    VecDot(grad, step, &gts);
+
+    double fnew = evalF(xnew);
+    if (fnew <= f + c1 * gts || ls == max_ls_iter - 1) {
+      if (fnew > f + c1 * gts && mpirank_world == 0) {
+        printf("Warning: Armijo line search did not find sufficient decrease within %d backtracks, accepting smallest step.\n", max_ls_iter);
+      }
+      return alpha;
+    }
+    alpha *= rho_backtrack;
+  }
+
+  return alpha; // unreachable
+}
+
 void OptimProblem::solve(Vec xinit) {
 
   switch (optim_solver_type) {
@@ -1508,6 +1752,9 @@ void OptimProblem::solve(Vec xinit) {
 
       bool stop = false;
       double alpha = 0.0; // for reporting the step length 
+
+      double eps_active = 0.01*drive_bound0; // Defines the width of the active zone near the box constraint
+
       for (int iter = 0; !stop; iter++) {
         // Set the current evaluation point for the Gauss-Newton matrix
         setGaussNewtonEvalPoint(x_GN);
@@ -1524,8 +1771,8 @@ void OptimProblem::solve(Vec xinit) {
         Vec x_initial = computeGaussNewtonInitialGuess(gn_solver_mode, b_rhs);
 
         // new approach including modified line search
-        if (gn_solver_mode == "dual" && !gn_precond_enabled) {
-          bool dummy = solveGaussNewtonDualBoxConstraint(x_GN, x_initial, b_rhs, Gprec);
+        if (gn_solver_mode == "dual" && gn_impose_box_constraints) {
+          alpha = solveGaussNewtonDualBoxConstraint(x_GN, f, xnew, step, G, x_initial, b_rhs, eps_active);
         } 
         else{ // general solver
           // Solve for the Gauss-Newton system for the search direction (Gprec) 
@@ -1559,10 +1806,11 @@ void OptimProblem::solve(Vec xinit) {
         // the sub-cost fields. A side effect is that the step length will lag one iteration.
         stop = monitor(iter, f, gnorm, alpha);
 
-        // Backtracking Armijo line search along -Gprec, projected onto the bound constraints
-        VecScale(Gprec, -1.0);
-        alpha = armijoLineSearch(x_GN, f, G, Gprec, xnew, step); // returns updated step length
-
+        if (!gn_impose_box_constraints){
+          // Backtracking Armijo line search along -Gprec, projected onto the bound constraints
+          VecScale(Gprec, -1.0);
+          alpha = armijoLineSearch(x_GN, f, G, Gprec, xnew, step); // returns updated step length
+        }
         // Accept the step
         VecCopy(x_GN, xprev);
         VecCopy(xnew, x_GN);

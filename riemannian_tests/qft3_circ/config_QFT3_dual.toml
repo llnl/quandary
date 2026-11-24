@@ -31,7 +31,10 @@ initialization = [
   { subsystem = 1, type = "random", amplitude = 0.0023570226039551583 },
   { subsystem = 2, type = "random", amplitude = 0.0023570226039551583 },
 ]
-amplitude_bound = 1.0e12
+# Note: Actual amplitude bound [GHz] is scaled by 1/(sqrt(2)*Nfreq(iosc))
+# With Nfreq = 3, actual parameter bound of 2.357e-2 [GHz] gives 
+amplitude_bound = 1.0e-1
+# amplitude_bound = 1.0e12
 zero_boundary_condition = false
 
 [optimization]
@@ -87,4 +90,4 @@ runtype = "optimization"
 usematfree = true
 linearsolver = { type = "gmres", maxiter = 20 }
 timestepper = "IMR"
-rand_seed = 1
+rand_seed = 7
