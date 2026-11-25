@@ -53,6 +53,7 @@ decoherence = { type = "none",              # "none", "decay", "dephase", or "bo
 # "basis" - all basis states of the full composite system, or of specified subsystems (subsystem = [...])
 # "state" - single initial state specified as levels of a product state (levels = [...])
 # "file" - read one initial state from file (filename = "...")
+# "restart" - restart from a full state/density matrix previously written by Quandary (filename = "...", optional time = <absolute time of the checkpoint>). If "time" is omitted, it is auto-detected from the ".info" sidecar file written next to the binary checkpoint; propagation then continues from that time up to total_time.
 # "diagonal" - for Lindblad solver, all diagonal basis density matrices of the full system, or of specified subsystems (subsystem = [...])
 # "ensemble" - for Lindblad solver, ensemble state used for pure-state preparation, optionally over specified subsystems (subsystem = [...])
 # "3states" - for Lindblad solver, three initial states for gate optimization
@@ -61,6 +62,8 @@ initial_condition = {type = "basis"}
 # initial_condition = {type = "state", levels = [1, 0]}
 # initial_condition = {type = "basis", subsystem = [0, 1]}
 # initial_condition = {type = "file", filename = "path/to/initial_state.dat"}
+# initial_condition = {type = "restart", filename = "path/to/initial_state.dat"}
+# initial_condition = {type = "restart", filename = "path/to/initial_state.dat", time = 40.0}
 
 ## For transmon-resonator system, additional option is to use the transmon eigenvectors as initial states. The levels indicate which eigenvalues to be taken (and how many)
 # initial_condition = {type = "transmon_evecs", levels = [0,1] }

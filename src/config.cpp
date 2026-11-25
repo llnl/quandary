@@ -222,6 +222,7 @@ Config::Config(const MPILogger& logger, const toml::table& toml) : logger(logger
     parseInitialConditionLevels(init_cond_table, initial_condition, logger);
     initial_condition.filename = validators::getOptional<std::string>(init_cond_table["filename"]);
     initial_condition.subsystem= validators::getOptionalVector<size_t>(init_cond_table["subsystem"]);
+    initial_condition.restart_time = validators::getOptional<double>(init_cond_table["time"]);
     
     // Transmon-resonator system settings
     transmon_resonator = validators::field<bool>(*system_table, "transmon_resonator").valueOr(false);
@@ -507,6 +508,14 @@ std::string toString(const InitialConditionSettings& initial_condition) {
   switch (initial_condition.type) {
     case InitialConditionType::FROMFILE:
       return "{" + type_str + ", filename = \"" + initial_condition.filename.value() + "\"}";
+    case InitialConditionType::RESTART: {
+      std::string out = "{" + type_str + ", filename = \"" + initial_condition.filename.value() + "\"";
+      if (initial_condition.restart_time.has_value()) {
+        out += ", time = " + formatDouble(initial_condition.restart_time.value());
+      }
+      out += "}";
+      return out;
+    }
     case InitialConditionType::PRODUCT_STATE: {
       std::string out = "{" + type_str + ", levels = ";
       if (initial_condition.levels_list.has_value()) {
@@ -921,6 +930,17 @@ void Config::validate() const {
       logger.exitWithError("initialcondition of type FROMFILE must have a filename");
     }
   }
+  if (initial_condition.type == InitialConditionType::RESTART) {
+    if (!initial_condition.filename.has_value()) {
+      logger.exitWithError("initialcondition of type RESTART must have a filename");
+    }
+    if (initial_condition.restart_time.has_value()) {
+      double t0 = initial_condition.restart_time.value();
+      if (t0 < 0.0 || t0 >= total_time) {
+        logger.exitWithError("initialcondition of type RESTART: 'time' = " + std::to_string(t0) + " must lie in [0, total_time = " + std::to_string(total_time) + ").");
+      }
+    }
+  }
   if (initial_condition.type == InitialConditionType::PRODUCT_STATE) {
     const bool has_single_levels = initial_condition.levels.has_value();
     const bool has_levels_list = initial_condition.levels_list.has_value();
@@ -987,6 +1007,7 @@ void Config::validate() const {
 size_t Config::computeNumInitialConditions(InitialConditionSettings init_cond_settings, std::vector<size_t> nlevels, std::vector<size_t> nessential, DecoherenceType decoherence_type) const {
   size_t n_initial_conditions = 0;
   switch (init_cond_settings.type) {
+    case InitialConditionType::RESTART:
     case InitialConditionType::FROMFILE:
     case InitialConditionType::PERFORMANCE:
     case InitialConditionType::ENSEMBLE:

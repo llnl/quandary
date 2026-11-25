@@ -148,6 +148,17 @@ class Output{
      */
     void closeTrajectoryDataFiles();
 
+    /**
+     * @brief Writes the state to a binary file.
+     *
+     * The state is written to `<output_dir>/fullstate_iinitXXXX.bin` where `XXXX` is the initial condition identifier.
+     *
+     * @param state Final state vector
+     * @param initid Initial condition identifier
+     * @param time Time corresponding to the final state
+     */
+    void writeFullStateBinary(const Vec state, const int initid, const double time);
+
     /** 
      * @brief Write resonator field trajectories
      * 

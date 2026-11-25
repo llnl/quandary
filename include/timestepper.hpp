@@ -55,10 +55,32 @@ class TimeStepper{
     double weightedcost_integral; ///< Sums the integral over weighted cost function
     double weightedcost_width; ///< Width parameter for weighted cost function
 
-    int ntime; ///< Number of time steps
-    double total_time; ///< Final evolution time
+    int ntime; ///< Number of time steps (remaining steps to propagate, starting from <restart_time>)
+    double total_time; ///< Final (absolute) evolution time. Always the original full pulse horizon, independent of <restart_time>.
     double dt; ///< Time step size
+    double restart_time; ///< Absolute time the initial condition corresponds to (0.0 unless restarting from a checkpoint at t>0, see OptimTarget::getInitialTime()).
+    int next_checkpoint; ///< Index (1..4) of the next intermediate 20%-of-total_time checkpoint to be written during this forward solve (see maybeWriteCheckpoint). The final checkpoint at 100% is always written separately at the end of solveODE.
     bool writeTrajectoryDataFiles;  ///< Flag to determine whether or not trajectory data will be written to files during forward simulation */
+
+    /**
+     * @brief Writes a full-state binary checkpoint whenever <time> has reached the next scheduled
+     * intermediate checkpoint (every 20% of <total_time>: 20%, 40%, 60%, 80%). Advances
+     * <next_checkpoint> accordingly, and does nothing once all intermediate checkpoints have been
+     * written (<next_checkpoint> > 4), or outside of this run's remaining segment. Only active
+     * when trajectory data files are being written (same gating as the final-state write).
+     * Checkpoints overwrite the same file on each write (see Output::writeFullStateBinary).
+     *
+     * @param time Current absolute solver time
+     * @param initid Initial condition identifier (used for the checkpoint's filename)
+     * @param state Current state vector
+     */
+    void maybeWriteCheckpoint(double time, int initid, Vec state);
+
+    /**
+     * @brief (Re-)initializes <next_checkpoint> at the start of a forward solve, skipping any
+     * intermediate 20%-of-total_time checkpoints that already lie at or before <restart_time>.
+     */
+    void resetCheckpointSchedule();
 
     Vec redgrad; ///< Reduced gradient vector for optimization
     OptimTarget* optim_target; ///< Pointer to optimization target specification
@@ -89,6 +111,20 @@ class TimeStepper{
     void setWriteTrajectoryDataFiles(bool write){ writeTrajectoryDataFiles = write; };
 
     void setOptimTarget(OptimTarget* optim_target_){ optim_target = optim_target_; };
+
+    /**
+     * @brief Sets the absolute restart time and adjusts the remaining number of time steps.
+     *
+     * For non-adaptive (fixed-step) time steppers, recomputes <ntime> as the number of steps
+     * remaining between <restart_time_> and the (unchanged) absolute final time <total_time>, so
+     * that the forward/adjoint loops only propagate the remaining segment of the pulse. <dt> and
+     * <total_time> are left untouched: they still describe the original full pulse horizon, which
+     * the control basis functions and carrier waves are still defined over. For Petsc's adaptive
+     * timestepper, <ntime> is unused; <restart_time> alone is sufficient (see PetscTS::solveODE).
+     *
+     * @param restart_time_ Absolute time the initial condition corresponds to (0.0 for a regular, non-restarted run).
+     */
+    void setRestartTime(double restart_time_);
 
     /**
      * @brief Retrieves the final state for a specific local initial condition.

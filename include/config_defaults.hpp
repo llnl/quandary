@@ -78,10 +78,11 @@ struct InitialConditionSettings {
   InitialConditionType type; ///< Type of initial condition
 
   // Optional settings - populate based on type
-  std::optional<std::string> filename; ///< For FROMFILE: File to read initial condition from
+  std::optional<std::string> filename; ///< For FROMFILE, RESTART: File to read initial condition from
   std::optional<std::vector<size_t>> levels; ///< For PRODUCT_STATE: Quantum level for each oscillator
   std::optional<std::vector<std::vector<size_t>>> levels_list; ///< For PRODUCT_STATE: Optional list of product states
   std::optional<std::vector<size_t>> subsystem; ///< For ENSEMBLE, DIAGONAL, BASIS: Oscillator IDs
+  std::optional<double> restart_time; ///< For RESTART: Absolute time the restart state corresponds to. If not provided, it is auto-detected from the ".info" sidecar file written alongside the binary state file; defaults to 0.0 if that also fails.
 };
 
 /**

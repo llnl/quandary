@@ -55,6 +55,7 @@ class Quandary:
     targetgate          # Complex target unitary in the essential level dimensions for gate optimization. Default: none
     targetstate         # Complex target state vector for state-to-state optimization. Default: none
     initialcondition    # Choose from provided initial states at time t=0.0: "basis" (all basis states, default), "pure, 0,0,1,..." (one pure initial state |001...>), "pure" with a list of lists (multiple pure initial states), or pass a vector as initial state. Default: "basis" 
+    restart_filename # Optional: Load the initial state or density matrix directly from a file on disk (type="restart"). Overrides <initialcondition>. Default: none
     gate_rot_freq       # Specify frequencies to rotate a target gate (one per oscillator). Default: no rotation (0.0 for each oscillator)
 
     # Control pulse options
@@ -146,6 +147,7 @@ class Quandary:
     targetgate             : List[List[complex]] = field(default_factory=list) 
     targetstate            : List[complex] = field(default_factory=list) 
     initialcondition       : str = "basis"
+    restart_filename        : str = ""
     gate_rot_freq          : List[float] = field(default_factory=list)
     # Control pulse options
     pcof0               : List[float] = field(default_factory=list)   
@@ -241,7 +243,10 @@ class Quandary:
         if len(self.targetgate) > 0:
             self.optim_target = "gate, file"
         self._initialcondition_levels = []
-        if not isinstance(self.initialcondition, str):
+        if len(self.restart_filename) > 0:
+            # User provided a file to restart the initial state or density matrix from.
+            self.initialcondition = "restart"
+        elif not isinstance(self.initialcondition, str):
             raw_ic = self.initialcondition
             # Accept Python-native pure state level specs:
             #  - [l0, l1, ...]
@@ -277,6 +282,8 @@ class Quandary:
         # Store the number of initial conditions and solver flag
         self._lindblad_solver = True if (len(self.T1)>0) or (len(self.T2)>0) else False
         if self.initialcondition[0:4] == "file":
+            self._ninit = 1
+        elif self.initialcondition[0:7] == "restart":
             self._ninit = 1
         elif self.initialcondition[0:4] == "pure":
             if len(self._initialcondition_levels) > 0:
@@ -376,8 +383,8 @@ class Quandary:
         time            :  List of time-points at which the controls are evaluated  (List)
         pt, qt          :  p,q-control pulses [MHz] at each time point for each oscillator (List of list)
         infidelity      :  Infidelity of the pulses for the specified target operation (Float)
-        expectedEnergy  :  Evolution of the expected energy of each oscillator and each initial condition. Acces: expectedEnergy[oscillator][initialcondition]
-        population      :  Evolution of the population of each oscillator, of each initial condition. (expectedEnergy[oscillator][initialcondition])
+        expectedEnergy  :  Evolution of the expected energy of each oscillator and each initial condition. Acces: [oscillator][initialcondition]
+        population      :  Evolution of the population of each oscillator, of each initial condition. ([oscillator][initialcondition][level])
         """
         
 
@@ -425,8 +432,8 @@ class Quandary:
         time            :  List of time-points at which the controls are evaluated  (List)
         pt, qt          :  p,q-control pulses at each time point for each oscillator (List of list)
         infidelity      :  Infidelity of the pulses for the specified target operation (Float)
-        expectedEnergy  :  Evolution of the expected energy of each oscillator and each initial condition. Acces: expectedEnergy[oscillator][initialcondition]
-        population      :  Evolution of the population of each oscillator, of each initial condition. (expectedEnergy[oscillator][initialcondition])
+        expectedEnergy  :  Evolution of the expected energy of each oscillator and each initial condition. Acces: [oscillator][initialcondition]
+        population      :  Evolution of the population of each oscillator, of each initial condition. ([oscillator][initialcondition][level])
         """
         
         if len(pt0) > 0 and len(qt0) > 0:
@@ -791,6 +798,8 @@ class Quandary:
         init_type = init_tokens[0] if len(init_tokens) > 0 else "basis"
         if init_type == "file":
             lines.append(f"initial_condition = {{ type = {_toml_str('file')}, filename = {_toml_str(self._initstatefilename)} }}")
+        elif init_type == "restart":
+            lines.append(f"initial_condition = {{ type = {_toml_str('restart')}, filename = {_toml_str(self.restart_filename)} }}")
         elif init_type == "pure":
             if len(self._initialcondition_levels) > 0:
                 if len(self._initialcondition_levels) == 1:

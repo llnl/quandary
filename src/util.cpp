@@ -631,6 +631,35 @@ int read_vector(const char *filename, double *var, int dim, bool quietmode, int 
 }
 
 
+bool read_time_from_info_file(const std::string& binary_filename, double& time_out, bool quietmode) {
+  std::string info_filename = binary_filename + ".info";
+  FILE* file = fopen(info_filename.c_str(), "r");
+  if (file == nullptr) {
+    if (!quietmode) printf("Could not open info file %s to auto-detect restart time.\n", info_filename.c_str());
+    return false;
+  }
+
+  char line[256];
+  bool found = false;
+  double parsed_time = 0.0;
+  while (fgets(line, sizeof(line), file) != nullptr) {
+    if (sscanf(line, "# time = %lf", &parsed_time) == 1) {
+      found = true;
+      break;
+    }
+  }
+  fclose(file);
+
+  if (found) {
+    time_out = parsed_time;
+    if (!quietmode) printf("Auto-detected restart time %.8f from %s\n", time_out, info_filename.c_str());
+  } else if (!quietmode) {
+    printf("No '# time = ...' annotation found in %s.\n", info_filename.c_str());
+  }
+  return found;
+}
+
+
 /* Compute eigenvalues */
 int getEigvals(const Mat A, const int neigvals, std::vector<double>& eigvals, std::vector<Vec>& eigvecs){
 

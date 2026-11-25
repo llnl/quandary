@@ -21,6 +21,8 @@ TimeStepper::TimeStepper() {
   ntime = 0;
   total_time = 0.0;
   dt = 0.0;
+  restart_time = 0.0;
+  next_checkpoint = 1;
   MPI_Comm_rank(MPI_COMM_WORLD, &mpirank_world);
   MPI_Comm_rank(PETSC_COMM_WORLD, &mpirank_petsc);
   MPI_Comm_size(PETSC_COMM_WORLD, &mpisize_petsc);
@@ -123,6 +125,37 @@ TimeStepper::~TimeStepper() {
   VecDestroy(&redgrad);
 }
 
+void TimeStepper::setRestartTime(double restart_time_) {
+  restart_time = restart_time_;
+  if (dt > 0.0) {
+    // Non-adaptive (fixed-step) time steppers: only propagate the remaining segment
+    // [restart_time, total_time], keeping dt and total_time (the original full horizon) unchanged.
+    ntime = static_cast<int>(std::round((total_time - restart_time) / dt));
+  }
+  // For Petsc's adaptive timestepper, ntime is unused (see config.cpp); restart_time alone
+  // suffices, since PetscTS::solveODE sets TSSetTime(ts_run, restart_time) directly.
+}
+
+void TimeStepper::maybeWriteCheckpoint(double time, int initid, Vec state) {
+  if (!writeTrajectoryDataFiles || total_time <= 0.0) return;
+
+  const double fraction = 0.2;  // Checkpoint every 20% of total_time (intermediate marks only; 100% is written separately).
+  const double tol = 1e-9 * total_time;
+  while (next_checkpoint <= 4 && time + tol >= next_checkpoint * fraction * total_time) {
+    output->writeFullStateBinary(state, initid, time);
+    next_checkpoint++;
+  }
+}
+
+void TimeStepper::resetCheckpointSchedule() {
+  const double fraction = 0.2;
+  const double tol = 1e-9 * total_time;
+  next_checkpoint = 1;
+  while (next_checkpoint <= 4 && restart_time + tol >= next_checkpoint * fraction * total_time) {
+    next_checkpoint++;
+  }
+}
+
 Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
   /* start wall clock timer */
   double monitor_wall_start = MPI_Wtime();
@@ -134,6 +167,7 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
   if (writeTrajectoryDataFiles) {
     output->openTrajectoryDataFiles("rho", initid);
   }
+  resetCheckpointSchedule();
 
   /* Set initial condition  */
   VecCopy(rho_t0, x);
@@ -160,8 +194,8 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
   for (int n = 0; n < ntime; n++){
 
     /* current time */
-    double tstart = n * dt;
-    double tstop  = (n+1) * dt;
+    double tstart = restart_time + n * dt;
+    double tstop  = restart_time + (n+1) * dt;
     
     /* store and write current state. */
     if (trajectory_states.size() > 0) VecCopy(x, trajectory_states[iinit_local][n]);
@@ -171,6 +205,9 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
 
     /* Take one time step */
     evolveFWD(tstart, tstop, x);
+
+    /* Write an intermediate full-state checkpoint every 20% of total_time */
+    maybeWriteCheckpoint(tstop, initid, x);
 
     /* Add to integral leakage term */
     if (eval_leakage) leakage_integral += evalLeakage(x);
@@ -191,7 +228,7 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
     if (mpirank_world == 0) {
       const double now = MPI_Wtime();
       const double elapsed = std::max(0.0, now - monitor_wall_start);
-      const double progress = std::max(0.0, std::min(1.0, tstart / total_time));
+      const double progress = std::max(0.0, std::min(1.0, (tstart - restart_time) / (total_time - restart_time)));
       const bool is_final = progress >= 0.999999;
       const bool should_report = (now - monitor_last_report >= monitor_report_interval) || is_final;
 
@@ -234,9 +271,12 @@ Vec TimeStepper::solveODE(int initid, int iinit_local, Vec rho_t0){
 
   /* Write last time step and close files */
   if (writeTrajectoryDataFiles) {
-    output->writeTrajectoryDataFiles(ntime, ntime*dt, x);
+    output->writeTrajectoryDataFiles(ntime, restart_time + ntime*dt, x);
     output->closeTrajectoryDataFiles();
+
+    output->writeFullStateBinary(x, initid, total_time);
   }
+
   
   return x;
 }
@@ -265,16 +305,16 @@ void TimeStepper::solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_l
     }
     VecCopy(xprimal, dpdm_states[2]);  // x_N
     VecCopy(dpdm_states[2], dpdm_states[1]);
-    evolveFWD(ntime*dt, (ntime-1)*dt, dpdm_states[1]);  // x_N-1
+    evolveFWD(restart_time + ntime*dt, restart_time + (ntime-1)*dt, dpdm_states[1]);  // x_N-1
     VecCopy(dpdm_states[1], dpdm_states[0]);
-    evolveFWD((ntime-1)*dt, (ntime-2)*dt, dpdm_states[0]);  // x_N-2
+    evolveFWD(restart_time + (ntime-1)*dt, restart_time + (ntime-2)*dt, dpdm_states[0]);  // x_N-2
   }
  
 
   /* Loop over time interval */
   for (int n = ntime; n > 0; n--){
-    double tstop  = n * dt;
-    double tstart = (n-1) * dt;
+    double tstop  = restart_time + n * dt;
+    double tstart = restart_time + (n-1) * dt;
     // printf("Backwards %d -> %d ... \n", n, n-1);
 
     /* Derivative of energy integral term */
@@ -302,7 +342,7 @@ void TimeStepper::solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_l
       int idx = 4-((k+4)%5);
       int idx1 = 4-(k%5);
       VecCopy(dpdm_states[idx], dpdm_states[idx1]);
-      if (n>2) evolveFWD((n-2)*dt, (n-3)*dt, dpdm_states[idx1]);
+      if (n>2) evolveFWD(restart_time + (n-2)*dt, restart_time + (n-3)*dt, dpdm_states[idx1]);
     }
   }
 
@@ -935,7 +975,7 @@ PetscTS::PetscTS(const Config& config, MasterEq* mastereq_, Output* output_, int
     TSSetRHSJacobianP(tsi, dRHSdp, dRHSdpMatrixUpdate, this);
 
     // Set time domain and adaptivity.
-    TSSetTime(tsi, 0.0);
+    TSSetTime(tsi, restart_time);
     TSSetMaxTime(tsi, total_time);
     TSSetExactFinalTime(tsi, TS_EXACTFINALTIME_MATCHSTEP);
     TSAdapt adapt;
@@ -1016,9 +1056,10 @@ Vec PetscTS::solveODE(int initid, int iinit_local, Vec rho_t0){
   if (writeTrajectoryDataFiles) {
     output->openTrajectoryDataFiles("rho", initid);
   }
+  resetCheckpointSchedule();
 
   /* Reset the time stepper */
-  TSSetTime(ts_run, 0.0);
+  TSSetTime(ts_run, restart_time);
   TSSetStepNumber(ts_run, 0);
   TSSetTimeStep(ts_run, 0.1);  // This is Petsc's default initial guess. Will be adpted during TSSolve().
 
@@ -1026,7 +1067,7 @@ Vec PetscTS::solveODE(int initid, int iinit_local, Vec rho_t0){
   VecSet(q_run, 0.0);
   
   /* Reset minimum timestep tracking for this solve */
-  min_timestep_size = total_time;
+  min_timestep_size = total_time - restart_time;
   
   /* Set initial condition for timestepping */
   VecCopy(rho_t0, x);
@@ -1036,7 +1077,7 @@ Vec PetscTS::solveODE(int initid, int iinit_local, Vec rho_t0){
   monitor_wall_start = MPI_Wtime();
   monitor_last_report = monitor_wall_start;
   if (mpirank_world == 0) {
-    printf("Forward solve iinit=%d started (T=%1.6f).\n", monitor_initid, total_time);
+    printf("Forward solve iinit=%d started (t0=%1.6f, T=%1.6f).\n", monitor_initid, restart_time, total_time);
     fflush(stdout);
   }
 
@@ -1049,12 +1090,13 @@ Vec PetscTS::solveODE(int initid, int iinit_local, Vec rho_t0){
   /* Store the last timestep*/
   VecCopy(x, final_states[iinit_local]);
 
-  /* Store integral cost terms */
+  /* Store integral cost terms. Normalize by the remaining integration window, since only
+     [restart_time, total_time] was actually propagated and integrated. */
   const PetscScalar *terms;
   VecGetArrayRead(q_run, &terms);
-  leakage_integral = terms[0] / total_time;
-  weightedcost_integral = terms[1] / total_time;
-  energy_integral = terms[2] / total_time;
+  leakage_integral = terms[0] / (total_time - restart_time);
+  weightedcost_integral = terms[1] / (total_time - restart_time);
+  energy_integral = terms[2] / (total_time - restart_time);
   VecRestoreArrayRead(q_run, &terms);
 
   /* Close trajectory data files. */
@@ -1062,6 +1104,7 @@ Vec PetscTS::solveODE(int initid, int iinit_local, Vec rho_t0){
   TSGetStepNumber(ts_run, &nsteps);
   if (writeTrajectoryDataFiles) {
     output->closeTrajectoryDataFiles();
+    output->writeFullStateBinary(x, initid, total_time);
   }
 
   return x;
@@ -1071,10 +1114,10 @@ void PetscTS::solveAdjointODE(int iinit_local, Vec rho_t0_bar, double Jbar_leaka
   TS ts_run = ts_pool[iinit_local];
   (void)Jbar_dpdm;
 
-  // Scaling.
-  adj_scale_leakage = Jbar_leakage / total_time;
-  adj_scale_weightedcost = Jbar_weightedcost / total_time;
-  adj_scale_energy = Jbar_energy / total_time;
+  // Scaling. Normalize by the remaining integration window [restart_time, total_time].
+  adj_scale_leakage = Jbar_leakage / (total_time - restart_time);
+  adj_scale_weightedcost = Jbar_weightedcost / (total_time - restart_time);
+  adj_scale_energy = Jbar_energy / (total_time - restart_time);
 
   /* Build terminal adjoint condition lambda(T) and terminal parameter gradient mu(T). */
   VecCopy(final_states[iinit_local], xprimal);
@@ -1214,10 +1257,10 @@ PetscErrorCode PetscTS::monitorTrajectory(TS ts, PetscInt step, PetscReal time, 
   (void)time;
   PetscTS *self = static_cast<PetscTS *>(ctx); // The base Timestepper class.
 
-  if (self->mpirank_world == 0 && self->total_time > 0.0) {
+  if (self->mpirank_world == 0 && self->total_time > self->restart_time) {
     const double now = MPI_Wtime();
     const double elapsed = std::max(0.0, now - self->monitor_wall_start);
-    const double progress = std::max(0.0, std::min(1.0, static_cast<double>(time) / self->total_time));
+    const double progress = std::max(0.0, std::min(1.0, (static_cast<double>(time) - self->restart_time) / (self->total_time - self->restart_time)));
     const bool is_final = progress >= 0.999999;
     const bool should_report = (now - self->monitor_last_report >= self->monitor_report_interval) || is_final;
 
@@ -1235,6 +1278,9 @@ PetscErrorCode PetscTS::monitorTrajectory(TS ts, PetscInt step, PetscReal time, 
       self->monitor_last_report = now;
     }
   }
+
+  // Write an intermediate full-state checkpoint every 20% of total_time
+  self->maybeWriteCheckpoint(static_cast<double>(time), self->monitor_initid, state);
 
   // Get the current timestep size and update minimum if needed
   if (step > 1){

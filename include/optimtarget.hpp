@@ -33,6 +33,7 @@ class OptimTarget{
     Vec targetstate; ///< Storage for the target state vector (NULL for product states, \f$V\rho V^\dagger\f$ for gates, density matrix from file)
     Vec initialstate; ///< Storing the initial state vector. 
     InitialConditionSettings initcond; ///< Initial conditions
+    double initial_time; ///< Absolute time the initial state corresponds to. Always 0.0, except for RESTART initial conditions, where it is the (user-provided or auto-detected) checkpoint time.
     DecoherenceType decoherence_type; ///< Type of Lindblad decoherence operators, or NONE for Schroedinger solver
     int mpisize_petsc; ///< Size of PETSc communicator
     int mpirank_petsc; ///< Rank of PETSc communicator
@@ -60,6 +61,7 @@ class OptimTarget{
     ~OptimTarget();
 
     Vec getInitialState() { return initialstate; };
+    double getInitialTime() const { return initial_time; };
     ObjectiveType getObjectiveType(){ return objective_type; };
 
     /**

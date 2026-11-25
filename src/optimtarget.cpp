@@ -32,6 +32,7 @@ OptimTarget::OptimTarget(){
   purity_rho0 = 1.0;
   purestateID = -1;
   targetstate = NULL;
+  initial_time = 0.0;
   mpisize_petsc=0;
   mpirank_petsc=0;
 }
@@ -83,6 +84,40 @@ OptimTarget::OptimTarget(const Config& config, MasterEq* mastereq, bool quietmod
     if (ilow <= vec_id && vec_id < iupp) {
       PetscInt id_global_x =  vec_id + mpirank_petsc*localsize_u; // Global index of u_i in x=[u,v]
       VecSetValue(initialstate, id_global_x, 1.0, INSERT_VALUES);
+    }
+  }
+  else if (initcond.type == InitialConditionType::RESTART) {
+    /* Load a full density matrix or state vector previously written by Output::writeFullStateBinary().
+       That file was written with Petsc's binary viewer (VecView) and may have been distributed
+       differently (e.g. different number of ranks) than <initialstate> here. VecLoad reads the
+       file and redistributes the data to match <initialstate>'s own parallel layout internally,
+       so no manual scatter or broadcast of the data is needed here. */
+    std::string filename = initcond.filename.value();
+    PetscViewer viewer;
+    PetscViewerBinaryOpen(PetscObjectComm((PetscObject)initialstate), filename.c_str(), FILE_MODE_READ, &viewer);
+    VecLoad(initialstate, viewer);
+    PetscViewerDestroy(&viewer);
+
+    /* Resolve the absolute time this restart state corresponds to: an explicit 'time' setting in
+       the configuration takes precedence, otherwise auto-detect it from the ".info" sidecar file
+       written alongside the binary state (see Output::writeFullStateBinary). Default to 0.0, with
+       a warning, if neither is available. */
+    if (initcond.restart_time.has_value()) {
+      initial_time = initcond.restart_time.value();
+    } else if (!read_time_from_info_file(filename, initial_time, quietmode)) {
+      initial_time = 0.0;
+      if (mpirank_world == 0) {
+        printf("WARNING: Could not determine the restart time for initial condition file %s. Defaulting to 0.0 - this is likely wrong unless the state was saved at t=0.\n", filename.c_str());
+      }
+    }
+    double total_time = config.getTotalTime();
+    if (initial_time < 0.0 || initial_time >= total_time) {
+      printf("ERROR: Restart time %f for initial condition file %s is out of bounds [0, total_time=%f).\n", initial_time, filename.c_str(), total_time);
+      exit(1);
+    }
+
+    if (mpirank_world == 0 && !quietmode) {
+      printf("Initial state loaded from %s (restart time = %.8f)\n", filename.c_str(), initial_time);
     }
   }
   else if (initcond.type == InitialConditionType::FROMFILE) {

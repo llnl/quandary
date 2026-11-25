@@ -238,6 +238,20 @@ PetscErrorCode SanityTests(Vec x, PetscReal time);
 int read_vector(const char *filename, double *var, int dim, bool quietmode=false, int skiplines=0, const std::string testheader="");
 
 /**
+ * @brief Reads the "# time = <value>" annotation from a PETSc binary viewer's ".info" sidecar file.
+ *
+ * This is the counterpart to the "# time = ..." comment written into the ".info" file alongside a
+ * binary state dump (see Output::writeFullStateBinary). Used to auto-detect the absolute time a
+ * RESTART initial condition corresponds to, when not explicitly provided in the configuration.
+ *
+ * @param binary_filename Path to the binary state file (its ".info" companion will be read)
+ * @param[out] time_out Parsed time value, only valid if the function returns true
+ * @param quietmode Flag for reduced output
+ * @return true if a time value was found and parsed, false otherwise
+ */
+bool read_time_from_info_file(const std::string& binary_filename, double& time_out, bool quietmode=false);
+
+/**
  * @brief Computes eigenvalues and eigenvectors of matrix A.
  *
  * Requires compilation with SLEPc for eigenvalue computations.

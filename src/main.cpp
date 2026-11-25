@@ -219,6 +219,7 @@ int main(int argc,char **argv)
   // Create optimization target
   OptimTarget* optim_target = new OptimTarget(config, mastereq, quietmode);
   timestepper->setOptimTarget(optim_target); // Pass pointer to optimization target to timestepper for objective function evaluation.
+  timestepper->setRestartTime(optim_target->getInitialTime()); // Offset time-stepping to the initial condition's absolute time (0.0 unless restarting from a checkpoint).
 
   // Create optimization problem context 
   OptimProblem* optimctx = new OptimProblem(config, optim_target, timestepper, mastereq, comm_init, comm_optim, output, quietmode);

@@ -557,3 +557,27 @@ void Output::writeResonatorFieldTrajectory(const std::vector<double>& resonator_
 } 
 
 
+
+void Output::writeFullStateBinary(const Vec state, const int initid, const double time) {
+  // Write full final state to binary file. Note that the state could be a Petsc distributed vector!
+  // PETSc's binary viewer gathers a distributed Vec onto rank 0 (of the vector's own communicator)
+  // internally during VecView, so no manual scatter/communication is needed here.
+  char filename[255];
+  snprintf(filename, 254, "%s/fullstate_iinit%04d.bin", output_dir.c_str(), initid);
+
+  PetscViewer viewer;
+  PetscViewerBinaryOpen(PetscObjectComm((PetscObject)state), filename, FILE_MODE_WRITE, &viewer);
+  VecView(state, viewer);
+
+  FILE *info = nullptr;
+  PetscViewerBinaryGetInfoPointer(viewer, &info);
+  if (info) {
+      PetscFPrintf(PETSC_COMM_SELF, info, "# time = %.17g\n", time);
+  }
+
+  PetscViewerDestroy(&viewer);
+
+  if (mpirank_world == 0 && !quietmode) {
+    printf("Full state written to %s\n", filename);
+  }
+}
